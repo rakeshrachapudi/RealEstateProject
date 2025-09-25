@@ -1,0 +1,354 @@
+I am starting a new project similar like 99acres.com iam using frontend as react and backend as springboot and database as mysql.
+So i have creted already a sample home page and its just statics now i want to make everything dynamic like login post a property use existing property by city i will give my existing full code. please modify everything and give it as a proper folder and file structured including tables and everything.
+
+-----------------Code-----------------------------
+RealEstate_SpringBoot_React_Project
+This document contains a complete minimal Spring Boot backend and a single-file React frontend
+(tailored to match the supplied design). Copy files into the appropriate folders and run the backend and
+frontend as described below.
+Project Structure (recommended)
+realestate-backend/
+ ├─ src/main/java/com/example/realestate/
+ │ ├─ RealEstateApplication.java
+ │ ├─ controller/PropertyController.java
+ │ ├─ model/Property.java
+ │ ├─ repository/PropertyRepository.java
+ │ └─ service/PropertyService.java
+ ├─ src/main/resources/application.properties
+ └─ pom.xml
+realestate-frontend/
+ ├─ package.json
+ ├─ public/index.html
+ └─ src/App.jsx
+Backend — Spring Boot (Maven)
+Create a Maven project and use the following files.
+pom.xml
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://
+maven.apache.org/xsd/maven-4.0.0.xsd">
+<modelVersion>4.0.0</modelVersion>
+<groupId>com.example</groupId>
+<artifactId>realestate</artifactId>
+<version>0.0.1-SNAPSHOT</version>
+<packaging>jar</packaging>
+1
+<parent>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-parent</artifactId>
+<version>3.1.4</version>
+<relativePath/> <!-- lookup parent from repository -->
+</parent>
+<properties>
+<java.version>17</java.version>
+</properties>
+<dependencies>
+<dependency>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+<dependency>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+<dependency>
+<groupId>com.h2database</groupId>
+<artifactId>h2</artifactId>
+<scope>runtime</scope>
+</dependency>
+<dependency>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-devtools</artifactId>
+<scope>runtime</scope>
+</dependency>
+</dependencies>
+<build>
+<plugins>
+<plugin>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-maven-plugin</artifactId>
+</plugin>
+</plugins>
+</build>
+</project>
+2
+RealEstateApplication.java
+package com.example.realestate;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+@SpringBootApplication
+public class RealEstateApplication {
+public static void main(String[] args) {
+SpringApplication.run(RealEstateApplication.class, args);
+}
+}
+model/Property.java
+package com.example.realestate.model;
+import jakarta.persistence.*;
+@Entity
+public class Property {
+@Id
+@GeneratedValue(strategy = GenerationType.IDENTITY)
+private Long id;
+private String title;
+private String type; // e.g., "2 BHK Apartment", "Plot"
+private String city;
+private String imageUrl;
+private String priceDisplay; // e.g., "₹1.20 Cr"
+// getters & setters
+public Long getId() { return id; }
+public void setId(Long id) { this.id = id; }
+public String getTitle() { return title; }
+public void setTitle(String title) { this.title = title; }
+public String getType() { return type; }
+public void setType(String type) { this.type = type; }
+3
+public String getCity() { return city; }
+public void setCity(String city) { this.city = city; }
+public String getImageUrl() { return imageUrl; }
+public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+public String getPriceDisplay() { return priceDisplay; }
+public void setPriceDisplay(String priceDisplay) { this.priceDisplay =
+priceDisplay; }
+}
+repository/PropertyRepository.java
+package com.example.realestate.repository;
+import com.example.realestate.model.Property;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
+public interface PropertyRepository extends JpaRepository<Property, Long> {
+List<Property> findByCityIgnoreCase(String city);
+}
+service/PropertyService.java
+package com.example.realestate.service;
+import com.example.realestate.model.Property;
+import com.example.realestate.repository.PropertyRepository;
+import org.springframework.stereotype.Service;
+import java.util.List;
+@Service
+public class PropertyService {
+private final PropertyRepository repo;
+public PropertyService(PropertyRepository repo) {
+this.repo = repo;
+}
+4
+public List<Property> findAll() { return repo.findAll(); }
+public List<Property> findByCity(String city) { return
+repo.findByCityIgnoreCase(city); }
+public Property save(Property p) { return repo.save(p); }
+}
+controller/PropertyController.java
+package com.example.realestate.controller;
+import com.example.realestate.model.Property;
+import com.example.realestate.service.PropertyService;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+@RestController
+@RequestMapping("/api/properties")
+@CrossOrigin(origins = "http://localhost:3000")
+public class PropertyController {
+private final PropertyService service;
+public PropertyController(PropertyService service) {
+this.service = service;
+}
+@GetMapping
+public List<Property> all() { return service.findAll(); }
+@GetMapping("/city/{city}")
+public List<Property> byCity(@PathVariable String city) { return
+service.findByCity(city); }
+@PostMapping
+public Property create(@RequestBody Property property) { return
+service.save(property); }
+}
+5
+src/main/resources/application.properties
+spring.datasource.url=jdbc:h2:mem:realestate;DB_CLOSE_DELAY=-1
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+spring.jpa.hibernate.ddl-auto=update
+spring.h2.console.enabled=true
+spring.h2.console.path=/h2-console
+logging.level.org.springframework=INFO
+Optional: seed some sample data on startup
+Add this bean to your RealEstateApplication or a @Configuration class to insert sample
+properties at startup.
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Bean;
+@Bean
+CommandLineRunner initData(com.example.realestate.repository.PropertyRepository
+repo) {
+return args -> {
+repo.save(new com.example.realestate.model.Property() {{
+setTitle("2 BHK Apartment"); setType("Apartment");
+setCity("Bangalore");
+setImageUrl("/images/apt1.jpg"); setPriceDisplay("₹1.20 Cr");
+}});
+repo.save(new com.example.realestate.model.Property() {{
+setTitle("3 BHK Apartment"); setType("Apartment");
+setCity("Mumbai");
+setImageUrl("/images/apt2.jpg"); setPriceDisplay("₹2.50 Cr");
+}});
+repo.save(new com.example.realestate.model.Property() {{
+setTitle("Plot"); setType("Plot"); setCity("Pune");
+setImageUrl("/images/plot1.jpg"); setPriceDisplay("₹50 Lakh");
+}});
+};
+}
+6
+Place static images under src/main/resources/static/images/ or use remote URLs.
+Frontend — React (single-file App.jsx )
+This is a minimal React single-file app using Tailwind classes (you can adapt to plain CSS if you prefer). It
+fetches featured properties from the backend.
+package.json (create with npm init -y then install React)
+{
+"name": "realestate-frontend",
+"version": "1.0.0",
+"private": true,
+"dependencies": {
+"react": "18.2.0",
+"react-dom": "18.2.0",
+"vite": "latest"
+},
+"scripts": {
+"dev": "vite",
+"build": "vite build",
+"preview": "vite preview"
+}
+}
+Install with:
+npm install
+public/index.html
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Real Estate</title>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="/src/App.jsx"></script>
+7
+</body>
+</html>
+src/App.jsx
+import React, {useEffect, useState} from 'react'
+import { createRoot } from 'react-dom/client'
+function App(){
+const [propsList, setPropsList] = useState([])
+const [query, setQuery] = useState('')
+useEffect(()=>{
+fetch('http://localhost:8080/api/properties')
+.then(r=>r.json())
+.then(setPropsList)
+},[])
+const searchByCity = (city)=>{
+fetch(`http://localhost:8080/api/properties/city/${encodeURIComponent(city)}
+`)
+.then(r=>r.json())
+.then(setPropsList)
+}
+const onSearch = ()=>{
+if(!query) return
+searchByCity(query)
+}
+return (
+<div style={{fontFamily: 'Inter, system-ui, Arial', padding: 24, maxWidth:
+1100, margin: '0 auto'}}>
+<header style={{display:'flex', alignItems:'center',
+justifyContent:'space-between', marginBottom:24}}>
+<div style={{fontSize:34, color:'#3b82f6', fontWeight:700}}>99acres</
+div>
+<nav style={{display:'flex', gap:20, alignItems:'center'}}>
+<span>Buy</span>
+<span>Rent</span>
+<span>Sell</span>
+<button style={{background:'#3b82f6', color:'white', padding:'8px 
+14px', borderRadius:10}}>Login ▾</button>
+</nav>
+</header>
+8
+<h1 style={{fontSize:64, margin:'10px 0'}}>Find your dream home</h1>
+<div style={{display:'flex', gap:12, alignItems:'center', marginBottom:
+24}}>
+<input
+placeholder="Search by city, locality, builder, project"
+value={query}
+onChange={e=>setQuery(e.target.value)}
+style={{flex:1, padding:18, borderRadius:10, border:'1px solid 
+#e5e7eb', fontSize:18}}
+/>
+<button onClick={onSearch} style={{background:'#3b82f6', color:'white',
+padding:'12px 16px', borderRadius:10}}> </button>
+</div>
+<section style={{marginBottom:24}}>
+<h2 style={{fontSize:28, marginBottom:16}}>Popular locations</h2>
+<div style={{display:'flex', gap:12}}>
+{['Bangalore','Mumbai','Pune','Delhi'].map(l=> (
+<button key={l} onClick={()=>searchByCity(l)} style={{padding:'14px 
+22px', borderRadius:12, background:'#f3f4f6', border:'none'}}>{l}</button>
+))}
+</div>
+</section>
+<section>
+<h2 style={{fontSize:28, marginBottom:16}}>Featured properties</h2>
+<div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:
+16}}>
+{propsList.map(p=> (
+<div key={p.id} style={{background:'#fff', borderRadius:12,
+overflow:'hidden', boxShadow:'0 2px 6px rgba(0,0,0,0.05)'}}>
+<div style={{height:200, background:'#eee'}}>
+<img src={p.imageUrl || 'https://via.placeholder.com/400x250'}
+alt={p.title} style={{width:'100%', height:'100%', objectFit:'cover'}}/>
+</div>
+<div style={{padding:18}}>
+<div style={{fontSize:18, marginBottom:8}}>{p.title}</div>
+<div style={{fontSize:20, fontWeight:600}}>{p.priceDisplay}</
+div>
+</div>
+</div>
+))}
+</div>
+</section>
+</div>
+)
+9
+}
+const root = createRoot(document.getElementById('root'))
+root.render(<App />)
+export default App
+Notes: - The React file uses simple inline styles to match the supplied design quickly. If you want pixelperfect, convert styles to Tailwind or an external CSS file.
+How to run
+Backend
+mvn clean package
+mvn spring-boot:run (or run from your IDE)
+Backend will run on http://localhost:8080 . H2 console on /h2-console .
+Frontend
+npm install
+npm run dev (Vite default serve at http://localhost:3000 )
+The frontend fetches http://localhost:8080/api/properties — ensure CORS allowed
+(controller has @CrossOrigin ).
+Extending this
+Add pagination & filtering endpoints (price range, property type).
+Replace H2 with PostgreSQL or MySQL in application.properties when moving to prod.
+Add authentication (Spring Security / JWT) for posting properties.
+Add upload endpoint for images (store in S3 or local static folder).
+Improve frontend: routing for property details, property forms, search autosuggest, and UI polish
+with Tailwind.
+If you want, I can also: - provide a full multi-file React project scaffold (with Tailwind) and CSS matching the
+screenshot, - add endpoints for posting new properties and deleting, - create Postman collection for testing
+the APIs.
+1. 
+2. 
+3. 
+1. 
+2. 
+3. 
+• 
+• 
+• 
+• 
+• 
+10
