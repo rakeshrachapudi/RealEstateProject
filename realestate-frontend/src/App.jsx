@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import LoginModal from './LoginModal';
+import PostPropertyModal from './PostPropertyModal'; // Import the new modal
 
 function App() {
   const [propsList, setPropsList] = useState([]);
   const [query, setQuery] = useState('');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isPostPropertyModalOpen, setIsPostPropertyModalOpen] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
 
   useEffect(() => {
@@ -32,6 +34,10 @@ function App() {
     onSearch();
   };
 
+  const handlePropertyPosted = (newProperty) => {
+    setPropsList(prevList => [newProperty, ...prevList]);
+  };
+
   return (
     <div style={{ fontFamily: 'Inter, system-ui, Arial', padding: 24, maxWidth: 1100, margin: '0 auto', color: '#111827' }}>
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
@@ -42,6 +48,12 @@ function App() {
           <span>Sell</span>
           {isAuthenticated ? (
             <>
+              <button
+                onClick={() => setIsPostPropertyModalOpen(true)}
+                style={{ background: '#28a745', color: 'white', padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 500 }}
+              >
+                Post Property
+              </button>
               <span style={{ fontWeight: 600 }}>Welcome, {user?.firstName || 'User'}</span>
               <button onClick={logout} style={{ background: '#ef4444', color: 'white', padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer' }}>
                 Logout
@@ -88,6 +100,10 @@ function App() {
               <div style={{ padding: 18 }}>
                 <div style={{ fontSize: 18, marginBottom: 8, fontWeight: 600 }}>{p.title}</div>
                 <div style={{ fontSize: 20, fontWeight: 700, color: '#3b82f6' }}>{p.priceDisplay}</div>
+                <div style={{ fontSize: 14, color: '#555', marginTop: 8 }}>
+                    {`${p.type} • ${p.bedrooms} Beds • ${p.bathrooms} Baths`}
+                </div>
+                 {p.user && <div style={{fontSize: 14, color: '#333', marginTop: 8, fontWeight: 'bold'}}>{`Posted by: ${p.user.firstName} ${p.user.lastName}`}</div>}
               </div>
             </div>
           ))}
@@ -95,6 +111,12 @@ function App() {
       </section>
 
       {isLoginModalOpen && <LoginModal onClose={() => setIsLoginModalOpen(false)} />}
+      {isPostPropertyModalOpen && (
+        <PostPropertyModal
+          onClose={() => setIsPostPropertyModalOpen(false)}
+          onPropertyPosted={handlePropertyPosted}
+        />
+      )}
     </div>
   );
 }
