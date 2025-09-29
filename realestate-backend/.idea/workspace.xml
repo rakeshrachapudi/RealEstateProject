@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="5b41c3e1-38e7-4772-b248-42664c418612" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/../I am starting a new project.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Real Estate Spring Boot React Project.pdf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/realestate/repository/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/realestate/repository/UserRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/realestate-0.0.1-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/target/realestate-0.0.1-SNAPSHOT.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/realestate-0.0.1-SNAPSHOT.jar.original" beforeDir="false" afterPath="$PROJECT_DIR$/target/realestate-0.0.1-SNAPSHOT.jar.original" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-frontend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-frontend/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-frontend/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-frontend/src/PostPropertyModal.jsx" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 0
+}</component>
+  <component name="ProjectId" id="338t2ljFc6NevCJMMVwIB9Sobk4" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.RealEstateApplication.executor": "Run",
+    "Application.realestate-backend.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/home/rakesh/Projects/99acres/realestate-backend",
+    "onboarding.tips.debug.path": "/home/rakesh/Projects/99acres/realestate-backend/src/main/java/org/example/Main.java",
+    "settings.editor.selected.configurable": "project.propCompiler"
+  }
+}]]></component>
+  <component name="RunManager">
+    <configuration name="realestate-backend" type="Application" factoryName="Application">
+      <envs>
+        <env name="TWILIO_ACCOUNT_SID" value="ACca29617f91288058d41366c5402a806e" />
+        <env name="TWILIO_AUTH_TOKEN" value="82a4bc97486b518b6908310386704a48" />
+        <env name="TWILIO_PHONE_NUMBER" value="+12792639315" />
+      </envs>
+      <option name="MAIN_CLASS_NAME" value="com.example.realestate.RealEstateApplication" />
+      <module name="realestate-backend" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="5b41c3e1-38e7-4772-b248-42664c418612" name="Changes" comment="" />
+      <created>1758710324707</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1758710324707</updated>
+    </task>
+    <servers />
+  </component>
+</project>

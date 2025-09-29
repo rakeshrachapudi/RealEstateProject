@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="5621f915-3557-41bb-b94d-e5902081aa61" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/AuthController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/model/User.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/repository/UserRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../realestate-frontend/src/LoginPage.jsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../realestate-frontend/src/main.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/target/classes/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/target/classes/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-frontend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-frontend/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-frontend/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-frontend/src/App.jsx" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 4
+}]]></component>
+  <component name="ProjectId" id="33BUrkzF0pQKk8s8N5TAPrXctWG" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/home/rakesh/Projects/99acres/realestate-backend"
+  }
+}]]></component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="5621f915-3557-41bb-b94d-e5902081aa61" name="Changes" comment="" />
+      <created>1758790159865</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1758790159865</updated>
+    </task>
+    <servers />
+  </component>
+</project>
