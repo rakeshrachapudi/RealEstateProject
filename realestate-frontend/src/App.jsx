@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from './AuthContext';
-import LoginModal from './LoginModal';
-import PostPropertyModal from './PostPropertyModal'; // Import the new modal
+import { useAuth } from './AuthContext.jsx';
+import LoginModal from './LoginModal.jsx';
+import PostPropertyModal from './PostPropertyModal.jsx';
 
 function App() {
   const [propsList, setPropsList] = useState([]);
@@ -10,11 +10,15 @@ function App() {
   const [isPostPropertyModalOpen, setIsPostPropertyModalOpen] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
 
-  useEffect(() => {
+  const fetchProperties = () => {
     fetch('http://localhost:8080/api/properties')
       .then(response => response.json())
       .then(data => setPropsList(data))
       .catch(error => console.error('Error fetching properties:', error));
+  };
+
+  useEffect(() => {
+    fetchProperties();
   }, []);
 
   const searchByCity = (city) => {
@@ -35,7 +39,8 @@ function App() {
   };
 
   const handlePropertyPosted = (newProperty) => {
-    setPropsList(prevList => [newProperty, ...prevList]);
+    // Re-fetch all properties to get the most up-to-date list
+    fetchProperties();
   };
 
   return (
@@ -100,10 +105,15 @@ function App() {
               <div style={{ padding: 18 }}>
                 <div style={{ fontSize: 18, marginBottom: 8, fontWeight: 600 }}>{p.title}</div>
                 <div style={{ fontSize: 20, fontWeight: 700, color: '#3b82f6' }}>{p.priceDisplay}</div>
+
+                {/* --- FIX: Conditionally render details --- */}
                 <div style={{ fontSize: 14, color: '#555', marginTop: 8 }}>
-                    {`${p.type} • ${p.bedrooms} Beds • ${p.bathrooms} Baths`}
+                    <span>{p.type}</span>
+                    {p.bedrooms != null && <span> • {p.bedrooms} Beds</span>}
+                    {p.bathrooms != null && <span> • {p.bathrooms} Baths</span>}
                 </div>
-                 {p.user && <div style={{fontSize: 14, color: '#333', marginTop: 8, fontWeight: 'bold'}}>{`Posted by: ${p.user.firstName} ${p.user.lastName}`}</div>}
+
+                {p.user && <div style={{fontSize: 14, color: '#333', marginTop: 8, fontWeight: 'bold'}}>{`Posted by: ${p.user.firstName} ${p.user.lastName}`}</div>}
               </div>
             </div>
           ))}
@@ -122,3 +132,4 @@ function App() {
 }
 
 export default App;
+
