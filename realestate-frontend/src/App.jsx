@@ -45,7 +45,7 @@ function App() {
 
   return (
     <div style={{ fontFamily: 'Inter, system-ui, Arial', padding: 24, maxWidth: 1100, margin: '0 auto', color: '#111827' }}>
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, background:'red' }}>
         <div style={{ fontSize: 34, color: '#3b82f6', fontWeight: 700 }}>Visionary Homes</div>
         <nav style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
           <span>Buy</span>
@@ -132,4 +132,3 @@ function App() {
 }
 
 export default App;
-
