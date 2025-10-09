@@ -1,1 +1,4 @@
 .idea/
+
+# Dependencies
+/realestate-frontend/node_modules
