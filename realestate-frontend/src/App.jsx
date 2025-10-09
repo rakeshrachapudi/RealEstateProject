@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from './AuthContext.jsx';
 import LoginModal from './LoginModal.jsx';
 import PostPropertyModal from './PostPropertyModal.jsx';
+import SignupModal from './SignupModal.jsx'; // ✨ 1. Import SignupModal
 
 function App() {
   const [propsList, setPropsList] = useState([]);
   const [query, setQuery] = useState('');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isPostPropertyModalOpen, setIsPostPropertyModalOpen] = useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false); // ✨ 2. Add state for SignupModal
   const { isAuthenticated, user, logout } = useAuth();
 
   const fetchProperties = () => {
@@ -44,9 +46,9 @@ function App() {
   };
 
   return (
-    <div style={{ fontFamily: 'Inter, system-ui, Arial', padding: 24,  margin: '0 auto', color: '#111827' }}>
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',borderRadius:'10px',padding:'15px', marginBottom: 24, background:'pink',  }}>
-        <div style={{ fontSize: 34, color: '#3b82f6', fontWeight: 700 }}>Your Destiny</div>
+    <div style={{ fontFamily: 'Inter, system-ui, Arial', padding: 24, maxWidth: 1100, margin: '0 auto', color: '#111827' }}>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div style={{ fontSize: 34, color: '#3b82f6', fontWeight: 700 }}>Visionary Homes</div>
         <nav style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
           <span>Buy</span>
           <span>Rent</span>
@@ -65,9 +67,15 @@ function App() {
               </button>
             </>
           ) : (
-            <button onClick={() => setIsLoginModalOpen(true)} style={{ background: '#3b82f6', color: 'white', padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer' }}>
-              Login
-            </button>
+            // ✨ 3. Add the Sign Up button next to Login
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setIsLoginModalOpen(true)} style={{ background: '#3b82f6', color: 'white', padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer' }}>
+                Login
+              </button>
+              <button onClick={() => setIsSignupModalOpen(true)} style={{ background: '#f59e0b', color: 'white', padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 500 }}>
+                Sign Up
+              </button>
+            </div>
           )}
         </nav>
       </header>
@@ -86,7 +94,7 @@ function App() {
       <section style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 28, marginBottom: 16 }}>Popular locations</h2>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          {['North', 'East', 'West', 'South'].map(location => (
+          {['Bangalore', 'Mumbai', 'Pune', 'Delhi', 'Hyderabad', 'Goa', 'Chennai'].map(location => (
             <button key={location} onClick={() => searchByCity(location)} style={{ padding: '14px 22px', borderRadius: 12, background: '#f3f4f6', border: 'none', cursor: 'pointer', fontSize: 16 }}>{location}</button>
           ))}
         </div>
@@ -105,14 +113,11 @@ function App() {
               <div style={{ padding: 18 }}>
                 <div style={{ fontSize: 18, marginBottom: 8, fontWeight: 600 }}>{p.title}</div>
                 <div style={{ fontSize: 20, fontWeight: 700, color: '#3b82f6' }}>{p.priceDisplay}</div>
-
-                {/* --- FIX: Conditionally render details --- */}
                 <div style={{ fontSize: 14, color: '#555', marginTop: 8 }}>
                     <span>{p.type}</span>
                     {p.bedrooms != null && <span> • {p.bedrooms} Beds</span>}
                     {p.bathrooms != null && <span> • {p.bathrooms} Baths</span>}
                 </div>
-
                 {p.user && <div style={{fontSize: 14, color: '#333', marginTop: 8, fontWeight: 'bold'}}>{`Posted by: ${p.user.firstName} ${p.user.lastName}`}</div>}
               </div>
             </div>
@@ -127,6 +132,9 @@ function App() {
           onPropertyPosted={handlePropertyPosted}
         />
       )}
+
+      {/* ✨ 4. Conditionally render the SignupModal */}
+      {isSignupModalOpen && <SignupModal onClose={() => setIsSignupModalOpen(false)} />}
     </div>
   );
 }
