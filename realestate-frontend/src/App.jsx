@@ -2,21 +2,40 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from './AuthContext.jsx';
 import LoginModal from './LoginModal.jsx';
 import PostPropertyModal from './PostPropertyModal.jsx';
-import SignupModal from './SignupModal.jsx'; // ✨ 1. Import SignupModal
+import SignupModal from './SignupModal.jsx';
+import PropertySearch from './components/PropertySearch';
+import PropertyList from './components/PropertyList';
+import { getFeaturedProperties } from './services/api';
 
 function App() {
   const [propsList, setPropsList] = useState([]);
   const [query, setQuery] = useState('');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isPostPropertyModalOpen, setIsPostPropertyModalOpen] = useState(false);
-  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false); // ✨ 2. Add state for SignupModal
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+
+  // NEW: Search state
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+
   const { isAuthenticated, user, logout } = useAuth();
 
-  const fetchProperties = () => {
-    fetch('http://localhost:8080/api/properties')
-      .then(response => response.json())
-      .then(data => setPropsList(data))
-      .catch(error => console.error('Error fetching properties:', error));
+  const fetchProperties = async () => {
+    try {
+      const response = await getFeaturedProperties();
+      if (response && response.success) {
+        setPropsList(response.data);
+        setShowSearchResults(false);
+      }
+    } catch (error) {
+      console.error('Error loading featured properties:', error);
+      // Fallback to old API
+      fetch('http://localhost:8080/api/properties')
+        .then(response => response.json())
+        .then(data => setPropsList(data))
+        .catch(err => console.error('Error with fallback:', err));
+    }
   };
 
   useEffect(() => {
@@ -41,7 +60,23 @@ function App() {
   };
 
   const handlePropertyPosted = (newProperty) => {
-    // Re-fetch all properties to get the most up-to-date list
+    fetchProperties();
+  };
+
+  // NEW: Search handlers
+  const handleSearchResults = (results) => {
+    setSearchResults(results);
+    setShowSearchResults(true);
+    setSearchLoading(false);
+  };
+
+  const handleSearchStart = () => {
+    setSearchLoading(true);
+  };
+
+  const handleResetSearch = () => {
+    setShowSearchResults(false);
+    setSearchResults([]);
     fetchProperties();
   };
 
@@ -67,7 +102,6 @@ function App() {
               </button>
             </>
           ) : (
-            // ✨ 3. Add the Sign Up button next to Login
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={() => setIsLoginModalOpen(true)} style={{ background: '#3b82f6', color: 'white', padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer' }}>
                 Login
@@ -81,6 +115,7 @@ function App() {
       </header>
 
       <h1 style={{ fontSize: 64, margin: '10px 0', fontWeight: 700 }}>Find your dream home</h1>
+
       <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 24 }}>
         <input
           placeholder="Search by city..."
@@ -91,6 +126,13 @@ function App() {
         <button type="submit" style={{ background: '#3b82f6', color: 'white', padding: '18px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 18 }}>Search</button>
       </form>
 
+      {/* NEW: Property Search Component */}
+      <PropertySearch
+        onSearchResults={handleSearchResults}
+        onSearchStart={handleSearchStart}
+        onReset={handleResetSearch}
+      />
+
       <section style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 28, marginBottom: 16 }}>Popular locations</h2>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -100,29 +142,18 @@ function App() {
         </div>
       </section>
 
+      {/* MODIFIED: Property List Section */}
       <section>
-        <h2 style={{ fontSize: 28, marginBottom: 16 }}>Featured properties</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 24 }}>
-          {propsList.map(p => (
-            <div key={p.id} style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-              <img
-                src={p.imageUrl || 'https://via.placeholder.com/400x250'}
-                alt={p.title}
-                style={{ width: '100%', height: '200px', objectFit: 'cover' }}
-              />
-              <div style={{ padding: 18 }}>
-                <div style={{ fontSize: 18, marginBottom: 8, fontWeight: 600 }}>{p.title}</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#3b82f6' }}>{p.priceDisplay}</div>
-                <div style={{ fontSize: 14, color: '#555', marginTop: 8 }}>
-                    <span>{p.type}</span>
-                    {p.bedrooms != null && <span> • {p.bedrooms} Beds</span>}
-                    {p.bathrooms != null && <span> • {p.bathrooms} Baths</span>}
-                </div>
-                {p.user && <div style={{fontSize: 14, color: '#333', marginTop: 8, fontWeight: 'bold'}}>{`Posted by: ${p.user.firstName} ${p.user.lastName}`}</div>}
-              </div>
-            </div>
-          ))}
-        </div>
+        <h2 style={{ fontSize: 28, marginBottom: 16 }}>
+          {showSearchResults
+            ? `Search Results (${searchResults.length} found)`
+            : 'Featured properties'}
+        </h2>
+
+        <PropertyList
+          properties={showSearchResults ? searchResults : propsList}
+          loading={searchLoading}
+        />
       </section>
 
       {isLoginModalOpen && <LoginModal onClose={() => setIsLoginModalOpen(false)} />}
@@ -132,8 +163,6 @@ function App() {
           onPropertyPosted={handlePropertyPosted}
         />
       )}
-
-      {/* ✨ 4. Conditionally render the SignupModal */}
       {isSignupModalOpen && <SignupModal onClose={() => setIsSignupModalOpen(false)} />}
     </div>
   );

@@ -1,0 +1,140 @@
+.advanced-search-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.advanced-search-bar {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 50px;
+  padding: 10px 15px;
+  max-width: 1200px;
+  width: 100%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  gap: 10px;
+}
+
+.search-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  padding: 5px 15px;
+}
+
+.search-icon {
+  font-size: 20px;
+}
+
+.location-icon {
+  color: #e53935;
+}
+
+.home-icon {
+  color: #e53935;
+}
+
+.rupee-icon {
+  color: #e53935;
+  font-weight: bold;
+}
+
+.location-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.location-input {
+  border: none;
+  outline: none;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  background: transparent;
+}
+
+.add-more-btn {
+  border: none;
+  background: transparent;
+  color: #999;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.add-more-btn:hover {
+  color: #666;
+}
+
+.property-select,
+.budget-select {
+  border: none;
+  outline: none;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  padding-right: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right center;
+}
+
+.search-divider {
+  width: 1px;
+  height: 40px;
+  background: #e0e0e0;
+}
+
+.search-btn {
+  background: #e53935;
+  color: white;
+  border: none;
+  border-radius: 30px;
+  padding: 15px 35px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: background 0.3s ease;
+}
+
+.search-btn:hover {
+  background: #c62828;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .advanced-search-bar {
+    flex-direction: column;
+    border-radius: 20px;
+    padding: 15px;
+  }
+
+  .search-divider {
+    width: 100%;
+    height: 1px;
+  }
+
+  .search-section {
+    width: 100%;
+    padding: 10px 0;
+  }
+
+  .search-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
