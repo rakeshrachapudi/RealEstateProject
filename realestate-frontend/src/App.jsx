@@ -44,9 +44,9 @@ function App() {
   };
 
   return (
-    <div style={{ fontFamily: 'Inter, system-ui, Arial', padding: 24, maxWidth: 1100, margin: '0 auto', color: '#111827' }}>
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, background:'red' }}>
-        <div style={{ fontSize: 34, color: '#3b82f6', fontWeight: 700 }}>Visionary Homes</div>
+    <div style={{ fontFamily: 'Inter, system-ui, Arial', padding: 24,  margin: '0 auto', color: '#111827' }}>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',borderRadius:'10px',padding:'15px', marginBottom: 24, background:'pink',  }}>
+        <div style={{ fontSize: 34, color: '#3b82f6', fontWeight: 700 }}>Your Destiny</div>
         <nav style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
           <span>Buy</span>
           <span>Rent</span>
@@ -86,7 +86,7 @@ function App() {
       <section style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 28, marginBottom: 16 }}>Popular locations</h2>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          {['Bangalore', 'Mumbai', 'Pune', 'Delhi', 'Hyderabad', 'Goa', 'Chennai'].map(location => (
+          {['North', 'East', 'West', 'South'].map(location => (
             <button key={location} onClick={() => searchByCity(location)} style={{ padding: '14px 22px', borderRadius: 12, background: '#f3f4f6', border: 'none', cursor: 'pointer', fontSize: 16 }}>{location}</button>
           ))}
         </div>
