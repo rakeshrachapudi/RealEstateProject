@@ -1,6 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const PropertyCard = ({ property }) => {
+  const navigate = useNavigate();
+
   const formatPrice = (price) => {
     if (!price) return property.priceDisplay || 'Price on request';
 
@@ -19,8 +22,12 @@ const PropertyCard = ({ property }) => {
     return 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&h=600&fit=crop';
   };
 
+  const handleClick = () => {
+    navigate(`/property/${property.propertyId || property.id}`);
+  };
+
   return (
-    <div style={styles.card}>
+    <div style={styles.card} onClick={handleClick}>
       {property.isFeatured && (
         <span style={styles.badge}>⭐ Featured</span>
       )}
@@ -126,6 +133,7 @@ const styles = {
     width: '100%',
     height: '200px',
     objectFit: 'cover',
+    transition: 'transform 0.3s',
   },
   content: {
     padding: '18px',
@@ -145,6 +153,9 @@ const styles = {
     marginBottom: '8px',
     fontWeight: '600',
     color: '#111827',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
   location: {
     color: '#6b7280',
@@ -197,5 +208,20 @@ const styles = {
     fontWeight: 'bold',
   },
 };
+
+// Add hover effect
+if (typeof window !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    .property-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
+    }
+    .property-card:hover img {
+      transform: scale(1.05);
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 export default PropertyCard;

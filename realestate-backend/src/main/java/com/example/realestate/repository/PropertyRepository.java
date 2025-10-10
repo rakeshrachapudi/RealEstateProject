@@ -17,18 +17,25 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
     // Find by city (backward compatibility)
     List<Property> findByCityIgnoreCase(String city);
 
+    // Find by property type (Apartment, Villa, etc.)
+    List<Property> findByTypeIgnoreCaseAndIsActiveTrue(String type);
+
+    // Find by area name
+    @Query("SELECT p FROM Property p LEFT JOIN p.area a WHERE LOWER(a.areaName) = LOWER(:areaName) AND p.isActive = true")
+    List<Property> findByAreaNameAndIsActiveTrue(@Param("areaName") String areaName);
+
     // Find featured properties
     List<Property> findByIsFeaturedTrueAndIsActiveTrueOrderByCreatedAtDesc();
 
-    // Find properties by area
+    // Find properties by area ID
     @Query("SELECT p FROM Property p WHERE p.area.areaId = :areaId AND p.isActive = true")
     List<Property> findByAreaId(@Param("areaId") Integer areaId);
 
-    // Find properties by property type
+    // Find properties by property type ID
     @Query("SELECT p FROM Property p WHERE p.propertyType.propertyTypeId = :typeId AND p.isActive = true")
     List<Property> findByPropertyTypeId(@Param("typeId") Integer typeId);
 
-    // Find properties by listing type
+    // Find properties by listing type (sale/rent)
     List<Property> findByListingTypeAndIsActiveTrue(String listingType);
 
     // Complex search query with multiple filters
@@ -37,10 +44,10 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
             "LEFT JOIN p.area a " +
             "LEFT JOIN a.city c " +
             "WHERE p.isActive = true " +
-            "AND (:propertyType IS NULL OR pt.typeName = :propertyType) " +
+            "AND (:propertyType IS NULL OR pt.typeName = :propertyType OR p.type = :propertyType) " +
             "AND (:minPrice IS NULL OR p.price >= :minPrice) " +
             "AND (:maxPrice IS NULL OR p.price <= :maxPrice) " +
-            "AND (:city IS NULL OR c.cityName = :city) " +
+            "AND (:city IS NULL OR c.cityName = :city OR p.city = :city) " +
             "AND (:area IS NULL OR a.areaName = :area) " +
             "AND (:listingType IS NULL OR p.listingType = :listingType) " +
             "AND (:minBedrooms IS NULL OR p.bedrooms >= :minBedrooms) " +
@@ -65,6 +72,13 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
     List<Property> findByStatusAndIsActiveTrue(String status);
 
     // Count properties by city
-    @Query("SELECT COUNT(p) FROM Property p LEFT JOIN p.area a LEFT JOIN a.city c WHERE c.cityName = :city AND p.isActive = true")
+    @Query("SELECT COUNT(p) FROM Property p LEFT JOIN p.area a LEFT JOIN a.city c WHERE (c.cityName = :city OR p.city = :city) AND p.isActive = true")
     Long countByCity(@Param("city") String city);
+
+    // Find properties by type and listing type
+    @Query("SELECT p FROM Property p WHERE LOWER(p.type) = LOWER(:type) AND LOWER(p.listingType) = LOWER(:listingType) AND p.isActive = true")
+    List<Property> findByTypeAndListingType(@Param("type") String type, @Param("listingType") String listingType);
+
+    // Find all active properties
+    List<Property> findByIsActiveTrueOrderByCreatedAtDesc();
 }

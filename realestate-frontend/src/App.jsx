@@ -1,25 +1,155 @@
 import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from './AuthContext.jsx';
 import LoginModal from './LoginModal.jsx';
 import PostPropertyModal from './PostPropertyModal.jsx';
 import SignupModal from './SignupModal.jsx';
 import PropertySearch from './components/PropertySearch';
 import PropertyList from './components/PropertyList';
+import PropertyDetails from './components/PropertyDetails';
 import { getFeaturedProperties } from './services/api';
 
-function App() {
-  const [propsList, setPropsList] = useState([]);
-  const [query, setQuery] = useState('');
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isPostPropertyModalOpen, setIsPostPropertyModalOpen] = useState(false);
-  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+// Header Component with Dropdowns
+function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
+  const { isAuthenticated, user, logout } = useAuth();
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const navigate = useNavigate();
 
-  // NEW: Search state
+  const dropdownData = {
+    buy: {
+      popularChoices: ['Owner Properties', 'Verified Properties', 'Ready to Move'],
+      propertyTypes: ['Apartments', 'Independent Houses', 'Villas', 'Plots'],
+      budget: ['Under ₹50 Lac', '₹50 Lac - ₹1 Cr', '₹1 Cr - ₹2 Cr', 'Above ₹2 Cr']
+    },
+    rent: {
+      popularChoices: ['Owner Properties', 'Verified Properties', 'Furnished Homes', 'Bachelor Friendly'],
+      propertyTypes: ['Apartments', 'Independent Houses', 'Villas', 'PG', 'Flatmates'],
+      budget: ['Under ₹10,000', '₹10,000 - ₹20,000', '₹20,000 - ₹40,000', 'Above ₹40,000']
+    }
+  };
+
+  const handlePropertyTypeClick = (type, listingType) => {
+    navigate(`/properties?type=${encodeURIComponent(type)}&listingType=${listingType}`);
+    setActiveDropdown(null);
+  };
+
+  return (
+    <header style={styles.header}>
+      <div style={styles.headerContent}>
+        <div onClick={() => navigate('/')} style={styles.logo}>Visionary Homes</div>
+
+        <nav style={styles.nav}>
+          <div
+            style={styles.navItem}
+            onMouseEnter={() => setActiveDropdown('buy')}
+            onMouseLeave={() => setActiveDropdown(null)}
+          >
+            <span>Buy ▾</span>
+            {activeDropdown === 'buy' && (
+              <div style={styles.dropdown}>
+                <div style={styles.dropdownSection}>
+                  <h4>Popular Choices</h4>
+                  {dropdownData.buy.popularChoices.map(item => (
+                    <div key={item} style={styles.dropdownItem}>{item}</div>
+                  ))}
+                </div>
+                <div style={styles.dropdownSection}>
+                  <h4>Property Types</h4>
+                  {dropdownData.buy.propertyTypes.map(item => (
+                    <div
+                      key={item}
+                      style={styles.dropdownItem}
+                      onClick={() => handlePropertyTypeClick(item, 'sale')}
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
+                <div style={styles.dropdownSection}>
+                  <h4>Budget</h4>
+                  {dropdownData.buy.budget.map(item => (
+                    <div key={item} style={styles.dropdownItem}>{item}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div
+            style={styles.navItem}
+            onMouseEnter={() => setActiveDropdown('rent')}
+            onMouseLeave={() => setActiveDropdown(null)}
+          >
+            <span>Rent ▾</span>
+            {activeDropdown === 'rent' && (
+              <div style={styles.dropdown}>
+                <div style={styles.dropdownSection}>
+                  <h4>Popular Choices</h4>
+                  {dropdownData.rent.popularChoices.map(item => (
+                    <div key={item} style={styles.dropdownItem}>{item}</div>
+                  ))}
+                </div>
+                <div style={styles.dropdownSection}>
+                  <h4>Property Types</h4>
+                  {dropdownData.rent.propertyTypes.map(item => (
+                    <div
+                      key={item}
+                      style={styles.dropdownItem}
+                      onClick={() => handlePropertyTypeClick(item, 'rent')}
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
+                <div style={styles.dropdownSection}>
+                  <h4>Budget</h4>
+                  {dropdownData.rent.budget.map(item => (
+                    <div key={item} style={styles.dropdownItem}>{item}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <span style={styles.navItem}>Sell</span>
+
+          {isAuthenticated ? (
+            <>
+              <button onClick={onPostPropertyClick} style={styles.postBtn}>
+                Post Property
+              </button>
+              <span style={styles.userName}>Welcome, {user?.firstName || 'User'}</span>
+              <button onClick={logout} style={styles.logoutBtn}>Logout</button>
+            </>
+          ) : (
+            <div style={styles.authButtons}>
+              <button onClick={onLoginClick} style={styles.loginBtn}>Login</button>
+              <button onClick={onSignupClick} style={styles.signupBtn}>Sign Up</button>
+            </div>
+          )}
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+// Home Page Component
+function HomePage() {
+  const [propsList, setPropsList] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const { isAuthenticated, user, logout } = useAuth();
+  // Hyderabad popular areas
+  const popularAreas = [
+    'Gachibowli', 'HITEC City', 'Madhapur', 'Kondapur',
+    'Kukatpally', 'Miyapur', 'Jubilee Hills'
+  ];
+
+  useEffect(() => {
+    fetchProperties();
+  }, []);
 
   const fetchProperties = async () => {
     try {
@@ -29,41 +159,10 @@ function App() {
         setShowSearchResults(false);
       }
     } catch (error) {
-      console.error('Error loading featured properties:', error);
-      // Fallback to old API
-      fetch('http://localhost:8080/api/properties')
-        .then(response => response.json())
-        .then(data => setPropsList(data))
-        .catch(err => console.error('Error with fallback:', err));
+      console.error('Error loading properties:', error);
     }
   };
 
-  useEffect(() => {
-    fetchProperties();
-  }, []);
-
-  const searchByCity = (city) => {
-    fetch(`http://localhost:8080/api/properties/city/${encodeURIComponent(city)}`)
-      .then(response => response.json())
-      .then(data => setPropsList(data))
-      .catch(error => console.error(`Error fetching properties for ${city}:`, error));
-  };
-
-  const onSearch = () => {
-    if (!query.trim()) return;
-    searchByCity(query);
-  };
-
-  const handleSearchSubmit = (event) => {
-    event.preventDefault();
-    onSearch();
-  };
-
-  const handlePropertyPosted = (newProperty) => {
-    fetchProperties();
-  };
-
-  // NEW: Search handlers
   const handleSearchResults = (results) => {
     setSearchResults(results);
     setShowSearchResults(true);
@@ -80,92 +179,289 @@ function App() {
     fetchProperties();
   };
 
+  const handleAreaClick = (area) => {
+    navigate(`/properties?area=${encodeURIComponent(area)}`);
+  };
+
   return (
-    <div style={{ fontFamily: 'Inter, system-ui, Arial', padding: 24, maxWidth: 1100, margin: '0 auto', color: '#111827' }}>
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div style={{ fontSize: 34, color: '#3b82f6', fontWeight: 700 }}>Visionary Homes</div>
-        <nav style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-          <span>Buy</span>
-          <span>Rent</span>
-          <span>Sell</span>
-          {isAuthenticated ? (
-            <>
-              <button
-                onClick={() => setIsPostPropertyModalOpen(true)}
-                style={{ background: '#28a745', color: 'white', padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 500 }}
-              >
-                Post Property
-              </button>
-              <span style={{ fontWeight: 600 }}>Welcome, {user?.firstName || 'User'}</span>
-              <button onClick={logout} style={{ background: '#ef4444', color: 'white', padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer' }}>
-                Logout
-              </button>
-            </>
-          ) : (
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => setIsLoginModalOpen(true)} style={{ background: '#3b82f6', color: 'white', padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer' }}>
-                Login
-              </button>
-              <button onClick={() => setIsSignupModalOpen(true)} style={{ background: '#f59e0b', color: 'white', padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 500 }}>
-                Sign Up
-              </button>
-            </div>
-          )}
-        </nav>
-      </header>
+    <div style={styles.container}>
+      <h1 style={styles.mainTitle}>Find your dream home</h1>
 
-      <h1 style={{ fontSize: 64, margin: '10px 0', fontWeight: 700 }}>Find your dream home</h1>
-
-      <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 24 }}>
-        <input
-          placeholder="Search by city..."
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          style={{ flex: 1, padding: 18, borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 18 }}
-        />
-        <button type="submit" style={{ background: '#3b82f6', color: 'white', padding: '18px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 18 }}>Search</button>
-      </form>
-
-      {/* NEW: Property Search Component */}
       <PropertySearch
         onSearchResults={handleSearchResults}
         onSearchStart={handleSearchStart}
         onReset={handleResetSearch}
       />
 
-      <section style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 28, marginBottom: 16 }}>Popular locations</h2>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          {['Bangalore', 'Mumbai', 'Pune', 'Delhi', 'Hyderabad', 'Goa', 'Chennai'].map(location => (
-            <button key={location} onClick={() => searchByCity(location)} style={{ padding: '14px 22px', borderRadius: 12, background: '#f3f4f6', border: 'none', cursor: 'pointer', fontSize: 16 }}>{location}</button>
+      <section style={styles.section}>
+        <h2 style={styles.sectionTitle}>Popular Areas</h2>
+        <div style={styles.areasGrid}>
+          {popularAreas.map(area => (
+            <button
+              key={area}
+              onClick={() => handleAreaClick(area)}
+              style={styles.areaButton}
+            >
+              {area}
+            </button>
           ))}
         </div>
       </section>
 
-      {/* MODIFIED: Property List Section */}
       <section>
-        <h2 style={{ fontSize: 28, marginBottom: 16 }}>
+        <h2 style={styles.sectionTitle}>
           {showSearchResults
             ? `Search Results (${searchResults.length} found)`
             : 'Featured properties'}
         </h2>
-
         <PropertyList
           properties={showSearchResults ? searchResults : propsList}
           loading={searchLoading}
         />
       </section>
-
-      {isLoginModalOpen && <LoginModal onClose={() => setIsLoginModalOpen(false)} />}
-      {isPostPropertyModalOpen && (
-        <PostPropertyModal
-          onClose={() => setIsPostPropertyModalOpen(false)}
-          onPropertyPosted={handlePropertyPosted}
-        />
-      )}
-      {isSignupModalOpen && <SignupModal onClose={() => setIsSignupModalOpen(false)} />}
     </div>
   );
 }
+
+// Properties List Page (filtered)
+function PropertiesPage() {
+  const [properties, setProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const type = params.get('type');
+    const listingType = params.get('listingType');
+    const area = params.get('area');
+
+    fetchFilteredProperties(type, listingType, area);
+  }, [window.location.search]);
+
+  const fetchFilteredProperties = async (type, listingType, area) => {
+    setLoading(true);
+    try {
+      const searchParams = {};
+      if (type) searchParams.propertyType = type;
+      if (listingType) searchParams.listingType = listingType;
+      if (area) searchParams.area = area;
+
+      const response = await fetch('http://localhost:8080/api/properties/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(searchParams)
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setProperties(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={styles.container}>
+      <button onClick={() => navigate('/')} style={styles.backButton}>
+        ← Back to Home
+      </button>
+      <h2 style={styles.sectionTitle}>Properties</h2>
+      <PropertyList properties={properties} loading={loading} />
+    </div>
+  );
+}
+
+// Main App Component
+function App() {
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isPostPropertyModalOpen, setIsPostPropertyModalOpen] = useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+
+  const handlePropertyPosted = () => {
+    // Refresh properties after posting
+    window.location.reload();
+  };
+
+  return (
+    <Router>
+      <div style={styles.app}>
+        <Header
+          onLoginClick={() => setIsLoginModalOpen(true)}
+          onSignupClick={() => setIsSignupModalOpen(true)}
+          onPostPropertyClick={() => setIsPostPropertyModalOpen(true)}
+        />
+
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/properties" element={<PropertiesPage />} />
+          <Route path="/property/:id" element={<PropertyDetails />} />
+        </Routes>
+
+        {isLoginModalOpen && <LoginModal onClose={() => setIsLoginModalOpen(false)} />}
+        {isPostPropertyModalOpen && (
+          <PostPropertyModal
+            onClose={() => setIsPostPropertyModalOpen(false)}
+            onPropertyPosted={handlePropertyPosted}
+          />
+        )}
+        {isSignupModalOpen && <SignupModal onClose={() => setIsSignupModalOpen(false)} />}
+      </div>
+    </Router>
+  );
+}
+
+const styles = {
+  app: {
+    fontFamily: 'Inter, system-ui, Arial',
+    minHeight: '100vh',
+    backgroundColor: '#f9fafb',
+  },
+  header: {
+    backgroundColor: 'white',
+    borderBottom: '1px solid #e5e7eb',
+    position: 'sticky',
+    top: 0,
+    zIndex: 100,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+  },
+  headerContent: {
+    maxWidth: 1200,
+    margin: '0 auto',
+    padding: '16px 24px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  logo: {
+    fontSize: 28,
+    color: '#3b82f6',
+    fontWeight: 700,
+    cursor: 'pointer',
+  },
+  nav: {
+    display: 'flex',
+    gap: 24,
+    alignItems: 'center',
+  },
+  navItem: {
+    position: 'relative',
+    cursor: 'pointer',
+    fontSize: 16,
+    fontWeight: 500,
+    padding: '8px 0',
+  },
+  dropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    backgroundColor: 'white',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    borderRadius: 8,
+    padding: 20,
+    marginTop: 8,
+    minWidth: 600,
+    display: 'flex',
+    gap: 30,
+    zIndex: 1000,
+  },
+  dropdownSection: {
+    flex: 1,
+  },
+  dropdownItem: {
+    padding: '8px 12px',
+    cursor: 'pointer',
+    borderRadius: 4,
+    fontSize: 14,
+    transition: 'background 0.2s',
+  },
+  postBtn: {
+    background: '#28a745',
+    color: 'white',
+    padding: '8px 16px',
+    borderRadius: 8,
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 500,
+  },
+  userName: {
+    fontWeight: 600,
+    fontSize: 14,
+  },
+  logoutBtn: {
+    background: '#ef4444',
+    color: 'white',
+    padding: '8px 16px',
+    borderRadius: 8,
+    border: 'none',
+    cursor: 'pointer',
+  },
+  authButtons: {
+    display: 'flex',
+    gap: 12,
+  },
+  loginBtn: {
+    background: '#3b82f6',
+    color: 'white',
+    padding: '8px 16px',
+    borderRadius: 8,
+    border: 'none',
+    cursor: 'pointer',
+  },
+  signupBtn: {
+    background: '#f59e0b',
+    color: 'white',
+    padding: '8px 16px',
+    borderRadius: 8,
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 500,
+  },
+  container: {
+    padding: 24,
+    maxWidth: 1200,
+    margin: '0 auto',
+  },
+  mainTitle: {
+    fontSize: 56,
+    margin: '20px 0 30px',
+    fontWeight: 700,
+  },
+  section: {
+    marginBottom: 40,
+  },
+  sectionTitle: {
+    fontSize: 28,
+    marginBottom: 20,
+    fontWeight: 600,
+  },
+  areasGrid: {
+    display: 'flex',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  areaButton: {
+    padding: '14px 24px',
+    borderRadius: 12,
+    background: '#f3f4f6',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: 16,
+    fontWeight: 500,
+    transition: 'all 0.3s',
+  },
+  backButton: {
+    padding: '10px 20px',
+    borderRadius: 8,
+    background: '#6b7280',
+    color: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    marginBottom: 20,
+    fontSize: 14,
+  },
+};
 
 export default App;
