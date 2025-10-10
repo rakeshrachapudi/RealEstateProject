@@ -38,6 +38,30 @@ public class PropertyService {
     }
 
     /**
+     * Get properties by property type (e.g., Apartment, Villa, House)
+     */
+    public List<Property> findByType(String type) {
+        logger.info("Fetching properties of type: {}", type);
+        return repo.findByTypeIgnoreCaseAndIsActiveTrue(type);
+    }
+
+    /**
+     * Get properties by listing type (sale/rent)
+     */
+    public List<Property> findByListingType(String listingType) {
+        logger.info("Fetching properties with listing type: {}", listingType);
+        return repo.findByListingTypeAndIsActiveTrue(listingType);
+    }
+
+    /**
+     * Get properties by area name
+     */
+    public List<Property> findByAreaName(String areaName) {
+        logger.info("Fetching properties in area: {}", areaName);
+        return repo.findByAreaNameAndIsActiveTrue(areaName);
+    }
+
+    /**
      * Save property
      */
     public Property save(Property p) {
