@@ -23,7 +23,10 @@ const PropertyCard = ({ property }) => {
   };
 
   const handleClick = () => {
-    navigate(`/property/${property.propertyId || property.id}`);
+    // Use id field from Property entity (primary key in database)
+    const propertyId = property.id || property.propertyId;
+    console.log('Navigating to property ID:', propertyId, 'Full property:', property);
+    navigate(`/property/${propertyId}`);
   };
 
   return (
