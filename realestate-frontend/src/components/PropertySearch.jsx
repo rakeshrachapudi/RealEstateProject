@@ -94,13 +94,19 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>🔍 Search Properties in Hyderabad</h2>
+      <div style={styles.header}>
+        <h2 style={styles.title}>🔍 Find Your Perfect Property</h2>
+        <p style={styles.subtitle}>Search through thousands of properties in Hyderabad</p>
+      </div>
 
-      <form onSubmit={handleSearch}>
+      <form onSubmit={handleSearch} style={styles.form}>
         <div style={styles.grid}>
           {/* Property Type */}
           <div style={styles.formGroup}>
-            <label style={styles.label}>Property Type</label>
+            <label style={styles.label}>
+              <span style={styles.labelIcon}>🏠</span>
+              Property Type
+            </label>
             <select
               name="propertyType"
               value={searchParams.propertyType}
@@ -118,22 +124,28 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
 
           {/* Listing Type */}
           <div style={styles.formGroup}>
-            <label style={styles.label}>Listing Type</label>
+            <label style={styles.label}>
+              <span style={styles.labelIcon}>📋</span>
+              Listing Type
+            </label>
             <select
               name="listingType"
               value={searchParams.listingType}
               onChange={handleInputChange}
               style={styles.select}
             >
-              <option value="">All</option>
-              <option value="sale">For Sale</option>
-              <option value="rent">For Rent</option>
+              <option value="">All Listings</option>
+              <option value="sale">🏠 For Sale</option>
+              <option value="rent">🔑 For Rent</option>
             </select>
           </div>
 
           {/* Area */}
           <div style={styles.formGroup}>
-            <label style={styles.label}>Area</label>
+            <label style={styles.label}>
+              <span style={styles.labelIcon}>📍</span>
+              Area
+            </label>
             <select
               name="area"
               value={searchParams.area}
@@ -151,11 +163,14 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
 
           {/* Min Price */}
           <div style={styles.formGroup}>
-            <label style={styles.label}>Min Price (₹)</label>
+            <label style={styles.label}>
+              <span style={styles.labelIcon}>💰</span>
+              Min Price (₹)
+            </label>
             <input
               type="number"
               name="minPrice"
-              placeholder="Min Price"
+              placeholder="Minimum Price"
               value={searchParams.minPrice}
               onChange={handleInputChange}
               style={styles.input}
@@ -165,11 +180,14 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
 
           {/* Max Price */}
           <div style={styles.formGroup}>
-            <label style={styles.label}>Max Price (₹)</label>
+            <label style={styles.label}>
+              <span style={styles.labelIcon}>💰</span>
+              Max Price (₹)
+            </label>
             <input
               type="number"
               name="maxPrice"
-              placeholder="Max Price"
+              placeholder="Maximum Price"
               value={searchParams.maxPrice}
               onChange={handleInputChange}
               style={styles.input}
@@ -179,7 +197,10 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
 
           {/* Min Bedrooms */}
           <div style={styles.formGroup}>
-            <label style={styles.label}>Min Bedrooms</label>
+            <label style={styles.label}>
+              <span style={styles.labelIcon}>🛏️</span>
+              Min Bedrooms
+            </label>
             <input
               type="number"
               name="minBedrooms"
@@ -194,7 +215,10 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
 
           {/* Max Bedrooms */}
           <div style={styles.formGroup}>
-            <label style={styles.label}>Max Bedrooms</label>
+            <label style={styles.label}>
+              <span style={styles.labelIcon}>🛏️</span>
+              Max Bedrooms
+            </label>
             <input
               type="number"
               name="maxBedrooms"
@@ -214,13 +238,17 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
             onClick={handleReset}
             style={styles.resetButton}
           >
-            Reset
+            <span style={styles.buttonIcon}>🔄</span>
+            Reset Filters
           </button>
           <button
             type="submit"
             style={styles.searchButton}
             disabled={loading}
           >
+            <span style={styles.buttonIcon}>
+              {loading ? '⏳' : '🔍'}
+            </span>
             {loading ? 'Searching...' : 'Search Properties'}
           </button>
         </div>
@@ -229,79 +257,146 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
   );
 };
 
-// Styles
+// Enhanced Styles
 const styles = {
   container: {
-    background: 'white',
-    padding: '2rem',
-    borderRadius: '12px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+    padding: '2.5rem',
+    borderRadius: '24px',
+    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+    marginBottom: '3rem',
+    border: '1px solid rgba(255,255,255,0.2)',
+    backdropFilter: 'blur(10px)',
+  },
+  header: {
+    textAlign: 'center',
     marginBottom: '2rem',
   },
   title: {
-    fontSize: '24px',
-    marginBottom: '1.5rem',
-    color: '#3b82f6',
-    fontWeight: '700',
+    fontSize: '2rem',
+    marginBottom: '0.5rem',
+    color: '#1e293b',
+    fontWeight: '800',
+    background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+  },
+  subtitle: {
+    fontSize: '1.1rem',
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  form: {
+    width: '100%',
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '1rem',
-    marginBottom: '1.5rem',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gap: '1.5rem',
+    marginBottom: '2rem',
   },
   formGroup: {
     display: 'flex',
     flexDirection: 'column',
   },
   label: {
-    display: 'block',
-    marginBottom: '5px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '8px',
     fontSize: '14px',
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#374151',
   },
+  labelIcon: {
+    fontSize: '16px',
+  },
   input: {
-    padding: '10px',
-    borderRadius: '6px',
-    border: '1px solid #e5e7eb',
-    fontSize: '14px',
-    transition: 'border-color 0.3s',
+    padding: '14px 16px',
+    borderRadius: '12px',
+    border: '2px solid #e2e8f0',
+    fontSize: '15px',
+    transition: 'all 0.3s ease',
+    background: 'white',
+    fontWeight: '500',
+    ':focus': {
+      outline: 'none',
+      borderColor: '#4f46e5',
+      boxShadow: '0 0 0 3px rgba(79, 70, 229, 0.1)',
+    },
   },
   select: {
-    padding: '10px',
-    borderRadius: '6px',
-    border: '1px solid #e5e7eb',
-    fontSize: '14px',
+    padding: '14px 16px',
+    borderRadius: '12px',
+    border: '2px solid #e2e8f0',
+    fontSize: '15px',
     backgroundColor: 'white',
     cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    fontWeight: '500',
+    appearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 16px center',
+    backgroundSize: '16px',
+    ':focus': {
+      outline: 'none',
+      borderColor: '#4f46e5',
+      boxShadow: '0 0 0 3px rgba(79, 70, 229, 0.1)',
+    },
   },
   actions: {
     display: 'flex',
-    gap: '12px',
-    justifyContent: 'flex-end',
+    gap: '16px',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
   },
   resetButton: {
-    padding: '10px 24px',
-    borderRadius: '6px',
+    padding: '14px 28px',
+    borderRadius: '12px',
     border: 'none',
-    background: '#6b7280',
+    background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
     color: 'white',
-    fontSize: '14px',
-    fontWeight: '600',
+    fontSize: '15px',
+    fontWeight: '700',
     cursor: 'pointer',
-    transition: 'background 0.3s',
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    boxShadow: '0 4px 12px rgba(107, 114, 128, 0.3)',
+    ':hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: '0 6px 20px rgba(107, 114, 128, 0.4)',
+    },
   },
   searchButton: {
-    padding: '10px 24px',
-    borderRadius: '6px',
+    padding: '14px 32px',
+    borderRadius: '12px',
     border: 'none',
-    background: '#3b82f6',
+    background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
     color: 'white',
-    fontSize: '14px',
-    fontWeight: '600',
+    fontSize: '15px',
+    fontWeight: '700',
     cursor: 'pointer',
-    transition: 'background 0.3s',
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
+    ':hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: '0 6px 20px rgba(79, 70, 229, 0.4)',
+    },
+    ':disabled': {
+      opacity: 0.7,
+      transform: 'none',
+      cursor: 'not-allowed',
+    },
+  },
+  buttonIcon: {
+    fontSize: '16px',
   },
 };
 
