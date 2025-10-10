@@ -59,7 +59,7 @@ const PropertyDetails = () => {
 
   const images = property.imageUrl ? [property.imageUrl] : [];
   const amenitiesList = property.amenities ? property.amenities.split(',').map(a => a.trim()) : [];
-  const propertyType = property.propertyType || property.type || 'N/A';
+  const propertyType = property.propertyType?.typeName || property.type || 'N/A';
   const ownerName = property.user ? `${property.user.firstName} ${property.user.lastName}` : 'N/A';
   const ownerMobile = property.user ? property.user.mobileNumber : 'N/A';
 
