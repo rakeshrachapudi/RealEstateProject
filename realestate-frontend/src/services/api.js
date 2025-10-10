@@ -6,7 +6,7 @@
 const API_BASE_URL = 'http://localhost:8080/api';
 
 // ============================================
-// NEW: SEARCH API
+// CORE API CALLS
 // ============================================
 
 export const searchProperties = async (searchParams) => {
@@ -31,13 +31,9 @@ export const searchProperties = async (searchParams) => {
   }
 };
 
-// ============================================
-// NEW: GET FEATURED PROPERTIES
-// ============================================
-
-export const getFeaturedProperties = async () => {
+export const getPropertyDetails = async (id) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/properties/featured`);
+    const response = await fetch(`${API_BASE_URL}/properties/${id}`);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -46,14 +42,28 @@ export const getFeaturedProperties = async () => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error fetching featured properties:', error);
+    console.error('Error fetching property details:', error);
     throw error;
   }
 };
 
 // ============================================
-// NEW: GET PROPERTY TYPES
+// UTILITY/LOOKUP API CALLS
 // ============================================
+
+export const getFeaturedProperties = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/properties/featured`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching featured properties:', error);
+    throw error;
+  }
+};
 
 export const getPropertyTypes = async () => {
   try {
@@ -71,10 +81,6 @@ export const getPropertyTypes = async () => {
   }
 };
 
-// ============================================
-// NEW: GET AREAS BY CITY
-// ============================================
-
 export const getAreas = async (city = 'Hyderabad') => {
   try {
     const response = await fetch(`${API_BASE_URL}/areas?city=${encodeURIComponent(city)}`);
@@ -89,37 +95,4 @@ export const getAreas = async (city = 'Hyderabad') => {
     console.error('Error fetching areas:', error);
     throw error;
   }
-};
-
-// ============================================
-// EXISTING: BACKWARD COMPATIBILITY
-// ============================================
-
-export const getAllProperties = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/properties`);
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching properties:', error);
-    throw error;
-  }
-};
-
-export const getPropertiesByCity = async (city) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/properties/city/${encodeURIComponent(city)}`);
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching properties by city:', error);
-    throw error;
-  }
-};
-
-export default {
-  searchProperties,
-  getFeaturedProperties,
-  getPropertyTypes,
-  getAreas,
-  getAllProperties,
-  getPropertiesByCity
 };
