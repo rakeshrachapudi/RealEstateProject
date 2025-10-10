@@ -54,11 +54,28 @@ public class PropertyService {
     }
 
     /**
+     * Get properties by both type and listing type
+     * Example: Apartments for Sale, Villas for Rent
+     */
+    public List<Property> findByTypeAndListingType(String type, String listingType) {
+        logger.info("Fetching properties of type: {} and listing type: {}", type, listingType);
+        return repo.findByTypeAndListingType(type, listingType);
+    }
+
+    /**
      * Get properties by area name
      */
     public List<Property> findByAreaName(String areaName) {
         logger.info("Fetching properties in area: {}", areaName);
-        return repo.findByAreaNameAndIsActiveTrue(areaName);
+        List<Property> properties = repo.findByAreaNameAndIsActiveTrue(areaName);
+
+        // If no properties found in area table, try searching in the city field
+        if (properties.isEmpty()) {
+            logger.info("No properties found in area table, searching in city field");
+            properties = repo.findByCityIgnoreCase(areaName);
+        }
+
+        return properties;
     }
 
     /**
@@ -98,17 +115,39 @@ public class PropertyService {
                 .orElseThrow(() -> new RuntimeException("Property not found with id: " + id));
 
         // Update fields
-        property.setTitle(propertyDetails.getTitle());
-        property.setDescription(propertyDetails.getDescription());
-        property.setPrice(propertyDetails.getPrice());
-        property.setAreaSqft(propertyDetails.getAreaSqft());
-        property.setBedrooms(propertyDetails.getBedrooms());
-        property.setBathrooms(propertyDetails.getBathrooms());
-        property.setAddress(propertyDetails.getAddress());
-        property.setAmenities(propertyDetails.getAmenities());
-        property.setStatus(propertyDetails.getStatus());
-        property.setListingType(propertyDetails.getListingType());
-        property.setIsFeatured(propertyDetails.getIsFeatured());
+        if (propertyDetails.getTitle() != null) {
+            property.setTitle(propertyDetails.getTitle());
+        }
+        if (propertyDetails.getDescription() != null) {
+            property.setDescription(propertyDetails.getDescription());
+        }
+        if (propertyDetails.getPrice() != null) {
+            property.setPrice(propertyDetails.getPrice());
+        }
+        if (propertyDetails.getAreaSqft() != null) {
+            property.setAreaSqft(propertyDetails.getAreaSqft());
+        }
+        if (propertyDetails.getBedrooms() != null) {
+            property.setBedrooms(propertyDetails.getBedrooms());
+        }
+        if (propertyDetails.getBathrooms() != null) {
+            property.setBathrooms(propertyDetails.getBathrooms());
+        }
+        if (propertyDetails.getAddress() != null) {
+            property.setAddress(propertyDetails.getAddress());
+        }
+        if (propertyDetails.getAmenities() != null) {
+            property.setAmenities(propertyDetails.getAmenities());
+        }
+        if (propertyDetails.getStatus() != null) {
+            property.setStatus(propertyDetails.getStatus());
+        }
+        if (propertyDetails.getListingType() != null) {
+            property.setListingType(propertyDetails.getListingType());
+        }
+        if (propertyDetails.getIsFeatured() != null) {
+            property.setIsFeatured(propertyDetails.getIsFeatured());
+        }
 
         if (propertyDetails.getPropertyType() != null) {
             property.setPropertyType(propertyDetails.getPropertyType());

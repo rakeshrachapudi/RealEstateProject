@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext.jsx';
 import LoginModal from './LoginModal.jsx';
 import PostPropertyModal from './PostPropertyModal.jsx';
@@ -7,9 +7,10 @@ import SignupModal from './SignupModal.jsx';
 import PropertySearch from './components/PropertySearch';
 import PropertyList from './components/PropertyList';
 import PropertyDetails from './components/PropertyDetails';
+import PropertyTypePage from './components/PropertyTypePage';
 import { getFeaturedProperties } from './services/api';
 
-// Header Component with Dropdowns
+// Header Component with Working Dropdowns
 function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
   const { isAuthenticated, user, logout } = useAuth();
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -29,8 +30,8 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
   };
 
   const handlePropertyTypeClick = (type, listingType) => {
-    navigate(`/properties?type=${encodeURIComponent(type)}&listingType=${listingType}`);
     setActiveDropdown(null);
+    navigate(`/properties/${listingType}/${type.toLowerCase().replace(/\s+/g, '-')}`);
   };
 
   return (
@@ -48,13 +49,13 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
             {activeDropdown === 'buy' && (
               <div style={styles.dropdown}>
                 <div style={styles.dropdownSection}>
-                  <h4>Popular Choices</h4>
+                  <h4 style={styles.dropdownTitle}>Popular Choices</h4>
                   {dropdownData.buy.popularChoices.map(item => (
                     <div key={item} style={styles.dropdownItem}>{item}</div>
                   ))}
                 </div>
                 <div style={styles.dropdownSection}>
-                  <h4>Property Types</h4>
+                  <h4 style={styles.dropdownTitle}>Property Types</h4>
                   {dropdownData.buy.propertyTypes.map(item => (
                     <div
                       key={item}
@@ -66,7 +67,7 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
                   ))}
                 </div>
                 <div style={styles.dropdownSection}>
-                  <h4>Budget</h4>
+                  <h4 style={styles.dropdownTitle}>Budget</h4>
                   {dropdownData.buy.budget.map(item => (
                     <div key={item} style={styles.dropdownItem}>{item}</div>
                   ))}
@@ -84,13 +85,13 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
             {activeDropdown === 'rent' && (
               <div style={styles.dropdown}>
                 <div style={styles.dropdownSection}>
-                  <h4>Popular Choices</h4>
+                  <h4 style={styles.dropdownTitle}>Popular Choices</h4>
                   {dropdownData.rent.popularChoices.map(item => (
                     <div key={item} style={styles.dropdownItem}>{item}</div>
                   ))}
                 </div>
                 <div style={styles.dropdownSection}>
-                  <h4>Property Types</h4>
+                  <h4 style={styles.dropdownTitle}>Property Types</h4>
                   {dropdownData.rent.propertyTypes.map(item => (
                     <div
                       key={item}
@@ -102,7 +103,7 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
                   ))}
                 </div>
                 <div style={styles.dropdownSection}>
-                  <h4>Budget</h4>
+                  <h4 style={styles.dropdownTitle}>Budget</h4>
                   {dropdownData.rent.budget.map(item => (
                     <div key={item} style={styles.dropdownItem}>{item}</div>
                   ))}
@@ -141,7 +142,6 @@ function HomePage() {
   const [searchLoading, setSearchLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Hyderabad popular areas
   const popularAreas = [
     'Gachibowli', 'HITEC City', 'Madhapur', 'Kondapur',
     'Kukatpally', 'Miyapur', 'Jubilee Hills'
@@ -180,7 +180,7 @@ function HomePage() {
   };
 
   const handleAreaClick = (area) => {
-    navigate(`/properties?area=${encodeURIComponent(area)}`);
+    navigate(`/area/${encodeURIComponent(area)}`);
   };
 
   return (
@@ -223,57 +223,6 @@ function HomePage() {
   );
 }
 
-// Properties List Page (filtered)
-function PropertiesPage() {
-  const [properties, setProperties] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const type = params.get('type');
-    const listingType = params.get('listingType');
-    const area = params.get('area');
-
-    fetchFilteredProperties(type, listingType, area);
-  }, [window.location.search]);
-
-  const fetchFilteredProperties = async (type, listingType, area) => {
-    setLoading(true);
-    try {
-      const searchParams = {};
-      if (type) searchParams.propertyType = type;
-      if (listingType) searchParams.listingType = listingType;
-      if (area) searchParams.area = area;
-
-      const response = await fetch('http://localhost:8080/api/properties/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(searchParams)
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setProperties(data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching properties:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={styles.container}>
-      <button onClick={() => navigate('/')} style={styles.backButton}>
-        ← Back to Home
-      </button>
-      <h2 style={styles.sectionTitle}>Properties</h2>
-      <PropertyList properties={properties} loading={loading} />
-    </div>
-  );
-}
-
 // Main App Component
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -281,7 +230,6 @@ function App() {
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
 
   const handlePropertyPosted = () => {
-    // Refresh properties after posting
     window.location.reload();
   };
 
@@ -296,8 +244,9 @@ function App() {
 
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/properties" element={<PropertiesPage />} />
           <Route path="/property/:id" element={<PropertyDetails />} />
+          <Route path="/properties/:listingType/:propertyType" element={<PropertyTypePage />} />
+          <Route path="/area/:areaName" element={<PropertyTypePage />} />
         </Routes>
 
         {isLoginModalOpen && <LoginModal onClose={() => setIsLoginModalOpen(false)} />}
@@ -370,12 +319,20 @@ const styles = {
   dropdownSection: {
     flex: 1,
   },
+  dropdownTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: '#111827',
+    marginBottom: 12,
+    marginTop: 0,
+  },
   dropdownItem: {
     padding: '8px 12px',
     cursor: 'pointer',
     borderRadius: 4,
     fontSize: 14,
     transition: 'background 0.2s',
+    color: '#374151',
   },
   postBtn: {
     background: '#28a745',
@@ -452,16 +409,21 @@ const styles = {
     fontWeight: 500,
     transition: 'all 0.3s',
   },
-  backButton: {
-    padding: '10px 20px',
-    borderRadius: 8,
-    background: '#6b7280',
-    color: 'white',
-    border: 'none',
-    cursor: 'pointer',
-    marginBottom: 20,
-    fontSize: 14,
-  },
 };
+
+// Add CSS for hover effects
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    .dropdown-item:hover {
+      background-color: #f3f4f6 !important;
+    }
+    .area-button:hover {
+      background-color: #e5e7eb !important;
+      transform: translateY(-2px);
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 export default App;
