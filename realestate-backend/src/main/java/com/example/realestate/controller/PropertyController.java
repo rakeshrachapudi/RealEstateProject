@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/properties")
@@ -35,9 +36,15 @@ public class PropertyController {
     @GetMapping("/{id}")
     public ResponseEntity<Property> getPropertyById(@PathVariable Long id) {
         logger.info("Fetching property with ID: {}", id);
-        return service.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        Optional<Property> property = service.findById(id);
+
+        if (property.isPresent()) {
+            logger.info("Property found: {}", property.get().getTitle());
+            return ResponseEntity.ok(property.get());
+        } else {
+            logger.warn("Property not found with ID: {}", id);
+            return ResponseEntity.notFound().build();
+        }
     }
 
     /**

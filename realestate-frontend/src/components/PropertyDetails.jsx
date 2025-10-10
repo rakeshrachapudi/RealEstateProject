@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { getPropertyDetails } from '../services/api';
 
 const PropertyDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
 
   useEffect(() => {
@@ -14,12 +16,12 @@ const PropertyDetails = () => {
 
   const fetchPropertyDetails = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/properties/${id}`);
-      const data = await response.json();
+      const data = await getPropertyDetails(id);
       setProperty(data);
       setLoading(false);
-    } catch (error) {
-      console.error('Error fetching property details:', error);
+    } catch (err) {
+      console.error('Error fetching property details:', err);
+      setError('Failed to load property details.');
       setLoading(false);
     }
   };
@@ -44,10 +46,10 @@ const PropertyDetails = () => {
     );
   }
 
-  if (!property) {
+  if (error || !property) {
     return (
       <div style={styles.error}>
-        <h2>Property not found</h2>
+        <h2>{error || 'Property not found'}</h2>
         <button onClick={() => navigate('/')} style={styles.backButton}>
           Go back to home
         </button>
@@ -56,7 +58,10 @@ const PropertyDetails = () => {
   }
 
   const images = property.imageUrl ? [property.imageUrl] : [];
-  const amenitiesList = property.amenities ? property.amenities.split(',') : [];
+  const amenitiesList = property.amenities ? property.amenities.split(',').map(a => a.trim()) : [];
+  const propertyType = property.propertyType || property.type || 'N/A';
+  const ownerName = property.user ? `${property.user.firstName} ${property.user.lastName}` : 'N/A';
+  const ownerMobile = property.user ? property.user.mobileNumber : 'N/A';
 
   return (
     <div style={styles.container}>
@@ -109,7 +114,7 @@ const PropertyDetails = () => {
           <h1 style={styles.title}>{property.title}</h1>
 
           <div style={styles.typeTag}>
-            {property.listingType === 'sale' || property.listingType === 'SALE' ? 'FOR SALE' : 'FOR RENT'}
+            {property.listingType?.toLowerCase() === 'sale' ? 'FOR SALE' : 'FOR RENT'}
           </div>
 
           <div style={styles.location}>
@@ -149,7 +154,7 @@ const PropertyDetails = () => {
               <span style={styles.detailIcon}>🏠</span>
               <div>
                 <div style={styles.detailLabel}>Type</div>
-                <div style={styles.detailValue}>{property.propertyType || property.type}</div>
+                <div style={styles.detailValue}>{propertyType}</div>
               </div>
             </div>
           </div>
@@ -159,12 +164,10 @@ const PropertyDetails = () => {
             <h3 style={styles.contactTitle}>Contact Owner</h3>
             {property.user && (
               <div style={styles.ownerInfo}>
-                <div style={styles.ownerName}>
-                  {property.user.firstName} {property.user.lastName}
-                </div>
-                {property.user.mobileNumber && (
+                <div style={styles.ownerName}>{ownerName}</div>
+                {ownerMobile !== 'N/A' && (
                   <div style={styles.ownerPhone}>
-                    📞 {property.user.mobileNumber}
+                    📞 {ownerMobile}
                   </div>
                 )}
               </div>
@@ -227,7 +230,7 @@ const PropertyDetails = () => {
             <div style={styles.amenitiesGrid}>
               {amenitiesList.map((amenity, idx) => (
                 <div key={idx} style={styles.amenityItem}>
-                  ✓ {amenity.trim()}
+                  ✓ {amenity}
                 </div>
               ))}
             </div>
