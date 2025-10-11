@@ -1,14 +1,37 @@
-# Use Java 17 as base image
-FROM eclipse-temurin:17-jdk
+#
+# STAGE 1: Build the application using Maven
+#
+# Use a Maven image that includes the JDK to build the application
+FROM maven:3.8.5-openjdk-17 AS build
 
 # Set the working directory inside the container
 WORKDIR /app
 
-# Copy the Maven build output (the JAR file) into the container
-COPY target/*.jar app.jar
+# Copy the pom.xml file to download dependencies first, leveraging Docker's layer caching
+COPY pom.xml .
+RUN mvn dependency:go-offline
 
-# Expose the default Spring Boot port
+# Copy the rest of your application's source code
+COPY src ./src
+
+# Build the application, creating the .jar file.
+# The -DskipTests flag is optional but can speed up the build.
+RUN mvn package -DskipTests
+
+#
+# STAGE 2: Create the final, lightweight production image
+#
+# Use a slim JRE (Java Runtime Environment) image, which is smaller than a full JDK
+FROM openjdk:17-slim
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the .jar file from the 'build' stage into this new image
+COPY --from=build /app/target/*.jar app.jar
+
+# Expose the port your application runs on (e.g., 8080 for Spring Boot)
 EXPOSE 8080
 
-# Run the Spring Boot app
+# The command to run your application when the container starts
 ENTRYPOINT ["java", "-jar", "app.jar"]
