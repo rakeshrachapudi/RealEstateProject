@@ -4,7 +4,14 @@
 # Use a Maven image that includes the JDK to build the application
 FROM maven:3.8.5-openjdk-17 AS build
 
-# Set the working directory inside the container
+# Copy source code
+COPY src ./src
+
+# Build the JAR (skip tests for faster builds)
+RUN mvn clean package -DskipTests
+
+# Stage 2: Create the runtime image
+FROM eclipse-temurin:17-jdk
 WORKDIR /app
 
 # Copy the pom.xml file to download dependencies first, leveraging Docker's layer caching
