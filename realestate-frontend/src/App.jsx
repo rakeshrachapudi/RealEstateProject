@@ -474,6 +474,7 @@ const styles = {
     },
     navText: {
         fontSize: '16px',
+        lineHeight:'20px',
         fontWeight: 600,
         color: 'white',
     },
@@ -485,7 +486,7 @@ const styles = {
         boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
         borderRadius: '16px',
         padding: '24px',
-        marginTop: '2px',
+        marginTop: '0px',
         minWidth: '650px',
         display: 'flex',
         gap: '32px',
