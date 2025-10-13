@@ -437,9 +437,10 @@ const styles = {
     header: {
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         position: 'sticky',
-        top: 0,
+        top: 8,
+        borderRadius:20,
         zIndex: 1000,
-        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        boxShadow: '0 4px 20px rgba(0,0,0,1)',
     },
     headerContent: {
         maxWidth: 1400,
@@ -479,12 +480,12 @@ const styles = {
     dropdown: {
         position: 'absolute',
         top: '100%',
-        left: '-20px',
+        left: '-50px',
         backgroundColor: 'white',
         boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
         borderRadius: '16px',
         padding: '24px',
-        marginTop: '12px',
+        marginTop: '2px',
         minWidth: '650px',
         display: 'flex',
         gap: '32px',
