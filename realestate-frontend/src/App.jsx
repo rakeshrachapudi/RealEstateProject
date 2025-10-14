@@ -1,4 +1,5 @@
-// src/App.jsx
+// realestate-frontend/src/App.jsx
+// ⭐ COMPLETE FIXED VERSION - Replace entire file
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext.jsx';
@@ -11,7 +12,9 @@ import PropertyDetails from './components/PropertyDetails';
 import { getFeaturedProperties } from './services/api';
 import UserProfileModal from './UserProfileModal.jsx';
 
-// Header Component with FIXED Dropdowns and NEW Design
+// ============================================
+// HEADER COMPONENT
+// ============================================
 function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileClick }) {
   const { isAuthenticated, user, logout } = useAuth();
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -98,29 +101,29 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
             {activeDropdown === 'buy' && (
               <div style={styles.dropdown}>
                 <div style={styles.dropdownSection}>
-                                  <h4 style={styles.dropdownTitle}>Popular Choices</h4>
-                                  {dropdownData.buy.popularChoices.map(item => (
-                                    <div key={item.label} style={styles.dropdownItem} onClick={() => handleChoiceClick(item)}>
-                                      {item.label}
-                                    </div>
-                                  ))}
-                                </div>
-                                <div style={styles.dropdownSection}>
-                                  <h4 style={styles.dropdownTitle}>Property Types</h4>
-                                  {dropdownData.buy.propertyTypes.map(item => (
-                                    <div key={item} style={styles.dropdownItem} onClick={() => handlePropertyTypeClick(item, 'sale')}>
-                                      {item}
-                                    </div>
-                                  ))}
-                                </div>
-                                <div style={styles.dropdownSection}>
-                                  <h4 style={styles.dropdownTitle}>Budget</h4>
-                                  {dropdownData.buy.budget.map(item => (
-                                    <div key={item.label} style={styles.dropdownItem} onClick={() => handleBudgetClick(item, 'sale')}>
-                                      {item.label}
-                                    </div>
-                                  ))}
-                                </div>
+                  <h4 style={styles.dropdownTitle}>Popular Choices</h4>
+                  {dropdownData.buy.popularChoices.map(item => (
+                    <div key={item.label} style={styles.dropdownItem} onClick={() => handleChoiceClick(item)}>
+                      {item.label}
+                    </div>
+                  ))}
+                </div>
+                <div style={styles.dropdownSection}>
+                  <h4 style={styles.dropdownTitle}>Property Types</h4>
+                  {dropdownData.buy.propertyTypes.map(item => (
+                    <div key={item} style={styles.dropdownItem} onClick={() => handlePropertyTypeClick(item, 'sale')}>
+                      {item}
+                    </div>
+                  ))}
+                </div>
+                <div style={styles.dropdownSection}>
+                  <h4 style={styles.dropdownTitle}>Budget</h4>
+                  {dropdownData.buy.budget.map(item => (
+                    <div key={item.label} style={styles.dropdownItem} onClick={() => handleBudgetClick(item, 'sale')}>
+                      {item.label}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -177,7 +180,10 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
     </header>
   );
 }
-// Home Page Component with NEW Design
+
+// ============================================
+// HOME PAGE COMPONENT
+// ============================================
 function HomePage() {
     const { isAuthenticated, user } = useAuth();
   const [propsList, setPropsList] = useState([]);
@@ -187,7 +193,6 @@ function HomePage() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('featured');
   const navigate = useNavigate();
-
 
   const popularAreas = [
     { name: 'Gachibowli', emoji: '💼' },
@@ -201,18 +206,17 @@ function HomePage() {
 
   useEffect(() => {
     fetchProperties();
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user?.id) {
           fetchMyProperties();
-          }
+    }
   },[isAuthenticated, user]);
 
   const fetchProperties = async () => {
     try {
       const response = await getFeaturedProperties();
       if (response && response.success) {
-// Sort to show user's properties first if logged in
-let properties = response.data;
-        if (isAuthenticated && user) {
+        let properties = response.data;
+        if (isAuthenticated && user?.id) {
           properties = properties.sort((a, b) => {
             const aIsUser = a.user?.id === user.id;
             const bIsUser = b.user?.id === user.id;
@@ -230,13 +234,21 @@ let properties = response.data;
   };
 
  const fetchMyProperties = async () => {
-    if (!user || !user.id) return;
+    if (!user?.id) {
+        console.log('❌ No user ID for fetching properties');
+        return;
+    }
     try {
+      console.log('📥 Fetching my properties for user ID:', user.id);
       const response = await fetch(`http://localhost:8080/api/properties/user/${user.id}`);
       if (response.ok) {
         const data = await response.json();
-        // API might return { success: true, data: [...] } or plain array; handle both
-        setMyProperties(data.data || data);
+        console.log('✅ My properties data:', data);
+        const propertiesArray = Array.isArray(data) ? data : (data.data || []);
+        console.log(`✅ Setting ${propertiesArray.length} properties`);
+        setMyProperties(propertiesArray);
+      } else {
+        console.log('❌ Failed to fetch my properties:', response.status);
       }
     } catch (error) {
       console.error('Error loading my properties:', error);
@@ -301,7 +313,7 @@ let properties = response.data;
               key={area.name}
               onClick={() => handleAreaClick(area.name)}
               style={styles.areaButton}
-              className="areaButton" // Class for hover effect
+              className="areaButton"
             >
               <span style={styles.areaEmoji}>{area.emoji}</span>
               {area.name}
@@ -311,8 +323,7 @@ let properties = response.data;
       </section>
 
       <section style={styles.propertiesSection}>
-           {/* Tab Navigation */}
-                  {isAuthenticated && myProperties.length > 0 && !showSearchResults && (
+           {isAuthenticated && myProperties.length > 0 && !showSearchResults && (
                     <div style={styles.tabContainer}>
                       <button
                         onClick={() => setActiveTab('featured')}
@@ -352,7 +363,6 @@ let properties = response.data;
             </button>
           )}
         </div>
-         {/* Display properties based on active tab */}
                 {activeTab === 'my-properties' && !showSearchResults ? (
                   myProperties.length > 0 ? (
         <PropertyList
@@ -404,7 +414,9 @@ let properties = response.data;
   );
 }
 
-// Search Results Page Component with Functional Logic and NEW Design
+// ============================================
+// SEARCH RESULTS PAGE COMPONENT
+// ============================================
 function SearchResultsPage() {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -467,48 +479,129 @@ function SearchResultsPage() {
     </div>
   );
 }
-// NEW "My Properties" Page Component
+
+// ============================================
+// MY PROPERTIES PAGE COMPONENT
+// ============================================
 function MyPropertiesPage({ onPostPropertyClick }) {
   const { user } = useAuth();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user?._id) {
+    if (!user?.id) {
+      console.log('❌ No user ID, redirecting to home');
       navigate('/');
       return;
     }
-    const fetchMyProperties = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`http://localhost:8080/api/properties/user/${user._id}`);
-        if (res.ok) {
-          const data = await res.json();
-          setProperties(data.data || data || []);
-        } else {
-          setProperties([]);
-        }
-      } catch (err) {
-        console.error('Error fetching user properties:', err);
-        setProperties([]);
-      }
-      setLoading(false);
-    };
     fetchMyProperties();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, navigate]);
 
+  const fetchMyProperties = async () => {
+    if (!user?.id) {
+      console.log('❌ Cannot fetch: No user ID');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    console.log('📥 Fetching properties for user ID:', user.id);
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/properties/user/${user.id}`);
+
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Received data:', data);
+
+      const propertiesArray = Array.isArray(data) ? data : (data.data || []);
+
+      console.log(`✅ Found ${propertiesArray.length} properties for user`);
+      setProperties(propertiesArray);
+
+    } catch (err) {
+      console.error('❌ Error fetching user properties:', err);
+      setError(err.message);
+      setProperties([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.loadingContainer}>
+          <div style={styles.spinner}>⏳</div>
+          <h3>Loading your properties...</h3>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.errorContainer}>
+          <h2>❌ Error Loading Properties</h2>
+          <p>{error}</p>
+          <button onClick={fetchMyProperties} style={styles.retryBtn}>
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.container}>
       <div style={styles.pageHeader}>
-        <h1 style={styles.pageTitle}>My Posted Properties</h1>
-        <p style={styles.pageSubtitle}>Here you can view and manage the properties you've listed.</p>
+        <h1 style={styles.pageTitle}>📁 My Posted Properties</h1>
+        <p style={styles.pageSubtitle}>
+          Manage and track the properties you've listed
+        </p>
       </div>
-      <PropertyList properties={properties} loading={loading} />
-      {!loading && properties.length === 0 && (
-        <div style={styles.noPropertiesContainer}>
-          <p style={styles.noPropertiesText}>You haven't posted any properties yet.</p>
+
+      {properties.length > 0 ? (
+        <>
+          <div style={styles.statsBar}>
+            <div style={styles.statItem}>
+              <span style={styles.statLabel}>Total Properties:</span>
+              <span style={styles.statValue}>{properties.length}</span>
+            </div>
+            <div style={styles.statItem}>
+              <span style={styles.statLabel}>For Sale:</span>
+              <span style={styles.statValue}>
+                {properties.filter(p => p.listingType === 'sale').length}
+              </span>
+            </div>
+            <div style={styles.statItem}>
+              <span style={styles.statLabel}>For Rent:</span>
+              <span style={styles.statValue}>
+                {properties.filter(p => p.listingType === 'rent').length}
+              </span>
+            </div>
+          </div>
+
+          <PropertyList properties={properties} loading={false} />
+        </>
+      ) : (
+        <div style={styles.emptyState}>
+          <div style={styles.emptyIcon}>📭</div>
+          <h3 style={styles.emptyTitle}>No Properties Posted Yet</h3>
+          <p style={styles.emptyText}>
+            Start by posting your first property to see it here
+          </p>
           <button onClick={onPostPropertyClick} style={styles.postBtn}>
             <span style={styles.btnIcon}>📝</span> Post Your First Property
           </button>
@@ -518,11 +611,19 @@ function MyPropertiesPage({ onPostPropertyClick }) {
   );
 }
 
+// ============================================
+// PLACEHOLDER PAGE
+// ============================================
 const PlaceholderPage = ({ title }) => (
-    <div style={{...styles.container, textAlign: 'center', padding: '80px 32px'}}><h1 style={styles.pageTitle}>{title}</h1><p style={styles.pageSubtitle}>This page is currently under construction. 🏗️ Please check back later!</p></div>
+    <div style={{...styles.container, textAlign: 'center', padding: '80px 32px'}}>
+        <h1 style={styles.pageTitle}>{title}</h1>
+        <p style={styles.pageSubtitle}>This page is currently under construction. 🏗️ Please check back later!</p>
+    </div>
 );
 
-// REPLACE the existing App function with these two
+// ============================================
+// APP CONTENT
+// ============================================
 function AppContent() {
   const navigate = useNavigate();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -565,23 +666,25 @@ function AppContent() {
       {isSignupModalOpen && <SignupModal onClose={() => setIsSignupModalOpen(false)} />}
       {isUserProfileModalOpen && <UserProfileModal user={user} onClose={() => setIsUserProfileModalOpen(false)} logout={logout} />}
     </div>
-
   );
 }
 
+// ============================================
+// MAIN APP
+// ============================================
 function App() {
   return ( <Router> <AppContent /> </Router> );
 }
 
-// Styles from the design file
+// ============================================
+// STYLES
+// ============================================
 const styles = {
-    // unified pageSubtitle (only one definition now)
     pageSubtitle: {
         fontSize: '18px',
         color: '#64748b',
         fontWeight: 500,
     },
-    // ADD everything from here down to the styles object
     viewMoreContainer: {
         textAlign: 'center',
         marginTop: '32px'
@@ -637,7 +740,6 @@ app: {
     minHeight: '100vh',
     backgroundColor: '#f8fafc',
 },
-
 header: {
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     position: 'sticky',
@@ -992,7 +1094,79 @@ pageTitle: {
     color: '#1e293b',
     marginBottom: '16px',
 },
-// pageSubtitle defined above
+emptyState: {
+    textAlign: 'center',
+    padding: '60px 20px',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '16px',
+    border: '2px dashed #e2e8f0',
+},
+emptyIcon: {
+    fontSize: '64px',
+    marginBottom: '24px',
+},
+emptyTitle: {
+    fontSize: '24px',
+    fontWeight: 700,
+    color: '#1e293b',
+    marginBottom: '12px',
+},
+emptyText: {
+    fontSize: '16px',
+    color: '#64748b',
+    marginBottom: '24px',
+},
+loadingContainer: {
+    textAlign: 'center',
+    padding: '80px 20px',
+},
+spinner: {
+    fontSize: '64px',
+    marginBottom: '24px',
+    animation: 'pulse 2s infinite',
+},
+errorContainer: {
+    textAlign: 'center',
+    padding: '80px 20px',
+    backgroundColor: '#fef2f2',
+    borderRadius: '16px',
+    border: '2px solid #fecaca',
+},
+retryBtn: {
+    padding: '12px 32px',
+    backgroundColor: '#ef4444',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '16px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    marginTop: '20px',
+},
+statsBar: {
+    display: 'flex',
+    gap: '24px',
+    marginBottom: '32px',
+    padding: '24px',
+    backgroundColor: '#f8fafc',
+    borderRadius: '16px',
+    border: '2px solid #e2e8f0',
+},
+statItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+},
+statLabel: {
+    fontSize: '14px',
+    color: '#64748b',
+    fontWeight: 500,
+},
+statValue: {
+    fontSize: '24px',
+    fontWeight: 700,
+    color: '#1e293b',
+},
 };
 
 // Inject animations and hover effects into the document
@@ -1021,7 +1195,6 @@ div[style*="dropdownItem"]:hover {
     transform: translateX(4px);
   }
 
-  /* ADD THESE NEW STYLES */
   div[style*="profileDropdownItem"]:hover {
     background: #f1f5f9;
   }
