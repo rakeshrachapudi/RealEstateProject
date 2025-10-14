@@ -2,10 +2,14 @@ package com.example.realestate.controller;
 
 import com.example.realestate.model.Property;
 import com.example.realestate.service.PropertyService;
+import com.example.realestate.dto.PropertyPostRequestDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.persistence.EntityNotFoundException; // 💡 Using jakarta imports
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +24,31 @@ public class PropertyController {
     public PropertyController(PropertyService service) {
         this.service = service;
     }
+
+    /**
+     * UPDATED METHOD: Create new property using the dedicated DTO and error handling.
+     */
+    @PostMapping
+    public ResponseEntity<?> create(@RequestBody PropertyPostRequestDto dto) {
+        logger.info("Attempting to create new property from DTO.");
+        try {
+            Property createdProperty = service.postProperty(dto);
+            // Return 201 Created status
+            return new ResponseEntity<>(createdProperty, HttpStatus.CREATED);
+        } catch (EntityNotFoundException e) {
+            logger.error("Creation failed (Foreign Key Not Found): {}", e.getMessage());
+            // User, Area, or PropertyType ID not found (400 Bad Request is appropriate for invalid input data)
+            return new ResponseEntity<>("Invalid foreign key: " + e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (IllegalArgumentException e) {
+            logger.error("Creation failed (Invalid Argument): {}", e.getMessage());
+            // Missing required fields (e.g., User ID)
+            return new ResponseEntity<>("Invalid request: " + e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            logger.error("Unexpected error during property creation: ", e);
+            return new ResponseEntity<>("Internal Server Error during property creation.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
     /**
      * Get all properties
@@ -115,15 +144,6 @@ public class PropertyController {
     }
 
     /**
-     * Create new property
-     */
-    @PostMapping
-    public Property create(@RequestBody Property property) {
-        logger.info("Creating new property: {}", property.getTitle());
-        return service.save(property);
-    }
-
-    /**
      * Update property
      */
     @PutMapping("/{id}")
@@ -132,7 +152,7 @@ public class PropertyController {
         try {
             Property updated = service.updateProperty(id, propertyDetails);
             return ResponseEntity.ok(updated);
-        } catch (RuntimeException e) {
+        } catch (EntityNotFoundException e) {
             logger.error("Error updating property: {}", e.getMessage());
             return ResponseEntity.notFound().build();
         }
@@ -147,7 +167,7 @@ public class PropertyController {
         try {
             service.deleteProperty(id);
             return ResponseEntity.ok().build();
-        } catch (RuntimeException e) {
+        } catch (EntityNotFoundException e) {
             logger.error("Error deleting property: {}", e.getMessage());
             return ResponseEntity.notFound().build();
         }
