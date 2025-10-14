@@ -9,13 +9,12 @@ import PropertyList from './components/PropertyList';
 import PropertyDetails from './components/PropertyDetails';
 import { getFeaturedProperties } from './services/api';
 
-// Header Component with FIXED Dropdowns and NEW Design
+// Header Component
 function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
   const { isAuthenticated, user, logout } = useAuth();
   const [activeDropdown, setActiveDropdown] = useState(null);
   const navigate = useNavigate();
 
-  // Data structure from the functional file to build correct search URLs
   const dropdownData = {
     buy: {
       popularChoices: [
@@ -48,7 +47,6 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
     }
   };
 
-  // Navigation logic from the functional file
   const handlePropertyTypeClick = (type, listingType) => {
     const params = new URLSearchParams({ propertyType: type, listingType });
     navigate(`/search?${params.toString()}`);
@@ -181,12 +179,15 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
   );
 }
 
-// Home Page Component with NEW Design
+// Home Page Component with My Properties Tab
 function HomePage() {
+  const { isAuthenticated, user } = useAuth();
   const [propsList, setPropsList] = useState([]);
+  const [myProperties, setMyProperties] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('featured'); // 'featured' or 'my-properties'
   const navigate = useNavigate();
 
   const popularAreas = [
@@ -201,13 +202,27 @@ function HomePage() {
 
   useEffect(() => {
     fetchProperties();
-  }, []);
+    if (isAuthenticated && user) {
+      fetchMyProperties();
+    }
+  }, [isAuthenticated, user]);
 
   const fetchProperties = async () => {
     try {
       const response = await getFeaturedProperties();
       if (response && response.success) {
-        setPropsList(response.data);
+        // Sort to show user's properties first if logged in
+        let properties = response.data;
+        if (isAuthenticated && user) {
+          properties = properties.sort((a, b) => {
+            const aIsUser = a.user?.id === user.id;
+            const bIsUser = b.user?.id === user.id;
+            if (aIsUser && !bIsUser) return -1;
+            if (!aIsUser && bIsUser) return 1;
+            return 0;
+          });
+        }
+        setPropsList(properties);
         setShowSearchResults(false);
       }
     } catch (error) {
@@ -215,10 +230,24 @@ function HomePage() {
     }
   };
 
+  const fetchMyProperties = async () => {
+    if (!user || !user.id) return;
+    try {
+      const response = await fetch(`http://localhost:8080/api/properties/user/${user.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setMyProperties(data);
+      }
+    } catch (error) {
+      console.error('Error loading my properties:', error);
+    }
+  };
+
   const handleSearchResults = (results) => {
     setSearchResults(results);
     setShowSearchResults(true);
     setSearchLoading(false);
+    setActiveTab('featured');
   };
 
   const handleSearchStart = () => {
@@ -228,6 +257,7 @@ function HomePage() {
   const handleResetSearch = () => {
     setShowSearchResults(false);
     setSearchResults([]);
+    setActiveTab('featured');
     fetchProperties();
   };
 
@@ -271,7 +301,7 @@ function HomePage() {
               key={area.name}
               onClick={() => handleAreaClick(area.name)}
               style={styles.areaButton}
-              className="areaButton" // Class for hover effect
+              className="areaButton"
             >
               <span style={styles.areaEmoji}>{area.emoji}</span>
               {area.name}
@@ -281,10 +311,40 @@ function HomePage() {
       </section>
 
       <section style={styles.propertiesSection}>
+        {/* Tab Navigation */}
+        {isAuthenticated && myProperties.length > 0 && !showSearchResults && (
+          <div style={styles.tabContainer}>
+            <button
+              onClick={() => setActiveTab('featured')}
+              style={{
+                ...styles.tab,
+                ...(activeTab === 'featured' ? styles.activeTab : {})
+              }}
+            >
+              ⭐ Featured Properties
+            </button>
+            <button
+              onClick={() => setActiveTab('my-properties')}
+              style={{
+                ...styles.tab,
+                ...(activeTab === 'my-properties' ? styles.activeTab : {})
+              }}
+            >
+              📁 My Uploaded Properties ({myProperties.length})
+            </button>
+          </div>
+        )}
+
         <div style={styles.sectionHeader}>
           <h2 style={styles.sectionTitle}>
-            <span style={styles.sectionIcon}>⭐</span>
-            {showSearchResults ? `Search Results (${searchResults.length} found)` : 'Featured Properties'}
+            <span style={styles.sectionIcon}>
+              {showSearchResults ? '🔍' : activeTab === 'my-properties' ? '📁' : '⭐'}
+            </span>
+            {showSearchResults
+              ? `Search Results (${searchResults.length} found)`
+              : activeTab === 'my-properties'
+              ? 'My Uploaded Properties'
+              : 'Featured Properties'}
           </h2>
           {showSearchResults && (
             <button onClick={handleResetSearch} style={styles.clearSearchBtn}>
@@ -292,10 +352,29 @@ function HomePage() {
             </button>
           )}
         </div>
-        <PropertyList
-          properties={showSearchResults ? searchResults : propsList}
-          loading={searchLoading}
-        />
+
+        {/* Display properties based on active tab */}
+        {activeTab === 'my-properties' && !showSearchResults ? (
+          myProperties.length > 0 ? (
+            <PropertyList
+              properties={myProperties}
+              loading={searchLoading}
+            />
+          ) : (
+            <div style={styles.emptyState}>
+              <div style={styles.emptyIcon}>📭</div>
+              <h3 style={styles.emptyTitle}>No Properties Posted Yet</h3>
+              <p style={styles.emptyText}>
+                Start by posting your first property to see it here
+              </p>
+            </div>
+          )
+        ) : (
+          <PropertyList
+            properties={showSearchResults ? searchResults : propsList}
+            loading={searchLoading}
+          />
+        )}
       </section>
 
       <section style={styles.statsSection}>
@@ -326,7 +405,7 @@ function HomePage() {
   );
 }
 
-// Search Results Page Component with Functional Logic and NEW Design
+// Search Results Page Component
 function SearchResultsPage() {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -389,14 +468,14 @@ function SearchResultsPage() {
   );
 }
 
-// Main App Component with correct routing
+// Main App Component
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isPostPropertyModalOpen, setIsPostPropertyModalOpen] = useState(false);
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
 
   const handlePropertyPosted = () => {
-    window.location.reload();
+    // Reload handled in modal
   };
 
   return (
@@ -427,368 +506,409 @@ function App() {
   );
 }
 
-// Styles from the design file
+// Styles
 const styles = {
-    app: {
-        fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-        minHeight: '100vh',
-        backgroundColor: '#f8fafc',
-    },
-    header: {
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        position: 'sticky',
-        top: 8,
-        borderRadius:20,
-        zIndex: 1000,
-        boxShadow: '0 4px 20px rgba(0,0,0,1)',
-    },
-    headerContent: {
-        maxWidth: 1400,
-        margin: '0 auto',
-        padding: '16px 32px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    logo: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        fontSize: '28px',
-        color: 'white',
-        fontWeight: 800,
-        cursor: 'pointer',
-    },
-    logoIcon: {
-        fontSize: '32px',
-    },
-    nav: {
-        display: 'flex',
-        gap: '28px',
-        alignItems: 'center',
-    },
-    navItem: {
-        position: 'relative',
-        cursor: 'pointer',
-        padding: '12px 0',
-    },
-    navText: {
-        fontSize: '16px',
-        fontWeight: 600,
-        color: 'white',
-    },
-    dropdown: {
-        position: 'absolute',
-        top: '100%',
-        left: '-50px',
-        backgroundColor: 'white',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
-        borderRadius: '16px',
-        padding: '24px',
-        marginTop: '2px',
-        minWidth: '650px',
-        display: 'flex',
-        gap: '32px',
-        zIndex: 1000,
-    },
-    dropdownSection: {
-        flex: 1,
-    },
-    dropdownTitle: {
-        fontSize: '14px',
-        fontWeight: 700,
-        color: '#4f46e5',
-        marginBottom: '16px',
-        textTransform: 'uppercase',
-    },
-    dropdownItem: {
-        padding: '10px 16px',
-        cursor: 'pointer',
-        borderRadius: '8px',
-        fontSize: '14px',
-        color: '#475569',
-        fontWeight: 500,
-        marginBottom: '4px',
-    },
-    authSection: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-    },
-    userSection: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        background: 'rgba(255,255,255,0.1)',
-        padding: '8px 16px',
-        borderRadius: '12px',
-    },
-    userIcon: {
-        fontSize: '18px',
-    },
-    userName: {
-        fontWeight: 600,
-        fontSize: '14px',
-        color: 'white',
-    },
-    authButtons: {
-        display: 'flex',
-        gap: '12px',
-    },
-    btnIcon: {
-        marginRight: '8px',
-        fontSize: '16px',
-    },
-    postBtn: {
-        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-        color: 'white',
-        padding: '12px 24px',
-        borderRadius: '12px',
-        border: 'none',
-        cursor: 'pointer',
-        fontWeight: 600,
-        fontSize: '14px',
-        display: 'flex',
-        alignItems: 'center',
-    },
-    logoutBtn: {
-        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-        color: 'white',
-        padding: '12px 20px',
-        borderRadius: '12px',
-        border: 'none',
-        cursor: 'pointer',
-        fontWeight: 600,
-        fontSize: '14px',
-        display: 'flex',
-        alignItems: 'center',
-    },
-    loginBtn: {
-        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-        color: 'white',
-        padding: '12px 24px',
-        borderRadius: '12px',
-        border: 'none',
-        cursor: 'pointer',
-        fontWeight: 600,
-        fontSize: '14px',
-        display: 'flex',
-        alignItems: 'center',
-    },
-    signupBtn: {
-        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-        color: 'white',
-        padding: '12px 24px',
-        borderRadius: '12px',
-        border: 'none',
-        cursor: 'pointer',
-        fontWeight: 600,
-        fontSize: '14px',
-        display: 'flex',
-        alignItems: 'center',
-    },
-    container: {
-        padding: '32px',
-        maxWidth: 1400,
-        margin: '0 auto',
-    },
-    heroSection: {
-        position: 'relative',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        borderRadius: '24px',
-        padding: '80px 60px',
-        marginBottom: '48px',
-        color: 'white',
-        textAlign: 'center',
-        overflow: 'hidden',
-    },
-    heroContent: {
-        position: 'relative',
-        zIndex: 2,
-    },
-    mainTitle: {
-        fontSize: '72px',
-        margin: '0 0 24px',
-        fontWeight: 800,
-    },
-    titleGradient: {
-        background: 'linear-gradient(45deg, #fbbf24, #f59e0b)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-    },
-    heroSubtitle: {
-        fontSize: '20px',
-        opacity: 0.9,
-    },
-    heroGraphics: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        pointerEvents: 'none',
-    },
-    floatingElement1: {
-        position: 'absolute',
-        top: '20%',
-        left: '10%',
-        fontSize: '48px',
-        animation: 'float 6s ease-in-out infinite',
-    },
-    floatingElement2: {
-        position: 'absolute',
-        top: '60%',
-        right: '15%',
-        fontSize: '64px',
-        animation: 'float 8s ease-in-out infinite 1s',
-    },
-    floatingElement3: {
-        position: 'absolute',
-        bottom: '20%',
-        left: '20%',
-        fontSize: '56px',
-        animation: 'float 7s ease-in-out infinite 0.5s',
-    },
-    searchSection: {
-        marginBottom: '60px',
-    },
-    section: {
-        marginBottom: '60px',
-    },
-    propertiesSection: {
-        marginBottom: '80px',
-    },
-    sectionHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '32px',
-    },
-    sectionTitle: {
-        fontSize: '36px',
-        marginBottom: '24px',
-        fontWeight: 700,
-        color: '#1e293b',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-    },
-    sectionIcon: {
-        fontSize: '32px',
-    },
-    areasGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '16px',
-    },
-    areaButton: {
-        padding: '20px 24px',
-        borderRadius: '16px',
-        background: 'white',
-        border: '2px solid #e2e8f0',
-        cursor: 'pointer',
-        fontSize: '16px',
-        fontWeight: 600,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        color: '#475569',
-        transition: 'all 0.3s',
-    },
-    areaEmoji: {
-        fontSize: '24px',
-    },
-    clearSearchBtn: {
-        background: '#ef4444',
-        color: 'white',
-        padding: '10px 20px',
-        borderRadius: '10px',
-        border: 'none',
-        cursor: 'pointer',
-        fontWeight: 600,
-        fontSize: '14px',
-    },
-    statsSection: {
-        background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-        borderRadius: '24px',
-        padding: '60px 40px',
-        color: 'white',
-        textAlign: 'center',
-    },
-    statsGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '32px',
-    },
-    statCard: {
-        padding: '32px 24px',
-    },
-    statIcon: {
-        fontSize: '48px',
-        marginBottom: '16px',
-    },
-    statNumber: {
-        fontSize: '36px',
-        fontWeight: 800,
-        marginBottom: '8px',
-        background: 'linear-gradient(45deg, #fbbf24, #f59e0b)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-    },
-    statLabel: {
-        fontSize: '16px',
-        fontWeight: 500,
-        opacity: 0.8,
-    },
-    backButton: {
-        padding: '12px 24px',
-        borderRadius: '12px',
-        background: '#6b7280',
-        color: 'white',
-        border: 'none',
-        cursor: 'pointer',
-        marginBottom: '32px',
-        fontSize: '14px',
-        fontWeight: 600,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-    },
-    backIcon: {
-        fontSize: '18px',
-    },
-    pageHeader: {
-        textAlign: 'center',
-        marginBottom: '48px',
-    },
-    pageTitle: {
-        fontSize: '48px',
-        fontWeight: 800,
-        color: '#1e293b',
-        marginBottom: '16px',
-    },
-    pageSubtitle: {
-        fontSize: '18px',
-        color: '#64748b',
-        fontWeight: 500,
-    },
+  app: {
+    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+    minHeight: '100vh',
+    backgroundColor: '#f8fafc',
+  },
+  header: {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    position: 'sticky',
+    top: 8,
+    borderRadius: 20,
+    zIndex: 1000,
+    boxShadow: '0 4px 20px rgba(0,0,0,1)',
+  },
+  headerContent: {
+    maxWidth: 1400,
+    margin: '0 auto',
+    padding: '16px 32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  logo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    fontSize: '28px',
+    color: 'white',
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+  logoIcon: {
+    fontSize: '32px',
+  },
+  nav: {
+    display: 'flex',
+    gap: '28px',
+    alignItems: 'center',
+  },
+  navItem: {
+    position: 'relative',
+    cursor: 'pointer',
+    padding: '12px 0',
+  },
+  navText: {
+    fontSize: '16px',
+    fontWeight: 600,
+    color: 'white',
+  },
+  dropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: '-50px',
+    backgroundColor: 'white',
+    boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+    borderRadius: '16px',
+    padding: '24px',
+    marginTop: '2px',
+    minWidth: '650px',
+    display: 'flex',
+    gap: '32px',
+    zIndex: 1000,
+  },
+  dropdownSection: {
+    flex: 1,
+  },
+  dropdownTitle: {
+    fontSize: '14px',
+    fontWeight: 700,
+    color: '#4f46e5',
+    marginBottom: '16px',
+    textTransform: 'uppercase',
+  },
+  dropdownItem: {
+    padding: '10px 16px',
+    cursor: 'pointer',
+    borderRadius: '8px',
+    fontSize: '14px',
+    color: '#475569',
+    fontWeight: 500,
+    marginBottom: '4px',
+  },
+  authSection: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  userSection: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: 'rgba(255,255,255,0.1)',
+    padding: '8px 16px',
+    borderRadius: '12px',
+  },
+  userIcon: {
+    fontSize: '18px',
+  },
+  userName: {
+    fontWeight: 600,
+    fontSize: '14px',
+    color: 'white',
+  },
+  authButtons: {
+    display: 'flex',
+    gap: '12px',
+  },
+  btnIcon: {
+    marginRight: '8px',
+    fontSize: '16px',
+  },
+  postBtn: {
+    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+    color: 'white',
+    padding: '12px 24px',
+    borderRadius: '12px',
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  logoutBtn: {
+    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+    color: 'white',
+    padding: '12px 20px',
+    borderRadius: '12px',
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  loginBtn: {
+    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+    color: 'white',
+    padding: '12px 24px',
+    borderRadius: '12px',
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  signupBtn: {
+    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+    color: 'white',
+    padding: '12px 24px',
+    borderRadius: '12px',
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  container: {
+    padding: '32px',
+    maxWidth: 1400,
+    margin: '0 auto',
+  },
+  heroSection: {
+    position: 'relative',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    borderRadius: '24px',
+    padding: '80px 60px',
+    marginBottom: '48px',
+    color: 'white',
+    textAlign: 'center',
+    overflow: 'hidden',
+  },
+  heroContent: {
+    position: 'relative',
+    zIndex: 2,
+  },
+  mainTitle: {
+    fontSize: '72px',
+    margin: '0 0 24px',
+    fontWeight: 800,
+  },
+  titleGradient: {
+    background: 'linear-gradient(45deg, #fbbf24, #f59e0b)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+  },
+  heroSubtitle: {
+    fontSize: '20px',
+    opacity: 0.9,
+  },
+  heroGraphics: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none',
+  },
+  floatingElement1: {
+    position: 'absolute',
+    top: '20%',
+    left: '10%',
+    fontSize: '48px',
+    animation: 'float 6s ease-in-out infinite',
+  },
+  floatingElement2: {
+    position: 'absolute',
+    top: '60%',
+    right: '15%',
+    fontSize: '64px',
+    animation: 'float 8s ease-in-out infinite 1s',
+  },
+  floatingElement3: {
+    position: 'absolute',
+    bottom: '20%',
+    left: '20%',
+    fontSize: '56px',
+    animation: 'float 7s ease-in-out infinite 0.5s',
+  },
+  searchSection: {
+    marginBottom: '60px',
+  },
+  section: {
+    marginBottom: '60px',
+  },
+  propertiesSection: {
+    marginBottom: '80px',
+  },
+  tabContainer: {
+    display: 'flex',
+    gap: '16px',
+    marginBottom: '32px',
+    borderBottom: '2px solid #e2e8f0',
+  },
+  tab: {
+    padding: '12px 24px',
+    background: 'transparent',
+    border: 'none',
+    borderBottom: '3px solid transparent',
+    cursor: 'pointer',
+    fontSize: '16px',
+    fontWeight: 600,
+    color: '#64748b',
+    transition: 'all 0.3s',
+  },
+  activeTab: {
+    color: '#667eea',
+    borderBottomColor: '#667eea',
+  },
+  sectionHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '32px',
+  },
+  sectionTitle: {
+    fontSize: '36px',
+    marginBottom: '24px',
+    fontWeight: 700,
+    color: '#1e293b',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  sectionIcon: {
+    fontSize: '32px',
+  },
+  areasGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px',
+  },
+  areaButton: {
+    padding: '20px 24px',
+    borderRadius: '16px',
+    background: 'white',
+    border: '2px solid #e2e8f0',
+    cursor: 'pointer',
+    fontSize: '16px',
+    fontWeight: 600,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    color: '#475569',
+    transition: 'all 0.3s',
+  },
+  areaEmoji: {
+    fontSize: '24px',
+  },
+  clearSearchBtn: {
+    background: '#ef4444',
+    color: 'white',
+    padding: '10px 20px',
+    borderRadius: '10px',
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '14px',
+  },
+  emptyState: {
+    textAlign: 'center',
+    padding: '80px 40px',
+    background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+    borderRadius: '20px',
+  },
+  emptyIcon: {
+    fontSize: '80px',
+    marginBottom: '24px',
+  },
+  emptyTitle: {
+    fontSize: '24px',
+    fontWeight: 700,
+    color: '#1e293b',
+    marginBottom: '12px',
+  },
+  emptyText: {
+    fontSize: '16px',
+    color: '#64748b',
+    maxWidth: '400px',
+    margin: '0 auto',
+  },
+  statsSection: {
+    background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+    borderRadius: '24px',
+    padding: '60px 40px',
+    color: 'white',
+    textAlign: 'center',
+  },
+  statsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '32px',
+  },
+  statCard: {
+    padding: '32px 24px',
+  },
+  statIcon: {
+    fontSize: '48px',
+    marginBottom: '16px',
+  },
+  statNumber: {
+    fontSize: '36px',
+    fontWeight: 800,
+    marginBottom: '8px',
+    background: 'linear-gradient(45deg, #fbbf24, #f59e0b)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+  },
+  statLabel: {
+    fontSize: '16px',
+    fontWeight: 500,
+    opacity: 0.8,
+  },
+  backButton: {
+    padding: '12px 24px',
+    borderRadius: '12px',
+    background: '#6b7280',
+    color: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    marginBottom: '32px',
+    fontSize: '14px',
+    fontWeight: 600,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  backIcon: {
+    fontSize: '18px',
+  },
+  pageHeader: {
+    textAlign: 'center',
+    marginBottom: '48px',
+  },
+  pageTitle: {
+    fontSize: '48px',
+    fontWeight: 800,
+    color: '#1e293b',
+    marginBottom: '16px',
+  },
+  pageSubtitle: {
+    fontSize: '18px',
+    color: '#64748b',
+    fontWeight: 500,
+  },
 };
 
-// Inject animations and hover effects into the document
+// Inject animations
 const styleSheet = document.createElement('style');
 styleSheet.textContent = `
   @keyframes float {
     0%, 100% { transform: translateY(0px) rotate(0deg); }
     50% { transform: translateY(-20px) rotate(5deg); }
   }
-
   .areaButton:hover {
     transform: translateY(-4px);
     border-color: #667eea;
     color: #667eea;
     box-shadow: 0 8px 16px rgba(102, 126, 234, 0.15);
   }
-
   div[style*="dropdownItem"]:hover {
     background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
     color: #4f46e5;
