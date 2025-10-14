@@ -1,10 +1,19 @@
 package com.example.realestate.dto;
 
+import java.math.BigDecimal;
+
 public class PropertyPostRequestDto {
 
-    // Nested DTO to match frontend JSON structure: { "user": { "id": 6 } }
+    // ⭐ Nested DTO to match frontend JSON structure: { "user": { "id": 6 } }
     public static class UserReferenceDto {
         private Long id; // Corresponds to the user who posted
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+    }
+
+    // ⭐ CRITICAL FIX: Nested DTO to match frontend JSON structure: { "area": { "id": 1 } }
+    public static class AreaReferenceDto {
+        private Long id; // Corresponds to the area selected
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
     }
@@ -13,17 +22,18 @@ public class PropertyPostRequestDto {
     private String title;
     private String description;
     private String imageUrl;
-    private Double price; // Frontend sends a numeric price (e.g., 5000000)
-    private String priceDisplay; // Frontend generated display string (e.g., '₹50 Lac')
+    private Double price;
+    private String priceDisplay;
     private Integer bedrooms;
     private Integer bathrooms;
     private Integer balconies;
     private Double areaSqft;
 
     // --- Foreign Key fields / Core Type fields ---
-    private Long areaId; // The ID selected from the 'area' dropdown in the frontend
-    private UserReferenceDto user; // The user object with ID
-    private String type; // Corresponds to frontend's 'type'
+    // ⭐ CRITICAL FIX: Changed from private Long areaId; to the nested DTO
+    private AreaReferenceDto area;
+    private UserReferenceDto user;
+    private String type;
     private String listingType;
     private String city;
     private String address;
@@ -31,10 +41,11 @@ public class PropertyPostRequestDto {
     // --- Other Attributes ---
     private String amenities;
     private String status = "available";
-    private Boolean isFeatured = true;
+    private Boolean isFeatured = false;
     private Boolean isActive = true;
 
-    // --- Getters and Setters (Manual for consistency with PropertyDTO) ---
+    // --- Getters and Setters ---
+
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getDescription() { return description; }
@@ -53,10 +64,14 @@ public class PropertyPostRequestDto {
     public void setBalconies(Integer balconies) { this.balconies = balconies; }
     public Double getAreaSqft() { return areaSqft; }
     public void setAreaSqft(Double areaSqft) { this.areaSqft = areaSqft; }
-    public Long getAreaId() { return areaId; }
-    public void setAreaId(Long areaId) { this.areaId = areaId; }
+
+    // ⭐ CRITICAL GETTER/SETTER CHANGE
+    public AreaReferenceDto getArea() { return area; }
+    public void setArea(AreaReferenceDto area) { this.area = area; }
+
     public UserReferenceDto getUser() { return user; }
     public void setUser(UserReferenceDto user) { this.user = user; }
+
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
     public String getListingType() { return listingType; }
