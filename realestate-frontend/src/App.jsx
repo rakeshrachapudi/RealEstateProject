@@ -21,6 +21,12 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
   const [isProfileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const navigate = useNavigate();
 
+  // 1. ADDED: This handler navigates to My Properties
+  const handleMyPropertiesClick = () => {
+    navigate('/my-properties');
+    setActiveDropdown(null);
+  };
+
   const dropdownData = {
     buy: {
       popularChoices: [
@@ -152,8 +158,29 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
             )}
           </div>
 
+          {/* 2. INSERTION POINT FOR ACTION BUTTONS */}
           {isAuthenticated ? (
             <div style={styles.authSection}>
+              {/* === ADDED: MY PROPERTIES BUTTON === */}
+              <button
+                onClick={handleMyPropertiesClick}
+                style={{
+                  color: 'white',
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)', // Subtle background for tab look
+                  padding: '12px 20px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  transition: 'background-color 0.2s',
+                }}
+              >
+                My Properties
+              </button>
+              {/* ================================== */}
               <button onClick={onPostPropertyClick} style={styles.postBtn}><span style={styles.btnIcon}>📝</span> Post Property</button>
               <div style={{ position: 'relative', paddingBottom: '10px' }} onMouseEnter={() => setProfileDropdownOpen(true)} onMouseLeave={() => setProfileDropdownOpen(false)}>
                 <div style={styles.userSection} className="userSection">
