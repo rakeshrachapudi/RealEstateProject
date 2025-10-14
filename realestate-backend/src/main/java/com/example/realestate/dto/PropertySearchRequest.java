@@ -15,6 +15,24 @@ public class PropertySearchRequest {
     private String sortOrder = "DESC";
     private Integer page = 0;
     private Integer size = 20;
+    private Boolean isVerified;
+    private String ownerType;
+    private String status;
+
+    private Boolean isReadyToMove;
+
+    public Boolean getIsReadyToMove() { return isReadyToMove; }
+    public void setIsReadyToMove(Boolean isReadyToMove) { this.isReadyToMove = isReadyToMove; }
+
+    // Add getters and setters
+    public Boolean getIsVerified() { return isVerified; }
+    public void setIsVerified(Boolean isVerified) { this.isVerified = isVerified; }
+
+    public String getOwnerType() { return ownerType; }
+    public void setOwnerType(String ownerType) { this.ownerType = ownerType; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
     // Getters and Setters
     public String getPropertyType() { return propertyType; }

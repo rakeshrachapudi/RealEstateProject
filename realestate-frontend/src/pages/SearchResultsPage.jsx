@@ -20,20 +20,26 @@ function SearchResultsPage() {
         setLoading(true);
 
         try {
-            const requestBody = {
-                propertyType: searchParams.propertyType || null,
-                minPrice: searchParams.minPrice ? parseFloat(searchParams.minPrice) : null,
-                maxPrice: searchParams.maxPrice ? parseFloat(searchParams.maxPrice) : null,
-                city: searchParams.city || null,
-                area: searchParams.area || null,
-                listingType: searchParams.listingType || null,
-                minBedrooms: searchParams.minBedrooms ? parseInt(searchParams.minBedrooms) : null,
-                maxBedrooms: searchParams.maxBedrooms ? parseInt(searchParams.maxBedrooms) : null,
-                sortBy: 'createdAt',
-                sortOrder: 'DESC',
-                page: 0,
-                size: 50
-            };
+
+
+
+        const requestBody = {
+            propertyType: searchParams.propertyType || null,
+            minPrice: searchParams.minPrice ? parseFloat(searchParams.minPrice) : null,
+            maxPrice: searchParams.maxPrice ? parseFloat(searchParams.maxPrice) : null,
+            city: searchParams.city || null,
+            area: searchParams.area || null,
+            listingType: searchParams.listingType || null,
+            minBedrooms: searchParams.minBedrooms ? parseInt(searchParams.minBedrooms) : null,
+            maxBedrooms: searchParams.maxBedrooms ? parseInt(searchParams.maxBedrooms) : null,
+            isVerified: searchParams.isVerified === 'true' ? true : null,
+            ownerType: searchParams.ownerType || null,
+            isReadyToMove: searchParams.isReadyToMove === 'true' ? true : null,  // NEW
+            sortBy: 'createdAt',
+            sortOrder: 'DESC',
+            page: 0,
+            size: 50
+        };
 
             const response = await fetch('http://localhost:8080/api/properties/search', {
                 method: 'POST',

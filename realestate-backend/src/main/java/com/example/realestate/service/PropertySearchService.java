@@ -47,7 +47,6 @@ public class PropertySearchService {
                 sort
         );
 
-        // Execute search
         Page<Property> propertyPage = propertyRepository.searchProperties(
                 request.getPropertyType(),
                 request.getMinPrice(),
@@ -57,6 +56,9 @@ public class PropertySearchService {
                 request.getListingType(),
                 request.getMinBedrooms(),
                 request.getMaxBedrooms(),
+                request.getIsVerified(),
+                request.getOwnerType(),
+                request.getIsReadyToMove(),  // NEW
                 pageable
         );
 
@@ -139,6 +141,7 @@ public class PropertySearchService {
         dto.setIsFeatured(property.getIsFeatured());
         dto.setCreatedAt(property.getCreatedAt());
         dto.setPriceDisplay(property.getPriceDisplay());
+        dto.setIsReadyToMove(property.getIsReadyToMove());
 
         // Set property type
         if (property.getPropertyType() != null) {
