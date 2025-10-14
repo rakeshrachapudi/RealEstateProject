@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext.jsx';
@@ -8,11 +9,13 @@ import PropertySearch from './components/PropertySearch';
 import PropertyList from './components/PropertyList';
 import PropertyDetails from './components/PropertyDetails';
 import { getFeaturedProperties } from './services/api';
+import UserProfileModal from './UserProfileModal.jsx';
 
-// Header Component
-function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
+// Header Component with FIXED Dropdowns and NEW Design
+function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileClick }) {
   const { isAuthenticated, user, logout } = useAuth();
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [isProfileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const navigate = useNavigate();
 
   const dropdownData = {
@@ -44,6 +47,17 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
         { label: '₹20,000 - ₹40,000', min: 20000, max: 40000 },
         { label: 'Above ₹40,000', min: 40000, max: 999999 }
       ]
+    },
+    sell: {
+        actions: [
+            { label: 'Post Free Property Ad', type: 'action', key: 'postProperty' },
+            { label: 'Owner Plans', type: 'navigate', path: '/owner-plans' },
+        ],
+        dashboard: { label: 'My Properties', type: 'navigate', path: '/my-properties' },
+        assistance: [
+            { label: 'Rental Agreement', type: 'navigate', path: '/rental-agreement' },
+            { label: 'Home Interior/Renovation', type: 'navigate', path: '/home-renovation' },
+        ]
     }
   };
 
@@ -52,17 +66,20 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
     navigate(`/search?${params.toString()}`);
     setActiveDropdown(null);
   };
-
   const handleBudgetClick = (budget, listingType) => {
     const params = new URLSearchParams({ minPrice: budget.min, maxPrice: budget.max, listingType });
     navigate(`/search?${params.toString()}`);
     setActiveDropdown(null);
   };
-
   const handleChoiceClick = (choice) => {
-    const params = new URLSearchParams(choice.params);
+    const params = new URLSearchParams(choice.params || {});
     navigate(`/search?${params.toString()}`);
     setActiveDropdown(null);
+  };
+  const handleSellItemClick = (item) => {
+      if (item.type === 'navigate') navigate(item.path);
+      else if (item.type === 'action' && item.key === 'postProperty') onPostPropertyClick();
+      setActiveDropdown(null);
   };
 
   return (
@@ -70,107 +87,89 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
       <div style={styles.headerContent}>
         <div onClick={() => navigate('/')} style={styles.logo}>
           <span style={styles.logoIcon}>🏡</span>
-          Your Destiny
+           Your Destiny
         </div>
-
         <nav style={styles.nav}>
-          <div
-            style={styles.navItem}
-            onMouseEnter={() => setActiveDropdown('buy')}
-            onMouseLeave={() => setActiveDropdown(null)}
-          >
+          <div style={styles.navItem} onClick={() => navigate('/')}>
+             <span style={styles.navText}>Home</span>
+          </div>
+          <div style={styles.navItem} onMouseEnter={() => setActiveDropdown('buy')} onMouseLeave={() => setActiveDropdown(null)}>
             <span style={styles.navText}>Buy ▾</span>
             {activeDropdown === 'buy' && (
               <div style={styles.dropdown}>
                 <div style={styles.dropdownSection}>
-                  <h4 style={styles.dropdownTitle}>Popular Choices</h4>
-                  {dropdownData.buy.popularChoices.map(item => (
-                    <div key={item.label} style={styles.dropdownItem} onClick={() => handleChoiceClick(item)}>
-                      {item.label}
-                    </div>
-                  ))}
-                </div>
-                <div style={styles.dropdownSection}>
-                  <h4 style={styles.dropdownTitle}>Property Types</h4>
-                  {dropdownData.buy.propertyTypes.map(item => (
-                    <div key={item} style={styles.dropdownItem} onClick={() => handlePropertyTypeClick(item, 'sale')}>
-                      {item}
-                    </div>
-                  ))}
-                </div>
-                <div style={styles.dropdownSection}>
-                  <h4 style={styles.dropdownTitle}>Budget</h4>
-                  {dropdownData.buy.budget.map(item => (
-                    <div key={item.label} style={styles.dropdownItem} onClick={() => handleBudgetClick(item, 'sale')}>
-                      {item.label}
-                    </div>
-                  ))}
-                </div>
+                                  <h4 style={styles.dropdownTitle}>Popular Choices</h4>
+                                  {dropdownData.buy.popularChoices.map(item => (
+                                    <div key={item.label} style={styles.dropdownItem} onClick={() => handleChoiceClick(item)}>
+                                      {item.label}
+                                    </div>
+                                  ))}
+                                </div>
+                                <div style={styles.dropdownSection}>
+                                  <h4 style={styles.dropdownTitle}>Property Types</h4>
+                                  {dropdownData.buy.propertyTypes.map(item => (
+                                    <div key={item} style={styles.dropdownItem} onClick={() => handlePropertyTypeClick(item, 'sale')}>
+                                      {item}
+                                    </div>
+                                  ))}
+                                </div>
+                                <div style={styles.dropdownSection}>
+                                  <h4 style={styles.dropdownTitle}>Budget</h4>
+                                  {dropdownData.buy.budget.map(item => (
+                                    <div key={item.label} style={styles.dropdownItem} onClick={() => handleBudgetClick(item, 'sale')}>
+                                      {item.label}
+                                    </div>
+                                  ))}
+                                </div>
               </div>
             )}
           </div>
-
-          <div
-            style={styles.navItem}
-            onMouseEnter={() => setActiveDropdown('rent')}
-            onMouseLeave={() => setActiveDropdown(null)}
-          >
+          <div style={styles.navItem} onMouseEnter={() => setActiveDropdown('rent')} onMouseLeave={() => setActiveDropdown(null)}>
             <span style={styles.navText}>Rent ▾</span>
             {activeDropdown === 'rent' && (
-              <div style={styles.dropdown}>
+              <div style={{...styles.dropdown, minWidth: '700px'}}>
+                <div style={styles.dropdownSection}><h4 style={styles.dropdownTitle}>Popular Choices</h4>{dropdownData.rent.popularChoices.map(item => (<div key={item.label} style={styles.dropdownItem} onClick={() => handleChoiceClick(item)}>{item.label}</div>))}</div>
+                <div style={styles.dropdownSection}><h4 style={styles.dropdownTitle}>Property Types</h4>{dropdownData.rent.propertyTypes.map(item => (<div key={item} style={styles.dropdownItem} onClick={() => handlePropertyTypeClick(item, 'rent')}>{item}</div>))}</div>
+                <div style={styles.dropdownSection}><h4 style={styles.dropdownTitle}>Budget</h4>{dropdownData.rent.budget.map(item => (<div key={item.label} style={styles.dropdownItem} onClick={() => handleBudgetClick(item, 'rent')}>{item.label}</div>))}</div>
+              </div>
+            )}
+          </div>
+          <div style={styles.navItem} onMouseEnter={() => setActiveDropdown('sell')} onMouseLeave={() => setActiveDropdown(null)}>
+            <span style={styles.navText}>Sell ▾</span>
+            {activeDropdown === 'sell' && (
+              <div style={{...styles.dropdown, minWidth: '300px', left: 'auto', right: 0, transform: 'none'}}>
                 <div style={styles.dropdownSection}>
-                  <h4 style={styles.dropdownTitle}>Popular Choices</h4>
-                  {dropdownData.rent.popularChoices.map(item => (
-                    <div key={item.label} style={styles.dropdownItem} onClick={() => handleChoiceClick(item)}>
-                      {item.label}
-                    </div>
-                  ))}
-                </div>
-                <div style={styles.dropdownSection}>
-                  <h4 style={styles.dropdownTitle}>Property Types</h4>
-                  {dropdownData.rent.propertyTypes.map(item => (
-                    <div key={item} style={styles.dropdownItem} onClick={() => handlePropertyTypeClick(item, 'rent')}>
-                      {item}
-                    </div>
-                  ))}
-                </div>
-                <div style={styles.dropdownSection}>
-                  <h4 style={styles.dropdownTitle}>Budget</h4>
-                  {dropdownData.rent.budget.map(item => (
-                    <div key={item.label} style={styles.dropdownItem} onClick={() => handleBudgetClick(item, 'rent')}>
-                      {item.label}
-                    </div>
-                  ))}
+                  {dropdownData.sell.actions.map(item => (<div key={item.label} style={styles.dropdownItem} onClick={() => handleSellItemClick(item)}>{item.label}</div>))}
+                  {isAuthenticated && (<div key={dropdownData.sell.dashboard.label} style={styles.dropdownItem} onClick={() => handleSellItemClick(dropdownData.sell.dashboard)}>{dropdownData.sell.dashboard.label}</div>)}
+                  <hr style={{border: 0, borderTop: '1px solid #eee', margin: '12px 0'}} />
+                  <h4 style={styles.dropdownTitle}>Assistance</h4>
+                  {dropdownData.sell.assistance.map(item => (<div key={item.label} style={styles.dropdownItem} onClick={() => handleSellItemClick(item)}>{item.label}</div>))}
                 </div>
               </div>
             )}
           </div>
-
-          <span style={styles.navItem} onClick={() => navigate('/search?listingType=sale')}>
-            <span style={styles.navText}>Sell</span>
-          </span>
 
           {isAuthenticated ? (
             <div style={styles.authSection}>
-              <button onClick={onPostPropertyClick} style={styles.postBtn}>
-                <span style={styles.btnIcon}>📝</span> Post Property
-              </button>
-              <div style={styles.userSection}>
-                <span style={styles.userIcon}>👋</span>
-                <span style={styles.userName}>Welcome, {user?.firstName || 'User'}</span>
+              <button onClick={onPostPropertyClick} style={styles.postBtn}><span style={styles.btnIcon}>📝</span> Post Property</button>
+              <div style={{ position: 'relative', paddingBottom: '10px' }} onMouseEnter={() => setProfileDropdownOpen(true)} onMouseLeave={() => setProfileDropdownOpen(false)}>
+                <div style={styles.userSection} className="userSection">
+                    <span style={styles.userIcon}>👤</span>
+                    <span style={styles.userName}>{user?.firstName || 'User'} ▾</span>
+                </div>
+                {isProfileDropdownOpen && (
+                    <div style={styles.profileDropdown}>
+                        <div style={styles.profileDropdownItem} onClick={() => { onProfileClick(); setProfileDropdownOpen(false); }}> View Profile </div>
+                        <div style={styles.profileDropdownItem} onClick={() => { navigate('/my-properties'); setProfileDropdownOpen(false); }}> My Properties </div>
+                        <div style={{...styles.profileDropdownItem, color: '#dc3545'}} onClick={logout}> Logout </div>
+                    </div>
+                )}
               </div>
-              <button onClick={logout} style={styles.logoutBtn}>
-                <span style={styles.btnIcon}>🚪</span> Logout
-              </button>
             </div>
           ) : (
             <div style={styles.authButtons}>
-              <button onClick={onLoginClick} style={styles.loginBtn}>
-                <span style={styles.btnIcon}>🔑</span> Login
-              </button>
-              <button onClick={onSignupClick} style={styles.signupBtn}>
-                <span style={styles.btnIcon}>✨</span> Sign Up
-              </button>
+              <button onClick={onLoginClick} style={styles.loginBtn}><span style={styles.btnIcon}>🔑</span> Login</button>
+              <button onClick={onSignupClick} style={styles.signupBtn}><span style={styles.btnIcon}>✨</span> Sign Up</button>
             </div>
           )}
         </nav>
@@ -178,17 +177,17 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
     </header>
   );
 }
-
-// Home Page Component with My Properties Tab
+// Home Page Component with NEW Design
 function HomePage() {
-  const { isAuthenticated, user } = useAuth();
+    const { isAuthenticated, user } = useAuth();
   const [propsList, setPropsList] = useState([]);
   const [myProperties, setMyProperties] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('featured'); // 'featured' or 'my-properties'
+  const [activeTab, setActiveTab] = useState('featured');
   const navigate = useNavigate();
+
 
   const popularAreas = [
     { name: 'Gachibowli', emoji: '💼' },
@@ -203,16 +202,16 @@ function HomePage() {
   useEffect(() => {
     fetchProperties();
     if (isAuthenticated && user) {
-      fetchMyProperties();
-    }
-  }, [isAuthenticated, user]);
+          fetchMyProperties();
+          }
+  },[isAuthenticated, user]);
 
   const fetchProperties = async () => {
     try {
       const response = await getFeaturedProperties();
       if (response && response.success) {
-        // Sort to show user's properties first if logged in
-        let properties = response.data;
+// Sort to show user's properties first if logged in
+let properties = response.data;
         if (isAuthenticated && user) {
           properties = properties.sort((a, b) => {
             const aIsUser = a.user?.id === user.id;
@@ -230,13 +229,14 @@ function HomePage() {
     }
   };
 
-  const fetchMyProperties = async () => {
+ const fetchMyProperties = async () => {
     if (!user || !user.id) return;
     try {
       const response = await fetch(`http://localhost:8080/api/properties/user/${user.id}`);
       if (response.ok) {
         const data = await response.json();
-        setMyProperties(data);
+        // API might return { success: true, data: [...] } or plain array; handle both
+        setMyProperties(data.data || data);
       }
     } catch (error) {
       console.error('Error loading my properties:', error);
@@ -301,7 +301,7 @@ function HomePage() {
               key={area.name}
               onClick={() => handleAreaClick(area.name)}
               style={styles.areaButton}
-              className="areaButton"
+              className="areaButton" // Class for hover effect
             >
               <span style={styles.areaEmoji}>{area.emoji}</span>
               {area.name}
@@ -311,40 +311,40 @@ function HomePage() {
       </section>
 
       <section style={styles.propertiesSection}>
-        {/* Tab Navigation */}
-        {isAuthenticated && myProperties.length > 0 && !showSearchResults && (
-          <div style={styles.tabContainer}>
-            <button
-              onClick={() => setActiveTab('featured')}
-              style={{
-                ...styles.tab,
-                ...(activeTab === 'featured' ? styles.activeTab : {})
-              }}
-            >
-              ⭐ Featured Properties
-            </button>
-            <button
-              onClick={() => setActiveTab('my-properties')}
-              style={{
-                ...styles.tab,
-                ...(activeTab === 'my-properties' ? styles.activeTab : {})
-              }}
-            >
-              📁 My Uploaded Properties ({myProperties.length})
-            </button>
-          </div>
-        )}
+           {/* Tab Navigation */}
+                  {isAuthenticated && myProperties.length > 0 && !showSearchResults && (
+                    <div style={styles.tabContainer}>
+                      <button
+                        onClick={() => setActiveTab('featured')}
+                        style={{
+                          ...styles.tab,
+                          ...(activeTab === 'featured' ? styles.activeTab : {})
+                        }}
+                      >
+                        ⭐ Featured Properties
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('my-properties')}
+                        style={{
+                          ...styles.tab,
+                          ...(activeTab === 'my-properties' ? styles.activeTab : {})
+                        }}
+                      >
+                        📁 My Uploaded Properties ({myProperties.length})
+                      </button>
+                    </div>
+                  )}
 
         <div style={styles.sectionHeader}>
           <h2 style={styles.sectionTitle}>
-            <span style={styles.sectionIcon}>
-              {showSearchResults ? '🔍' : activeTab === 'my-properties' ? '📁' : '⭐'}
-            </span>
-            {showSearchResults
-              ? `Search Results (${searchResults.length} found)`
-              : activeTab === 'my-properties'
-              ? 'My Uploaded Properties'
-              : 'Featured Properties'}
+             <span style={styles.sectionIcon}>
+                          {showSearchResults ? '🔍' : activeTab === 'my-properties' ? '📁' : '⭐'}
+                        </span>
+                        {showSearchResults
+                          ? `Search Results (${searchResults.length} found)`
+                          : activeTab === 'my-properties'
+                          ? 'My Uploaded Properties'
+                          : 'Featured Properties'}
           </h2>
           {showSearchResults && (
             <button onClick={handleResetSearch} style={styles.clearSearchBtn}>
@@ -352,16 +352,15 @@ function HomePage() {
             </button>
           )}
         </div>
-
-        {/* Display properties based on active tab */}
-        {activeTab === 'my-properties' && !showSearchResults ? (
-          myProperties.length > 0 ? (
-            <PropertyList
-              properties={myProperties}
-              loading={searchLoading}
-            />
-          ) : (
-            <div style={styles.emptyState}>
+         {/* Display properties based on active tab */}
+                {activeTab === 'my-properties' && !showSearchResults ? (
+                  myProperties.length > 0 ? (
+        <PropertyList
+          properties={myProperties}
+          loading={searchLoading}
+        />
+        ):(
+<div style={styles.emptyState}>
               <div style={styles.emptyIcon}>📭</div>
               <h3 style={styles.emptyTitle}>No Properties Posted Yet</h3>
               <p style={styles.emptyText}>
@@ -375,7 +374,7 @@ function HomePage() {
             loading={searchLoading}
           />
         )}
-      </section>
+    </section>
 
       <section style={styles.statsSection}>
         <div style={styles.statsGrid}>
@@ -405,7 +404,7 @@ function HomePage() {
   );
 }
 
-// Search Results Page Component
+// Search Results Page Component with Functional Logic and NEW Design
 function SearchResultsPage() {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -415,6 +414,7 @@ function SearchResultsPage() {
     const params = new URLSearchParams(window.location.search);
     const searchParams = Object.fromEntries(params.entries());
     fetchFilteredProperties(searchParams);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [window.location.search]);
 
   const fetchFilteredProperties = async (searchParams) => {
@@ -467,69 +467,194 @@ function SearchResultsPage() {
     </div>
   );
 }
+// NEW "My Properties" Page Component
+function MyPropertiesPage({ onPostPropertyClick }) {
+  const { user } = useAuth();
+  const [properties, setProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-// Main App Component
-function App() {
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isPostPropertyModalOpen, setIsPostPropertyModalOpen] = useState(false);
-  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
-
-  const handlePropertyPosted = () => {
-    // Reload handled in modal
-  };
+  useEffect(() => {
+    if (!user?._id) {
+      navigate('/');
+      return;
+    }
+    const fetchMyProperties = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`http://localhost:8080/api/properties/user/${user._id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setProperties(data.data || data || []);
+        } else {
+          setProperties([]);
+        }
+      } catch (err) {
+        console.error('Error fetching user properties:', err);
+        setProperties([]);
+      }
+      setLoading(false);
+    };
+    fetchMyProperties();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, navigate]);
 
   return (
-    <Router>
-      <div style={styles.app}>
-        <Header
-          onLoginClick={() => setIsLoginModalOpen(true)}
-          onSignupClick={() => setIsSignupModalOpen(true)}
-          onPostPropertyClick={() => setIsPostPropertyModalOpen(true)}
-        />
-
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/search" element={<SearchResultsPage />} />
-          <Route path="/property/:id" element={<PropertyDetails />} />
-        </Routes>
-
-        {isLoginModalOpen && <LoginModal onClose={() => setIsLoginModalOpen(false)} />}
-        {isPostPropertyModalOpen && (
-          <PostPropertyModal
-            onClose={() => setIsPostPropertyModalOpen(false)}
-            onPropertyPosted={handlePropertyPosted}
-          />
-        )}
-        {isSignupModalOpen && <SignupModal onClose={() => setIsSignupModalOpen(false)} />}
+    <div style={styles.container}>
+      <div style={styles.pageHeader}>
+        <h1 style={styles.pageTitle}>My Posted Properties</h1>
+        <p style={styles.pageSubtitle}>Here you can view and manage the properties you've listed.</p>
       </div>
-    </Router>
+      <PropertyList properties={properties} loading={loading} />
+      {!loading && properties.length === 0 && (
+        <div style={styles.noPropertiesContainer}>
+          <p style={styles.noPropertiesText}>You haven't posted any properties yet.</p>
+          <button onClick={onPostPropertyClick} style={styles.postBtn}>
+            <span style={styles.btnIcon}>📝</span> Post Your First Property
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
-// Styles
+const PlaceholderPage = ({ title }) => (
+    <div style={{...styles.container, textAlign: 'center', padding: '80px 32px'}}><h1 style={styles.pageTitle}>{title}</h1><p style={styles.pageSubtitle}>This page is currently under construction. 🏗️ Please check back later!</p></div>
+);
+
+// REPLACE the existing App function with these two
+function AppContent() {
+  const navigate = useNavigate();
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isPostPropertyModalOpen, setIsPostPropertyModalOpen] = useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+  const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
+  const { isAuthenticated, user, logout } = useAuth();
+
+  const handlePropertyPosted = () => {
+    setIsPostPropertyModalOpen(false);
+    navigate('/my-properties');
+    setTimeout(() => window.location.reload(), 100);
+  };
+
+  const handlePostPropertyClick = () => {
+    if (isAuthenticated) setIsPostPropertyModalOpen(true);
+    else setIsLoginModalOpen(true);
+  };
+
+  return (
+    <div style={styles.app}>
+      <Header
+        onLoginClick={() => setIsLoginModalOpen(true)}
+        onSignupClick={() => setIsSignupModalOpen(true)}
+        onPostPropertyClick={handlePostPropertyClick}
+        onProfileClick={() => setIsUserProfileModalOpen(true)}
+      />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/search" element={<SearchResultsPage />} />
+        <Route path="/property/:id" element={<PropertyDetails />} />
+        <Route path="/owner-plans" element={<PlaceholderPage title="Owner Plans" />} />
+        <Route path="/my-properties" element={<MyPropertiesPage onPostPropertyClick={handlePostPropertyClick} />} />
+        <Route path="/dashboard" element={<MyPropertiesPage onPostPropertyClick={handlePostPropertyClick} />} />
+        <Route path="/rental-agreement" element={<PlaceholderPage title="Rental Agreement" />} />
+        <Route path="/home-renovation" element={<PlaceholderPage title="Home Interior/Renovation" />} />
+      </Routes>
+      {isLoginModalOpen && <LoginModal onClose={() => setIsLoginModalOpen(false)} />}
+      {isPostPropertyModalOpen && <PostPropertyModal onClose={() => setIsPostPropertyModalOpen(false)} onPropertyPosted={handlePropertyPosted} />}
+      {isSignupModalOpen && <SignupModal onClose={() => setIsSignupModalOpen(false)} />}
+      {isUserProfileModalOpen && <UserProfileModal user={user} onClose={() => setIsUserProfileModalOpen(false)} logout={logout} />}
+    </div>
+
+  );
+}
+
+function App() {
+  return ( <Router> <AppContent /> </Router> );
+}
+
+// Styles from the design file
 const styles = {
-  app: {
+    // unified pageSubtitle (only one definition now)
+    pageSubtitle: {
+        fontSize: '18px',
+        color: '#64748b',
+        fontWeight: 500,
+    },
+    // ADD everything from here down to the styles object
+    viewMoreContainer: {
+        textAlign: 'center',
+        marginTop: '32px'
+    },
+    viewMoreBtn: {
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white',
+        padding: '14px 28px',
+        borderRadius: '12px',
+        border: 'none',
+        cursor: 'pointer',
+        fontWeight: 600,
+        fontSize: '16px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '8px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        transition: 'transform 0.2s, box-shadow 0.2s'
+    },
+    profileDropdown: {
+        position: 'absolute',
+        top: '100%',
+        right: 0,
+        background: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+        zIndex: 1010,
+        width: '200px',
+        overflow: 'hidden',
+        paddingTop: '10px'
+    },
+    profileDropdownItem: {
+        padding: '12px 16px',
+        cursor: 'pointer',
+        fontSize: '14px',
+        color: '#475569',
+        fontWeight: 500
+    },
+    noPropertiesContainer: {
+        textAlign: 'center',
+        padding: '60px 20px',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '16px',
+        border: '2px dashed #e2e8f0'
+    },
+    noPropertiesText: {
+        fontSize: '18px',
+        color: '#64748b',
+        marginBottom: '24px'
+    },
+app: {
     fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
     minHeight: '100vh',
     backgroundColor: '#f8fafc',
-  },
-  header: {
+},
+
+header: {
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     position: 'sticky',
     top: 8,
-    borderRadius: 20,
+    borderRadius:20,
     zIndex: 1000,
     boxShadow: '0 4px 20px rgba(0,0,0,1)',
-  },
-  headerContent: {
+},
+headerContent: {
     maxWidth: 1400,
     margin: '0 auto',
     padding: '16px 32px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  logo: {
+},
+logo: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
@@ -537,26 +662,26 @@ const styles = {
     color: 'white',
     fontWeight: 800,
     cursor: 'pointer',
-  },
-  logoIcon: {
+},
+logoIcon: {
     fontSize: '32px',
-  },
-  nav: {
+},
+nav: {
     display: 'flex',
     gap: '28px',
     alignItems: 'center',
-  },
-  navItem: {
+},
+navItem: {
     position: 'relative',
     cursor: 'pointer',
     padding: '12px 0',
-  },
-  navText: {
+},
+navText: {
     fontSize: '16px',
     fontWeight: 600,
     color: 'white',
-  },
-  dropdown: {
+},
+dropdown: {
     position: 'absolute',
     top: '100%',
     left: '-50px',
@@ -569,18 +694,18 @@ const styles = {
     display: 'flex',
     gap: '32px',
     zIndex: 1000,
-  },
-  dropdownSection: {
+},
+dropdownSection: {
     flex: 1,
-  },
-  dropdownTitle: {
+},
+dropdownTitle: {
     fontSize: '14px',
     fontWeight: 700,
     color: '#4f46e5',
     marginBottom: '16px',
     textTransform: 'uppercase',
-  },
-  dropdownItem: {
+},
+dropdownItem: {
     padding: '10px 16px',
     cursor: 'pointer',
     borderRadius: '8px',
@@ -588,37 +713,37 @@ const styles = {
     color: '#475569',
     fontWeight: 500,
     marginBottom: '4px',
-  },
-  authSection: {
+},
+authSection: {
     display: 'flex',
     alignItems: 'center',
     gap: '16px',
-  },
-  userSection: {
+},
+userSection: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
     background: 'rgba(255,255,255,0.1)',
     padding: '8px 16px',
     borderRadius: '12px',
-  },
-  userIcon: {
+},
+userIcon: {
     fontSize: '18px',
-  },
-  userName: {
+},
+userName: {
     fontWeight: 600,
     fontSize: '14px',
     color: 'white',
-  },
-  authButtons: {
+},
+authButtons: {
     display: 'flex',
     gap: '12px',
-  },
-  btnIcon: {
+},
+btnIcon: {
     marginRight: '8px',
     fontSize: '16px',
-  },
-  postBtn: {
+},
+postBtn: {
     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
     color: 'white',
     padding: '12px 24px',
@@ -629,8 +754,8 @@ const styles = {
     fontSize: '14px',
     display: 'flex',
     alignItems: 'center',
-  },
-  logoutBtn: {
+},
+logoutBtn: {
     background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
     color: 'white',
     padding: '12px 20px',
@@ -641,8 +766,8 @@ const styles = {
     fontSize: '14px',
     display: 'flex',
     alignItems: 'center',
-  },
-  loginBtn: {
+},
+loginBtn: {
     background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
     color: 'white',
     padding: '12px 24px',
@@ -653,8 +778,8 @@ const styles = {
     fontSize: '14px',
     display: 'flex',
     alignItems: 'center',
-  },
-  signupBtn: {
+},
+signupBtn: {
     background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
     color: 'white',
     padding: '12px 24px',
@@ -665,13 +790,13 @@ const styles = {
     fontSize: '14px',
     display: 'flex',
     alignItems: 'center',
-  },
-  container: {
+},
+container: {
     padding: '32px',
     maxWidth: 1400,
     margin: '0 auto',
-  },
-  heroSection: {
+},
+heroSection: {
     position: 'relative',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     borderRadius: '24px',
@@ -680,91 +805,91 @@ const styles = {
     color: 'white',
     textAlign: 'center',
     overflow: 'hidden',
-  },
-  heroContent: {
+},
+heroContent: {
     position: 'relative',
     zIndex: 2,
-  },
-  mainTitle: {
+},
+mainTitle: {
     fontSize: '72px',
     margin: '0 0 24px',
     fontWeight: 800,
-  },
-  titleGradient: {
+},
+titleGradient: {
     background: 'linear-gradient(45deg, #fbbf24, #f59e0b)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
-  },
-  heroSubtitle: {
+},
+heroSubtitle: {
     fontSize: '20px',
     opacity: 0.9,
-  },
-  heroGraphics: {
+},
+heroGraphics: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     pointerEvents: 'none',
-  },
-  floatingElement1: {
+},
+floatingElement1: {
     position: 'absolute',
     top: '20%',
     left: '10%',
     fontSize: '48px',
     animation: 'float 6s ease-in-out infinite',
-  },
-  floatingElement2: {
+},
+floatingElement2: {
     position: 'absolute',
     top: '60%',
     right: '15%',
     fontSize: '64px',
     animation: 'float 8s ease-in-out infinite 1s',
-  },
-  floatingElement3: {
+},
+floatingElement3: {
     position: 'absolute',
     bottom: '20%',
     left: '20%',
     fontSize: '56px',
     animation: 'float 7s ease-in-out infinite 0.5s',
-  },
-  searchSection: {
+},
+searchSection: {
     marginBottom: '60px',
-  },
-  section: {
+},
+section: {
     marginBottom: '60px',
-  },
-  propertiesSection: {
+},
+propertiesSection: {
     marginBottom: '80px',
-  },
-  tabContainer: {
-    display: 'flex',
-    gap: '16px',
-    marginBottom: '32px',
-    borderBottom: '2px solid #e2e8f0',
-  },
-  tab: {
-    padding: '12px 24px',
-    background: 'transparent',
-    border: 'none',
-    borderBottom: '3px solid transparent',
-    cursor: 'pointer',
-    fontSize: '16px',
-    fontWeight: 600,
-    color: '#64748b',
-    transition: 'all 0.3s',
-  },
-  activeTab: {
-    color: '#667eea',
-    borderBottomColor: '#667eea',
-  },
-  sectionHeader: {
+},
+tabContainer: {
+display: 'flex',
+gap: '16px',
+marginBottom: '32px',
+borderBottom: '2px solid #e2e8f0',
+},
+tab: {
+padding: '12px 24px',
+background: 'transparent',
+border: 'none',
+borderBottom: '3px solid transparent',
+cursor: 'pointer',
+fontSize: '16px',
+fontWeight: 600,
+color: '#64748b',
+transition: 'all 0.3s',
+},
+activeTab: {
+color: '#667eea',
+borderBottomColor: '#667eea',
+},
+sectionHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '32px',
-  },
-  sectionTitle: {
+},
+sectionTitle: {
     fontSize: '36px',
     marginBottom: '24px',
     fontWeight: 700,
@@ -772,16 +897,16 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-  },
-  sectionIcon: {
+},
+sectionIcon: {
     fontSize: '32px',
-  },
-  areasGrid: {
+},
+areasGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
     gap: '16px',
-  },
-  areaButton: {
+},
+areaButton: {
     padding: '20px 24px',
     borderRadius: '16px',
     background: 'white',
@@ -794,11 +919,11 @@ const styles = {
     gap: '12px',
     color: '#475569',
     transition: 'all 0.3s',
-  },
-  areaEmoji: {
+},
+areaEmoji: {
     fontSize: '24px',
-  },
-  clearSearchBtn: {
+},
+clearSearchBtn: {
     background: '#ef4444',
     color: 'white',
     padding: '10px 20px',
@@ -807,62 +932,40 @@ const styles = {
     cursor: 'pointer',
     fontWeight: 600,
     fontSize: '14px',
-  },
-  emptyState: {
-    textAlign: 'center',
-    padding: '80px 40px',
-    background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-    borderRadius: '20px',
-  },
-  emptyIcon: {
-    fontSize: '80px',
-    marginBottom: '24px',
-  },
-  emptyTitle: {
-    fontSize: '24px',
-    fontWeight: 700,
-    color: '#1e293b',
-    marginBottom: '12px',
-  },
-  emptyText: {
-    fontSize: '16px',
-    color: '#64748b',
-    maxWidth: '400px',
-    margin: '0 auto',
-  },
-  statsSection: {
+},
+statsSection: {
     background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
     borderRadius: '24px',
     padding: '60px 40px',
     color: 'white',
     textAlign: 'center',
-  },
-  statsGrid: {
+},
+statsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
     gap: '32px',
-  },
-  statCard: {
+},
+statCard: {
     padding: '32px 24px',
-  },
-  statIcon: {
+},
+statIcon: {
     fontSize: '48px',
     marginBottom: '16px',
-  },
-  statNumber: {
+},
+statNumber: {
     fontSize: '36px',
     fontWeight: 800,
     marginBottom: '8px',
     background: 'linear-gradient(45deg, #fbbf24, #f59e0b)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
-  },
-  statLabel: {
+},
+statLabel: {
     fontSize: '16px',
     fontWeight: 500,
     opacity: 0.8,
-  },
-  backButton: {
+},
+backButton: {
     padding: '12px 24px',
     borderRadius: '12px',
     background: '#6b7280',
@@ -875,44 +978,59 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-  },
-  backIcon: {
+},
+backIcon: {
     fontSize: '18px',
-  },
-  pageHeader: {
+},
+pageHeader: {
     textAlign: 'center',
     marginBottom: '48px',
-  },
-  pageTitle: {
+},
+pageTitle: {
     fontSize: '48px',
     fontWeight: 800,
     color: '#1e293b',
     marginBottom: '16px',
-  },
-  pageSubtitle: {
-    fontSize: '18px',
-    color: '#64748b',
-    fontWeight: 500,
-  },
+},
+// pageSubtitle defined above
 };
 
-// Inject animations
+// Inject animations and hover effects into the document
 const styleSheet = document.createElement('style');
 styleSheet.textContent = `
   @keyframes float {
     0%, 100% { transform: translateY(0px) rotate(0deg); }
     50% { transform: translateY(-20px) rotate(5deg); }
   }
+
   .areaButton:hover {
     transform: translateY(-4px);
     border-color: #667eea;
     color: #667eea;
     box-shadow: 0 8px 16px rgba(102, 126, 234, 0.15);
   }
+
   div[style*="dropdownItem"]:hover {
     background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
     color: #4f46e5;
     transform: translateX(4px);
+  }
+div[style*="dropdownItem"]:hover {
+    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+    color: #4f46e5;
+    transform: translateX(4px);
+  }
+
+  /* ADD THESE NEW STYLES */
+  div[style*="profileDropdownItem"]:hover {
+    background: #f1f5f9;
+  }
+  .viewMoreBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
+  }
+  .userSection:hover {
+    background: rgba(255,255,255,0.2);
   }
 `;
 document.head.appendChild(styleSheet);
