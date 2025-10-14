@@ -13,7 +13,7 @@ public class Property {
 
     // Existing fields (keep for backward compatibility)
     private String title;
-    private String type;
+    private String type; // String type for backward compatibility (can also be mapped to propertyType entity name)
     private String city;
     private String imageUrl;
     private String priceDisplay;
@@ -41,6 +41,8 @@ public class Property {
 
     private Integer bedrooms;
     private Integer bathrooms;
+
+    private Integer balconies; // 💡 NEW FIELD ADDED TO RESOLVE ERROR
 
     @Column(name = "amenities", columnDefinition = "TEXT")
     private String amenities;
@@ -123,6 +125,10 @@ public class Property {
 
     public Integer getBathrooms() { return bathrooms; }
     public void setBathrooms(Integer bathrooms) { this.bathrooms = bathrooms; }
+
+    // 💡 NEW GETTER/SETTER
+    public Integer getBalconies() { return balconies; }
+    public void setBalconies(Integer balconies) { this.balconies = balconies; }
 
     public String getAmenities() { return amenities; }
     public void setAmenities(String amenities) { this.amenities = amenities; }

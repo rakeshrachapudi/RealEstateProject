@@ -3,13 +3,15 @@ import { useAuth } from './AuthContext.jsx';
 
 function PostPropertyModal({ onClose, onPropertyPosted }) {
     const { user, isAuthenticated } = useAuth();
-    
-    // State Management
+
+    // State Management: Combined from both V1 and V2
     const [areas, setAreas] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false); // For form submission
     const [error, setError] = useState(null);
-    const [areasLoading, setAreasLoading] = useState(true);
-    
+    const [areasLoading, setAreasLoading] = useState(true); // From V1
+    const [imageUploading, setImageUploading] = useState(false); // From V2
+    const [uploadProgress, setUploadProgress] = useState(0); // From V2
+
     const [formData, setFormData] = useState({
         title: '',
         type: 'Apartment',
@@ -27,61 +29,41 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         description: '',
     });
 
-    // Debug: Track component renders
-    console.log('🖼️ RENDER: PostPropertyModal, areas.length =', areas.length);
+    // Cloudinary Configuration (Corrected)
+    const CLOUDINARY_CLOUD_NAME = 'diw5av4fw';
+    const CLOUDINARY_UPLOAD_PRESET = 'ml_default'; // Corrected from 'root'
 
-    // Load areas when component mounts
-    useEffect(() => {
-        console.log('🎬 MODAL MOUNTED - Loading areas...');
-        loadAreas();
-    }, []);
-
-    // Track areas state changes
-    useEffect(() => {
-        console.log('🔄 AREAS STATE CHANGED!');
-        console.log('🔄 Areas count:', areas.length);
-        console.log('🔄 Areas:', areas);
-    }, [areas]);
-
-    // Load areas from backend
+    // Load areas from backend (Using V1's robust async/await logic)
     const loadAreas = async () => {
-        console.log('📞 Step 1: loadAreas() called');
         setAreasLoading(true);
-        
         try {
             const url = 'http://localhost:8080/api/areas?city=Hyderabad';
-            console.log('📞 Step 2: Fetching from:', url);
-            
             const response = await fetch(url);
-            console.log('📞 Step 3: Response status:', response.status, response.ok);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
             const data = await response.json();
-            console.log('📞 Step 4: Data received:', data);
-            console.log('📞 Step 4.1: data.success =', data.success);
-            console.log('📞 Step 4.2: data.data length =', data.data?.length);
 
             if (data.success && Array.isArray(data.data)) {
-                console.log('✅ Step 5: Setting areas with', data.data.length, 'items');
-                console.log('✅ First area:', data.data[0]);
                 setAreas(data.data);
                 setError(null);
             } else {
-                console.error('❌ Invalid data structure:', data);
-                setError('Invalid response format from server');
+                setError('Invalid response format from server for areas');
             }
         } catch (err) {
-            console.error('❌ Error loading areas:', err);
             setError(`Failed to load areas: ${err.message}`);
             setAreas([]);
         } finally {
             setAreasLoading(false);
-            console.log('📞 Step 6: loadAreas() finished');
         }
     };
+
+    // Load areas when component mounts
+    useEffect(() => {
+        loadAreas();
+    }, []);
 
     // Check authentication
     if (!isAuthenticated || !user) {
@@ -103,15 +85,55 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         setError(null);
     };
 
-    // Handle form submission
+    // Handle Image Upload (V2 Logic)
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) return alert('Please select an image file');
+        if (file.size > 10 * 1024 * 1024) return alert('File too large (max 10MB)');
+
+        setImageUploading(true);
+        setUploadProgress(10);
+
+        try {
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+            setUploadProgress(30);
+
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+                method: 'POST', body: fd
+            });
+
+            setUploadProgress(70);
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                console.error("Cloudinary Error Response:", errorData);
+                throw new Error(`Upload failed: ${errorData.error.message || res.statusText}`);
+            }
+
+            const data = await res.json();
+            setUploadProgress(100);
+            setFormData(p => ({...p, imageUrl: data.secure_url}));
+            setTimeout(() => setUploadProgress(0), 2000);
+        } catch (err) {
+            alert('Upload failed: ' + err.message);
+        } finally {
+            setImageUploading(false);
+        }
+    };
+
+    // Handle form submission (V1 Logic)
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
 
         // Validate required fields
-        if (!formData.title || !formData.area || !formData.imageUrl || 
-            !formData.bedrooms || !formData.bathrooms || !formData.price || 
+        if (!formData.title || !formData.area || !formData.imageUrl ||
+            !formData.bedrooms || !formData.bathrooms || !formData.price ||
             !formData.description) {
             setError('Please fill all required fields marked with *');
             setLoading(false);
@@ -137,26 +159,15 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
         // Prepare property data
         const propertyData = {
-            title: formData.title,
-            type: formData.type,
-            city: formData.city,
+            title: formData.title, type: formData.type, city: formData.city,
             address: formData.address || `${formData.area}, ${formData.city}`,
-            imageUrl: formData.imageUrl,
-            description: formData.description,
-            price: numericPrice,
-            priceDisplay: priceDisplay,
+            imageUrl: formData.imageUrl, description: formData.description,
+            price: numericPrice, priceDisplay: priceDisplay,
             areaSqft: formData.areaSqft ? parseFloat(formData.areaSqft) : null,
-            bedrooms: parseInt(formData.bedrooms),
-            bathrooms: parseInt(formData.bathrooms),
-            amenities: formData.amenities || null,
-            listingType: formData.listingType,
-            status: 'available',
-            isFeatured: true,
-            isActive: true,
-            user: { id: user.id }
+            bedrooms: parseInt(formData.bedrooms), bathrooms: parseInt(formData.bathrooms),
+            amenities: formData.amenities || null, listingType: formData.listingType,
+            status: 'available', isFeatured: true, isActive: true, user: { id: user.id }
         };
-
-        console.log('📤 Submitting property:', propertyData);
 
         try {
             const response = await fetch('http://localhost:8080/api/properties', {
@@ -167,18 +178,13 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('Server error:', errorText);
-                throw new Error('Failed to post property');
+                throw new Error('Failed to post property: ' + errorText);
             }
-
-            const result = await response.json();
-            console.log('✅ Property posted successfully:', result);
 
             alert('✅ Property posted successfully!');
             onClose();
             window.location.reload();
         } catch (err) {
-            console.error('❌ Error posting property:', err);
             setError(err.message || 'Failed to post property. Please try again.');
         } finally {
             setLoading(false);
@@ -199,11 +205,6 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                     </div>
                 )}
 
-                {/* Debug Info */}
-                <div style={styles.debugInfo}>
-                    <strong>Debug:</strong> {areas.length} areas loaded | User ID: {user.id}
-                </div>
-
                 <form onSubmit={handleSubmit} style={styles.form}>
                     {/* Property Title */}
                     <div style={styles.field}>
@@ -223,11 +224,11 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                     <div style={styles.row}>
                         <div style={styles.field}>
                             <label style={styles.label}>Property Type *</label>
-                            <select 
-                                name="type" 
-                                value={formData.type} 
-                                onChange={handleChange} 
-                                style={styles.select} 
+                            <select
+                                name="type"
+                                value={formData.type}
+                                onChange={handleChange}
+                                style={styles.select}
                                 required
                             >
                                 <option>Apartment</option>
@@ -242,11 +243,11 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                         </div>
                         <div style={styles.field}>
                             <label style={styles.label}>Listing Type *</label>
-                            <select 
-                                name="listingType" 
-                                value={formData.listingType} 
-                                onChange={handleChange} 
-                                style={styles.select} 
+                            <select
+                                name="listingType"
+                                value={formData.listingType}
+                                onChange={handleChange}
+                                style={styles.select}
                                 required
                             >
                                 <option value="sale">🏠 For Sale</option>
@@ -255,7 +256,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                         </div>
                     </div>
 
-                    {/* City and Area - THE CRITICAL SECTION */}
+                    {/* City and Area */}
                     <div style={styles.row}>
                         <div style={styles.field}>
                             <label style={styles.label}>City *</label>
@@ -279,33 +280,21 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                                 name="area"
                                 value={formData.area}
                                 onChange={handleChange}
-                                style={{
-                                    ...styles.select,
-                                    borderColor: areas.length > 0 ? '#10b981' : '#ef4444',
-                                    borderWidth: '2px'
-                                }}
+                                style={styles.select}
                                 required
-                                disabled={areasLoading}
+                                disabled={areasLoading || areas.length === 0}
                             >
                                 <option value="">
-                                    {areasLoading ? '⏳ Loading areas...' : 
-                                     areas.length === 0 ? '❌ No areas available' : 
+                                    {areasLoading ? '⏳ Loading areas...' :
+                                     areas.length === 0 ? '❌ No areas available' :
                                      `-- Select Area (${areas.length} options) --`}
                                 </option>
-                                {areas.map((area, index) => {
-                                    console.log(`Rendering option ${index}:`, area.areaName);
-                                    return (
-                                        <option key={area.areaId} value={area.areaName}>
-                                            {area.areaName} ({area.pincode})
-                                        </option>
-                                    );
-                                })}
+                                {areas.map((area) => (
+                                    <option key={area.areaId} value={area.areaName}>
+                                        {area.areaName} ({area.pincode})
+                                    </option>
+                                ))}
                             </select>
-                            {!areasLoading && areas.length === 0 && (
-                                <small style={{color: '#ef4444', fontSize: '12px', display: 'block', marginTop: '4px'}}>
-                                    ⚠️ Backend not responding. Check console.
-                                </small>
-                            )}
                         </div>
                     </div>
 
@@ -322,38 +311,56 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                         />
                     </div>
 
-                    {/* Image URL */}
-                    <div style={styles.imageSection}>
-                        <label style={styles.label}>🖼️ Property Image *</label>
-                        <input
-                            type="url"
-                            name="imageUrl"
-                            value={formData.imageUrl}
-                            onChange={handleChange}
-                            placeholder="https://example.com/image.jpg"
-                            style={styles.input}
-                            required
-                        />
-                        <div style={styles.imageHelp}>
-                            <p style={{margin: 0, fontSize: '13px', color: '#6b7280'}}>
-                                💡 <strong>How to add image:</strong>
-                            </p>
-                            <ol style={{margin: '8px 0', paddingLeft: '20px', fontSize: '12px', color: '#6b7280'}}>
-                                <li>Go to <a href="https://imgur.com/upload" target="_blank" rel="noopener noreferrer" style={{color: '#3b82f6'}}>Imgur</a> or <a href="https://postimages.org/" target="_blank" rel="noopener noreferrer" style={{color: '#3b82f6'}}>PostImages</a></li>
-                                <li>Upload your property image</li>
-                                <li>Copy the <strong>direct image link</strong></li>
-                                <li>Paste it in the field above</li>
-                            </ol>
-                        </div>
-                        {formData.imageUrl && (
-                            <img
-                                src={formData.imageUrl}
-                                alt="Preview"
-                                style={styles.imagePreview}
-                                onError={(e) => {
-                                    e.target.style.display = 'none';
-                                }}
-                            />
+                    {/* IMAGE UPLOAD SECTION (from V2, styled with V1 naming) */}
+                    <div style={{...styles.imageSection, border: '2px solid #3b82f6', background: '#f0f9ff'}}>
+                        <h3 style={{margin: '0 0 12px 0', fontSize: '16px', color: '#1e40af', fontWeight: '700'}}>
+                            📁 Upload Property Image *
+                        </h3>
+
+                        {!formData.imageUrl ? (
+                            <>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                    disabled={imageUploading}
+                                    style={{
+                                        display: 'block',
+                                        width: '100%',
+                                        padding: '16px',
+                                        border: '3px dashed #3b82f6',
+                                        borderRadius: '8px',
+                                        backgroundColor: 'white',
+                                        cursor: 'pointer',
+                                        fontSize: '16px',
+                                        fontWeight: '600',
+                                        color: '#1e40af'
+                                    }}
+                                />
+                                {imageUploading && (
+                                    <div style={{marginTop: '12px'}}>
+                                        <div style={{width: '100%', height: '10px', background: '#e0e7ff', borderRadius: '5px'}}>
+                                            <div style={{width: `${uploadProgress}%`, height: '100%', background: '#3b82f6', borderRadius: '5px', transition: 'width 0.3s'}}></div>
+                                        </div>
+                                        <p style={{margin: '8px 0 0 0', color: '#3b82f6', fontWeight: '600'}}>Uploading {uploadProgress}%</p>
+                                    </div>
+                                )}
+                                <p style={{margin: '12px 0 0 0', fontSize: '14px', color: '#6b7280'}}>
+                                    OR paste URL: <input type="url" name="imageUrl" value={formData.imageUrl}
+                                        onChange={handleChange} placeholder="https://..." style={{...styles.input, marginTop: '8px', width: '100%'}} />
+                                </p>
+                            </>
+                        ) : (
+                            <div style={{textAlign: 'center'}}>
+                                <div style={{background: '#d1fae5', color: '#065f46', padding: '12px', borderRadius: '8px', fontWeight: '600', marginBottom: '12px'}}>
+                                    ✅ Image uploaded!
+                                </div>
+                                <img src={formData.imageUrl} alt="Preview" style={styles.imagePreview} />
+                                <button type="button" onClick={() => setFormData(p => ({...p, imageUrl: ''}))}
+                                    style={{marginTop: '12px', padding: '10px 20px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600'}}>
+                                    🗑️ Remove
+                                </button>
+                            </div>
                         )}
                     </div>
 
@@ -370,7 +377,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                         />
                     </div>
 
-                    {/* Bedrooms, Bathrooms, Balconies */}
+                    {/* Bedrooms, Bathrooms, Balconies (V1 layout: row3) */}
                     <div style={styles.row3}>
                         <div style={styles.field}>
                             <label style={styles.label}>🛏️ Bedrooms *</label>
@@ -460,12 +467,12 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                         type="submit"
                         style={{
                             ...styles.submitBtn,
-                            opacity: loading ? 0.6 : 1,
-                            cursor: loading ? 'not-allowed' : 'pointer'
+                            opacity: (loading || imageUploading) ? 0.6 : 1,
+                            cursor: (loading || imageUploading) ? 'not-allowed' : 'pointer'
                         }}
-                        disabled={loading}
+                        disabled={loading || imageUploading}
                     >
-                        {loading ? '⏳ Posting Property...' : '📤 Post Property'}
+                        {loading ? '⏳ Posting Property...' : imageUploading ? '⏳ Uploading Image...' : '📤 Post Property'}
                     </button>
 
                     <p style={{textAlign: 'center', fontSize: '12px', color: '#9ca3af', margin: '8px 0 0 0'}}>
@@ -477,7 +484,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     );
 }
 
-// Styles
+// Styles (Using V1's detailed style object)
 const styles = {
     backdrop: {
         position: 'fixed',
@@ -526,15 +533,6 @@ const styles = {
         color: '#1e293b',
         fontWeight: '800',
     },
-    debugInfo: {
-        background: '#dbeafe',
-        padding: '8px 12px',
-        borderRadius: '6px',
-        fontSize: '12px',
-        marginBottom: '1rem',
-        color: '#1e40af',
-        border: '1px solid #93c5fd',
-    },
     form: {
         display: 'flex',
         flexDirection: 'column',
@@ -579,17 +577,9 @@ const styles = {
         transition: 'border-color 0.3s',
     },
     imageSection: {
-        background: '#f8fafc',
+        // Base style from V1's imageSection
         padding: '16px',
         borderRadius: '12px',
-        border: '2px dashed #cbd5e1',
-    },
-    imageHelp: {
-        marginTop: '8px',
-        background: 'white',
-        padding: '12px',
-        borderRadius: '8px',
-        border: '1px solid #e2e8f0',
     },
     imagePreview: {
         marginTop: '12px',
