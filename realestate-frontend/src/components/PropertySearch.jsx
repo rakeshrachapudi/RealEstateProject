@@ -141,9 +141,9 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
         <p style={styles.subtitle}>Search through thousands of properties in Hyderabad</p>
 
         {/* Debug Info */}
-        <div style={styles.debugInfo}>
-          <small>Debug: {debugInfo.types} | {debugInfo.areas}</small>
-        </div>
+{/*         <div style={styles.debugInfo}> */}
+{/*           <small>Debug: {debugInfo.types} | {debugInfo.areas}</small> */}
+{/*         </div> */}
       </div>
 
       <form onSubmit={handleSearch} style={styles.form}>

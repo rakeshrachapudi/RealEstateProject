@@ -5,9 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="42dfceb5-b8ee-4b67-a031-eae8b466d127" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/animations.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/styles.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/DebugComponent.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/DebugComponent.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -35,7 +34,7 @@
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "feature/user-profile-button",
+    "git-widget-placeholder": "feature/App.jsx-split",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "C:/Users/nsrin/RealEstateProject-main/realestate-frontend",
     "settings.editor.selected.configurable": "preferences.pluginManager"
