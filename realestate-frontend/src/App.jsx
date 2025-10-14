@@ -11,7 +11,6 @@ import { getFeaturedProperties } from './services/api';
 import UserProfileModal from './UserProfileModal.jsx';
 import { searchProperties, getPropertiesByOwner } from './services/api';
 // Header Component with FIXED Dropdowns and NEW Design
-// REPLACE the existing Header function with this one
 function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileClick }) {
   const { isAuthenticated, user, logout } = useAuth();
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -63,10 +62,12 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
 
   const handlePropertyTypeClick = (type, listingType) => {
     navigate(`/search?${new URLSearchParams({ propertyType: type, listingType })}`);
+    navigate(`/search?${params.toString()}`);
     setActiveDropdown(null);
   };
   const handleBudgetClick = (budget, listingType) => {
     navigate(`/search?${new URLSearchParams({ minPrice: budget.min, maxPrice: budget.max, listingType })}`);
+    navigate(`/search?${params.toString()}`);
     setActiveDropdown(null);
   };
   const handleChoiceClick = (choice) => {
@@ -83,7 +84,8 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
     <header style={styles.header}>
       <div style={styles.headerContent}>
         <div onClick={() => navigate('/')} style={styles.logo}>
-          <span style={styles.logoIcon}>🏡</span> Your Destiny
+          <span style={styles.logoIcon}>🏡</span>
+           Your Destiny
         </div>
         <nav style={styles.nav}>
           <div style={styles.navItem} onClick={() => navigate('/')}>
@@ -93,9 +95,30 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
             <span style={styles.navText}>Buy ▾</span>
             {activeDropdown === 'buy' && (
               <div style={styles.dropdown}>
-                <div style={styles.dropdownSection}><h4 style={styles.dropdownTitle}>Popular Choices</h4>{dropdownData.buy.popularChoices.map(item => (<div key={item.label} style={styles.dropdownItem} onClick={() => handleChoiceClick(item)}>{item.label}</div>))}</div>
-                <div style={styles.dropdownSection}><h4 style={styles.dropdownTitle}>Property Types</h4>{dropdownData.buy.propertyTypes.map(item => (<div key={item} style={styles.dropdownItem} onClick={() => handlePropertyTypeClick(item, 'sale')}>{item}</div>))}</div>
-                <div style={styles.dropdownSection}><h4 style={styles.dropdownTitle}>Budget</h4>{dropdownData.buy.budget.map(item => (<div key={item.label} style={styles.dropdownItem} onClick={() => handleBudgetClick(item, 'sale')}>{item.label}</div>))}</div>
+                <div style={styles.dropdownSection}>
+                                  <h4 style={styles.dropdownTitle}>Popular Choices</h4>
+                                  {dropdownData.buy.popularChoices.map(item => (
+                                    <div key={item.label} style={styles.dropdownItem} onClick={() => handleChoiceClick(item)}>
+                                      {item.label}
+                                    </div>
+                                  ))}
+                                </div>
+                                <div style={styles.dropdownSection}>
+                                  <h4 style={styles.dropdownTitle}>Property Types</h4>
+                                  {dropdownData.buy.propertyTypes.map(item => (
+                                    <div key={item} style={styles.dropdownItem} onClick={() => handlePropertyTypeClick(item, 'sale')}>
+                                      {item}
+                                    </div>
+                                  ))}
+                                </div>
+                                <div style={styles.dropdownSection}>
+                                  <h4 style={styles.dropdownTitle}>Budget</h4>
+                                  {dropdownData.buy.budget.map(item => (
+                                    <div key={item.label} style={styles.dropdownItem} onClick={() => handleBudgetClick(item, 'sale')}>
+                                      {item.label}
+                                    </div>
+                                  ))}
+                                </div>
               </div>
             )}
           </div>
@@ -123,6 +146,7 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
               </div>
             )}
           </div>
+
           {isAuthenticated ? (
             <div style={styles.authSection}>
               <button onClick={onPostPropertyClick} style={styles.postBtn}><span style={styles.btnIcon}>📝</span> Post Property</button>
@@ -153,11 +177,15 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
 }
 // Home Page Component with NEW Design
 function HomePage() {
+    const { isAuthenticated, user } = useAuth();
   const [propsList, setPropsList] = useState([]);
+  const [myProperties, setMyProperties] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('featured');
   const navigate = useNavigate();
+
 
   const popularAreas = [
     { name: 'Gachibowli', emoji: '💼' },
@@ -171,13 +199,27 @@ function HomePage() {
 
   useEffect(() => {
     fetchProperties();
-  }, []);
+    if (isAuthenticated && user) {
+          fetchMyProperties();
+          }
+  },[isAuthenticated, user]);
 
   const fetchProperties = async () => {
     try {
       const response = await getFeaturedProperties();
       if (response && response.success) {
-        setPropsList(response.data);
+// Sort to show user's properties first if logged in
+let properties = response.data;
+        if (isAuthenticated && user) {
+          properties = properties.sort((a, b) => {
+            const aIsUser = a.user?.id === user.id;
+            const bIsUser = b.user?.id === user.id;
+            if (aIsUser && !bIsUser) return -1;
+            if (!aIsUser && bIsUser) return 1;
+            return 0;
+          });
+        }
+        setPropsList(properties);
         setShowSearchResults(false);
       }
     } catch (error) {
@@ -185,10 +227,24 @@ function HomePage() {
     }
   };
 
+ const fetchMyProperties = async () => {
+    if (!user || !user.id) return;
+    try {
+      const response = await fetch(`http://localhost:8080/api/properties/user/${user.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setMyProperties(data);
+      }
+    } catch (error) {
+      console.error('Error loading my properties:', error);
+    }
+  };
+
   const handleSearchResults = (results) => {
     setSearchResults(results);
     setShowSearchResults(true);
     setSearchLoading(false);
+    setActiveTab('featured');
   };
 
   const handleSearchStart = () => {
@@ -198,6 +254,7 @@ function HomePage() {
   const handleResetSearch = () => {
     setShowSearchResults(false);
     setSearchResults([]);
+    setActiveTab('featured');
     fetchProperties();
   };
 
@@ -251,10 +308,40 @@ function HomePage() {
       </section>
 
       <section style={styles.propertiesSection}>
+           {/* Tab Navigation */}
+                  {isAuthenticated && myProperties.length > 0 && !showSearchResults && (
+                    <div style={styles.tabContainer}>
+                      <button
+                        onClick={() => setActiveTab('featured')}
+                        style={{
+                          ...styles.tab,
+                          ...(activeTab === 'featured' ? styles.activeTab : {})
+                        }}
+                      >
+                        ⭐ Featured Properties
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('my-properties')}
+                        style={{
+                          ...styles.tab,
+                          ...(activeTab === 'my-properties' ? styles.activeTab : {})
+                        }}
+                      >
+                        📁 My Uploaded Properties ({myProperties.length})
+                      </button>
+                    </div>
+                  )}
+
         <div style={styles.sectionHeader}>
           <h2 style={styles.sectionTitle}>
-            <span style={styles.sectionIcon}>⭐</span>
-            {showSearchResults ? `Search Results (${searchResults.length} found)` : 'Featured Properties'}
+             <span style={styles.sectionIcon}>
+                          {showSearchResults ? '🔍' : activeTab === 'my-properties' ? '📁' : '⭐'}
+                        </span>
+                        {showSearchResults
+                          ? `Search Results (${searchResults.length} found)`
+                          : activeTab === 'my-properties'
+                          ? 'My Uploaded Properties'
+                          : 'Featured Properties'}
           </h2>
           {showSearchResults && (
             <button onClick={handleResetSearch} style={styles.clearSearchBtn}>
@@ -262,20 +349,29 @@ function HomePage() {
             </button>
           )}
         </div>
+         {/* Display properties based on active tab */}
+                {activeTab === 'my-properties' && !showSearchResults ? (
+                  myProperties.length > 0 ? (
         <PropertyList
-          properties={showSearchResults ? searchResults : propsList}
+          properties={myProperties}
           loading={searchLoading}
         />
-        <div style={styles.viewMoreContainer}>
-                    <button
-                        onClick={() => navigate('/search')}
-                        style={styles.viewMoreBtn}
-                        className="viewMoreBtn"
-                    >
-                        View All Properties →
-                    </button>
-                </div>
-      </section>
+        ):(
+<div style={styles.emptyState}>
+              <div style={styles.emptyIcon}>📭</div>
+              <h3 style={styles.emptyTitle}>No Properties Posted Yet</h3>
+              <p style={styles.emptyText}>
+                Start by posting your first property to see it here
+              </p>
+            </div>
+          )
+        ) : (
+          <PropertyList
+            properties={showSearchResults ? searchResults : propsList}
+            loading={searchLoading}
+          />
+        )}
+    </section>
 
       <section style={styles.statsSection}>
         <div style={styles.statsGrid}>
@@ -439,7 +535,7 @@ function AppContent() {
         onLoginClick={() => setIsLoginModalOpen(true)}
         onSignupClick={() => setIsSignupModalOpen(true)}
         onPostPropertyClick={handlePostPropertyClick}
-        onProfileClick={() => setIsUserProfileModalOpen(true)}
+        onProfileClick={() => setIsPostProfileModalOpen(true)}
       />
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -456,6 +552,7 @@ function AppContent() {
       {isSignupModalOpen && <SignupModal onClose={() => setIsSignupModalOpen(false)} />}
       {isUserProfileModalOpen && <UserProfileModal user={user} onClose={() => setIsUserProfileModalOpen(false)} logout={logout} />}
     </div>
+
   );
 }
 
@@ -751,6 +848,27 @@ const styles = {
     propertiesSection: {
         marginBottom: '80px',
     },
+tabContainer: {
+    display: 'flex',
+    gap: '16px',
+    marginBottom: '32px',
+    borderBottom: '2px solid #e2e8f0',
+  },
+  tab: {
+    padding: '12px 24px',
+    background: 'transparent',
+    border: 'none',
+    borderBottom: '3px solid transparent',
+    cursor: 'pointer',
+    fontSize: '16px',
+    fontWeight: 600,
+    color: '#64748b',
+    transition: 'all 0.3s',
+  },
+  activeTab: {
+    color: '#667eea',
+    borderBottomColor: '#667eea',
+  },
     sectionHeader: {
         display: 'flex',
         justifyContent: 'space-between',
