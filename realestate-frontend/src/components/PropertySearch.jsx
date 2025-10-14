@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { searchProperties, getPropertyTypes, getAreas } from '../services/api';
 
 const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
   const [searchParams, setSearchParams] = useState({
@@ -16,6 +15,7 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
   const [propertyTypes, setPropertyTypes] = useState([]);
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [debugInfo, setDebugInfo] = useState({ types: 'loading...', areas: 'loading...' });
 
   useEffect(() => {
     loadPropertyTypes();
@@ -23,24 +23,56 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
   }, []);
 
   const loadPropertyTypes = async () => {
+    console.log('🔍 Loading property types...');
     try {
-      const response = await getPropertyTypes();
-      if (response.success) {
-        setPropertyTypes(response.data);
+      const response = await fetch('http://localhost:8080/api/property-types');
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Property Types Response:', data);
+
+      if (data && data.success && data.data) {
+        console.log('✅ Setting', data.data.length, 'property types');
+        setPropertyTypes(data.data);
+        setDebugInfo(prev => ({ ...prev, types: `Loaded ${data.data.length} types` }));
+      } else {
+        console.error('❌ Invalid response structure:', data);
+        setDebugInfo(prev => ({ ...prev, types: 'Invalid response' }));
       }
     } catch (error) {
-      console.error('Error loading property types:', error);
+      console.error('❌ Error loading property types:', error);
+      setDebugInfo(prev => ({ ...prev, types: `Error: ${error.message}` }));
     }
   };
 
   const loadAreas = async () => {
+    console.log('🔍 Loading areas...');
     try {
-      const response = await getAreas('Hyderabad');
-      if (response.success) {
-        setAreas(response.data);
+      const response = await fetch('http://localhost:8080/api/areas?city=Hyderabad');
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Areas Response:', data);
+
+      if (data && data.success && data.data) {
+        console.log('✅ Setting', data.data.length, 'areas');
+        setAreas(data.data);
+        setDebugInfo(prev => ({ ...prev, areas: `Loaded ${data.data.length} areas` }));
+      } else {
+        console.error('❌ Invalid response structure:', data);
+        setDebugInfo(prev => ({ ...prev, areas: 'Invalid response' }));
       }
     } catch (error) {
-      console.error('Error loading areas:', error);
+      console.error('❌ Error loading areas:', error);
+      setDebugInfo(prev => ({ ...prev, areas: `Error: ${error.message}` }));
     }
   };
 
@@ -66,9 +98,19 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
         listingType: searchParams.listingType || null
       };
 
-      const response = await searchProperties(params);
-      if (response.success) {
-        onSearchResults(response.data);
+      const response = await fetch('http://localhost:8080/api/properties/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        onSearchResults(data.data);
       }
     } catch (error) {
       console.error('Error searching properties:', error);
@@ -97,6 +139,11 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
       <div style={styles.header}>
         <h2 style={styles.title}>🔍 Find Your Perfect Property</h2>
         <p style={styles.subtitle}>Search through thousands of properties in Hyderabad</p>
+
+        {/* Debug Info */}
+        <div style={styles.debugInfo}>
+          <small>Debug: {debugInfo.types} | {debugInfo.areas}</small>
+        </div>
       </div>
 
       <form onSubmit={handleSearch} style={styles.form}>
@@ -105,7 +152,7 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
           <div style={styles.formGroup}>
             <label style={styles.label}>
               <span style={styles.labelIcon}>🏠</span>
-              Property Type
+              Property Type ({propertyTypes.length} types loaded)
             </label>
             <select
               name="propertyType"
@@ -135,8 +182,8 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
               style={styles.select}
             >
               <option value="">All Listings</option>
-              <option value="sale">🏠 For Sale</option>
-              <option value="rent">🔑 For Rent</option>
+              <option value="sale">For Sale</option>
+              <option value="rent">For Rent</option>
             </select>
           </div>
 
@@ -144,7 +191,7 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
           <div style={styles.formGroup}>
             <label style={styles.label}>
               <span style={styles.labelIcon}>📍</span>
-              Area
+              Area ({areas.length} areas loaded)
             </label>
             <select
               name="area"
@@ -187,7 +234,7 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
             <input
               type="number"
               name="maxPrice"
-              placeholder="Maximum Price"
+              placeholder="500000000"
               value={searchParams.maxPrice}
               onChange={handleInputChange}
               style={styles.input}
@@ -204,7 +251,7 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
             <input
               type="number"
               name="minBedrooms"
-              placeholder="Min"
+              placeholder="1"
               value={searchParams.minBedrooms}
               onChange={handleInputChange}
               style={styles.input}
@@ -222,7 +269,7 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
             <input
               type="number"
               name="maxBedrooms"
-              placeholder="Max"
+              placeholder="2"
               value={searchParams.maxBedrooms}
               onChange={handleInputChange}
               style={styles.input}
@@ -257,7 +304,6 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
   );
 };
 
-// Enhanced Styles
 const styles = {
   container: {
     background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
@@ -266,7 +312,6 @@ const styles = {
     boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
     marginBottom: '3rem',
     border: '1px solid rgba(255,255,255,0.2)',
-    backdropFilter: 'blur(10px)',
   },
   header: {
     textAlign: 'center',
@@ -277,15 +322,18 @@ const styles = {
     marginBottom: '0.5rem',
     color: '#1e293b',
     fontWeight: '800',
-    background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
   },
   subtitle: {
     fontSize: '1.1rem',
     color: '#64748b',
     fontWeight: '500',
+  },
+  debugInfo: {
+    marginTop: '0.5rem',
+    padding: '0.5rem',
+    background: '#fef3c7',
+    borderRadius: '8px',
+    color: '#92400e',
   },
   form: {
     width: '100%',
@@ -317,14 +365,8 @@ const styles = {
     borderRadius: '12px',
     border: '2px solid #e2e8f0',
     fontSize: '15px',
-    transition: 'all 0.3s ease',
     background: 'white',
     fontWeight: '500',
-    ':focus': {
-      outline: 'none',
-      borderColor: '#4f46e5',
-      boxShadow: '0 0 0 3px rgba(79, 70, 229, 0.1)',
-    },
   },
   select: {
     padding: '14px 16px',
@@ -333,18 +375,7 @@ const styles = {
     fontSize: '15px',
     backgroundColor: 'white',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
     fontWeight: '500',
-    appearance: 'none',
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 16px center',
-    backgroundSize: '16px',
-    ':focus': {
-      outline: 'none',
-      borderColor: '#4f46e5',
-      boxShadow: '0 0 0 3px rgba(79, 70, 229, 0.1)',
-    },
   },
   actions: {
     display: 'flex',
@@ -361,15 +392,9 @@ const styles = {
     fontSize: '15px',
     fontWeight: '700',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    boxShadow: '0 4px 12px rgba(107, 114, 128, 0.3)',
-    ':hover': {
-      transform: 'translateY(-2px)',
-      boxShadow: '0 6px 20px rgba(107, 114, 128, 0.4)',
-    },
   },
   searchButton: {
     padding: '14px 32px',
@@ -380,20 +405,9 @@ const styles = {
     fontSize: '15px',
     fontWeight: '700',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
-    ':hover': {
-      transform: 'translateY(-2px)',
-      boxShadow: '0 6px 20px rgba(79, 70, 229, 0.4)',
-    },
-    ':disabled': {
-      opacity: 0.7,
-      transform: 'none',
-      cursor: 'not-allowed',
-    },
   },
   buttonIcon: {
     fontSize: '16px',
