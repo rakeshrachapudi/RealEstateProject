@@ -23,7 +23,14 @@ public class PropertyDTO {
     private String cityName;
     private String state;
     private LocalDateTime createdAt;
-    private String priceDisplay;  // For backward compatibility
+    private String priceDisplay;
+
+    private Boolean isReadyToMove;
+
+    public Boolean getIsReadyToMove() { return isReadyToMove; }
+    public void setIsReadyToMove(Boolean isReadyToMove) { this.isReadyToMove = isReadyToMove; }
+
+    // For backward compatibility
 
     // All Getters and Setters
     public Long getPropertyId() { return propertyId; }
