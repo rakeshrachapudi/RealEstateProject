@@ -1,6 +1,6 @@
 // src/pages/SearchResultsPage.jsx
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import PropertyList from '../components/PropertyList';
 import { styles } from '../styles.js';
 
@@ -8,22 +8,41 @@ function SearchResultsPage() {
     const [properties, setProperties] = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+    const location = useLocation();
 
     useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
+        const params = new URLSearchParams(location.search);
         const searchParams = Object.fromEntries(params.entries());
         fetchFilteredProperties(searchParams);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [window.location.search]);
+    }, [location.search]);
 
     const fetchFilteredProperties = async (searchParams) => {
         setLoading(true);
+
         try {
+            const requestBody = {
+                propertyType: searchParams.propertyType || null,
+                minPrice: searchParams.minPrice ? parseFloat(searchParams.minPrice) : null,
+                maxPrice: searchParams.maxPrice ? parseFloat(searchParams.maxPrice) : null,
+                city: searchParams.city || null,
+                area: searchParams.area || null,
+                listingType: searchParams.listingType || null,
+                minBedrooms: searchParams.minBedrooms ? parseInt(searchParams.minBedrooms) : null,
+                maxBedrooms: searchParams.maxBedrooms ? parseInt(searchParams.maxBedrooms) : null,
+                sortBy: 'createdAt',
+                sortOrder: 'DESC',
+                page: 0,
+                size: 50
+            };
+
             const response = await fetch('http://localhost:8080/api/properties/search', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(searchParams)
+                body: JSON.stringify(requestBody)
             });
+
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
             const data = await response.json();
             if (data.success) {
                 setProperties(data.data || []);
@@ -39,12 +58,13 @@ function SearchResultsPage() {
     };
 
     const getPageTitle = () => {
-        const params = new URLSearchParams(window.location.search);
+        const params = new URLSearchParams(location.search);
         const type = params.get('propertyType');
         const listingType = params.get('listingType');
         const area = params.get('area');
+
         if (area) return `Properties in ${area}`;
-        if (type) return `${type}s for ${listingType === 'sale' ? 'Sale' : 'Rent'}`;
+        if (type && listingType) return `${type}s for ${listingType === 'sale' ? 'Sale' : 'Rent'}`;
         if (listingType) return `Properties for ${listingType === 'sale' ? 'Sale' : 'Rent'}`;
         return 'Search Results';
     };
@@ -58,11 +78,20 @@ function SearchResultsPage() {
             <div style={styles.pageHeader}>
                 <h1 style={styles.pageTitle}>{getPageTitle()}</h1>
                 <p style={styles.pageSubtitle}>
-                    {loading ? 'Searching...' : `${properties.length} properties found`}
+                    {loading ? 'Searching...' : `${properties.length} ${properties.length === 1 ? 'property' : 'properties'} found`}
                 </p>
             </div>
 
-            <PropertyList properties={properties} loading={loading} />
+            {!loading && properties.length === 0 ? (
+                <div style={styles.emptyState}>
+                    <div style={styles.emptyIcon}>🏚️</div>
+                    <h3 style={styles.emptyTitle}>No properties found</h3>
+                    <p style={styles.emptyText}>Try adjusting your search or browse all properties</p>
+                    <button onClick={() => navigate('/')} style={styles.postBtn}>Browse All Properties</button>
+                </div>
+            ) : (
+                <PropertyList properties={properties} loading={loading} />
+            )}
         </div>
     );
 }

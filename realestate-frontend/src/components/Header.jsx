@@ -1,5 +1,5 @@
 // src/components/Header.jsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
 import { styles } from '../styles.js';
@@ -9,20 +9,70 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [isProfileDropdownOpen, setProfileDropdownOpen] = useState(false);
     const navigate = useNavigate();
+    const dropdownTimerRef = useRef(null);
+
+    useEffect(() => {
+        return () => {
+            if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current);
+        };
+    }, []);
 
     const handleMyPropertiesClick = () => {
         navigate('/my-properties');
         setActiveDropdown(null);
     };
 
+    const handleMouseEnter = (dropdown) => {
+        if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current);
+        setActiveDropdown(dropdown);
+    };
+
+    const handleMouseLeave = () => {
+        dropdownTimerRef.current = setTimeout(() => setActiveDropdown(null), 300);
+    };
+
+    const handleDropdownEnter = () => {
+        if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current);
+    };
+
+    const handlePropertyTypeClick = (propertyTypeValue, listingType) => {
+        const params = new URLSearchParams({ propertyType: propertyTypeValue, listingType });
+        navigate(`/search?${params.toString()}`);
+        setActiveDropdown(null);
+    };
+
+    const handleBudgetClick = (budget, listingType) => {
+        const params = new URLSearchParams({ minPrice: budget.min, maxPrice: budget.max, listingType });
+        navigate(`/search?${params.toString()}`);
+        setActiveDropdown(null);
+    };
+
+    const handleChoiceClick = (choice) => {
+        const params = new URLSearchParams(choice.params || {});
+        navigate(`/search?${params.toString()}`);
+        setActiveDropdown(null);
+    };
+
+    const handleSellItemClick = (item) => {
+        if (item.type === 'navigate') navigate(item.path);
+        else if (item.type === 'action' && item.key === 'postProperty') onPostPropertyClick();
+        setActiveDropdown(null);
+    };
+
     const dropdownData = {
         buy: {
             popularChoices: [
-                { label: 'Owner Properties', params: { listingType: 'sale', ownerType: 'owner' } },
-                { label: 'Verified Properties', params: { listingType: 'sale', verified: true } },
-                { label: 'Ready to Move', params: { listingType: 'sale', status: 'ready' } }
+                { label: 'Owner Properties', params: { listingType: 'sale' } },
+                { label: 'Verified Properties', params: { listingType: 'sale' } },
+                { label: 'Ready to Move', params: { listingType: 'sale' } }
             ],
-            propertyTypes: ['Apartments', 'Independent Houses', 'Villas', 'Plots'],
+            propertyTypes: [
+                { label: 'Apartments', value: 'Apartment' },
+                { label: 'Villas', value: 'Villa' },
+                { label: 'Houses', value: 'House' },
+                { label: 'Plots', value: 'Plot' },
+                { label: 'Commercial', value: 'Commercial' }
+            ],
             budget: [
                 { label: 'Under ₹50 Lac', min: 0, max: 5000000 },
                 { label: '₹50 Lac - ₹1 Cr', min: 5000000, max: 10000000 },
@@ -32,12 +82,17 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
         },
         rent: {
             popularChoices: [
-                { label: 'Owner Properties', params: { listingType: 'rent', ownerType: 'owner' } },
-                { label: 'Verified Properties', params: { listingType: 'rent', verified: true } },
-                { label: 'Furnished Homes', params: { listingType: 'rent', furnishing: 'furnished' } },
-                { label: 'Bachelor Friendly', params: { listingType: 'rent', bachelors: true } }
+                { label: 'Owner Properties', params: { listingType: 'rent' } },
+                { label: 'Verified Properties', params: { listingType: 'rent' } },
+                { label: 'Furnished Homes', params: { listingType: 'rent' } },
+                { label: 'Bachelor Friendly', params: { listingType: 'rent' } }
             ],
-            propertyTypes: ['Apartments', 'Independent Houses', 'Villas', 'PG', 'Flatmates'],
+            propertyTypes: [
+                { label: 'Apartments', value: 'Apartment' },
+                { label: 'Houses', value: 'House' },
+                { label: 'Villas', value: 'Villa' },
+                { label: 'PG', value: 'PG' }
+            ],
             budget: [
                 { label: 'Under ₹10,000', min: 0, max: 10000 },
                 { label: '₹10,000 - ₹20,000', min: 10000, max: 20000 },
@@ -58,27 +113,6 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
         }
     };
 
-    const handlePropertyTypeClick = (type, listingType) => {
-        const params = new URLSearchParams({ propertyType: type, listingType });
-        navigate(`/search?${params.toString()}`);
-        setActiveDropdown(null);
-    };
-    const handleBudgetClick = (budget, listingType) => {
-        const params = new URLSearchParams({ minPrice: budget.min, maxPrice: budget.max, listingType });
-        navigate(`/search?${params.toString()}`);
-        setActiveDropdown(null);
-    };
-    const handleChoiceClick = (choice) => {
-        const params = new URLSearchParams(choice.params || {});
-        navigate(`/search?${params.toString()}`);
-        setActiveDropdown(null);
-    };
-    const handleSellItemClick = (item) => {
-        if (item.type === 'navigate') navigate(item.path);
-        else if (item.type === 'action' && item.key === 'postProperty') onPostPropertyClick();
-        setActiveDropdown(null);
-    };
-
     return (
         <header style={styles.header}>
             <div style={styles.headerContent}>
@@ -90,57 +124,78 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
                     <div style={styles.navItem} onClick={() => navigate('/')}>
                         <span style={styles.navText}>Home</span>
                     </div>
-                    <div style={styles.navItem} onMouseEnter={() => setActiveDropdown('buy')} onMouseLeave={() => setActiveDropdown(null)}>
+
+                    {/* BUY */}
+                    <div style={styles.navItem} onMouseEnter={() => handleMouseEnter('buy')} onMouseLeave={handleMouseLeave}>
                         <span style={styles.navText}>Buy ▾</span>
                         {activeDropdown === 'buy' && (
-                            <div style={styles.dropdown}>
+                            <div style={styles.dropdown} onMouseEnter={handleDropdownEnter} onMouseLeave={handleMouseLeave}>
                                 <div style={styles.dropdownSection}>
                                     <h4 style={styles.dropdownTitle}>Popular Choices</h4>
                                     {dropdownData.buy.popularChoices.map(item => (
-                                        <div key={item.label} style={styles.dropdownItem} onClick={() => handleChoiceClick(item)}>
-                                            {item.label}
-                                        </div>
+                                        <div key={item.label} style={styles.dropdownItem} onClick={() => handleChoiceClick(item)}>{item.label}</div>
                                     ))}
                                 </div>
                                 <div style={styles.dropdownSection}>
                                     <h4 style={styles.dropdownTitle}>Property Types</h4>
                                     {dropdownData.buy.propertyTypes.map(item => (
-                                        <div key={item} style={styles.dropdownItem} onClick={() => handlePropertyTypeClick(item, 'sale')}>
-                                            {item}
-                                        </div>
+                                        <div key={item.value} style={styles.dropdownItem} onClick={() => handlePropertyTypeClick(item.value, 'sale')}>{item.label}</div>
                                     ))}
                                 </div>
                                 <div style={styles.dropdownSection}>
                                     <h4 style={styles.dropdownTitle}>Budget</h4>
                                     {dropdownData.buy.budget.map(item => (
-                                        <div key={item.label} style={styles.dropdownItem} onClick={() => handleBudgetClick(item, 'sale')}>
-                                            {item.label}
-                                        </div>
+                                        <div key={item.label} style={styles.dropdownItem} onClick={() => handleBudgetClick(item, 'sale')}>{item.label}</div>
                                     ))}
                                 </div>
                             </div>
                         )}
                     </div>
-                    <div style={styles.navItem} onMouseEnter={() => setActiveDropdown('rent')} onMouseLeave={() => setActiveDropdown(null)}>
+
+                    {/* RENT */}
+                    <div style={styles.navItem} onMouseEnter={() => handleMouseEnter('rent')} onMouseLeave={handleMouseLeave}>
                         <span style={styles.navText}>Rent ▾</span>
                         {activeDropdown === 'rent' && (
-                            <div style={{...styles.dropdown, minWidth: '700px'}}>
-                                <div style={styles.dropdownSection}><h4 style={styles.dropdownTitle}>Popular Choices</h4>{dropdownData.rent.popularChoices.map(item => (<div key={item.label} style={styles.dropdownItem} onClick={() => handleChoiceClick(item)}>{item.label}</div>))}</div>
-                                <div style={styles.dropdownSection}><h4 style={styles.dropdownTitle}>Property Types</h4>{dropdownData.rent.propertyTypes.map(item => (<div key={item} style={styles.dropdownItem} onClick={() => handlePropertyTypeClick(item, 'rent')}>{item}</div>))}</div>
-                                <div style={styles.dropdownSection}><h4 style={styles.dropdownTitle}>Budget</h4>{dropdownData.rent.budget.map(item => (<div key={item.label} style={styles.dropdownItem} onClick={() => handleBudgetClick(item, 'rent')}>{item.label}</div>))}</div>
+                            <div style={{...styles.dropdown, minWidth: '700px'}} onMouseEnter={handleDropdownEnter} onMouseLeave={handleMouseLeave}>
+                                <div style={styles.dropdownSection}>
+                                    <h4 style={styles.dropdownTitle}>Popular Choices</h4>
+                                    {dropdownData.rent.popularChoices.map(item => (
+                                        <div key={item.label} style={styles.dropdownItem} onClick={() => handleChoiceClick(item)}>{item.label}</div>
+                                    ))}
+                                </div>
+                                <div style={styles.dropdownSection}>
+                                    <h4 style={styles.dropdownTitle}>Property Types</h4>
+                                    {dropdownData.rent.propertyTypes.map(item => (
+                                        <div key={item.value} style={styles.dropdownItem} onClick={() => handlePropertyTypeClick(item.value, 'rent')}>{item.label}</div>
+                                    ))}
+                                </div>
+                                <div style={styles.dropdownSection}>
+                                    <h4 style={styles.dropdownTitle}>Budget</h4>
+                                    {dropdownData.rent.budget.map(item => (
+                                        <div key={item.label} style={styles.dropdownItem} onClick={() => handleBudgetClick(item, 'rent')}>{item.label}</div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>
-                    <div style={styles.navItem} onMouseEnter={() => setActiveDropdown('sell')} onMouseLeave={() => setActiveDropdown(null)}>
+
+                    {/* SELL */}
+                    <div style={styles.navItem} onMouseEnter={() => handleMouseEnter('sell')} onMouseLeave={handleMouseLeave}>
                         <span style={styles.navText}>Sell ▾</span>
                         {activeDropdown === 'sell' && (
-                            <div style={{...styles.dropdown, minWidth: '300px', left: 'auto', right: 0, transform: 'none'}}>
+                            <div style={{...styles.dropdown, minWidth: '300px', left: 'auto', right: 0, transform: 'none'}} onMouseEnter={handleDropdownEnter} onMouseLeave={handleMouseLeave}>
                                 <div style={styles.dropdownSection}>
-                                    {dropdownData.sell.actions.map(item => (<div key={item.label} style={styles.dropdownItem} onClick={() => handleSellItemClick(item)}>{item.label}</div>))}
-                                    {isAuthenticated && (<div key={dropdownData.sell.dashboard.label} style={styles.dropdownItem} onClick={() => handleSellItemClick(dropdownData.sell.dashboard)}>{dropdownData.sell.dashboard.label}</div>)}
+                                    {dropdownData.sell.actions.map(item => (
+                                        <div key={item.label} style={styles.dropdownItem} onClick={() => handleSellItemClick(item)}>{item.label}</div>
+                                    ))}
+                                    {isAuthenticated && (
+                                        <div style={styles.dropdownItem} onClick={() => handleSellItemClick(dropdownData.sell.dashboard)}>{dropdownData.sell.dashboard.label}</div>
+                                    )}
                                     <hr style={{border: 0, borderTop: '1px solid #eee', margin: '12px 0'}} />
                                     <h4 style={styles.dropdownTitle}>Assistance</h4>
-                                    {dropdownData.sell.assistance.map(item => (<div key={item.label} style={styles.dropdownItem} onClick={() => handleSellItemClick(item)}>{item.label}</div>))}
+                                    {dropdownData.sell.assistance.map(item => (
+                                        <div key={item.label} style={styles.dropdownItem} onClick={() => handleSellItemClick(item)}>{item.label}</div>
+                                    ))}
                                 </div>
                             </div>
                         )}
@@ -148,24 +203,7 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
 
                     {isAuthenticated ? (
                         <div style={styles.authSection}>
-                            <button
-                                onClick={handleMyPropertiesClick}
-                                style={{
-                                    color: 'white',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.2)', // Subtle background for tab look
-                                    padding: '12px 20px',
-                                    borderRadius: '12px',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    fontWeight: 600,
-                                    fontSize: '14px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    transition: 'background-color 0.2s',
-                                }}
-                            >
-                                My Properties
-                            </button>
+                            <button onClick={handleMyPropertiesClick} style={{color: 'white', backgroundColor: 'rgba(255, 255, 255, 0.2)', padding: '12px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '14px'}}>My Properties</button>
                             <button onClick={onPostPropertyClick} style={styles.postBtn}><span style={styles.btnIcon}>📝</span> Post Property</button>
                             <div style={{ position: 'relative', paddingBottom: '10px' }} onMouseEnter={() => setProfileDropdownOpen(true)} onMouseLeave={() => setProfileDropdownOpen(false)}>
                                 <div style={styles.userSection} className="userSection">
@@ -174,9 +212,9 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
                                 </div>
                                 {isProfileDropdownOpen && (
                                     <div style={styles.profileDropdown}>
-                                        <div style={styles.profileDropdownItem} onClick={() => { onProfileClick(); setProfileDropdownOpen(false); }}> View Profile </div>
-                                        <div style={styles.profileDropdownItem} onClick={() => { navigate('/my-properties'); setProfileDropdownOpen(false); }}> My Properties </div>
-                                        <div style={{...styles.profileDropdownItem, color: '#dc3545'}} onClick={logout}> Logout </div>
+                                        <div style={styles.profileDropdownItem} onClick={() => { onProfileClick(); setProfileDropdownOpen(false); }}>View Profile</div>
+                                        <div style={styles.profileDropdownItem} onClick={() => { navigate('/my-properties'); setProfileDropdownOpen(false); }}>My Properties</div>
+                                        <div style={{...styles.profileDropdownItem, color: '#dc3545'}} onClick={logout}>Logout</div>
                                     </div>
                                 )}
                             </div>

@@ -17,6 +17,7 @@ function HomePage() {
     const [activeTab, setActiveTab] = useState('featured');
     const navigate = useNavigate();
 
+
     const popularAreas = [
         { name: 'Gachibowli', emoji: '💼' },
         { name: 'HITEC City', emoji: '🏢' },
@@ -96,8 +97,11 @@ function HomePage() {
         fetchProperties();
     };
 
+    // In your HomePage.jsx, update the handleAreaClick function:
     const handleAreaClick = (area) => {
-        navigate(`/search?area=${encodeURIComponent(area)}`);
+        // Convert spaces to hyphens for URL
+        const urlArea = area.name.toLowerCase().replace(/\s+/g, '-');
+        navigate(`/area/${urlArea}`);
     };
 
     return (

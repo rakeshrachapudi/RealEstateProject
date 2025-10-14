@@ -1,7 +1,7 @@
+// src/components/PropertyTypePage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PropertyList from './PropertyList';
-import { searchProperties } from '../services/api';
 
 const PropertyTypePage = () => {
   const { listingType, propertyType, areaName } = useParams();
@@ -18,34 +18,105 @@ const PropertyTypePage = () => {
     setLoading(true);
     setError(null);
 
-    const searchParams = {};
-
-    if (areaName) {
-      searchParams.area = decodeURIComponent(areaName);
-    }
-    if (listingType) {
-      searchParams.listingType = listingType;
-    }
-    if (propertyType) {
-      // API expects space, but URL has hyphens
-      searchParams.propertyType = propertyType.replace(/-/g, ' ');
-    }
+    console.log('🔍 Fetching properties with:', { listingType, propertyType, areaName });
 
     try {
-      // Use the centralized search API call
-      const response = await searchProperties(searchParams);
-      if (response && response.success) {
-        setProperties(response.data);
-      } else {
-        throw new Error(response.message || 'No properties found');
+      const response = await fetch('http://localhost:8080/api/properties');
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch properties: ${response.status}`);
       }
+
+      const data = await response.json();
+      console.log('✅ All properties from API:', data);
+
+      let allProperties = [];
+
+      // Handle response format
+      if (Array.isArray(data)) {
+        allProperties = data;
+      } else if (data && Array.isArray(data.data)) {
+        allProperties = data.data;
+      } else {
+        allProperties = [];
+      }
+
+      console.log(`📊 Total properties found: ${allProperties.length}`);
+
+      // Filter properties based on URL parameters
+      const filteredProperties = allProperties.filter(property => {
+        let matches = true;
+
+        // Filter by listing type (sale/rent)
+        if (listingType && property.listingType) {
+          const propListingType = property.listingType.toLowerCase();
+          const searchListingType = listingType.toLowerCase();
+          matches = matches && propListingType === searchListingType;
+          console.log(`Listing type check: ${propListingType} === ${searchListingType} = ${matches}`);
+        }
+
+        // Filter by property type
+        if (propertyType && property.type) {
+          const searchType = propertyType.replace(/-/g, ' ').toLowerCase();
+          const propType = property.type.toLowerCase();
+
+          console.log(`Type check: "${propType}" vs "${searchType}"`);
+
+          // Flexible matching for property types
+          const exactMatch = propType === searchType;
+          const containsMatch = propType.includes(searchType) || searchType.includes(propType);
+          const synonymMatch = checkPropertyTypeSynonyms(propType, searchType);
+
+          matches = matches && (exactMatch || containsMatch || synonymMatch);
+          console.log(`Type match result: ${matches}`);
+        }
+
+        // Filter by area name
+        if (areaName && property.areaName) {
+          const searchArea = areaName.replace(/-/g, ' ').toLowerCase();
+          const propArea = property.areaName.toLowerCase();
+          matches = matches && propArea.includes(searchArea);
+          console.log(`Area check: ${propArea} includes ${searchArea} = ${matches}`);
+        }
+
+        console.log(`Property "${property.title}" - matches: ${matches}`);
+        return matches;
+      });
+
+      console.log(`✅ Filtered properties found: ${filteredProperties.length}`);
+      setProperties(filteredProperties);
+
     } catch (err) {
-      console.error('Error fetching properties:', err);
-      setError('Failed to load properties. Please try again.');
+      console.error('❌ Error fetching properties:', err);
+      setError('Failed to load properties. Please check if the backend is running.');
       setProperties([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to handle property type synonyms
+  const checkPropertyTypeSynonyms = (propType, searchType) => {
+    const synonyms = {
+      'apartment': ['flat', 'apartments'],
+      'flat': ['apartment', 'apartments'],
+      'villa': ['house', 'independent house', 'bungalow'],
+      'house': ['villa', 'independent house', 'bungalow'],
+      'plot': ['land', 'empty plot'],
+    };
+
+    if (synonyms[searchType]) {
+      return synonyms[searchType].includes(propType);
+    }
+
+    // Check reverse mapping
+    for (const [key, values] of Object.entries(synonyms)) {
+      if (values.includes(searchType) && propType === key) {
+        return true;
+      }
+    }
+
+    return false;
   };
 
   if (loading) {
@@ -69,9 +140,13 @@ const PropertyTypePage = () => {
     );
   }
 
+  const formatTitle = (text) => {
+    return text.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
   const title = areaName
-    ? `Properties in ${decodeURIComponent(areaName)}`
-    : `${propertyType.replace(/-/g, ' ')} for ${listingType === 'sale' ? 'Sale' : 'Rent'}`;
+    ? `Properties in ${formatTitle(areaName)}`
+    : `${formatTitle(propertyType)} for ${listingType === 'sale' ? 'Sale' : 'Rent'}`;
 
   return (
     <div style={styles.container}>
@@ -80,18 +155,25 @@ const PropertyTypePage = () => {
       </button>
       <h1 style={styles.title}>{title}</h1>
       <p style={styles.count}>{properties.length} properties found</p>
-      <PropertyList properties={properties} />
 
-      {properties.length === 0 && (
+      <PropertyList properties={properties} loading={loading} />
+
+      {properties.length === 0 && !loading && (
         <div style={styles.emptyContainer}>
           <div style={styles.emptyIcon}>🏠</div>
-          <h3 style={styles.emptyTitle}>No properties found in this category</h3>
+          <h3 style={styles.emptyTitle}>No properties found</h3>
           <p style={styles.emptyText}>
-            Try browsing all properties or adjusting your filters.
+            We couldn't find any {formatTitle(propertyType)} properties for {listingType === 'sale' ? 'sale' : 'rent'}
+            {areaName && ` in ${formatTitle(areaName)}`}.
           </p>
-          <button onClick={() => navigate('/')} style={styles.browseButton}>
-            Browse All Properties
-          </button>
+          <div style={styles.buttonGroup}>
+            <button onClick={() => navigate('/')} style={styles.browseButton}>
+              Browse All Properties
+            </button>
+            <button onClick={fetchProperties} style={styles.retryButton}>
+              Refresh Search
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -119,16 +201,22 @@ const styles = {
     borderRadius: '16px',
     border: '2px solid #fecaca',
   },
+  buttonGroup: {
+    display: 'flex',
+    gap: '12px',
+    justifyContent: 'center',
+    marginTop: '20px',
+    flexWrap: 'wrap',
+  },
   retryButton: {
-    padding: '12px 32px',
-    backgroundColor: '#ef4444',
+    padding: '12px 24px',
+    backgroundColor: '#3b82f6',
     color: 'white',
     border: 'none',
     borderRadius: '8px',
-    fontSize: '16px',
+    fontSize: '14px',
     fontWeight: 600,
     cursor: 'pointer',
-    marginTop: '20px',
   },
   backButton: {
     padding: '10px 20px',
@@ -177,15 +265,14 @@ const styles = {
     margin: '0 auto 24px',
   },
   browseButton: {
-    padding: '12px 32px',
+    padding: '12px 24px',
     backgroundColor: '#3b82f6',
     color: 'white',
     border: 'none',
     borderRadius: '8px',
-    fontSize: '16px',
+    fontSize: '14px',
     fontWeight: 600,
     cursor: 'pointer',
-    transition: 'background 0.3s',
   },
 };
 
