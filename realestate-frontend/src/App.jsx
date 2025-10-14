@@ -14,6 +14,7 @@ import UserProfileModal from './UserProfileModal.jsx';
 // Import Components
 import Header from './components/Header.jsx';
 import PropertyDetails from './components/PropertyDetails.jsx';
+import PropertyTypePage from './components/PropertyTypePage.jsx';
 
 // Import Pages
 import HomePage from './pages/HomePage.jsx';
@@ -60,6 +61,9 @@ function AppContent() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/search" element={<SearchResultsPage />} />
                 <Route path="/property/:id" element={<PropertyDetails />} />
+                {/* ADDED ROUTES FOR HEADER NAVIGATION */}
+                <Route path="/property-type/:listingType/:propertyType" element={<PropertyTypePage />} />
+                <Route path="/area/:areaName" element={<PropertyTypePage />} />
                 <Route path="/owner-plans" element={<PlaceholderPage title="Owner Plans" />} />
                 <Route path="/my-properties" element={<MyPropertiesPage onPostPropertyClick={handlePostPropertyClick} />} />
                 <Route path="/dashboard" element={<MyPropertiesPage onPostPropertyClick={handlePostPropertyClick} />} />
