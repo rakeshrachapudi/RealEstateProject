@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -65,6 +66,35 @@ public class PropertyImageService {
         }
 
         return propertyImageRepository.save(propertyImage);
+    }
+
+    /**
+     * Save multiple images for a property
+     * NEW METHOD - This is what was missing!
+     */
+    public List<PropertyImage> saveImages(Long propertyId, List<PropertyImageRequest> imageRequests) {
+        logger.info("Saving {} images for property ID: {}", imageRequests.size(), propertyId);
+
+        Property property = propertyRepository.findById(propertyId)
+                .orElseThrow(() -> new RuntimeException("Property not found with id: " + propertyId));
+
+        List<PropertyImage> savedImages = new ArrayList<>();
+
+        for (int i = 0; i < imageRequests.size(); i++) {
+            PropertyImageRequest request = imageRequests.get(i);
+
+            PropertyImage image = new PropertyImage();
+            image.setProperty(property);
+            image.setImageUrl(request.getImageUrl());
+            image.setIsPrimary(request.getIsPrimary() != null ? request.getIsPrimary() : (i == 0));
+            image.setDisplayOrder(request.getDisplayOrder() != null ? request.getDisplayOrder() : i);
+            image.setCreatedAt(LocalDateTime.now());
+
+            savedImages.add(propertyImageRepository.save(image));
+        }
+
+        logger.info("Successfully saved {} images", savedImages.size());
+        return savedImages;
     }
 
     /**
@@ -130,5 +160,46 @@ public class PropertyImageService {
 
         image.setDisplayOrder(newOrder);
         propertyImageRepository.save(image);
+    }
+
+    /**
+     * DTO class for image requests
+     */
+    public static class PropertyImageRequest {
+        private String imageUrl;
+        private Boolean isPrimary;
+        private Integer displayOrder;
+
+        public PropertyImageRequest() {}
+
+        public PropertyImageRequest(String imageUrl, Boolean isPrimary, Integer displayOrder) {
+            this.imageUrl = imageUrl;
+            this.isPrimary = isPrimary;
+            this.displayOrder = displayOrder;
+        }
+
+        public String getImageUrl() {
+            return imageUrl;
+        }
+
+        public void setImageUrl(String imageUrl) {
+            this.imageUrl = imageUrl;
+        }
+
+        public Boolean getIsPrimary() {
+            return isPrimary;
+        }
+
+        public void setIsPrimary(Boolean isPrimary) {
+            this.isPrimary = isPrimary;
+        }
+
+        public Integer getDisplayOrder() {
+            return displayOrder;
+        }
+
+        public void setDisplayOrder(Integer displayOrder) {
+            this.displayOrder = displayOrder;
+        }
     }
 }

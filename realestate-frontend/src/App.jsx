@@ -9,13 +9,26 @@ import PropertyList from './components/PropertyList';
 import PropertyDetails from './components/PropertyDetails';
 import { getFeaturedProperties } from './services/api';
 
-// Header Component with FIXED Dropdowns and NEW Design
+// Header Component with FIXED Dropdowns
 function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
   const { isAuthenticated, user, logout } = useAuth();
   const [activeDropdown, setActiveDropdown] = useState(null);
   const navigate = useNavigate();
 
-  // Data structure from the functional file to build correct search URLs
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (activeDropdown && !e.target.closest('[data-dropdown-container]')) {
+        setActiveDropdown(null);
+      }
+    };
+
+    if (activeDropdown) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [activeDropdown]);
+
   const dropdownData = {
     buy: {
       popularChoices: [
@@ -48,7 +61,6 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
     }
   };
 
-  // Navigation logic from the functional file
   const handlePropertyTypeClick = (type, listingType) => {
     const params = new URLSearchParams({ propertyType: type, listingType });
     navigate(`/search?${params.toString()}`);
@@ -76,8 +88,10 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
         </div>
 
         <nav style={styles.nav}>
+          {/* Buy Dropdown */}
           <div
             style={styles.navItem}
+            data-dropdown-container
             onMouseEnter={() => setActiveDropdown('buy')}
             onMouseLeave={() => setActiveDropdown(null)}
           >
@@ -112,8 +126,10 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
             )}
           </div>
 
+          {/* Rent Dropdown */}
           <div
             style={styles.navItem}
+            data-dropdown-container
             onMouseEnter={() => setActiveDropdown('rent')}
             onMouseLeave={() => setActiveDropdown(null)}
           >
@@ -148,10 +164,12 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
             )}
           </div>
 
+          {/* Sell Link */}
           <span style={styles.navItem} onClick={() => navigate('/search?listingType=sale')}>
             <span style={styles.navText}>Sell</span>
           </span>
 
+          {/* Auth Section */}
           {isAuthenticated ? (
             <div style={styles.authSection}>
               <button onClick={onPostPropertyClick} style={styles.postBtn}>
@@ -181,7 +199,7 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick }) {
   );
 }
 
-// Home Page Component with NEW Design
+// Home Page Component
 function HomePage() {
   const [propsList, setPropsList] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
@@ -271,7 +289,7 @@ function HomePage() {
               key={area.name}
               onClick={() => handleAreaClick(area.name)}
               style={styles.areaButton}
-              className="areaButton" // Class for hover effect
+              className="areaButton"
             >
               <span style={styles.areaEmoji}>{area.emoji}</span>
               {area.name}
@@ -326,7 +344,7 @@ function HomePage() {
   );
 }
 
-// Search Results Page Component with Functional Logic and NEW Design
+// Search Results Page Component
 function SearchResultsPage() {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -389,7 +407,7 @@ function SearchResultsPage() {
   );
 }
 
-// Main App Component with correct routing
+// Main App Component
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isPostPropertyModalOpen, setIsPostPropertyModalOpen] = useState(false);
@@ -427,353 +445,362 @@ function App() {
   );
 }
 
-// Styles from the design file
+// Styles - FIXED DROPDOWN POSITIONING
 const styles = {
-    app: {
-        fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-        minHeight: '100vh',
-        backgroundColor: '#f8fafc',
-    },
-    header: {
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 1000,
-        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-    },
-    headerContent: {
-        maxWidth: 1400,
-        margin: '0 auto',
-        padding: '16px 32px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    logo: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        fontSize: '28px',
-        color: 'white',
-        fontWeight: 800,
-        cursor: 'pointer',
-    },
-    logoIcon: {
-        fontSize: '32px',
-    },
-    nav: {
-        display: 'flex',
-        gap: '28px',
-        alignItems: 'center',
-    },
-    navItem: {
-        position: 'relative',
-        cursor: 'pointer',
-        padding: '12px 0',
-    },
-    navText: {
-        fontSize: '16px',
-        fontWeight: 600,
-        color: 'white',
-    },
-    dropdown: {
-        position: 'absolute',
-        top: '100%',
-        left: '-20px',
-        backgroundColor: 'white',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
-        borderRadius: '16px',
-        padding: '24px',
-        marginTop: '12px',
-        minWidth: '650px',
-        display: 'flex',
-        gap: '32px',
-        zIndex: 1000,
-    },
-    dropdownSection: {
-        flex: 1,
-    },
-    dropdownTitle: {
-        fontSize: '14px',
-        fontWeight: 700,
-        color: '#4f46e5',
-        marginBottom: '16px',
-        textTransform: 'uppercase',
-    },
-    dropdownItem: {
-        padding: '10px 16px',
-        cursor: 'pointer',
-        borderRadius: '8px',
-        fontSize: '14px',
-        color: '#475569',
-        fontWeight: 500,
-        marginBottom: '4px',
-    },
-    authSection: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-    },
-    userSection: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        background: 'rgba(255,255,255,0.1)',
-        padding: '8px 16px',
-        borderRadius: '12px',
-    },
-    userIcon: {
-        fontSize: '18px',
-    },
-    userName: {
-        fontWeight: 600,
-        fontSize: '14px',
-        color: 'white',
-    },
-    authButtons: {
-        display: 'flex',
-        gap: '12px',
-    },
-    btnIcon: {
-        marginRight: '8px',
-        fontSize: '16px',
-    },
-    postBtn: {
-        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-        color: 'white',
-        padding: '12px 24px',
-        borderRadius: '12px',
-        border: 'none',
-        cursor: 'pointer',
-        fontWeight: 600,
-        fontSize: '14px',
-        display: 'flex',
-        alignItems: 'center',
-    },
-    logoutBtn: {
-        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-        color: 'white',
-        padding: '12px 20px',
-        borderRadius: '12px',
-        border: 'none',
-        cursor: 'pointer',
-        fontWeight: 600,
-        fontSize: '14px',
-        display: 'flex',
-        alignItems: 'center',
-    },
-    loginBtn: {
-        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-        color: 'white',
-        padding: '12px 24px',
-        borderRadius: '12px',
-        border: 'none',
-        cursor: 'pointer',
-        fontWeight: 600,
-        fontSize: '14px',
-        display: 'flex',
-        alignItems: 'center',
-    },
-    signupBtn: {
-        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-        color: 'white',
-        padding: '12px 24px',
-        borderRadius: '12px',
-        border: 'none',
-        cursor: 'pointer',
-        fontWeight: 600,
-        fontSize: '14px',
-        display: 'flex',
-        alignItems: 'center',
-    },
-    container: {
-        padding: '32px',
-        maxWidth: 1400,
-        margin: '0 auto',
-    },
-    heroSection: {
-        position: 'relative',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        borderRadius: '24px',
-        padding: '80px 60px',
-        marginBottom: '48px',
-        color: 'white',
-        textAlign: 'center',
-        overflow: 'hidden',
-    },
-    heroContent: {
-        position: 'relative',
-        zIndex: 2,
-    },
-    mainTitle: {
-        fontSize: '72px',
-        margin: '0 0 24px',
-        fontWeight: 800,
-    },
-    titleGradient: {
-        background: 'linear-gradient(45deg, #fbbf24, #f59e0b)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-    },
-    heroSubtitle: {
-        fontSize: '20px',
-        opacity: 0.9,
-    },
-    heroGraphics: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        pointerEvents: 'none',
-    },
-    floatingElement1: {
-        position: 'absolute',
-        top: '20%',
-        left: '10%',
-        fontSize: '48px',
-        animation: 'float 6s ease-in-out infinite',
-    },
-    floatingElement2: {
-        position: 'absolute',
-        top: '60%',
-        right: '15%',
-        fontSize: '64px',
-        animation: 'float 8s ease-in-out infinite 1s',
-    },
-    floatingElement3: {
-        position: 'absolute',
-        bottom: '20%',
-        left: '20%',
-        fontSize: '56px',
-        animation: 'float 7s ease-in-out infinite 0.5s',
-    },
-    searchSection: {
-        marginBottom: '60px',
-    },
-    section: {
-        marginBottom: '60px',
-    },
-    propertiesSection: {
-        marginBottom: '80px',
-    },
-    sectionHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '32px',
-    },
-    sectionTitle: {
-        fontSize: '36px',
-        marginBottom: '24px',
-        fontWeight: 700,
-        color: '#1e293b',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-    },
-    sectionIcon: {
-        fontSize: '32px',
-    },
-    areasGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '16px',
-    },
-    areaButton: {
-        padding: '20px 24px',
-        borderRadius: '16px',
-        background: 'white',
-        border: '2px solid #e2e8f0',
-        cursor: 'pointer',
-        fontSize: '16px',
-        fontWeight: 600,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        color: '#475569',
-        transition: 'all 0.3s',
-    },
-    areaEmoji: {
-        fontSize: '24px',
-    },
-    clearSearchBtn: {
-        background: '#ef4444',
-        color: 'white',
-        padding: '10px 20px',
-        borderRadius: '10px',
-        border: 'none',
-        cursor: 'pointer',
-        fontWeight: 600,
-        fontSize: '14px',
-    },
-    statsSection: {
-        background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-        borderRadius: '24px',
-        padding: '60px 40px',
-        color: 'white',
-        textAlign: 'center',
-    },
-    statsGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '32px',
-    },
-    statCard: {
-        padding: '32px 24px',
-    },
-    statIcon: {
-        fontSize: '48px',
-        marginBottom: '16px',
-    },
-    statNumber: {
-        fontSize: '36px',
-        fontWeight: 800,
-        marginBottom: '8px',
-        background: 'linear-gradient(45deg, #fbbf24, #f59e0b)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-    },
-    statLabel: {
-        fontSize: '16px',
-        fontWeight: 500,
-        opacity: 0.8,
-    },
-    backButton: {
-        padding: '12px 24px',
-        borderRadius: '12px',
-        background: '#6b7280',
-        color: 'white',
-        border: 'none',
-        cursor: 'pointer',
-        marginBottom: '32px',
-        fontSize: '14px',
-        fontWeight: 600,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-    },
-    backIcon: {
-        fontSize: '18px',
-    },
-    pageHeader: {
-        textAlign: 'center',
-        marginBottom: '48px',
-    },
-    pageTitle: {
-        fontSize: '48px',
-        fontWeight: 800,
-        color: '#1e293b',
-        marginBottom: '16px',
-    },
-    pageSubtitle: {
-        fontSize: '18px',
-        color: '#64748b',
-        fontWeight: 500,
-    },
+  app: {
+    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+    minHeight: '100vh',
+    backgroundColor: '#f8fafc',
+  },
+  header: {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    position: 'sticky',
+    top: 0,
+    zIndex: 1000,
+    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+    overflow: 'visible', // ✅ IMPORTANT: Allow dropdown to overflow
+  },
+  headerContent: {
+    maxWidth: 1400,
+    margin: '0 auto',
+    padding: '16px 32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  logo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    fontSize: '28px',
+    color: 'white',
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+  logoIcon: {
+    fontSize: '32px',
+  },
+  nav: {
+    display: 'flex',
+    gap: '28px',
+    alignItems: 'center',
+  },
+  navItem: {
+    position: 'relative',
+    cursor: 'pointer',
+    padding: '12px 0',
+  },
+  navText: {
+    fontSize: '16px',
+    fontWeight: 600,
+    color: 'white',
+  },
+  dropdown: {
+    position: 'absolute',
+    top: 'calc(100% + 12px)', // ✅ FIXED: Always position below with space
+    left: '-20px',
+    backgroundColor: 'white',
+    boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+    borderRadius: '16px',
+    padding: '24px',
+    minWidth: '650px',
+    display: 'flex',
+    gap: '32px',
+    zIndex: 9999, // ✅ HIGHER z-index
+    maxHeight: 'calc(100vh - 120px)', // ✅ Prevent overflow
+    overflowY: 'auto', // ✅ Add scroll if needed
+    transform: 'translateY(0)', // ✅ Force downward positioning
+    bottom: 'auto', // ✅ Prevent upward flip
+  },
+  dropdownSection: {
+    flex: 1,
+  },
+  dropdownTitle: {
+    fontSize: '14px',
+    fontWeight: 700,
+    color: '#4f46e5',
+    marginBottom: '16px',
+    textTransform: 'uppercase',
+  },
+  dropdownItem: {
+    padding: '10px 16px',
+    cursor: 'pointer',
+    borderRadius: '8px',
+    fontSize: '14px',
+    color: '#475569',
+    fontWeight: 500,
+    marginBottom: '4px',
+    transition: 'all 0.2s ease',
+  },
+  authSection: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  userSection: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: 'rgba(255,255,255,0.1)',
+    padding: '8px 16px',
+    borderRadius: '12px',
+  },
+  userIcon: {
+    fontSize: '18px',
+  },
+  userName: {
+    fontWeight: 600,
+    fontSize: '14px',
+    color: 'white',
+  },
+  authButtons: {
+    display: 'flex',
+    gap: '12px',
+  },
+  btnIcon: {
+    marginRight: '8px',
+    fontSize: '16px',
+  },
+  postBtn: {
+    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+    color: 'white',
+    padding: '12px 24px',
+    borderRadius: '12px',
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    transition: 'all 0.3s ease',
+  },
+  logoutBtn: {
+    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+    color: 'white',
+    padding: '12px 20px',
+    borderRadius: '12px',
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    transition: 'all 0.3s ease',
+  },
+  loginBtn: {
+    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+    color: 'white',
+    padding: '12px 24px',
+    borderRadius: '12px',
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    transition: 'all 0.3s ease',
+  },
+  signupBtn: {
+    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+    color: 'white',
+    padding: '12px 24px',
+    borderRadius: '12px',
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    transition: 'all 0.3s ease',
+  },
+  container: {
+    padding: '32px',
+    maxWidth: 1400,
+    margin: '0 auto',
+  },
+  heroSection: {
+    position: 'relative',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    borderRadius: '24px',
+    padding: '80px 60px',
+    marginBottom: '48px',
+    color: 'white',
+    textAlign: 'center',
+    overflow: 'hidden',
+  },
+  heroContent: {
+    position: 'relative',
+    zIndex: 2,
+  },
+  mainTitle: {
+    fontSize: '72px',
+    margin: '0 0 24px',
+    fontWeight: 800,
+  },
+  titleGradient: {
+    background: 'linear-gradient(45deg, #fbbf24, #f59e0b)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+  },
+  heroSubtitle: {
+    fontSize: '20px',
+    opacity: 0.9,
+  },
+  heroGraphics: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none',
+  },
+  floatingElement1: {
+    position: 'absolute',
+    top: '20%',
+    left: '10%',
+    fontSize: '48px',
+    animation: 'float 6s ease-in-out infinite',
+  },
+  floatingElement2: {
+    position: 'absolute',
+    top: '60%',
+    right: '15%',
+    fontSize: '64px',
+    animation: 'float 8s ease-in-out infinite 1s',
+  },
+  floatingElement3: {
+    position: 'absolute',
+    bottom: '20%',
+    left: '20%',
+    fontSize: '56px',
+    animation: 'float 7s ease-in-out infinite 0.5s',
+  },
+  searchSection: {
+    marginBottom: '60px',
+  },
+  section: {
+    marginBottom: '60px',
+  },
+  propertiesSection: {
+    marginBottom: '80px',
+  },
+  sectionHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '32px',
+  },
+  sectionTitle: {
+    fontSize: '36px',
+    marginBottom: '24px',
+    fontWeight: 700,
+    color: '#1e293b',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  sectionIcon: {
+    fontSize: '32px',
+  },
+  areasGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px',
+  },
+  areaButton: {
+    padding: '20px 24px',
+    borderRadius: '16px',
+    background: 'white',
+    border: '2px solid #e2e8f0',
+    cursor: 'pointer',
+    fontSize: '16px',
+    fontWeight: 600,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    color: '#475569',
+    transition: 'all 0.3s',
+  },
+  areaEmoji: {
+    fontSize: '24px',
+  },
+  clearSearchBtn: {
+    background: '#ef4444',
+    color: 'white',
+    padding: '10px 20px',
+    borderRadius: '10px',
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '14px',
+  },
+  statsSection: {
+    background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+    borderRadius: '24px',
+    padding: '60px 40px',
+    color: 'white',
+    textAlign: 'center',
+  },
+  statsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '32px',
+  },
+  statCard: {
+    padding: '32px 24px',
+  },
+  statIcon: {
+    fontSize: '48px',
+    marginBottom: '16px',
+  },
+  statNumber: {
+    fontSize: '36px',
+    fontWeight: 800,
+    marginBottom: '8px',
+    background: 'linear-gradient(45deg, #fbbf24, #f59e0b)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+  },
+  statLabel: {
+    fontSize: '16px',
+    fontWeight: 500,
+    opacity: 0.8,
+  },
+  backButton: {
+    padding: '12px 24px',
+    borderRadius: '12px',
+    background: '#6b7280',
+    color: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    marginBottom: '32px',
+    fontSize: '14px',
+    fontWeight: 600,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  backIcon: {
+    fontSize: '18px',
+  },
+  pageHeader: {
+    textAlign: 'center',
+    marginBottom: '48px',
+  },
+  pageTitle: {
+    fontSize: '48px',
+    fontWeight: 800,
+    color: '#1e293b',
+    marginBottom: '16px',
+  },
+  pageSubtitle: {
+    fontSize: '18px',
+    color: '#64748b',
+    fontWeight: 500,
+  },
 };
 
-// Inject animations and hover effects into the document
+// Enhanced animations and hover effects
 const styleSheet = document.createElement('style');
 styleSheet.textContent = `
   @keyframes float {
@@ -781,6 +808,7 @@ styleSheet.textContent = `
     50% { transform: translateY(-20px) rotate(5deg); }
   }
 
+  /* Area button hover */
   .areaButton:hover {
     transform: translateY(-4px);
     border-color: #667eea;
@@ -788,10 +816,26 @@ styleSheet.textContent = `
     box-shadow: 0 8px 16px rgba(102, 126, 234, 0.15);
   }
 
-  div[style*="dropdownItem"]:hover {
+  /* Dropdown item hover - using attribute selector */
+  [style*="dropdownItem"]:hover {
     background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
     color: #4f46e5;
     transform: translateX(4px);
+  }
+
+  /* Ensure body doesn't interfere with dropdown positioning */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Button hover effects */
+  button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  }
+
+  button:active {
+    transform: translateY(0);
   }
 `;
 document.head.appendChild(styleSheet);

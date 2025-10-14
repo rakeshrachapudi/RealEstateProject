@@ -25,7 +25,13 @@ public class SecurityConfig {
                 .cors(withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/api/auth/**", "/api/properties/**").permitAll()
+                        // ✅ ADDED: Allow access to areas and property-types endpoints
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/api/properties/**",
+                                "/api/areas/**",           // ← NEW
+                                "/api/property-types/**"   // ← NEW
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
