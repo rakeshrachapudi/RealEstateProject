@@ -25,8 +25,6 @@ public class PropertyPostRequestDto {
     private AreaReferenceDto area;
     private UserReferenceDto user;
 
-    // Getters and Setters for all fields
-
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getDescription() { return description; }
@@ -73,7 +71,7 @@ public class PropertyPostRequestDto {
     public void setUser(UserReferenceDto user) { this.user = user; }
 
     public static class AreaReferenceDto {
-        private Integer id; // CORRECTED: Changed from Long to Integer
+        private Integer id;
 
         public Integer getId() { return id; }
         public void setId(Integer id) { this.id = id; }
@@ -86,4 +84,3 @@ public class PropertyPostRequestDto {
         public void setId(Long id) { this.id = id; }
     }
 }
-
