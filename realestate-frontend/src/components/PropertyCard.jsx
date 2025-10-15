@@ -126,7 +126,10 @@ const PropertyCard = ({ property, onPropertyUpdated, onPropertyDeleted }) => {
           </div>
 
           <div style={styles.propertyType}>
-            <strong>{property.propertyType || property.type}</strong>
+            <strong>
+              {(property.propertyType?.typeName) || (property.type?.typeName)}
+            </strong>
+
             {property.ownerType && (
               <span style={styles.ownerTypeBadge}>
                 {property.ownerType === 'owner' ? '👤 Owner' : '🏢 Broker'}
