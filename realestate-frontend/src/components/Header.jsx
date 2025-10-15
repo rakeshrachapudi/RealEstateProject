@@ -118,7 +118,7 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
             <div style={styles.headerContent}>
                 <div onClick={() => navigate('/')} style={styles.logo}>
                     <span style={styles.logoIcon}>🏡</span>
-                    Your Destiny
+                    ZeroBrokerageHomes
                 </div>
                 <nav style={styles.nav}>
                     <div style={styles.navItem} onClick={() => navigate('/')}>

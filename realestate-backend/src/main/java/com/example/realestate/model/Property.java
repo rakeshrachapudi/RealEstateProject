@@ -11,9 +11,8 @@ public class Property {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Existing fields (keep for backward compatibility)
     private String title;
-    private String type; // String type for backward compatibility (can also be mapped to propertyType entity name)
+    private String type;
     private String city;
     private String imageUrl;
     private String priceDisplay;
@@ -21,7 +20,6 @@ public class Property {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    // NEW fields for enhanced functionality
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "property_type_id")
     private PropertyType propertyType;
@@ -41,8 +39,7 @@ public class Property {
 
     private Integer bedrooms;
     private Integer bathrooms;
-
-    private Integer balconies; // 💡 NEW FIELD ADDED TO RESOLVE ERROR
+    private Integer balconies;
 
     @Column(name = "amenities", columnDefinition = "TEXT")
     private String amenities;
@@ -59,6 +56,25 @@ public class Property {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+    @Column(name = "is_verified")
+    private Boolean isVerified = false;
+
+    @Column(name = "owner_type")
+    private String ownerType = "owner";
+
+    @Column(name = "is_ready_to_move")
+    private Boolean isReadyToMove = false;
+
+    @Enumerated(EnumType.STRING)
+    private DealStatus dealStatus;
+
+    // --- NEW FIELDS FOR REGISTRATION WORKFLOW ---
+    @Column(name = "registration_proof_url")
+    private String registrationProofUrl;
+
+    @Column(name = "registration_confirmed_by")
+    private String registrationConfirmedBy; // Can be 'BUYER', 'SELLER', or 'ADMIN'
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -68,29 +84,11 @@ public class Property {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
     private User user;
-    @Column(name = "is_verified")
-    private Boolean isVerified = false;
 
-    @Column(name = "owner_type")
-    private String ownerType = "owner"; // "owner" or "broker"
-
-    // Add getters and setters
-    public Boolean getIsVerified() { return isVerified; }
-    public void setIsVerified(Boolean isVerified) { this.isVerified = isVerified; }
-
-    public String getOwnerType() { return ownerType; }
-    public void setOwnerType(String ownerType) { this.ownerType = ownerType; }
-    @Column(name = "is_ready_to_move")
-    private Boolean isReadyToMove = false;
-
-    // Getter and Setter
-    public Boolean getIsReadyToMove() {
-        return isReadyToMove;
+    public enum DealStatus {
+        INQUIRY, SHORTLIST, NEGOTIATION, AGREEMENT, REGISTRATION, PAYMENT
     }
 
-    public void setIsReadyToMove(Boolean isReadyToMove) {
-        this.isReadyToMove = isReadyToMove;
-    }
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -102,10 +100,10 @@ public class Property {
         updatedAt = LocalDateTime.now();
     }
 
-    // Constructors
     public Property() {}
 
-    // ALL Getters and Setters
+    // --- GETTERS AND SETTERS ---
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -148,7 +146,6 @@ public class Property {
     public Integer getBathrooms() { return bathrooms; }
     public void setBathrooms(Integer bathrooms) { this.bathrooms = bathrooms; }
 
-    // 💡 NEW GETTER/SETTER
     public Integer getBalconies() { return balconies; }
     public void setBalconies(Integer balconies) { this.balconies = balconies; }
 
@@ -166,6 +163,25 @@ public class Property {
 
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+
+    public Boolean getIsVerified() { return isVerified; }
+    public void setIsVerified(Boolean isVerified) { this.isVerified = isVerified; }
+
+    public String getOwnerType() { return ownerType; }
+    public void setOwnerType(String ownerType) { this.ownerType = ownerType; }
+
+    public Boolean getIsReadyToMove() { return isReadyToMove; }
+    public void setIsReadyToMove(Boolean isReadyToMove) { this.isReadyToMove = isReadyToMove; }
+
+    public DealStatus getDealStatus() { return dealStatus; }
+    public void setDealStatus(DealStatus dealStatus) { this.dealStatus = dealStatus; }
+
+    // --- GETTERS AND SETTERS FOR NEW FIELDS ---
+    public String getRegistrationProofUrl() { return registrationProofUrl; }
+    public void setRegistrationProofUrl(String registrationProofUrl) { this.registrationProofUrl = registrationProofUrl; }
+
+    public String getRegistrationConfirmedBy() { return registrationConfirmedBy; }
+    public void setRegistrationConfirmedBy(String registrationConfirmedBy) { this.registrationConfirmedBy = registrationConfirmedBy; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
