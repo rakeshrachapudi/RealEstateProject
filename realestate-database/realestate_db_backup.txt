@@ -1,0 +1,290 @@
+﻿-- MySQL dump 10.13  Distrib 8.0.43, for Win64 (x86_64)
+--
+-- Host: localhost    Database: realestate_db
+-- ------------------------------------------------------
+-- Server version	8.0.43
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `areas`
+--
+CREATE DATABASE IF NOT EXISTS realestate_db;
+USE realestate_db;
+
+-- Disable FK checks for safe dropping
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- Drop tables in correct order
+DROP TABLE IF EXISTS property_images;
+DROP TABLE IF EXISTS property;
+DROP TABLE IF EXISTS configuration;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS property_types;
+DROP TABLE IF EXISTS areas;
+DROP TABLE IF EXISTS cities;
+
+-- Enable FK checks back
+SET FOREIGN_KEY_CHECKS = 1;
+
+DROP TABLE IF EXISTS `areas`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `areas` (
+  `area_id` int NOT NULL AUTO_INCREMENT,
+  `city_id` int NOT NULL,
+  `area_name` varchar(200) NOT NULL,
+  `pincode` varchar(10) NOT NULL,
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`area_id`),
+  UNIQUE KEY `unique_area_pincode` (`city_id`,`area_name`,`pincode`),
+  KEY `idx_city_id` (`city_id`),
+  KEY `idx_pincode` (`pincode`),
+  CONSTRAINT `areas_ibfk_1` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=70 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `areas`
+--
+
+LOCK TABLES `areas` WRITE;
+/*!40000 ALTER TABLE `areas` DISABLE KEYS */;
+INSERT INTO `areas` VALUES (1,1,'Banjara Hills','500034',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(2,1,'Jubilee Hills','500033',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(3,1,'Somajiguda','500082',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(4,1,'Begumpet','500016',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(5,1,'Ameerpet','500038',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(6,1,'Punjagutta','500082',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(7,1,'Himayatnagar','500029',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(8,1,'Abids','500001',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(9,1,'Nampally','500001',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(10,1,'Madhapur','500081',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(11,1,'Gachibowli','500032',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(12,1,'HITEC City','500081',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(13,1,'Kondapur','500084',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(14,1,'Manikonda','500089',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(15,1,'Narsingi','500075',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(16,1,'Kokapet','500075',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(17,1,'Financial District','500032',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(18,1,'Secunderabad','500003',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(19,1,'Tarnaka','500017',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(20,1,'Uppal','500039',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(21,1,'Habsiguda','500007',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(22,1,'LB Nagar','500074',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(23,1,'Dilsukhnagar','500060',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(24,1,'Malakpet','500036',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(25,1,'Kukatpally','500072',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(26,1,'Miyapur','500049',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(27,1,'KPHB Colony','500072',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(28,1,'Nizampet','500090',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(29,1,'Bachupally','500090',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(30,1,'Tolichowki','500008',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(31,1,'Mehdipatnam','500028',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(32,1,'Attapur','500048',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(33,1,'Shamshabad','500409',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(46,1,'Hitech City','500081',1,'2025-10-13 13:43:08','2025-10-13 13:43:08'),(47,1,'Ameerpet','500016',1,'2025-10-13 13:43:08','2025-10-13 13:43:08'),(61,6,'Koramangala','560034',1,'2025-10-13 13:43:08','2025-10-13 13:43:08'),(62,6,'Whitefield','560066',1,'2025-10-13 13:43:08','2025-10-13 13:43:08'),(63,6,'Indiranagar','560038',1,'2025-10-13 13:43:08','2025-10-13 13:43:08'),(64,6,'HSR Layout','560102',1,'2025-10-13 13:43:08','2025-10-13 13:43:08'),(65,6,'Electronic City','560100',1,'2025-10-13 13:43:08','2025-10-13 13:43:08'),(66,7,'Andheri','400053',1,'2025-10-13 13:43:08','2025-10-13 13:43:08'),(67,7,'Bandra','400050',1,'2025-10-13 13:43:08','2025-10-13 13:43:08'),(68,7,'Powai','400076',1,'2025-10-13 13:43:08','2025-10-13 13:43:08'),(69,7,'Juhu','400049',1,'2025-10-13 13:43:08','2025-10-13 13:43:08');
+/*!40000 ALTER TABLE `areas` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `cities`
+--
+
+DROP TABLE IF EXISTS `cities`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `cities` (
+  `city_id` int NOT NULL AUTO_INCREMENT,
+  `city_name` varchar(100) NOT NULL,
+  `state` varchar(100) NOT NULL,
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`city_id`),
+  UNIQUE KEY `city_name` (`city_name`)
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `cities`
+--
+
+LOCK TABLES `cities` WRITE;
+/*!40000 ALTER TABLE `cities` DISABLE KEYS */;
+INSERT INTO `cities` VALUES (1,'Hyderabad','Telangana',1,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(6,'Bangalore','Karnataka',1,'2025-10-13 13:43:08','2025-10-13 13:43:08'),(7,'Mumbai','Maharashtra',1,'2025-10-13 13:43:08','2025-10-13 13:43:08'),(8,'Delhi','Delhi',1,'2025-10-13 13:43:08','2025-10-13 13:43:08');
+/*!40000 ALTER TABLE `cities` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `configuration`
+--
+
+DROP TABLE IF EXISTS `configuration`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `configuration` (
+  `config_id` int NOT NULL AUTO_INCREMENT,
+  `config_key` varchar(100) NOT NULL,
+  `config_value` text NOT NULL,
+  `description` text,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`config_id`),
+  UNIQUE KEY `config_key` (`config_key`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `configuration`
+--
+
+LOCK TABLES `configuration` WRITE;
+/*!40000 ALTER TABLE `configuration` DISABLE KEYS */;
+INSERT INTO `configuration` VALUES (1,'ALLOWED_PINCODES','500001,500003,500007,500008,500016,500017,500028,500029,500032,500033,500034,500036,500038,500039,500048,500049,500060,500072,500074,500075,500081,500082,500084,500089,500090,500409','Comma-separated list of allowed pincodes for Hyderabad','2025-10-13 11:11:36'),(2,'DEFAULT_CITY','Hyderabad','Default city for property search','2025-10-13 11:11:36'),(3,'MAX_SEARCH_RESULTS','100','Maximum number of search results to return','2025-10-13 11:11:36');
+/*!40000 ALTER TABLE `configuration` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `property`
+--
+
+DROP TABLE IF EXISTS `property`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `property` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) NOT NULL,
+  `description` text,
+  `type` varchar(255) DEFAULT NULL,
+  `city` varchar(255) DEFAULT NULL,
+  `image_url` varchar(500) DEFAULT NULL,
+  `price_display` varchar(255) DEFAULT NULL,
+  `property_type_id` int DEFAULT NULL,
+  `area_id` int DEFAULT NULL,
+  `address` text,
+  `price` decimal(15,2) DEFAULT NULL,
+  `area_sqft` decimal(10,2) DEFAULT NULL,
+  `bedrooms` int DEFAULT NULL,
+  `bathrooms` int DEFAULT NULL,
+  `amenities` text,
+  `status` varchar(20) DEFAULT 'available',
+  `possession_status` varchar(50) DEFAULT 'under_construction',
+  `listing_type` varchar(10) DEFAULT 'sale',
+  `is_featured` tinyint(1) DEFAULT '0',
+  `is_verified` tinyint(1) DEFAULT '0',
+  `is_ready_to_move` tinyint(1) DEFAULT '0',
+  `owner_type` varchar(50) DEFAULT 'owner',
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `user_id` bigint DEFAULT NULL,
+  `balconies` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_property_type` (`property_type_id`),
+  KEY `idx_area` (`area_id`),
+  KEY `idx_price` (`price`),
+  KEY `idx_listing_type` (`listing_type`),
+  KEY `idx_status` (`status`),
+  KEY `idx_city` (`city`),
+  KEY `idx_type` (`type`),
+  KEY `idx_user_id` (`user_id`),
+  CONSTRAINT `property_ibfk_1` FOREIGN KEY (`property_type_id`) REFERENCES `property_types` (`property_type_id`),
+  CONSTRAINT `property_ibfk_2` FOREIGN KEY (`area_id`) REFERENCES `areas` (`area_id`),
+  CONSTRAINT `property_ibfk_3` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `property`
+--
+
+LOCK TABLES `property` WRITE;
+/*!40000 ALTER TABLE `property` DISABLE KEYS */;
+INSERT INTO `property` VALUES (1,'Luxury 3BHK Apartment in Banjara Hills','Spacious 3BHK apartment with modern amenities, marble flooring, and scenic views.','Apartment','Hyderabad','https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800','Ôé╣1.25 Cr',1,1,'Road No 12, Banjara Hills, Hyderabad - 500034',12500000.00,2100.00,3,3,'Swimming Pool, Gym, Parking, 24/7 Security, Power Backup, Clubhouse, Children Play Area','available','ready','sale',1,1,1,'owner',1,'2025-10-13 11:11:36','2025-10-15 06:12:51',3,NULL),(2,'Premium Villa in Jubilee Hills','Independent villa with private garden, 4 bedrooms, modern kitchen, and premium interiors.','Villa','Hyderabad','https://images.unsplash.com/photo-1613977257363-707ba9348227?w=800','Ôé╣4.50 Cr',2,2,'Plot 145, Road No 36, Jubilee Hills, Hyderabad - 500033',45000000.00,4500.00,4,5,'Private Garden, Parking for 4 cars, Security, Clubhouse, Solar Panels, Rain Water Harvesting','available','under_construction','sale',1,1,0,'owner',1,'2025-10-13 11:11:36','2025-10-14 19:48:35',3,NULL),(3,'2BHK Ready to Move - Madhapur','Ready to move 2BHK apartment near IT hubs. Ideal for working professionals.','Apartment','Hyderabad','https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800','Ôé╣85 Lac',1,10,'Cyber Towers Road, Madhapur, Hyderabad - 500081',8500000.00,1400.00,2,2,'Gym, Parking, Power Backup, Internet Ready, Modular Kitchen, Covered Parking','ready','ready','sale',0,0,1,'owner',1,'2025-10-13 11:11:36','2025-10-15 06:12:51',4,NULL),(4,'Prime Commercial Space - Gachibowli','Prime location office space in the heart of IT corridor.','Commercial','Hyderabad','https://images.unsplash.com/photo-1497366216548-37526070297c?w=800','Ôé╣2.50 Cr',4,11,'HITEC City Main Road, Gachibowli, Hyderabad - 500032',25000000.00,3000.00,0,2,'Parking, Lift, Security, Cafeteria, Conference Room, Central AC','available','under_construction','sale',1,0,0,'broker',1,'2025-10-13 11:11:36','2025-10-14 19:48:35',4,NULL),(5,'HMDA Approved Residential Plot','HMDA approved residential plot ready for construction.','Plot','Hyderabad','https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800','Ôé╣65 Lac',3,13,'Survey No 234, Kondapur Village, Hyderabad - 500084',6500000.00,2400.00,0,0,'HMDA Approved, Gated Community, Security, Street Lights, Underground Drainage, Water Supply','available','under_construction','sale',0,0,0,'broker',1,'2025-10-13 11:11:36','2025-10-14 19:48:35',5,NULL),(6,'3BHK Apartment for Rent','Well maintained 3BHK apartment available for rent.','Apartment','Hyderabad','https://images.unsplash.com/photo-1502672260066-6bc31f1a7c4f?w=800','Ôé╣35,000/month',1,5,'SR Nagar Main Road, Ameerpet, Hyderabad - 500038',35000.00,1650.00,3,2,'Parking, Water Supply, Security, Power Backup, Semi-Furnished, Balcony','available','under_construction','rent',0,0,0,'owner',1,'2025-10-13 11:11:36','2025-10-13 11:11:36',5,NULL),(7,'Ultra Luxury Penthouse - Banjara Hills','Ultra luxury penthouse with private terrace, 5 bedrooms, premium fixtures.','Penthouse','Hyderabad','https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800','Ôé╣8.50 Cr',5,1,'Road No 10, Banjara Hills, Hyderabad - 500034',85000000.00,5500.00,5,6,'Private Pool, Terrace Garden, Home Theater, Gym, Premium Imported Interiors, Private Elevator, Smart Home','available','under_construction','sale',1,1,0,'owner',1,'2025-10-13 11:11:36','2025-10-14 19:48:35',5,NULL),(8,'Spacious 4BHK Duplex Villa','Spacious duplex villa with 4 bedrooms, modern kitchen, and all amenities.','Duplex','Hyderabad','https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800','Ôé╣1.85 Cr',7,25,'KPHB Main Road, Kukatpally, Hyderabad - 500072',18500000.00,3200.00,4,4,'Parking, Garden, Security, Clubhouse, Swimming Pool, Gym, Children Play Area','available','under_construction','sale',0,0,0,'broker',1,'2025-10-13 11:11:36','2025-10-15 06:12:51',5,NULL),(9,'Spacious 3BHK in Gachibowli','Beautiful 3BHK apartment with modern amenities in prime Gachibowli location. Walking distance to major IT parks.','Apartment','Hyderabad','https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800','₹1.20 Cr',1,11,'Plot No 123, Gachibowli, Hyderabad',12000000.00,1850.00,3,2,'Parking, Gym, Swimming Pool, 24/7 Security, Power Backup','ready','ready','sale',1,1,1,'owner',1,'2025-10-13 13:43:08','2025-10-15 06:12:51',NULL,NULL),(10,'qeefqq','eefqefq','Apartment','Hyderabad','https://th.bing.com/th/id/OIP.l3SWKVBoUZ9CxSU36EUZSAHaE8?w=270&h=180&c=7&r=0&o=7&cb=12&dpr=1.5&pid=1.7&rm=3','₹111',NULL,NULL,NULL,NULL,NULL,1,1,NULL,'available','under_construction','sale',0,0,0,'owner',1,'2025-10-13 14:54:14','2025-10-13 14:54:14',6,NULL),(11,'Spacious 2 BHK','Spacious 2 BHK','Apartment','Hyderabad','https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800','₹40.00 Lac',NULL,NULL,NULL,NULL,NULL,3,2,NULL,'available','under_construction','sale',0,0,0,'owner',1,'2025-10-14 07:55:13','2025-10-14 07:55:13',6,NULL),(12,'Spacious 1 BHK','gfdfgdjf','Apartment','Hyderabad','https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800','₹70.00 Lac',NULL,NULL,NULL,NULL,NULL,1,2,NULL,'available','under_construction','sale',0,0,0,'owner',1,'2025-10-14 09:47:29','2025-10-14 09:47:29',6,NULL),(13,'Apartment','my Apartments provides a luxurious feel in low budget ','House','Hyderabad','https://www.freepik.com/premium-video/warm-lights-glow-inside-charming-miniature-house-model-nestled-amidst-greenery-as-sun-sets-creating-cozy-inviting-atmosphere_5238243#fromView=resource_detail&position=0&from_element=cross_selling__photo','₹75.00 Lac',NULL,NULL,'1-561',7500000.00,100.00,3,2,'parking , gym, ','available','under_construction','rent',1,0,0,'owner',1,'2025-10-14 12:25:09','2025-10-14 12:25:09',6,NULL),(14,'Spacious 5 BHK','luxury','Apartment','Hyderabad','https://res.cloudinary.com/diw5av4fw/image/upload/v1760452409/aerial-view-modern-highrise-buildings-delhi-india-urban-cityscape-with-many-residential_1299716-22960_ka2bjy.avif','₹50.00 Cr',NULL,NULL,'1-561',500000000.00,NULL,5,3,NULL,'available','under_construction','sale',1,0,0,'owner',1,'2025-10-14 14:34:24','2025-10-14 14:34:24',6,NULL),(15,'6 bhk','55 pop','Apartment','Hyderabad','https://res.cloudinary.com/diw5av4fw/image/upload/v1760460047/aerial-view-modern-highrise-buildings-delhi-india-urban-cityscape-with-many-residential_1299716-22960_n0wcwp.avif','₹50.00 Cr',1,2,'Area ID 2, Hyderabad',500000000.00,3200.00,16,10,'parking , gym, ','ready','ready','sale',1,0,1,'owner',1,'2025-10-14 16:41:10','2025-10-15 06:12:51',6,10),(16,'10 BHK','10 bhk','Apartment','Hyderabad','https://res.cloudinary.com/diw5av4fw/image/upload/v1760460161/building-city_943194-5628_xf0oxi.avif','₹90.00 Cr',1,2,'Area ID 2, Hyderabad',900000000.00,NULL,10,10,'parking , gym, ','ready','ready','sale',1,0,1,'owner',1,'2025-10-14 16:43:01','2025-10-15 06:12:51',6,10),(17,'spacius villa','luxury villa','Villa','Hyderabad','https://res.cloudinary.com/diw5av4fw/image/upload/v1760460999/building-city_943194-5623_nibvch.avif','₹2.00 Cr',2,47,'1-5610000',20000000.00,NULL,5,6,'parking , gym, ','available','under_construction','sale',1,0,0,'owner',1,'2025-10-14 16:57:06','2025-10-14 16:57:06',6,3),(18,'5 villa','test','Apartment','Hyderabad','https://res.cloudinary.com/diw5av4fw/image/upload/v1760462119/aerial-view-modern-highrise-buildings-delhi-india-urban-cityscape-with-many-residential_1299716-22960_yq8gj6.avif','₹2.00 Cr',1,23,'1-5610000 test',20000000.00,4200.00,5,6,'parking , gym, ','available','under_construction','sale',1,0,1,'owner',1,'2025-10-14 17:15:36','2025-10-14 19:56:33',6,3),(19,'3BHK HOUSE','testtt','House','Hyderabad','https://res.cloudinary.com/diw5av4fw/image/upload/v1760508989/building-city_943194-5623_gvqzhw.avif','₹35.00 Lac',1,12,'1-561 jbs',3500000.00,NULL,3,5,'parking , gym, ','available','under_construction','sale',1,0,0,'owner',1,'2025-10-15 06:16:57','2025-10-15 06:16:57',6,2),(20,'spacious villa','jk','Villa','Hyderabad','https://res.cloudinary.com/diw5av4fw/image/upload/v1760510256/building-with-lot-windows-that-say-apartments_976492-22346_gkixxx.avif','₹6.00 Cr',2,12,'1-561 jbs',60000000.00,1500.00,3,3,'parking , gym, ','available','under_construction','sale',1,0,0,'owner',1,'2025-10-15 06:37:54','2025-10-15 06:37:54',6,3),(21,'spacious plot','test','Plot','Hyderabad','https://res.cloudinary.com/diw5av4fw/image/upload/v1760510799/dream-home-sale-real-estate-social-media-post-template-design_505751-3345_jxevz5.avif','₹9.50 Cr',3,2,'Area ID 2, Hyderabad',95000000.00,16000.00,10,10,'parking , gym, ','available','under_construction','sale',1,0,0,'owner',1,'2025-10-15 06:47:09','2025-10-15 06:47:09',6,1);
+/*!40000 ALTER TABLE `property` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `property_images`
+--
+
+DROP TABLE IF EXISTS `property_images`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `property_images` (
+  `image_id` int NOT NULL AUTO_INCREMENT,
+  `property_id` bigint NOT NULL,
+  `image_url` varchar(500) NOT NULL,
+  `is_primary` tinyint(1) DEFAULT '0',
+  `display_order` int DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`image_id`),
+  KEY `idx_property_id` (`property_id`),
+  CONSTRAINT `property_images_ibfk_1` FOREIGN KEY (`property_id`) REFERENCES `property` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `property_images`
+--
+
+LOCK TABLES `property_images` WRITE;
+/*!40000 ALTER TABLE `property_images` DISABLE KEYS */;
+/*!40000 ALTER TABLE `property_images` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `property_types`
+--
+
+DROP TABLE IF EXISTS `property_types`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `property_types` (
+  `property_type_id` int NOT NULL AUTO_INCREMENT,
+  `type_name` varchar(50) NOT NULL,
+  `description` text,
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`property_type_id`),
+  UNIQUE KEY `type_name` (`type_name`)
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `property_types`
+--
+
+LOCK TABLES `property_types` WRITE;
+/*!40000 ALTER TABLE `property_types` DISABLE KEYS */;
+INSERT INTO `property_types` VALUES (1,'Apartment','Multi-unit residential building with shared amenities',1,'2025-10-13 11:11:36'),(2,'Villa','Independent house with private garden and parking',1,'2025-10-13 11:11:36'),(3,'Plot','Vacant land ready for construction',1,'2025-10-13 11:11:36'),(4,'Commercial','Office spaces, shops, and commercial buildings',1,'2025-10-13 11:11:36'),(5,'Penthouse','Luxury apartment on the top floor with premium amenities',1,'2025-10-13 11:11:36'),(6,'Studio','Single room apartment with combined living and sleeping area',1,'2025-10-13 11:11:36'),(7,'Duplex','Two-floor apartment with internal staircase',1,'2025-10-13 11:11:36'),(8,'Farmhouse','Rural property with agricultural land',1,'2025-10-13 11:11:36'),(9,'Independent House','Standalone house with independent entrance',1,'2025-10-13 11:11:36'),(10,'PG','Paying Guest accommodation with shared facilities',1,'2025-10-13 11:11:36'),(11,'Flatmates','Shared apartment accommodation with roommates',1,'2025-10-13 11:11:36'),(12,'Builder Floor','Independent floor in a multi-story building',1,'2025-10-13 11:11:36'),(13,'Service Apartment','Furnished apartment with hotel-like services',1,'2025-10-13 11:11:36'),(14,'Studio Apartment','Single room living space',1,'2025-10-13 13:43:08'),(15,'Commercial Space','Office or retail space',1,'2025-10-13 13:43:08'),(16,'Townhouse','Multi-floor attached house',1,'2025-10-13 13:43:08');
+/*!40000 ALTER TABLE `property_types` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `users`
+--
+
+DROP TABLE IF EXISTS `users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `users` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `mobile_number` varchar(20) DEFAULT NULL,
+  `username` varchar(50) DEFAULT NULL,
+  `password` varchar(255) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `first_name` varchar(50) DEFAULT NULL,
+  `last_name` varchar(50) DEFAULT NULL,
+  `otp` varchar(10) DEFAULT NULL,
+  `otp_expiry_time` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `mobile_number` (`mobile_number`),
+  UNIQUE KEY `username` (`username`),
+  UNIQUE KEY `email` (`email`),
+  KEY `idx_mobile` (`mobile_number`),
+  KEY `idx_username` (`username`),
+  KEY `idx_email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `users`
+--
+
+LOCK TABLES `users` WRITE;
+/*!40000 ALTER TABLE `users` DISABLE KEYS */;
+INSERT INTO `users` VALUES (1,'+919876543210','admin','$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8ssKQqpKUKKDRhBkM2','admin@realestate.com','Admin','User',NULL,NULL,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(2,'+919876543211','testuser','$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.AQubh4a','test@realestate.com','Test','User',NULL,NULL,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(3,'+919876543212','owner1','$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.AQubh4a','owner1@realestate.com','Rajesh','Kumar',NULL,NULL,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(4,'+919876543213','owner2','$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.AQubh4a','owner2@realestate.com','Priya','Sharma',NULL,NULL,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(5,'+919876543214','owner3','$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.AQubh4a','owner3@realestate.com','Amit','Patel',NULL,NULL,'2025-10-13 11:11:36','2025-10-13 11:11:36'),(6,'+919392586351','raki','$2a$10$1J0j1IZ69P8B61pCJM9m1eyTUQRt/U984I1vjUfz0oeklZyOPhMuy','nsrinivas.0975@gmail.com','srini','nomula',NULL,NULL,'2025-10-13 14:41:07','2025-10-14 10:01:37');
+/*!40000 ALTER TABLE `users` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2025-10-15 12:32:13

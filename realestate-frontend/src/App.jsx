@@ -70,9 +70,9 @@ function AppContent() {
                 <Route path="/rental-agreement" element={<PlaceholderPage title="Rental Agreement" />} />
                 <Route path="/home-renovation" element={<PlaceholderPage title="Home Interior/Renovation" />} />
             </Routes>
-            {isLoginModalOpen && <LoginModal onClose={() => setIsLoginModalOpen(false)} />}
+            {isLoginModalOpen && <LoginModal onClose={() => setIsLoginModalOpen(false)} onSwitchToSignup={() => setIsSignupModalOpen(true)} />}
             {isPostPropertyModalOpen && <PostPropertyModal onClose={() => setIsPostPropertyModalOpen(false)} onPropertyPosted={handlePropertyPosted} />}
-            {isSignupModalOpen && <SignupModal onClose={() => setIsSignupModalOpen(false)} />}
+            {isSignupModalOpen && <SignupModal onClose={() => setIsSignupModalOpen(false)} onSwitchToLogin={() => setIsLoginModalOpen(true)} />}
             {isUserProfileModalOpen && <UserProfileModal user={user} onClose={() => setIsUserProfileModalOpen(false)} logout={logout} />}
         </div>
     );

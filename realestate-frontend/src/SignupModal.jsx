@@ -1,26 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { useAuth } from './AuthContext';
 
-// Simplified styles
-const modalStyle = {
-    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex',
-    justifyContent: 'center', alignItems: 'center', zIndex: 1000,
-};
-const contentStyle = {
-    backgroundColor: 'white', padding: '30px', borderRadius: '12px',
-    width: '450px', boxShadow: '0 5px 15px rgba(0, 0, 0, 0.3)', position: 'relative',
-};
-const inputStyle = {
-    width: '100%', padding: '10px', marginBottom: '15px',
-    border: '1px solid #ccc', borderRadius: '6px', boxSizing: 'border-box',
-};
-const buttonStyle = (color) => ({
-    width: '100%', padding: '12px', background: color, color: 'white',
-    border: 'none', borderRadius: '6px', cursor: 'pointer',
-    fontSize: '16px', fontWeight: 'bold', transition: 'background 0.3s',
-});
-
-// Password Strength Logic
 const getPasswordStrength = (password) => {
     if (password.length < 6) return { strength: 'Too Short', color: '#dc3545' };
     let score = 0;
@@ -34,111 +14,356 @@ const getPasswordStrength = (password) => {
     return { strength: 'Strong', color: '#28a745' };
 };
 
-const SignupModal = ({ onClose, onSignupSuccess }) => {
-    const [step, setStep] = useState(1);
-    // ✨ 1. Add 'username' to the state
+const SignupModal = ({ onClose, onSwitchToLogin }) => {
     const [formData, setFormData] = useState({
-        firstName: '', lastName: '', email: '', password: '', phone: '', username: '',
+        username: '',
+        password: '',
+        email: '',
+        firstName: '',
+        lastName: '',
+        mobileNumber: '',
     });
-    const [otp, setOtp] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const { login } = useAuth();
+
     const strength = useMemo(() => getPasswordStrength(formData.password), [formData.password]);
-    const isFormValid = formData.firstName && formData.lastName && formData.username && formData.email && formData.password.length >= 6 && formData.phone.length === 10;
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+        setError('');
     };
 
-    const handleDetailsSubmit = async (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
+
         if (strength.strength === 'Too Short' || strength.strength === 'Weak') {
-            alert('Please choose a stronger password.');
+            setError('Please choose a stronger password.');
             return;
         }
-        try {
-            const fullMobileNumber = `+91${formData.phone}`;
-            const response = await fetch('http://localhost:8080/api/auth/request-otp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mobileNumber: fullMobileNumber }),
-            });
-            if (response.ok) {
-                alert('OTP sent successfully!');
-                setStep(2);
-            } else {
-                const errorData = await response.json();
-                alert(errorData.message || 'Failed to send OTP.');
-            }
-        } catch (error) {
-            console.error('Error sending OTP:', error);
-            alert('Network error while sending OTP.');
-        }
-    };
 
-    const handleOtpVerification = async (e) => {
-        e.preventDefault();
+        setLoading(true);
+
         try {
-            const fullMobileNumber = `+91${formData.phone}`;
-            const response = await fetch('http://localhost:8080/api/auth/register-with-otp', {
+            const response = await fetch('/api/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...formData, mobileNumber: fullMobileNumber, otp }),
+                body: JSON.stringify(formData),
             });
-            const data = await response.json();
-            if (response.ok) {
-                alert('User Registration Successful! Please log in.');
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                login(result.data.user, result.data.token);
                 onClose();
             } else {
-                alert(data.message || 'OTP verification failed.');
+                setError(result.message || 'Signup failed. Please try again.');
             }
-        } catch (error) {
-            console.error('Error during registration:', error);
-            alert('Network error during registration.');
+        } catch (err) {
+            setError('Network error. Please check your connection.');
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <div style={modalStyle}>
-            <div style={contentStyle}>
-                <button onClick={onClose} style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#6b7280' }}>&times;</button>
-                <h2 style={{ fontSize: '24px', marginBottom: '20px', color: '#3498db' }}>Step {step}: {step === 1 ? 'Enter Details' : 'Verify Phone'}</h2>
+        <div style={styles.overlay} onClick={onClose}>
+            <div style={styles.modal} onClick={e => e.stopPropagation()}>
+                <button onClick={onClose} style={styles.closeBtn}>&times;</button>
+                
+                <div style={styles.header}>
+                    <div style={styles.iconContainer}>
+                        <span style={styles.icon}>✨</span>
+                    </div>
+                    <h2 style={styles.title}>Create Account</h2>
+                    <p style={styles.subtitle}>Join us to find your dream property</p>
+                </div>
 
-                {step === 1 && (
-                    <form onSubmit={handleDetailsSubmit}>
-                        <input type="text" name="firstName" placeholder="First Name" value={formData.firstName} onChange={handleChange} style={inputStyle} required />
-                        <input type="text" name="lastName" placeholder="Last Name" value={formData.lastName} onChange={handleChange} style={inputStyle} required />
-                        {/* ✨ 2. Add the username input field */}
-                        <input type="text" name="username" placeholder="Username" value={formData.username} onChange={handleChange} style={inputStyle} required />
-                        <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} style={inputStyle} required />
-                        <input type="password" name="password" placeholder="Password" value={formData.password} onChange={handleChange} style={inputStyle} required />
+                <form onSubmit={handleSubmit} style={styles.form}>
+                    {error && <div style={styles.error}>{error}</div>}
+                    
+                    <div style={styles.row}>
+                        <div style={styles.inputGroup}>
+                            <label style={styles.label}>First Name</label>
+                            <input
+                                type="text"
+                                name="firstName"
+                                value={formData.firstName}
+                                onChange={handleChange}
+                                style={styles.input}
+                                placeholder="John"
+                                required
+                            />
+                        </div>
+                        <div style={styles.inputGroup}>
+                            <label style={styles.label}>Last Name</label>
+                            <input
+                                type="text"
+                                name="lastName"
+                                value={formData.lastName}
+                                onChange={handleChange}
+                                style={styles.input}
+                                placeholder="Doe"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div style={styles.inputGroup}>
+                        <label style={styles.label}>Username</label>
+                        <input
+                            type="text"
+                            name="username"
+                            value={formData.username}
+                            onChange={handleChange}
+                            style={styles.input}
+                            placeholder="Choose a unique username"
+                            required
+                        />
+                    </div>
+
+                    <div style={styles.inputGroup}>
+                        <label style={styles.label}>Email</label>
+                        <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            style={styles.input}
+                            placeholder="your@email.com"
+                            required
+                        />
+                    </div>
+
+                    <div style={styles.inputGroup}>
+                        <label style={styles.label}>Mobile Number (Optional)</label>
+                        <input
+                            type="tel"
+                            name="mobileNumber"
+                            value={formData.mobileNumber}
+                            onChange={handleChange}
+                            style={styles.input}
+                            placeholder="+91 1234567890"
+                        />
+                    </div>
+
+                    <div style={styles.inputGroup}>
+                        <label style={styles.label}>Password</label>
+                        <input
+                            type="password"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            style={styles.input}
+                            placeholder="Min. 6 characters"
+                            required
+                        />
                         {formData.password && (
-                            <div style={{ marginBottom: '15px', fontSize: '14px' }}>
-                                Password Strength: <span style={{ color: strength.color, fontWeight: 'bold' }}>{strength.strength}</span>
+                            <div style={styles.strengthIndicator}>
+                                <span>Strength: </span>
+                                <span style={{ color: strength.color, fontWeight: '600' }}>
+                                    {strength.strength}
+                                </span>
                             </div>
                         )}
-                        <input type="tel" name="phone" placeholder="10-Digit Phone Number" value={formData.phone} onChange={handleChange} style={inputStyle} required maxLength="10" />
-                        <button type="submit" style={buttonStyle(isFormValid ? '#3498db' : '#ccc')} disabled={!isFormValid}>
-                            Send Verification OTP
-                        </button>
-                    </form>
-                )}
+                    </div>
 
-                {step === 2 && (
-                    <form onSubmit={handleOtpVerification}>
-                        <p style={{ marginBottom: '15px', color: '#555' }}>
-                            An OTP has been sent to +91 {formData.phone}. Please enter it below.
-                        </p>
-                        <input type="text" name="otp" placeholder="Enter 6-Digit OTP" value={otp} onChange={(e) => setOtp(e.target.value)} style={inputStyle} required minLength="6" maxLength="6" />
-                        <button type="submit" style={buttonStyle(otp.length === 6 ? '#28a745' : '#ccc')} disabled={otp.length !== 6}>
-                            Verify & Register
-                        </button>
-                        <button type="button" onClick={() => setStep(1)} style={{ ...buttonStyle('#f59e0b'), marginTop: '10px' }}>
-                            &larr; Change Details
-                        </button>
-                    </form>
-                )}
+                    <button 
+                        type="submit" 
+                        style={{...styles.submitBtn, opacity: loading ? 0.7 : 1}}
+                        disabled={loading}
+                    >
+                        {loading ? 'Creating Account...' : 'Sign Up'}
+                    </button>
+                </form>
+
+                <div style={styles.footer}>
+                    <span style={styles.footerText}>Already have an account?</span>
+                    <button 
+                        onClick={() => {
+                            onClose();
+                            if (onSwitchToLogin) onSwitchToLogin();
+                        }} 
+                        style={styles.switchBtn}
+                    >
+                        Login
+                    </button>
+                </div>
             </div>
         </div>
     );
 };
+
+const styles = {
+    overlay: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+        animation: 'fadeIn 0.3s ease',
+    },
+    modal: {
+        backgroundColor: 'white',
+        borderRadius: '24px',
+        padding: '40px',
+        width: '90%',
+        maxWidth: '500px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+        position: 'relative',
+        animation: 'slideUp 0.3s ease',
+    },
+    closeBtn: {
+        position: 'absolute',
+        top: '20px',
+        right: '20px',
+        border: 'none',
+        background: 'transparent',
+        fontSize: '32px',
+        cursor: 'pointer',
+        color: '#64748b',
+        transition: 'color 0.2s',
+        zIndex: 10,
+    },
+    header: {
+        textAlign: 'center',
+        marginBottom: '30px',
+    },
+    iconContainer: {
+        width: '80px',
+        height: '80px',
+        margin: '0 auto 20px',
+        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        animation: 'pulse 2s infinite',
+    },
+    icon: {
+        fontSize: '40px',
+    },
+    title: {
+        fontSize: '28px',
+        fontWeight: '700',
+        color: '#1e293b',
+        marginBottom: '8px',
+    },
+    subtitle: {
+        fontSize: '16px',
+        color: '#64748b',
+    },
+    form: {
+        marginBottom: '20px',
+    },
+    row: {
+        display: 'flex',
+        gap: '15px',
+        marginBottom: '20px',
+    },
+    inputGroup: {
+        marginBottom: '20px',
+        flex: 1,
+    },
+    label: {
+        display: 'block',
+        fontSize: '14px',
+        fontWeight: '600',
+        color: '#334155',
+        marginBottom: '8px',
+    },
+    input: {
+        width: '100%',
+        padding: '14px 16px',
+        border: '2px solid #e2e8f0',
+        borderRadius: '12px',
+        fontSize: '16px',
+        transition: 'all 0.3s',
+        boxSizing: 'border-box',
+    },
+    strengthIndicator: {
+        marginTop: '8px',
+        fontSize: '14px',
+        color: '#64748b',
+    },
+    submitBtn: {
+        width: '100%',
+        padding: '16px',
+        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        color: 'white',
+        border: 'none',
+        borderRadius: '12px',
+        fontSize: '18px',
+        fontWeight: '600',
+        cursor: 'pointer',
+        transition: 'all 0.3s',
+        marginTop: '10px',
+    },
+    error: {
+        backgroundColor: '#fee2e2',
+        color: '#dc2626',
+        padding: '12px 16px',
+        borderRadius: '8px',
+        marginBottom: '16px',
+        fontSize: '14px',
+    },
+    footer: {
+        textAlign: 'center',
+        marginTop: '24px',
+        paddingTop: '24px',
+        borderTop: '1px solid #e2e8f0',
+    },
+    footerText: {
+        color: '#64748b',
+        fontSize: '14px',
+        marginRight: '8px',
+    },
+    switchBtn: {
+        background: 'transparent',
+        border: 'none',
+        color: '#f5576c',
+        fontSize: '14px',
+        fontWeight: '600',
+        cursor: 'pointer',
+        transition: 'color 0.2s',
+    },
+};
+
+// Add animations
+if (typeof window !== 'undefined') {
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        input:focus {
+            outline: none;
+            border-color: #f5576c !important;
+            box-shadow: 0 0 0 3px rgba(245, 87, 108, 0.1);
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(245, 87, 108, 0.4);
+        }
+    `;
+    document.head.appendChild(style);
+}
 
 export default SignupModal;

@@ -38,6 +38,7 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
     // Find properties by listing type (sale/rent)
     List<Property> findByListingTypeAndIsActiveTrue(String listingType);
 
+    // Complex search query with multiple filters
     @Query("SELECT p FROM Property p " +
             "LEFT JOIN p.propertyType pt " +
             "LEFT JOIN p.area a " +
@@ -50,10 +51,7 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
             "AND (:area IS NULL OR a.areaName = :area) " +
             "AND (:listingType IS NULL OR p.listingType = :listingType) " +
             "AND (:minBedrooms IS NULL OR p.bedrooms >= :minBedrooms) " +
-            "AND (:maxBedrooms IS NULL OR p.bedrooms <= :maxBedrooms) " +
-            "AND (:isVerified IS NULL OR p.isVerified = :isVerified) " +
-            "AND (:ownerType IS NULL OR p.ownerType = :ownerType) " +
-            "AND (:isReadyToMove IS NULL OR p.isReadyToMove = :isReadyToMove)")
+            "AND (:maxBedrooms IS NULL OR p.bedrooms <= :maxBedrooms)")
     Page<Property> searchProperties(
             @Param("propertyType") String propertyType,
             @Param("minPrice") BigDecimal minPrice,
@@ -63,13 +61,8 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
             @Param("listingType") String listingType,
             @Param("minBedrooms") Integer minBedrooms,
             @Param("maxBedrooms") Integer maxBedrooms,
-            @Param("isVerified") Boolean isVerified,
-            @Param("ownerType") String ownerType,
-            @Param("isReadyToMove") Boolean isReadyToMove,  // NEW
             Pageable pageable
     );
-
-
 
     // Find properties by user
     @Query("SELECT p FROM Property p WHERE p.user.id = :userId AND p.isActive = true")

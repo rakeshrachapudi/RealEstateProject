@@ -2,15 +2,19 @@
   "name": "realestate-frontend",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "dependencies": {
     "dotenv": "^17.2.2",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "react-router-dom": "^7.9.1",
-    "vite": "latest"
+    "react-router-dom": "^7.9.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.0",
+    "vite": "^5.0.0"
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0 --port 5173",
     "build": "vite build",
     "preview": "vite preview"
   }

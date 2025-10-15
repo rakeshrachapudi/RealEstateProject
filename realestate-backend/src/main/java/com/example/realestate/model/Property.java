@@ -68,29 +68,7 @@ public class Property {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
     private User user;
-    @Column(name = "is_verified")
-    private Boolean isVerified = false;
 
-    @Column(name = "owner_type")
-    private String ownerType = "owner"; // "owner" or "broker"
-
-    // Add getters and setters
-    public Boolean getIsVerified() { return isVerified; }
-    public void setIsVerified(Boolean isVerified) { this.isVerified = isVerified; }
-
-    public String getOwnerType() { return ownerType; }
-    public void setOwnerType(String ownerType) { this.ownerType = ownerType; }
-    @Column(name = "is_ready_to_move")
-    private Boolean isReadyToMove = false;
-
-    // Getter and Setter
-    public Boolean getIsReadyToMove() {
-        return isReadyToMove;
-    }
-
-    public void setIsReadyToMove(Boolean isReadyToMove) {
-        this.isReadyToMove = isReadyToMove;
-    }
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

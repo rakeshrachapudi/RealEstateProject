@@ -3,7 +3,8 @@
 // API Service for Real Estate App
 // ============================================
 
-const API_BASE_URL = 'http://localhost:8080/api';
+// Use proxy in development (Vite will proxy /api to backend)
+const API_BASE_URL = '/api';
 
 // Helper function to handle fetch responses
 async function handleResponse(response) {

@@ -42,9 +42,11 @@ public class PropertyService {
      * Create new property from DTO.
      */
     public Property postProperty(PropertyPostRequestDto dto) {
+        // Get area ID and User ID from the nested DTO structure
         Long areaId = dto.getArea().getId();
         Long userId = dto.getUser().getId();
 
+        // Fetch entities
         Area area = areaRepository.findById(areaId.intValue())
                 .orElseThrow(() -> new EntityNotFoundException("Area not found with ID: " + areaId));
 
@@ -57,6 +59,7 @@ public class PropertyService {
                     return propertyTypeRepository.findByTypeName("Apartment").orElse(null);
                 });
 
+        // Create and populate the Property entity
         Property property = new Property();
         property.setTitle(dto.getTitle());
         property.setDescription(dto.getDescription());
@@ -74,17 +77,12 @@ public class PropertyService {
 
         property.setType(dto.getType());
         property.setListingType(dto.getListingType());
-        property.setCity(dto.getCity());
+        property.setCity(dto.getCity()); // Retaining for backward compatibility
         property.setAddress(dto.getAddress());
         property.setAmenities(dto.getAmenities());
         property.setStatus(dto.getStatus());
         property.setIsFeatured(dto.getIsFeatured());
         property.setIsActive(dto.getIsActive());
-
-        // New fields
-        property.setOwnerType(dto.getOwnerType());
-        property.setIsReadyToMove(dto.getIsReadyToMove());
-        property.setIsVerified(dto.getIsVerified());
 
         return repo.save(property);
     }
@@ -96,18 +94,18 @@ public class PropertyService {
         logger.info("Fetching properties for user ID: {}", userId);
         List<Property> properties = repo.findByUserId(userId);
 
+        // CONVERT LIST OF ENTITIES TO LIST OF DTOS
         return properties.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
     /**
-     * ⭐ UPDATED: Helper method to convert Property Entity to PropertyDTO
-     * NOW INCLUDES USER INFORMATION!
+     * Helper method to convert Property Entity to PropertyDTO
+     * ⭐ CRITICAL FIXES APPLIED HERE
      */
     private PropertyDTO convertToDTO(Property property) {
         PropertyDTO dto = new PropertyDTO();
-
         dto.setPropertyId(property.getId());
         dto.setPropertyType(property.getType());
         dto.setTitle(property.getTitle());
@@ -124,119 +122,57 @@ public class PropertyService {
         dto.setIsFeatured(property.getIsFeatured());
         dto.setCreatedAt(property.getCreatedAt());
         dto.setPriceDisplay(property.getPriceDisplay());
-        dto.setIsReadyToMove(property.getIsReadyToMove());
-        dto.setOwnerType(property.getOwnerType());
-        dto.setIsVerified(property.getIsVerified());
 
-        // ⭐ NEW: Set user information
-        if (property.getUser() != null) {
-            PropertyDTO.UserDTO userDTO = new PropertyDTO.UserDTO();
-            userDTO.setId(property.getUser().getId());
-            userDTO.setFirstName(property.getUser().getFirstName());
-            userDTO.setLastName(property.getUser().getLastName());
-            userDTO.setEmail(property.getUser().getEmail());
-            userDTO.setMobileNumber(property.getUser().getMobileNumber());
-            dto.setUser(userDTO);
-
-            logger.debug("Set user info for property {}: User ID {}", property.getId(), userDTO.getId());
-        } else {
-            logger.warn("Property {} has no user associated!", property.getId());
-        }
-
-        // Area/Location details
+        // Area/Location details (safe checks to prevent NullPointerExceptions)
         if (property.getArea() != null) {
+            // ⭐ FIX: Use getAreaName() instead of getName()
             dto.setAreaName(property.getArea().getAreaName());
-            dto.setPincode(property.getArea().getPincode());
 
             if (property.getArea().getCity() != null) {
+                // ⭐ FIX: Use getCityName() instead of getName()
                 dto.setCityName(property.getArea().getCity().getCityName());
+                // Use getState() (Assuming a simple 'state' field in the City model)
                 dto.setState(property.getArea().getCity().getState());
+                // You can also set pincode if your City/Area model has it:
+                // dto.setPincode(property.getArea().getPincode());
             }
         }
 
         return dto;
     }
 
-    // Existing methods
+    // --- Existing methods (kept for completeness) ---
+
     public List<Property> findAll() { return repo.findAll(); }
-
     public Optional<Property> findById(Long id) { return repo.findById(id); }
-
     public List<Property> findByCity(String city) { return repo.findByCityIgnoreCase(city); }
-
     public List<Property> findByAreaName(String areaName) { return repo.findByAreaNameAndIsActiveTrue(areaName); }
-// In PropertyService.java
 
-    // In PropertyService.java
-
-    /**
-     * Update property
-     */
     public Property updateProperty(Long id, Property propertyDetails) {
-        Property property = repo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Property not found with id: " + id));
+        Property property = repo.findById(id).orElseThrow(() -> new EntityNotFoundException("Property not found with id: " + id));
 
-        // Update non-entity fields
-        if (propertyDetails.getTitle() != null) property.setTitle(propertyDetails.getTitle());
-        if (propertyDetails.getDescription() != null) property.setDescription(propertyDetails.getDescription());
-        if (propertyDetails.getPrice() != null) property.setPrice(propertyDetails.getPrice());
-        if (propertyDetails.getPriceDisplay() != null) property.setPriceDisplay(propertyDetails.getPriceDisplay());
-        if (propertyDetails.getBedrooms() != null) property.setBedrooms(propertyDetails.getBedrooms());
-        if (propertyDetails.getBathrooms() != null) property.setBathrooms(propertyDetails.getBathrooms());
-        if (propertyDetails.getBalconies() != null) property.setBalconies(propertyDetails.getBalconies());
-        if (propertyDetails.getAreaSqft() != null) property.setAreaSqft(propertyDetails.getAreaSqft());
-        if (propertyDetails.getAddress() != null) property.setAddress(propertyDetails.getAddress());
-        if (propertyDetails.getImageUrl() != null) property.setImageUrl(propertyDetails.getImageUrl());
-        if (propertyDetails.getAmenities() != null) property.setAmenities(propertyDetails.getAmenities());
-        if (propertyDetails.getStatus() != null) property.setStatus(propertyDetails.getStatus());
-        if (propertyDetails.getListingType() != null) property.setListingType(propertyDetails.getListingType());
-        if (propertyDetails.getIsFeatured() != null) property.setIsFeatured(propertyDetails.getIsFeatured());
-
-        // ⭐ FIX 1: Handle Area (Resolves TransientPropertyValueException for Area, and type mismatch for AreaRepository)
-        if (propertyDetails.getArea() != null) {
-            // ASSUMPTION: Area entity's ID getter is getAreaId() and returns Integer (based on AreaRepository<Area, Integer> and DTO)
-            Integer areaId = propertyDetails.getArea().getAreaId();
-
-            if (areaId != null) {
-                // Fetch the managed Area entity by its Integer ID
-                Area area = areaRepository.findById(areaId)
-                        .orElseThrow(() -> new EntityNotFoundException("Area not found with ID: " + areaId));
-                property.setArea(area);
-            }
-        }
-
-        // ⭐ FIX 2: Handle PropertyType (Resolves "Cannot resolve getId" and type mismatch for PropertyTypeRepository)
-        if (propertyDetails.getPropertyType() != null) {
-            // ASSUMPTION: PropertyType entity's ID getter is getPropertyTypeId() and returns Integer
-            // This is a strong assumption based on the two compilation errors you provided.
-            Integer propertyTypeId = propertyDetails.getPropertyType().getPropertyTypeId();
-
-            if (propertyTypeId != null) {
-                // Fetch the managed PropertyType entity. Assuming PropertyTypeRepository uses Integer key like AreaRepository.
-                PropertyType propertyType = propertyTypeRepository.findById(propertyTypeId)
-                        .orElseThrow(() -> new EntityNotFoundException("PropertyType not found with ID: " + propertyTypeId));
-                property.setPropertyType(propertyType);
-            }
-        }
-
-
-        // New fields
-        if (propertyDetails.getOwnerType() != null) property.setOwnerType(propertyDetails.getOwnerType());
-        if (propertyDetails.getIsReadyToMove() != null) property.setIsReadyToMove(propertyDetails.getIsReadyToMove());
-        if (propertyDetails.getIsVerified() != null) property.setIsVerified(propertyDetails.getIsVerified());
-
-        // Also update the 'type' string field if needed (backward compatibility field)
-        if (propertyDetails.getType() != null) property.setType(propertyDetails.getType());
+        if (propertyDetails.getTitle() != null) { property.setTitle(propertyDetails.getTitle()); }
+        if (propertyDetails.getDescription() != null) { property.setDescription(propertyDetails.getDescription()); }
+        if (propertyDetails.getPrice() != null) { property.setPrice(propertyDetails.getPrice()); }
+        if (propertyDetails.getPriceDisplay() != null) { property.setPriceDisplay(propertyDetails.getPriceDisplay()); }
+        if (propertyDetails.getBedrooms() != null) { property.setBedrooms(propertyDetails.getBedrooms()); }
+        if (propertyDetails.getBathrooms() != null) { property.setBathrooms(propertyDetails.getBathrooms()); }
+        if (propertyDetails.getBalconies() != null) { property.setBalconies(propertyDetails.getBalconies()); }
+        if (propertyDetails.getAreaSqft() != null) { property.setAreaSqft(propertyDetails.getAreaSqft()); }
+        if (propertyDetails.getAddress() != null) { property.setAddress(propertyDetails.getAddress()); }
+        if (propertyDetails.getImageUrl() != null) { property.setImageUrl(propertyDetails.getImageUrl()); }
+        if (propertyDetails.getAmenities() != null) { property.setAmenities(propertyDetails.getAmenities()); }
+        if (propertyDetails.getStatus() != null) { property.setStatus(propertyDetails.getStatus()); }
+        if (propertyDetails.getListingType() != null) { property.setListingType(propertyDetails.getListingType()); }
+        if (propertyDetails.getIsFeatured() != null) { property.setIsFeatured(propertyDetails.getIsFeatured()); }
+        if (propertyDetails.getPropertyType() != null) { property.setPropertyType(propertyDetails.getPropertyType()); }
+        if (propertyDetails.getArea() != null) { property.setArea(propertyDetails.getArea()); }
 
         return repo.save(property);
     }
-    /**
-     * Soft delete property
-     */
     public void deleteProperty(Long id) {
-        Property property = repo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Property not found with id: " + id));
-        property.setIsActive(false);
+        Property property = repo.findById(id).orElseThrow(() -> new EntityNotFoundException("Property not found with id: " + id));
+        property.setIsActive(false); // Soft delete
         repo.save(property);
     }
 }

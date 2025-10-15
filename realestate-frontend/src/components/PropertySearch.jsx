@@ -25,7 +25,7 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
   const loadPropertyTypes = async () => {
     console.log('🔍 Loading property types...');
     try {
-      const response = await fetch('http://localhost:8080/api/property-types');
+      const response = await fetch('/api/lookups/property-types');
       console.log('Response status:', response.status);
 
       if (!response.ok) {
@@ -52,7 +52,7 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
   const loadAreas = async () => {
     console.log('🔍 Loading areas...');
     try {
-      const response = await fetch('http://localhost:8080/api/areas?city=Hyderabad');
+      const response = await fetch('/api/lookups/areas?city=Hyderabad');
       console.log('Response status:', response.status);
 
       if (!response.ok) {
@@ -98,7 +98,7 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
         listingType: searchParams.listingType || null
       };
 
-      const response = await fetch('http://localhost:8080/api/properties/search', {
+      const response = await fetch('/api/properties/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params)

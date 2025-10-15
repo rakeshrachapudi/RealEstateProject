@@ -1,139 +1,270 @@
 import React, { useState } from 'react';
 import { useAuth } from './AuthContext';
 
-function LoginModal({ onClose }) {
-    const [loginMethod, setLoginMethod] = useState('select'); // 'select', 'otp', 'password'
-    const [otpStep, setOtpStep] = useState(1);
-    const [isNewUser, setIsNewUser] = useState(false);
-    const [otpFormData, setOtpFormData] = useState({
-        mobileNumber: '', otp: '', firstName: '', lastName: '', email: ''
-    });
-    const [passwordFormData, setPasswordFormData] = useState({
+function LoginModal({ onClose, onSwitchToSignup }) {
+    const [formData, setFormData] = useState({
         username: '',
         password: ''
     });
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const { login } = useAuth();
 
-    const handleOtpChange = (input) => (e) => {
-        setOtpFormData({ ...otpFormData, [input]: e.target.value });
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+        setError('');
     };
 
-    const handleRequestOtp = async (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        const fullMobileNumber = `+91${otpFormData.mobileNumber}`;
-        const response = await fetch('http://localhost:8080/api/auth/request-otp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ mobileNumber: fullMobileNumber }),
-        });
-        const data = await response.json();
-        if (response.ok) {
-            setIsNewUser(data.isNewUser);
-            setOtpStep(2);
-        } else { alert('Failed to send OTP. Please check your number.'); }
-    };
+        setError('');
+        setLoading(true);
 
-    const handleVerifyOtp = async (e) => {
-        e.preventDefault();
-        const fullMobileNumber = `+91${otpFormData.mobileNumber}`;
-        const response = await fetch('http://localhost:8080/api/auth/verify-otp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...otpFormData, mobileNumber: fullMobileNumber }),
-        });
-        const data = await response.json();
-        if (response.ok && data.token) {
-            login(data.user, data.token);
-            onClose();
-        } else { alert(data.message || 'Invalid or expired OTP.'); }
-    };
-
-    const handlePasswordChange = (input) => (e) => {
-        setPasswordFormData({ ...passwordFormData, [input]: e.target.value });
-    };
-
-    const handlePasswordLogin = async (e) => {
-        e.preventDefault();
         try {
-            const response = await fetch('http://localhost:8080/api/auth/login-with-password', {
+            const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(passwordFormData),
+                body: JSON.stringify(formData),
             });
-            const data = await response.json();
-            if (response.ok && data.token) {
-                login(data.user, data.token);
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                login(result.data.user, result.data.token);
                 onClose();
             } else {
-                alert(data.message || 'Invalid username or password.');
+                setError(result.message || 'Login failed. Please try again.');
             }
-        } catch (error) {
-            alert('An error occurred during login.');
+        } catch (err) {
+            setError('Network error. Please check your connection.');
+        } finally {
+            setLoading(false);
         }
-    };
-
-    const modalBackdropStyle = { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
-    const modalContentStyle = { background: 'white', padding: '2rem', borderRadius: '8px', width: '400px', fontFamily: 'system-ui', position: 'relative' };
-    const inputStyle = { width: '100%', padding: '10px', boxSizing: 'border-box', marginBottom: '1rem', borderRadius: '4px', border: '1px solid #ccc' };
-    const buttonStyle = { width: '100%', padding: '10px', background: '#3b82f6', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '4px', fontSize: '1rem' };
-    const secondaryButtonStyle = { ...buttonStyle, background: '#6c757d', marginTop: '1rem' };
-
-    const renderContent = () => {
-        if (loginMethod === 'password') {
-            return (
-                <form onSubmit={handlePasswordLogin}>
-                    <h2 style={{ marginTop: 0 }}>Login with Password</h2>
-                    <input type="text" value={passwordFormData.username} onChange={handlePasswordChange('username')} placeholder="Enter Username" required style={inputStyle} />
-                    <input type="password" value={passwordFormData.password} onChange={handlePasswordChange('password')} placeholder="Enter Password" required style={inputStyle} />
-                    <button type="submit" style={buttonStyle}>Login</button>
-                    <button type="button" onClick={() => setLoginMethod('select')} style={secondaryButtonStyle}>&larr; Back to options</button>
-                </form>
-            );
-        }
-
-        if (loginMethod === 'otp') {
-            return otpStep === 1 ? (
-                <form onSubmit={handleRequestOtp}>
-                    <h2 style={{ marginTop: 0 }}>Login with OTP</h2>
-                    <input type="tel" value={otpFormData.mobileNumber} onChange={handleOtpChange('mobileNumber')} placeholder="Enter 10-digit mobile number" required maxLength="10" style={inputStyle} />
-                    <button type="submit" style={buttonStyle}>Send OTP</button>
-                    <button type="button" onClick={() => setLoginMethod('select')} style={secondaryButtonStyle}>&larr; Back to options</button>
-                </form>
-            ) : (
-                <form onSubmit={handleVerifyOtp}>
-                    <h2>Verify Your Number</h2>
-                    <p style={{ fontSize: '0.9rem', color: '#555' }}>Enter OTP sent to +91 {otpFormData.mobileNumber}</p>
-                    <input type="text" value={otpFormData.otp} onChange={handleOtpChange('otp')} placeholder="Enter OTP" required maxLength="6" style={inputStyle} />
-                    {isNewUser && (
-                        <>
-                            <p style={{ fontSize: '0.9rem', color: '#555', fontWeight: '600' }}>Welcome! Please complete registration.</p>
-                            <input type="text" value={otpFormData.firstName} onChange={handleOtpChange('firstName')} placeholder="First Name" required style={inputStyle} />
-                            <input type="text" value={otpFormData.lastName} onChange={handleOtpChange('lastName')} placeholder="Last Name" required style={inputStyle} />
-                            <input type="email" value={otpFormData.email} onChange={handleOtpChange('email')} placeholder="Email" required style={inputStyle} />
-                        </>
-                    )}
-                    <button type="submit" style={buttonStyle}>Verify & Continue</button>
-                </form>
-            );
-        }
-
-        return (
-            <div>
-                <h2 style={{ marginTop: 0, textAlign: 'center' }}>Login</h2>
-                <button onClick={() => setLoginMethod('otp')} style={buttonStyle}>Login with OTP</button>
-                <button onClick={() => setLoginMethod('password')} style={secondaryButtonStyle}>Login with Username & Password</button>
-            </div>
-        );
     };
 
     return (
-        <div style={modalBackdropStyle} onClick={onClose}>
-            <div style={modalContentStyle} onClick={e => e.stopPropagation()}>
-                <button onClick={onClose} style={{ position: 'absolute', top: '10px', right: '15px', border: 'none', background: 'transparent', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
-                {renderContent()}
+        <div style={styles.overlay} onClick={onClose}>
+            <div style={styles.modal} onClick={e => e.stopPropagation()}>
+                <button onClick={onClose} style={styles.closeBtn}>&times;</button>
+                
+                <div style={styles.header}>
+                    <div style={styles.iconContainer}>
+                        <span style={styles.icon}>🔐</span>
+                    </div>
+                    <h2 style={styles.title}>Welcome Back</h2>
+                    <p style={styles.subtitle}>Login to access your account</p>
+                </div>
+
+                <form onSubmit={handleSubmit} style={styles.form}>
+                    {error && <div style={styles.error}>{error}</div>}
+                    
+                    <div style={styles.inputGroup}>
+                        <label style={styles.label}>Username</label>
+                        <input
+                            type="text"
+                            name="username"
+                            value={formData.username}
+                            onChange={handleChange}
+                            style={styles.input}
+                            placeholder="Enter your username"
+                            required
+                        />
+                    </div>
+
+                    <div style={styles.inputGroup}>
+                        <label style={styles.label}>Password</label>
+                        <input
+                            type="password"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            style={styles.input}
+                            placeholder="Enter your password"
+                            required
+                        />
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        style={{...styles.submitBtn, opacity: loading ? 0.7 : 1}}
+                        disabled={loading}
+                    >
+                        {loading ? 'Logging in...' : 'Login'}
+                    </button>
+                </form>
+
+                <div style={styles.footer}>
+                    <span style={styles.footerText}>Don't have an account?</span>
+                    <button 
+                        onClick={() => {
+                            onClose();
+                            if (onSwitchToSignup) onSwitchToSignup();
+                        }} 
+                        style={styles.switchBtn}
+                    >
+                        Sign Up
+                    </button>
+                </div>
             </div>
         </div>
     );
+}
+
+const styles = {
+    overlay: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+        animation: 'fadeIn 0.3s ease',
+    },
+    modal: {
+        backgroundColor: 'white',
+        borderRadius: '24px',
+        padding: '40px',
+        width: '90%',
+        maxWidth: '450px',
+        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+        position: 'relative',
+        animation: 'slideUp 0.3s ease',
+    },
+    closeBtn: {
+        position: 'absolute',
+        top: '20px',
+        right: '20px',
+        border: 'none',
+        background: 'transparent',
+        fontSize: '32px',
+        cursor: 'pointer',
+        color: '#64748b',
+        transition: 'color 0.2s',
+    },
+    header: {
+        textAlign: 'center',
+        marginBottom: '30px',
+    },
+    iconContainer: {
+        width: '80px',
+        height: '80px',
+        margin: '0 auto 20px',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        animation: 'pulse 2s infinite',
+    },
+    icon: {
+        fontSize: '40px',
+    },
+    title: {
+        fontSize: '28px',
+        fontWeight: '700',
+        color: '#1e293b',
+        marginBottom: '8px',
+    },
+    subtitle: {
+        fontSize: '16px',
+        color: '#64748b',
+    },
+    form: {
+        marginBottom: '20px',
+    },
+    inputGroup: {
+        marginBottom: '20px',
+    },
+    label: {
+        display: 'block',
+        fontSize: '14px',
+        fontWeight: '600',
+        color: '#334155',
+        marginBottom: '8px',
+    },
+    input: {
+        width: '100%',
+        padding: '14px 16px',
+        border: '2px solid #e2e8f0',
+        borderRadius: '12px',
+        fontSize: '16px',
+        transition: 'all 0.3s',
+        boxSizing: 'border-box',
+    },
+    submitBtn: {
+        width: '100%',
+        padding: '16px',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white',
+        border: 'none',
+        borderRadius: '12px',
+        fontSize: '18px',
+        fontWeight: '600',
+        cursor: 'pointer',
+        transition: 'all 0.3s',
+        marginTop: '10px',
+    },
+    error: {
+        backgroundColor: '#fee2e2',
+        color: '#dc2626',
+        padding: '12px 16px',
+        borderRadius: '8px',
+        marginBottom: '16px',
+        fontSize: '14px',
+    },
+    footer: {
+        textAlign: 'center',
+        marginTop: '24px',
+        paddingTop: '24px',
+        borderTop: '1px solid #e2e8f0',
+    },
+    footerText: {
+        color: '#64748b',
+        fontSize: '14px',
+        marginRight: '8px',
+    },
+    switchBtn: {
+        background: 'transparent',
+        border: 'none',
+        color: '#667eea',
+        fontSize: '14px',
+        fontWeight: '600',
+        cursor: 'pointer',
+        transition: 'color 0.2s',
+    },
+};
+
+// Add animations
+if (typeof window !== 'undefined') {
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 export default LoginModal;
