@@ -165,6 +165,9 @@ public class PropertyService {
     public List<Property> findByCity(String city) { return repo.findByCityIgnoreCase(city); }
 
     public List<Property> findByAreaName(String areaName) { return repo.findByAreaNameAndIsActiveTrue(areaName); }
+// In PropertyService.java
+
+    // In PropertyService.java
 
     /**
      * Update property
@@ -173,7 +176,7 @@ public class PropertyService {
         Property property = repo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Property not found with id: " + id));
 
-        // Update all fields
+        // Update non-entity fields
         if (propertyDetails.getTitle() != null) property.setTitle(propertyDetails.getTitle());
         if (propertyDetails.getDescription() != null) property.setDescription(propertyDetails.getDescription());
         if (propertyDetails.getPrice() != null) property.setPrice(propertyDetails.getPrice());
@@ -188,17 +191,45 @@ public class PropertyService {
         if (propertyDetails.getStatus() != null) property.setStatus(propertyDetails.getStatus());
         if (propertyDetails.getListingType() != null) property.setListingType(propertyDetails.getListingType());
         if (propertyDetails.getIsFeatured() != null) property.setIsFeatured(propertyDetails.getIsFeatured());
-        if (propertyDetails.getPropertyType() != null) property.setPropertyType(propertyDetails.getPropertyType());
-        if (propertyDetails.getArea() != null) property.setArea(propertyDetails.getArea());
+
+        // ⭐ FIX 1: Handle Area (Resolves TransientPropertyValueException for Area, and type mismatch for AreaRepository)
+        if (propertyDetails.getArea() != null) {
+            // ASSUMPTION: Area entity's ID getter is getAreaId() and returns Integer (based on AreaRepository<Area, Integer> and DTO)
+            Integer areaId = propertyDetails.getArea().getAreaId();
+
+            if (areaId != null) {
+                // Fetch the managed Area entity by its Integer ID
+                Area area = areaRepository.findById(areaId)
+                        .orElseThrow(() -> new EntityNotFoundException("Area not found with ID: " + areaId));
+                property.setArea(area);
+            }
+        }
+
+        // ⭐ FIX 2: Handle PropertyType (Resolves "Cannot resolve getId" and type mismatch for PropertyTypeRepository)
+        if (propertyDetails.getPropertyType() != null) {
+            // ASSUMPTION: PropertyType entity's ID getter is getPropertyTypeId() and returns Integer
+            // This is a strong assumption based on the two compilation errors you provided.
+            Integer propertyTypeId = propertyDetails.getPropertyType().getPropertyTypeId();
+
+            if (propertyTypeId != null) {
+                // Fetch the managed PropertyType entity. Assuming PropertyTypeRepository uses Integer key like AreaRepository.
+                PropertyType propertyType = propertyTypeRepository.findById(propertyTypeId)
+                        .orElseThrow(() -> new EntityNotFoundException("PropertyType not found with ID: " + propertyTypeId));
+                property.setPropertyType(propertyType);
+            }
+        }
+
 
         // New fields
         if (propertyDetails.getOwnerType() != null) property.setOwnerType(propertyDetails.getOwnerType());
         if (propertyDetails.getIsReadyToMove() != null) property.setIsReadyToMove(propertyDetails.getIsReadyToMove());
         if (propertyDetails.getIsVerified() != null) property.setIsVerified(propertyDetails.getIsVerified());
 
+        // Also update the 'type' string field if needed (backward compatibility field)
+        if (propertyDetails.getType() != null) property.setType(propertyDetails.getType());
+
         return repo.save(property);
     }
-
     /**
      * Soft delete property
      */
