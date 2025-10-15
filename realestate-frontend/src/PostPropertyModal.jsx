@@ -163,9 +163,9 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
             status: 'available',
             isFeatured: true,
             isActive: true,
-            ownerType: formData.ownerType, // NEW
-            isReadyToMove: formData.isReadyToMove, // NEW
-            isVerified: false, // Only agents can verify
+            ownerType: formData.ownerType,
+            isReadyToMove: formData.isReadyToMove,
+            isVerified: false,
             area: { id: parseInt(formData.areaId) },
             user: { id: user.id }
         };
@@ -173,10 +173,15 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         console.log('📤 Submitting property data:', propertyData);
 
         try {
+            const token = localStorage.getItem('authToken');
+
             const response = await fetch('http://localhost:8080/api/properties', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(propertyData),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(propertyData)
             });
 
             if (!response.ok) {
