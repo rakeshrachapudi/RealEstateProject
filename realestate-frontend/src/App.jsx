@@ -10,7 +10,7 @@ import LoginModal from './LoginModal.jsx';
 import PostPropertyModal from './PostPropertyModal.jsx';
 import SignupModal from './SignupModal.jsx';
 import UserProfileModal from './UserProfileModal.jsx';
-import PropertyEditModal from './PropertyEditModal.jsx'; // NEW IMPORT
+import PropertyEditModal from './PropertyEditModal.jsx';
 
 // Import Components
 import Header from './components/Header.jsx';
@@ -22,6 +22,7 @@ import HomePage from './pages/HomePage.jsx';
 import SearchResultsPage from './pages/SearchResultsPage.jsx';
 import MyPropertiesPage from './pages/MyPropertiesPage.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
+import AdminDashboard from './pages/AdminDashboard.jsx';
 
 // ============================================
 // APP CONTENT
@@ -34,7 +35,6 @@ function AppContent() {
     const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
     const { isAuthenticated, user, logout } = useAuth();
 
-    // Inject animations once when the app loads
     useEffect(() => {
         injectAnimations();
     }, []);
@@ -69,6 +69,7 @@ function AppContent() {
                 <Route path="/dashboard" element={<MyPropertiesPage onPostPropertyClick={handlePostPropertyClick} />} />
                 <Route path="/rental-agreement" element={<PlaceholderPage title="Rental Agreement" />} />
                 <Route path="/home-renovation" element={<PlaceholderPage title="Home Interior/Renovation" />} />
+                <Route path="/admin" element={<AdminDashboard />} />
             </Routes>
             {isLoginModalOpen && <LoginModal onClose={() => setIsLoginModalOpen(false)} />}
             {isPostPropertyModalOpen && <PostPropertyModal onClose={() => setIsPostPropertyModalOpen(false)} onPropertyPosted={handlePropertyPosted} />}

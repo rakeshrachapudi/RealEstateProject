@@ -2,6 +2,7 @@ package com.example.realestate.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -12,6 +13,7 @@ import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true) // Enable method-level security
 public class SecurityConfig {
 
     @Bean
@@ -25,13 +27,13 @@ public class SecurityConfig {
                 .cors(withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
-                        // ✅ ADDED: Allow access to areas and property-types endpoints
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/api/properties/**",
-                                "/api/areas/**",           // ← NEW
-                                "/api/property-types/**"   // ← NEW
+                                "/api/areas/**",
+                                "/api/property-types/**"
                         ).permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // Secure admin routes
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
