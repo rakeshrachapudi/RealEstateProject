@@ -28,14 +28,16 @@ public class PropertyController {
         this.service = service;
     }
 
+    /**
+     * Create a new property listing.
+     */
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> create(@RequestBody PropertyPostRequestDto dto) {
         logger.info("Attempting to create new property from DTO.");
         try {
-            // ✅ FIX: The service returns a DTO now
-            PropertyDTO createdPropertyDTO = service.postProperty(dto);
-            return new ResponseEntity<>(createdPropertyDTO, HttpStatus.CREATED);
+            Property createdProperty = service.postProperty(dto);
+            return new ResponseEntity<>(createdProperty, HttpStatus.CREATED);
         } catch (EntityNotFoundException e) {
             logger.error("Error creating property: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
@@ -45,6 +47,9 @@ public class PropertyController {
         }
     }
 
+    /**
+     * Get all properties listed by a specific user.
+     */
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<PropertyDTO>> byUser(@PathVariable Long userId) {
         logger.info("Fetching properties for user ID: {}", userId);
@@ -55,8 +60,9 @@ public class PropertyController {
         return ResponseEntity.ok(userProperties);
     }
 
-    // ... (rest of the controller methods remain the same)
-
+    /**
+     * Update the deal status of a property. Restricted to AGENT and ADMIN roles.
+     */
     @PutMapping("/{id}/deal-status")
     @PreAuthorize("hasRole('AGENT') or hasRole('ADMIN')")
     public ResponseEntity<?> updateDealStatus(@PathVariable Long id, @RequestBody Map<String, String> payload) {
@@ -72,6 +78,9 @@ public class PropertyController {
         }
     }
 
+    /**
+     * Endpoint for a user (buyer) to upload proof of registration.
+     */
     @PostMapping("/{id}/upload-proof")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> uploadRegistrationProof(@PathVariable Long id, @RequestBody Map<String, String> payload) {
@@ -88,6 +97,9 @@ public class PropertyController {
         }
     }
 
+    /**
+     * Endpoint for the property owner (seller) to manually confirm registration.
+     */
     @PostMapping("/{id}/confirm-registration")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> confirmRegistrationBySeller(@PathVariable Long id) {
@@ -100,13 +112,12 @@ public class PropertyController {
         }
     }
 
+
+    // --- Standard Property Endpoints ---
+
     @GetMapping
-    public ResponseEntity<List<PropertyDTO>> getAll() {
-        List<PropertyDTO> properties = service.findAll();
-        if (properties.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.ok(properties);
+    public List<Property> getAll() {
+        return service.findAll();
     }
 
     @GetMapping("/{id}")

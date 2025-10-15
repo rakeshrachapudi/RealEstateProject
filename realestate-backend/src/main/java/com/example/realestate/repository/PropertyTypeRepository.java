@@ -10,13 +10,15 @@ import java.util.Optional;
 @Repository
 public interface PropertyTypeRepository extends JpaRepository<PropertyType, Integer> {
 
+    // Find property type by name
     Optional<PropertyType> findByTypeName(String typeName);
 
+    // Find property type by name (case insensitive)
     Optional<PropertyType> findByTypeNameIgnoreCase(String typeName);
 
+    // Find all active property types
     List<PropertyType> findByIsActiveTrue();
 
-    // ADDED THIS MISSING METHOD TO CHECK FOR EXISTENCE
+    // Check if property type exists by name
     boolean existsByTypeName(String typeName);
 }
-
