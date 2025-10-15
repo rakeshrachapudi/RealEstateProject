@@ -5,13 +5,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="42dfceb5-b8ee-4b67-a031-eae8b466d127" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/PropertyDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/PropertyDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/PropertySearchRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/PropertySearchRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/model/Property.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/model/Property.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/repository/PropertyRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/repository/PropertyRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/service/PropertySearchService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/service/PropertySearchService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/PropertyEditModal.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/PropertyPostRequestDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/PropertyPostRequestDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/service/PropertyService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/service/PropertyService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-database/RealEstateDB - alter.sql" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-database/RealEstateDB - alter.sql" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pages/SearchResultsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/SearchResultsPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/PostPropertyModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/PostPropertyModal.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/PropertyCard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/PropertyCard.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/PropertyList.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/PropertyList.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/HomePage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/HomePage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/MyPropertiesPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/MyPropertiesPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/styles.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/styles.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

@@ -1,8 +1,8 @@
-// src/pages/MyPropertiesPage.jsx
+// realestate-frontend/src/pages/MyPropertiesPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
-import PropertyList from '../components/PropertyList';
+import PropertyCard from '../components/PropertyCard';
 import { styles } from '../styles.js';
 
 function MyPropertiesPage({ onPostPropertyClick }) {
@@ -60,6 +60,16 @@ function MyPropertiesPage({ onPostPropertyClick }) {
         }
     };
 
+    const handlePropertyUpdated = () => {
+        console.log('🔄 Property updated, refreshing list...');
+        fetchMyProperties();
+    };
+
+    const handlePropertyDeleted = () => {
+        console.log('🔄 Property deleted, refreshing list...');
+        fetchMyProperties();
+    };
+
     if (loading) {
         return (
             <div style={styles.container}>
@@ -113,9 +123,24 @@ function MyPropertiesPage({ onPostPropertyClick }) {
                                 {properties.filter(p => p.listingType === 'rent').length}
                             </span>
                         </div>
+                        <div style={styles.statItem}>
+                            <span style={styles.statLabel}>Verified:</span>
+                            <span style={styles.statValue}>
+                                {properties.filter(p => p.isVerified).length}
+                            </span>
+                        </div>
                     </div>
 
-                    <PropertyList properties={properties} loading={false} />
+                    <div style={styles.grid}>
+                        {properties.map(property => (
+                            <PropertyCard
+                                key={property.propertyId || property.id}
+                                property={property}
+                                onPropertyUpdated={handlePropertyUpdated}
+                                onPropertyDeleted={handlePropertyDeleted}
+                            />
+                        ))}
+                    </div>
                 </>
             ) : (
                 <div style={styles.emptyState}>

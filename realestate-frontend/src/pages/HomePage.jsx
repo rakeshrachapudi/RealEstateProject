@@ -17,7 +17,6 @@ function HomePage() {
     const [activeTab, setActiveTab] = useState('featured');
     const navigate = useNavigate();
 
-
     const popularAreas = [
         { name: 'Gachibowli', emoji: '💼' },
         { name: 'HITEC City', emoji: '🏢' },
@@ -97,11 +96,26 @@ function HomePage() {
         fetchProperties();
     };
 
-    // In your HomePage.jsx, update the handleAreaClick function:
     const handleAreaClick = (area) => {
-        // Convert spaces to hyphens for URL
         const urlArea = area.name.toLowerCase().replace(/\s+/g, '-');
         navigate(`/area/${urlArea}`);
+    };
+
+    // ⭐ NEW: Handle property updates and deletes
+    const handlePropertyUpdated = () => {
+        console.log('🔄 Property updated, refreshing lists...');
+        fetchProperties();
+        if (isAuthenticated && user?.id) {
+            fetchMyProperties();
+        }
+    };
+
+    const handlePropertyDeleted = () => {
+        console.log('🔄 Property deleted, refreshing lists...');
+        fetchProperties();
+        if (isAuthenticated && user?.id) {
+            fetchMyProperties();
+        }
     };
 
     return (
@@ -138,7 +152,7 @@ function HomePage() {
                     {popularAreas.map(area => (
                         <button
                             key={area.name}
-                            onClick={() => handleAreaClick(area.name)}
+                            onClick={() => handleAreaClick(area)}
                             style={styles.areaButton}
                             className="areaButton"
                         >
@@ -195,6 +209,8 @@ function HomePage() {
                         <PropertyList
                             properties={myProperties}
                             loading={searchLoading}
+                            onPropertyUpdated={handlePropertyUpdated}
+                            onPropertyDeleted={handlePropertyDeleted}
                         />
                     ) : (
                         <div style={styles.emptyState}>
@@ -209,6 +225,8 @@ function HomePage() {
                     <PropertyList
                         properties={showSearchResults ? searchResults : propsList}
                         loading={searchLoading}
+                        onPropertyUpdated={handlePropertyUpdated}
+                        onPropertyDeleted={handlePropertyDeleted}
                     />
                 )}
             </section>

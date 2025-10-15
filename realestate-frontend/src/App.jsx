@@ -10,6 +10,7 @@ import LoginModal from './LoginModal.jsx';
 import PostPropertyModal from './PostPropertyModal.jsx';
 import SignupModal from './SignupModal.jsx';
 import UserProfileModal from './UserProfileModal.jsx';
+import PropertyEditModal from './PropertyEditModal.jsx'; // NEW IMPORT
 
 // Import Components
 import Header from './components/Header.jsx';
@@ -61,7 +62,6 @@ function AppContent() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/search" element={<SearchResultsPage />} />
                 <Route path="/property/:id" element={<PropertyDetails />} />
-                {/* ADDED ROUTES FOR HEADER NAVIGATION */}
                 <Route path="/property-type/:listingType/:propertyType" element={<PropertyTypePage />} />
                 <Route path="/area/:areaName" element={<PropertyTypePage />} />
                 <Route path="/owner-plans" element={<PlaceholderPage title="Owner Plans" />} />

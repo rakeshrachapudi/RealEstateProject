@@ -1,7 +1,8 @@
+// realestate-frontend/src/components/PropertyList.jsx
 import React from 'react';
 import PropertyCard from './PropertyCard';
 
-const PropertyList = ({ properties, loading }) => {
+const PropertyList = ({ properties, loading, onPropertyUpdated, onPropertyDeleted }) => {
   if (loading) {
     return (
       <div style={styles.loading}>
@@ -28,6 +29,8 @@ const PropertyList = ({ properties, loading }) => {
         <PropertyCard
           key={property.propertyId || property.id}
           property={property}
+          onPropertyUpdated={onPropertyUpdated}
+          onPropertyDeleted={onPropertyDeleted}
         />
       ))}
     </div>

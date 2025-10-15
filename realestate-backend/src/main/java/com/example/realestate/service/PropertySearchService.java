@@ -33,14 +33,12 @@ public class PropertySearchService {
     public List<PropertyDTO> searchProperties(PropertySearchRequest request) {
         logger.info("Searching properties with request: {}", request);
 
-        // Create sort object
         Sort sort = Sort.by(
                 request.getSortOrder().equalsIgnoreCase("ASC") ?
                         Sort.Direction.ASC : Sort.Direction.DESC,
                 request.getSortBy()
         );
 
-        // Create pageable object
         Pageable pageable = PageRequest.of(
                 request.getPage(),
                 request.getSize(),
@@ -58,13 +56,12 @@ public class PropertySearchService {
                 request.getMaxBedrooms(),
                 request.getIsVerified(),
                 request.getOwnerType(),
-                request.getIsReadyToMove(),  // NEW
+                request.getIsReadyToMove(),
                 pageable
         );
 
         logger.info("Found {} properties", propertyPage.getTotalElements());
 
-        // Convert to DTOs
         return propertyPage.getContent().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -77,7 +74,6 @@ public class PropertySearchService {
         logger.info("Fetching featured properties");
         List<Property> properties = propertyRepository.findByIsFeaturedTrueAndIsActiveTrueOrderByCreatedAtDesc();
 
-        // Limit to top 6 featured properties
         return properties.stream()
                 .limit(6)
                 .map(this::convertToDTO)
@@ -121,7 +117,8 @@ public class PropertySearchService {
     }
 
     /**
-     * Convert Property entity to PropertyDTO
+     * ⭐ UPDATED: Convert Property entity to PropertyDTO
+     * NOW INCLUDES USER INFORMATION!
      */
     private PropertyDTO convertToDTO(Property property) {
         PropertyDTO dto = new PropertyDTO();
@@ -142,6 +139,23 @@ public class PropertySearchService {
         dto.setCreatedAt(property.getCreatedAt());
         dto.setPriceDisplay(property.getPriceDisplay());
         dto.setIsReadyToMove(property.getIsReadyToMove());
+        dto.setOwnerType(property.getOwnerType());
+        dto.setIsVerified(property.getIsVerified());
+
+        // ⭐ NEW: Set user information
+        if (property.getUser() != null) {
+            PropertyDTO.UserDTO userDTO = new PropertyDTO.UserDTO();
+            userDTO.setId(property.getUser().getId());
+            userDTO.setFirstName(property.getUser().getFirstName());
+            userDTO.setLastName(property.getUser().getLastName());
+            userDTO.setEmail(property.getUser().getEmail());
+            userDTO.setMobileNumber(property.getUser().getMobileNumber());
+            dto.setUser(userDTO);
+
+            logger.debug("Set user info for property {}: User ID {}", property.getId(), userDTO.getId());
+        } else {
+            logger.warn("Property {} has no user associated!", property.getId());
+        }
 
         // Set property type
         if (property.getPropertyType() != null) {

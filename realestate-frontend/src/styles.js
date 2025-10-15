@@ -490,4 +490,10 @@ export const styles = {
         fontWeight: 700,
         color: '#1e293b',
     },
+    grid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+        gap: '2rem',
+        marginTop: '1rem',
+    },
 };
