@@ -1,19 +1,22 @@
 import React, { useState, useMemo } from 'react';
+import { useAuth } from './AuthContext';
 
-// Simplified styles
 const modalStyle = {
     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex',
     justifyContent: 'center', alignItems: 'center', zIndex: 1000,
 };
+
 const contentStyle = {
     backgroundColor: 'white', padding: '30px', borderRadius: '12px',
     width: '450px', boxShadow: '0 5px 15px rgba(0, 0, 0, 0.3)', position: 'relative',
 };
+
 const inputStyle = {
     width: '100%', padding: '10px', marginBottom: '15px',
     border: '1px solid #ccc', borderRadius: '6px', boxSizing: 'border-box',
 };
+
 const buttonStyle = (color) => ({
     width: '100%', padding: '12px', background: color, color: 'white',
     border: 'none', borderRadius: '6px', cursor: 'pointer',
@@ -35,107 +38,181 @@ const getPasswordStrength = (password) => {
 };
 
 const SignupModal = ({ onClose, onSignupSuccess }) => {
-    const [step, setStep] = useState(1);
-    // ✨ 1. Add 'username' to the state
+    const { login } = useAuth();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
     const [formData, setFormData] = useState({
-        firstName: '', lastName: '', email: '', password: '', phone: '', username: '',
+        firstName: '',
+        lastName: '',
+        username: '',
+        email: '',
+        password: '',
+        mobileNumber: '',
     });
-    const [otp, setOtp] = useState('');
+
     const strength = useMemo(() => getPasswordStrength(formData.password), [formData.password]);
-    const isFormValid = formData.firstName && formData.lastName && formData.username && formData.email && formData.password.length >= 6 && formData.phone.length === 10;
+
+    const isFormValid = formData.firstName &&
+                       formData.lastName &&
+                       formData.username &&
+                       formData.email &&
+                       formData.password.length >= 6 &&
+                       formData.mobileNumber.length >= 10;
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+        setError(null);
     };
 
-    const handleDetailsSubmit = async (e) => {
+    const handleRegister = async (e) => {
         e.preventDefault();
+
         if (strength.strength === 'Too Short' || strength.strength === 'Weak') {
-            alert('Please choose a stronger password.');
+            setError('Please choose a stronger password.');
             return;
         }
-        try {
-            const fullMobileNumber = `+91${formData.phone}`;
-            const response = await fetch('http://localhost:8080/api/auth/request-otp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mobileNumber: fullMobileNumber }),
-            });
-            if (response.ok) {
-                alert('OTP sent successfully!');
-                setStep(2);
-            } else {
-                const errorData = await response.json();
-                alert(errorData.message || 'Failed to send OTP.');
-            }
-        } catch (error) {
-            console.error('Error sending OTP:', error);
-            alert('Network error while sending OTP.');
-        }
-    };
 
-    const handleOtpVerification = async (e) => {
-        e.preventDefault();
+        setLoading(true);
+        setError(null);
+
         try {
-            const fullMobileNumber = `+91${formData.phone}`;
-            const response = await fetch('http://localhost:8080/api/auth/register-with-otp', {
+            const response = await fetch('http://localhost:8080/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...formData, mobileNumber: fullMobileNumber, otp }),
+                body: JSON.stringify(formData),
             });
+
             const data = await response.json();
-            if (response.ok) {
-                alert('User Registration Successful! Please log in.');
+
+            if (response.ok && data.data && data.data.token) {
+                // Login automatically after registration
+                login(data.data.user, data.data.token);
+                alert('✅ Registration successful!');
                 onClose();
             } else {
-                alert(data.message || 'OTP verification failed.');
+                setError(data.message || 'Registration failed. Please try again.');
             }
         } catch (error) {
-            console.error('Error during registration:', error);
-            alert('Network error during registration.');
+            console.error('Registration error:', error);
+            setError('Network error. Please check your connection and try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <div style={modalStyle}>
-            <div style={contentStyle}>
-                <button onClick={onClose} style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#6b7280' }}>&times;</button>
-                <h2 style={{ fontSize: '24px', marginBottom: '20px', color: '#3498db' }}>Step {step}: {step === 1 ? 'Enter Details' : 'Verify Phone'}</h2>
+        <div style={modalStyle} onClick={onClose}>
+            <div style={contentStyle} onClick={e => e.stopPropagation()}>
+                <button
+                    onClick={onClose}
+                    style={{
+                        position: 'absolute', top: '10px', right: '10px',
+                        background: 'none', border: 'none', fontSize: '24px',
+                        cursor: 'pointer', color: '#6b7280'
+                    }}
+                >
+                    ×
+                </button>
 
-                {step === 1 && (
-                    <form onSubmit={handleDetailsSubmit}>
-                        <input type="text" name="firstName" placeholder="First Name" value={formData.firstName} onChange={handleChange} style={inputStyle} required />
-                        <input type="text" name="lastName" placeholder="Last Name" value={formData.lastName} onChange={handleChange} style={inputStyle} required />
-                        {/* ✨ 2. Add the username input field */}
-                        <input type="text" name="username" placeholder="Username" value={formData.username} onChange={handleChange} style={inputStyle} required />
-                        <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} style={inputStyle} required />
-                        <input type="password" name="password" placeholder="Password" value={formData.password} onChange={handleChange} style={inputStyle} required />
-                        {formData.password && (
-                            <div style={{ marginBottom: '15px', fontSize: '14px' }}>
-                                Password Strength: <span style={{ color: strength.color, fontWeight: 'bold' }}>{strength.strength}</span>
-                            </div>
-                        )}
-                        <input type="tel" name="phone" placeholder="10-Digit Phone Number" value={formData.phone} onChange={handleChange} style={inputStyle} required maxLength="10" />
-                        <button type="submit" style={buttonStyle(isFormValid ? '#3498db' : '#ccc')} disabled={!isFormValid}>
-                            Send Verification OTP
-                        </button>
-                    </form>
+                <h2 style={{ fontSize: '24px', marginBottom: '20px', color: '#3498db' }}>
+                    ✨ Step 1: Enter Details
+                </h2>
+
+                {error && (
+                    <div style={{
+                        backgroundColor: '#f8d7da',
+                        color: '#721c24',
+                        padding: '12px',
+                        borderRadius: '6px',
+                        marginBottom: '15px',
+                        fontSize: '14px',
+                        border: '1px solid #f5c6cb'
+                    }}>
+                        {error}
+                    </div>
                 )}
 
-                {step === 2 && (
-                    <form onSubmit={handleOtpVerification}>
-                        <p style={{ marginBottom: '15px', color: '#555' }}>
-                            An OTP has been sent to +91 {formData.phone}. Please enter it below.
-                        </p>
-                        <input type="text" name="otp" placeholder="Enter 6-Digit OTP" value={otp} onChange={(e) => setOtp(e.target.value)} style={inputStyle} required minLength="6" maxLength="6" />
-                        <button type="submit" style={buttonStyle(otp.length === 6 ? '#28a745' : '#ccc')} disabled={otp.length !== 6}>
-                            Verify & Register
-                        </button>
-                        <button type="button" onClick={() => setStep(1)} style={{ ...buttonStyle('#f59e0b'), marginTop: '10px' }}>
-                            &larr; Change Details
-                        </button>
-                    </form>
-                )}
+                <form onSubmit={handleRegister}>
+                    <input
+                        type="text"
+                        name="firstName"
+                        placeholder="First Name"
+                        value={formData.firstName}
+                        onChange={handleChange}
+                        style={inputStyle}
+                        required
+                    />
+
+                    <input
+                        type="text"
+                        name="lastName"
+                        placeholder="Last Name"
+                        value={formData.lastName}
+                        onChange={handleChange}
+                        style={inputStyle}
+                        required
+                    />
+
+                    <input
+                        type="text"
+                        name="username"
+                        placeholder="Username"
+                        value={formData.username}
+                        onChange={handleChange}
+                        style={inputStyle}
+                        required
+                    />
+
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="Email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        style={inputStyle}
+                        required
+                    />
+
+                    <input
+                        type="password"
+                        name="password"
+                        placeholder="Password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        style={inputStyle}
+                        required
+                    />
+
+                    {formData.password && (
+                        <div style={{ marginBottom: '15px', fontSize: '14px' }}>
+                            Password Strength: <span style={{ color: strength.color, fontWeight: 'bold' }}>
+                                {strength.strength}
+                            </span>
+                        </div>
+                    )}
+
+                    <input
+                        type="tel"
+                        name="mobileNumber"
+                        placeholder="Mobile Number (10 digits)"
+                        value={formData.mobileNumber}
+                        onChange={handleChange}
+                        style={inputStyle}
+                        required
+                        maxLength="10"
+                        pattern="[0-9]{10}"
+                    />
+
+                    <button
+                        type="submit"
+                        style={buttonStyle(isFormValid ? '#3498db' : '#ccc')}
+                        disabled={!isFormValid || loading}
+                    >
+                        {loading ? '⏳ Registering...' : '✅ Register'}
+                    </button>
+                </form>
             </div>
         </div>
     );
