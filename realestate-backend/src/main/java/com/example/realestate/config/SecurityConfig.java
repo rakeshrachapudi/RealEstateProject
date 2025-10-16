@@ -25,13 +25,14 @@ public class SecurityConfig {
                 .cors(withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
-                        // ✅ ADDED: Allow access to areas and property-types endpoints
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/api/properties/**",
-                                "/api/areas/**",           // ← NEW
-                                "/api/property-types/**"   // ← NEW
+                                "/api/areas/**",
+                                "/api/property-types/**"
                         ).permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/deals/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

@@ -1,121 +1,86 @@
 package com.example.realestate.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-/**
- * Represents a User in the application, storing authentication and profile details.
- * Contains all necessary fields used by the AuthController for registration and OTP flow.
- */
 @Entity
 @Table(name = "users")
 public class User {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // --- Authentication & Identity Fields ---
-    private String mobileNumber;
-    private String username; // Used for permanent login via signup
-    private String password; // Stored hashed in a real application
+    @Column(unique = true, nullable = false)
+    private String username;
+
+    @Column(nullable = false)
+    private String password; // Store hashed password
+
+    @Column(unique = true, nullable = false)
     private String email;
 
-    // --- Profile Fields ---
     private String firstName;
     private String lastName;
+    private String mobileNumber;
 
-    // --- OTP Fields ---
-    private String otp;
-    private LocalDateTime otpExpiryTime;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role = UserRole.USER; // USER, AGENT, ADMIN
 
-    // --- Constructors ---
-    public User() {
+    private Boolean isActive = true;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    public enum UserRole {
+        USER, AGENT, ADMIN
     }
 
-    // --- Getters and Setters (CRITICAL for compilation) ---
-
-    public Long getId() {
-        return id;
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 
-    public String getMobileNumber() {
-        return mobileNumber;
-    }
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setMobileNumber(String mobileNumber) {
-        this.mobileNumber = mobileNumber;
-    }
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
 
-    // FIX: Missing setUsername method that caused the "cannot find symbol" error
-    public String getUsername() {
-        return username;
-    }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
-    // END FIX
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    // FIX: setPassword is also mandatory for the /register-with-otp flow
-    public String getPassword() {
-        return password;
-    }
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
 
-    public void setPassword(String password) {
-        this.password = password;
-    }
-    // END FIX
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
 
-    // FIX: setFirstName and setLastName are used in both signup and quick register
-    public String getFirstName() {
-        return firstName;
-    }
+    public String getMobileNumber() { return mobileNumber; }
+    public void setMobileNumber(String mobileNumber) { this.mobileNumber = mobileNumber; }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
+    public UserRole getRole() { return role; }
+    public void setRole(UserRole role) { this.role = role; }
 
-    public String getLastName() {
-        return lastName;
-    }
+    public Boolean getIsActive() { return isActive; }
+    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
 
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-    // END FIX
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    // FIX: setEmail is mandatory for the /register-with-otp flow
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-    // END FIX
-
-    public String getOtp() {
-        return otp;
-    }
-
-    public void setOtp(String otp) {
-        this.otp = otp;
-    }
-
-    public LocalDateTime getOtpExpiryTime() {
-        return otpExpiryTime;
-    }
-
-    public void setOtpExpiryTime(LocalDateTime otpExpiryTime) {
-        this.otpExpiryTime = otpExpiryTime;
-    }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

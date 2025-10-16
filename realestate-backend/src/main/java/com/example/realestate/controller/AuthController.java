@@ -2,29 +2,25 @@ package com.example.realestate.controller;
 
 import com.example.realestate.model.User;
 import com.example.realestate.repository.UserRepository;
-import com.twilio.Twilio;
-import com.twilio.rest.api.v2010.account.Message;
-import com.twilio.type.PhoneNumber;
+import com.example.realestate.dto.ApiResponse;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
 public class AuthController {
 
-    // 1. Initialize the logger for this class
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthController.class);
 
     @Autowired
@@ -33,150 +29,174 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @Value("${twilio.account_sid}")
-    private String accountSid;
-    @Value("${twilio.auth_token}")
-    private String authToken;
-    @Value("${twilio.phone_number}")
-    private String twilioPhoneNumber;
-
-    @PostConstruct
-    public void initTwilio() {
-        Twilio.init(accountSid, authToken);
-    }
-
-    // --- DTOs ---
-    static class RegistrationRequest {
-        public String mobileNumber;
-        public String otp;
-        public String firstName;
-        public String lastName;
-        public String email;
+    // DTOs
+    static class LoginRequest {
         public String username;
         public String password;
+
+        public String getUsername() { return username; }
+        public String getPassword() { return password; }
     }
 
-    static class VerifyOtpRequest {
-        public String mobileNumber;
-        public String otp;
-        public String firstName;
-        public String lastName;
-        public String email;
-    }
-
-    static class PasswordLoginRequest {
+    static class RegisterRequest {
         public String username;
         public String password;
+        public String email;
+        public String firstName;
+        public String lastName;
+        public String mobileNumber;
+
+        public String getUsername() { return username; }
+        public String getPassword() { return password; }
+        public String getEmail() { return email; }
+        public String getFirstName() { return firstName; }
+        public String getLastName() { return lastName; }
+        public String getMobileNumber() { return mobileNumber; }
     }
 
-    // --- Endpoints ---
-
-    @PostMapping("/request-otp")
-    public ResponseEntity<?> requestOtp(@RequestBody Map<String, String> payload) {
-        String mobileNumber = payload.get("mobileNumber");
-        LOGGER.info("Received OTP request for mobile number: {}", mobileNumber);
-
-        String otp = new Random().ints(100000, 1000000).findFirst().getAsInt() + "";
-
-        Optional<User> userOptional = userRepository.findByMobileNumber(mobileNumber);
-        boolean isNewUser = userOptional.isEmpty() || userOptional.get().getFirstName() == null;
-        LOGGER.info("User status: {}", isNewUser ? "New user" : "Existing user");
-
-        User user = userOptional.orElseGet(() -> {
-            User newUser = new User();
-            newUser.setMobileNumber(mobileNumber);
-            return newUser;
-        });
-
-        user.setOtp(otp);
-        user.setOtpExpiryTime(LocalDateTime.now().plusMinutes(5));
-        userRepository.save(user);
+    // ==================== LOGIN ENDPOINT ====================
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        LOGGER.info("Login attempt for username: {}", request.getUsername());
 
         try {
-            Message.creator(
-                    new PhoneNumber(mobileNumber),
-                    new PhoneNumber(twilioPhoneNumber),
-                    "Your Visionary Homes OTP is: " + otp
-            ).create();
-            LOGGER.info("OTP sent successfully via Twilio to {}", mobileNumber);
+            Optional<User> userOptional = userRepository.findByUsername(request.getUsername());
+
+            if (userOptional.isEmpty()) {
+                LOGGER.warn("❌ User not found: {}", request.getUsername());
+                return new ResponseEntity<>(
+                        ApiResponse.error("Invalid username or password"),
+                        HttpStatus.UNAUTHORIZED
+                );
+            }
+
+            User user = userOptional.get();
+
+            if (!user.getIsActive()) {
+                LOGGER.warn("❌ User account is inactive: {}", request.getUsername());
+                return new ResponseEntity<>(
+                        ApiResponse.error("Account is inactive"),
+                        HttpStatus.UNAUTHORIZED
+                );
+            }
+
+            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                LOGGER.warn("❌ Invalid password for user: {}", request.getUsername());
+                return new ResponseEntity<>(
+                        ApiResponse.error("Invalid username or password"),
+                        HttpStatus.UNAUTHORIZED
+                );
+            }
+
+            String token = generateJWT(user);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Login successful!");
+            response.put("token", token);
+            response.put("user", user);
+
+            LOGGER.info("✅ User logged in successfully: {}", user.getUsername());
+            return ResponseEntity.ok(ApiResponse.success(response));
+
         } catch (Exception e) {
-            // 2. Use LOGGER.error for exceptions
-            LOGGER.error("Could not send SMS via Twilio. Error: {}", e.getMessage());
+            LOGGER.error("❌ Login error: ", e);
+            return new ResponseEntity<>(
+                    ApiResponse.error("An error occurred during login"),
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
         }
-
-        return ResponseEntity.ok(Map.of("message", "OTP sent successfully.", "isNewUser", isNewUser));
     }
 
-    @PostMapping("/verify-otp")
-    public ResponseEntity<?> verifyOtp(@RequestBody VerifyOtpRequest request) {
-        LOGGER.info("Received OTP verification request for mobile number: {}", request.mobileNumber);
-        User user = userRepository.findByMobileNumber(request.mobileNumber).orElse(null);
+    // ==================== REGISTER ENDPOINT ====================
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+        LOGGER.info("Register attempt for username: {}", request.getUsername());
 
-        if (user == null || user.getOtp() == null || !user.getOtp().equals(request.otp) || user.getOtpExpiryTime().isBefore(LocalDateTime.now())) {
-            LOGGER.warn("Failed OTP verification for {}: Invalid or expired OTP.", request.mobileNumber);
-            return new ResponseEntity<>(Map.of("message", "Invalid or expired OTP."), HttpStatus.BAD_REQUEST);
+        try {
+            // Validation
+            if (userRepository.existsByUsername(request.getUsername())) {
+                LOGGER.warn("❌ Username already exists: {}", request.getUsername());
+                return new ResponseEntity<>(
+                        ApiResponse.error("Username already exists"),
+                        HttpStatus.BAD_REQUEST
+                );
+            }
+
+            if (userRepository.existsByEmail(request.getEmail())) {
+                LOGGER.warn("❌ Email already exists: {}", request.getEmail());
+                return new ResponseEntity<>(
+                        ApiResponse.error("Email already registered"),
+                        HttpStatus.BAD_REQUEST
+                );
+            }
+
+            if (request.getPassword().length() < 6) {
+                LOGGER.warn("❌ Password too short for user: {}", request.getUsername());
+                return new ResponseEntity<>(
+                        ApiResponse.error("Password must be at least 6 characters"),
+                        HttpStatus.BAD_REQUEST
+                );
+            }
+
+            // Create new user
+            User newUser = new User();
+            newUser.setUsername(request.getUsername());
+            newUser.setPassword(passwordEncoder.encode(request.getPassword()));
+            newUser.setEmail(request.getEmail());
+            newUser.setFirstName(request.getFirstName());
+            newUser.setLastName(request.getLastName());
+            newUser.setMobileNumber(request.getMobileNumber());
+            newUser.setRole(User.UserRole.USER);
+            newUser.setIsActive(true);
+
+            User savedUser = userRepository.save(newUser);
+
+            String token = generateJWT(savedUser);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Registration successful!");
+            response.put("token", token);
+            response.put("user", savedUser);
+
+            LOGGER.info("✅ User registered successfully: {}", savedUser.getUsername());
+            return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.CREATED);
+
+        } catch (Exception e) {
+            LOGGER.error("❌ Registration error: ", e);
+            return new ResponseEntity<>(
+                    ApiResponse.error("An error occurred during registration"),
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
         }
-
-        if (user.getFirstName() == null && request.firstName != null) {
-            user.setFirstName(request.firstName);
-            user.setLastName(request.lastName);
-            user.setEmail(request.email);
-        }
-
-        user.setOtp(null);
-        user.setOtpExpiryTime(null);
-        User savedUser = userRepository.save(user);
-
-        String token = "dummy-jwt-for-" + user.getMobileNumber();
-        LOGGER.info("OTP verification successful for {}", request.mobileNumber);
-        return ResponseEntity.ok(Map.of("message", "Login successful!", "token", token, "user", savedUser));
     }
 
-    @PostMapping("/register-with-otp")
-    public ResponseEntity<?> registerWithOtp(@RequestBody RegistrationRequest request) {
-        LOGGER.info("Received registration request for username: {}", request.username);
-        User user = userRepository.findByMobileNumber(request.mobileNumber).orElse(null);
+    // ==================== VERIFY TOKEN ENDPOINT ====================
+    @GetMapping("/verify")
+    public ResponseEntity<?> verifyToken(@RequestHeader("Authorization") String token) {
+        LOGGER.info("Verifying token");
 
-        if (user == null || user.getOtp() == null || !user.getOtp().equals(request.otp) || user.getOtpExpiryTime().isBefore(LocalDateTime.now())) {
-            LOGGER.warn("Registration failed for {}: Invalid or expired OTP.", request.username);
-            return new ResponseEntity<>(Map.of("message", "Invalid or expired OTP."), HttpStatus.BAD_REQUEST);
+        try {
+            if (token == null || !token.startsWith("Bearer ")) {
+                return new ResponseEntity<>(
+                        ApiResponse.error("Invalid token format"),
+                        HttpStatus.UNAUTHORIZED
+                );
+            }
+
+            String jwtToken = token.substring(7);
+            // In production, validate JWT signature and expiry
+            return ResponseEntity.ok(ApiResponse.success(Map.of("valid", true)));
+
+        } catch (Exception e) {
+            LOGGER.error("❌ Token verification error: ", e);
+            return new ResponseEntity<>(
+                    ApiResponse.error("Invalid token"),
+                    HttpStatus.UNAUTHORIZED
+            );
         }
-        if (userRepository.existsByUsername(request.username)) {
-            LOGGER.warn("Registration failed for {}: Username already taken.", request.username);
-            return new ResponseEntity<>(Map.of("message", "Username is already taken."), HttpStatus.BAD_REQUEST);
-        }
-        if (userRepository.existsByEmail(request.email)) {
-            LOGGER.warn("Registration failed for {}: Email already registered.", request.username);
-            return new ResponseEntity<>(Map.of("message", "Email is already registered."), HttpStatus.BAD_REQUEST);
-        }
-
-        user.setFirstName(request.firstName);
-        user.setLastName(request.lastName);
-        user.setUsername(request.username);
-        user.setEmail(request.email);
-        user.setPassword(passwordEncoder.encode(request.password));
-
-        user.setOtp(null);
-        user.setOtpExpiryTime(null);
-        User savedUser = userRepository.save(user);
-
-        String token = "dummy-jwt-for-signup-" + user.getMobileNumber();
-        LOGGER.info("User '{}' registered successfully.", savedUser.getUsername());
-        return ResponseEntity.ok(Map.of("message", "Registration successful!", "token", token, "user", savedUser));
     }
 
-    @PostMapping("/login-with-password")
-    public ResponseEntity<?> loginWithPassword(@RequestBody PasswordLoginRequest request) {
-        LOGGER.info("Received password login attempt for username: {}", request.username);
-        User user = userRepository.findByUsername(request.username).orElse(null);
-
-        if (user == null || user.getPassword() == null || !passwordEncoder.matches(request.password, user.getPassword())) {
-            LOGGER.warn("Failed password login for username '{}': Invalid credentials.", request.username);
-            return new ResponseEntity<>(Map.of("message", "Invalid username or password."), HttpStatus.UNAUTHORIZED);
-        }
-
-        String token = "dummy-jwt-for-password-login-" + user.getUsername();
-        LOGGER.info("User '{}' logged in successfully with password.", user.getUsername());
-        return ResponseEntity.ok(Map.of("message", "Login successful!", "token", token, "user", user));
+    // ==================== HELPER METHODS ====================
+    private String generateJWT(User user) {
+        // Simplified JWT - In production, use proper JWT library (jjwt)
+        return "jwt_" + user.getId() + "_" + System.currentTimeMillis();
     }
 }
