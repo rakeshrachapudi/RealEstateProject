@@ -1,7 +1,6 @@
 const CLOUDINARY_CONFIG = {
   cloudName: 'diw5av4fw',
   uploadPreset: 'root',
-  apiKey: '166362659667986',
   // apiSecret removed for security - never expose this on frontend!
 };
 

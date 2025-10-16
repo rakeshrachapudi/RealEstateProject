@@ -144,12 +144,20 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
         } else {
             priceDisplay = `₹${numericPrice.toLocaleString('en-IN')}`;
         }
+        const selectedAreaObject = areas.find(
+                (area) => area.areaId.toString() === formData.areaId
+            );
 
+            if (!selectedAreaObject) {
+                setError("Invalid area selected. Please try again.");
+                setLoading(false);
+                return;
+            }
         const propertyData = {
             title: formData.title,
             type: formData.type,
             city: formData.city,
-            address: formData.address || `Area ID ${formData.areaId}, ${formData.city}`,
+            address: formData.address || `${selectedAreaObject.areaName}, ${formData.city}`,
             imageUrl: formData.imageUrl,
             description: formData.description,
             price: numericPrice,
@@ -157,7 +165,7 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
             areaSqft: formData.areaSqft ? parseFloat(formData.areaSqft) : null,
             bedrooms: parseInt(formData.bedrooms),
             bathrooms: parseInt(formData.bathrooms),
-            balconies: formData.balconies ? parseInt(formData.balconies) : 0,
+            balconies: parseInt(formData.balconies || '0'),
             amenities: formData.amenities || null,
             listingType: formData.listingType,
             status: 'available',
@@ -165,9 +173,9 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
             isActive: true,
             ownerType: formData.ownerType,
             isReadyToMove: formData.isReadyToMove,
-            isVerified: formData.isVerified, // Can be updated if user is admin
-            area: { id: parseInt(formData.areaId) },
-            user: property?.user || { id: user.id }
+            isVerified: formData.isVerified || false, // Can be updated if user is admin
+            area: selectedAreaObject,
+            user:  { id: user.id }
         };
 
         console.log('📤 Updating property data:', propertyData);
@@ -260,6 +268,7 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
                     </div>
 
                     {/* Admin Only: Verification Status */}
+                  {user && user.role === 'ADMIN' && (
                     <div style={styles.field}>
                         <label style={styles.checkboxLabel}>
                             <input
@@ -272,7 +281,7 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
                             <span style={styles.checkboxText}>✅ Verified Property (Admin Only)</span>
                         </label>
                     </div>
-
+                  )}
                     <div style={styles.row}>
                         <div style={styles.field}>
                             <label style={styles.label}>City *</label>

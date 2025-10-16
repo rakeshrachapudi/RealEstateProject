@@ -12,6 +12,7 @@ public class PropertyDTO {
     private BigDecimal areaSqft;
     private Integer bedrooms;
     private Integer bathrooms;
+    private Integer balconies;
     private String address;
     private String status;
     private String listingType;

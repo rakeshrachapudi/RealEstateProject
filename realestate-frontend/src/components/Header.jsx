@@ -62,9 +62,10 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
     const dropdownData = {
         buy: {
             popularChoices: [
-                { label: 'Owner Properties', params: { listingType: 'sale' } },
-                { label: 'Verified Properties', params: { listingType: 'sale' } },
-                { label: 'Ready to Move', params: { listingType: 'sale' } }
+                { label: 'Owner Properties', params: { listingType: 'sale', ownerType: 'owner' } },
+                { label: 'Verified Properties', params: { listingType: 'sale', isVerified: true } },
+                { label: 'Ready to Move', params: { listingType: 'sale', isReadyToMove: true } },
+                { label: 'Broker Properties', params: { listingType: 'sale', ownerType: 'broker' } },
             ],
             propertyTypes: [
                 { label: 'Apartments', value: 'Apartment' },
