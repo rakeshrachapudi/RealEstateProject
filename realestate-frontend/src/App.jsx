@@ -1,5 +1,3 @@
-// realestate-frontend/src/App.jsx - UPDATED
-
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext.jsx';
@@ -11,12 +9,8 @@ import PostPropertyModal from './PostPropertyModal.jsx';
 import SignupModal from './SignupModal.jsx';
 import UserProfileModal from './UserProfileModal.jsx';
 import PropertyEditModal from './PropertyEditModal.jsx';
+import AdminDealPanel from './AdminDealPanel.jsx';
 
-// 🆕 Import new components
-import AdminDashboardPage from './pages/AdminDashboardPage.jsx';
-import MyDealsPage from './pages/MyDealsPage.jsx';
-
-// Existing imports
 import Header from './components/Header.jsx';
 import PropertyDetails from './components/PropertyDetails.jsx';
 import PropertyTypePage from './components/PropertyTypePage.jsx';
@@ -27,6 +21,9 @@ import MyPropertiesPage from './pages/MyPropertiesPage.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
 import AgentDashboard from './pages/AgentDashboard.jsx';
 import BuyerDeals from './BuyerDeals.jsx';
+import MyDealsPage from './pages/MyDealsPage.jsx';
+import AdminAgentsDashboard from './pages/AdminAgentsDashboard.jsx';
+import SellerDealsPage from './pages/SellerDealsPage.jsx';
 import RentalAgreementPage from './pages/RentalAgreementPage.jsx';
 import MyAgreementsPage from './pages/MyAgreementsPage.jsx';
 
@@ -61,34 +58,34 @@ function AppContent() {
                 onProfileClick={() => setIsUserProfileModalOpen(true)}
             />
             <Routes>
-                {/* Home & Properties */}
+                {/* Main Pages */}
                 <Route path="/" element={<HomePage />} />
                 <Route path="/search" element={<SearchResultsPage />} />
                 <Route path="/property/:id" element={<PropertyDetails />} />
                 <Route path="/property-type/:listingType/:propertyType" element={<PropertyTypePage />} />
                 <Route path="/area/:areaName" element={<PropertyTypePage />} />
 
-                {/* Property Management */}
+                {/* User Properties */}
                 <Route path="/my-properties" element={<MyPropertiesPage onPostPropertyClick={handlePostPropertyClick} />} />
                 <Route path="/dashboard" element={<MyPropertiesPage onPostPropertyClick={handlePostPropertyClick} />} />
 
-                {/* 🆕 UNIFIED DEALS PAGE - Shows deals based on user role */}
+                {/* Deals Pages - Role Based */}
                 <Route path="/my-deals" element={<MyDealsPage />} />
+                <Route path="/buyer-deals" element={<BuyerDeals />} />
+                <Route path="/seller-deals" element={<SellerDealsPage />} />
 
                 {/* Agent Dashboard */}
                 <Route path="/agent-dashboard" element={<AgentDashboard />} />
 
-                {/* 🆕 Admin Dashboard - All agents and their deals */}
-                <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
+                {/* Admin Pages */}
+                <Route path="/admin-deals" element={<AdminDealPanel />} />
+                <Route path="/admin-agents" element={<AdminAgentsDashboard />} />
 
-                {/* Keep old admin-deals route for backward compatibility */}
-                <Route path="/admin-deals" element={<AdminDashboardPage />} />
-
-                {/* Agreements */}
+                {/* Agreement Pages */}
                 <Route path="/rental-agreement" element={<RentalAgreementPage />} />
                 <Route path="/my-agreements" element={<MyAgreementsPage />} />
 
-                {/* Placeholder pages */}
+                {/* Placeholder Pages */}
                 <Route path="/owner-plans" element={<PlaceholderPage title="Owner Plans" />} />
                 <Route path="/home-renovation" element={<PlaceholderPage title="Home Interior/Renovation" />} />
             </Routes>
