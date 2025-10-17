@@ -37,31 +37,32 @@ public class DealService {
 
     // ==================== CREATE DEAL WITH PRICE ====================
     /**
-     * ⭐ NEW: Create deal with agreed price
+     * ⭐ CORRECTED: Create deal with agreed price
      * Only AGENT can create deals (enforce in controller)
+     * Agent cannot create deals on properties they own
      */
     public DealStatus createDealWithPrice(CreateDealWithPriceRequestDto dto, Long agentId) {
         logger.info("Creating deal with price - Property: {}, Buyer: {}, Agent: {}, Price: {}",
                 dto.getPropertyId(), dto.getBuyerId(), agentId, dto.getAgreedPrice());
 
-        // Validate property
+        // Validate property exists
         Property property = propertyRepository.findById(dto.getPropertyId())
                 .orElseThrow(() -> {
                     logger.error("Property not found: {}", dto.getPropertyId());
                     return new RuntimeException("Property not found");
                 });
 
-        // Validate buyer
+        // Validate buyer exists
         User buyer = userRepository.findById(dto.getBuyerId())
                 .orElseThrow(() -> {
                     logger.error("Buyer not found: {}", dto.getBuyerId());
                     return new RuntimeException("Buyer not found");
                 });
 
-        // Validate agent
+        // ✅ FIXED: agentId() -> agentId (removed parentheses)
         User agent = userRepository.findById(agentId)
                 .orElseThrow(() -> {
-                    logger.error("Agent not found: {}", agentId());
+                    logger.error("Agent not found: {}", agentId);
                     return new RuntimeException("Agent not found");
                 });
 
@@ -70,6 +71,18 @@ public class DealService {
                 !agent.getRole().equals(User.UserRole.ADMIN)) {
             logger.warn("User {} is not an agent", agentId);
             throw new RuntimeException("Only agents can create deals");
+        }
+
+        // ✅ NEW: Verify agent is not the property owner
+        if (property.getUser() != null && property.getUser().getId().equals(agentId)) {
+            logger.warn("Agent {} cannot create deal on property they own", agentId);
+            throw new RuntimeException("Agents cannot create deals on properties they own");
+        }
+
+        // ✅ NEW: Verify buyer is not the property owner
+        if (property.getUser() != null && property.getUser().getId().equals(dto.getBuyerId())) {
+            logger.warn("Buyer cannot create deal on property they own");
+            throw new RuntimeException("Buyer cannot create deal on their own property");
         }
 
         // Check for duplicate deal
@@ -91,7 +104,7 @@ public class DealService {
         deal.setBuyer(buyer);
         deal.setAgent(agent);
         deal.setStage(DealStatus.DealStage.INQUIRY);
-        deal.setAgreedPrice(dto.getAgreedPrice()); // ⭐ NEW
+        deal.setAgreedPrice(dto.getAgreedPrice());
         deal.setNotes(dto.getNotes() != null ? dto.getNotes() : "Deal initiated - Agreed Price: " + dto.getAgreedPrice());
         deal.setLastUpdatedBy(agent.getUsername());
 
@@ -141,9 +154,9 @@ public class DealService {
         return savedDeal;
     }
 
-    // ==================== ROLE-BASED DEAL FETCHING ⭐ NEW ====================
+    // ==================== ROLE-BASED DEAL FETCHING ⭐ CORRECTED ====================
     /**
-     * ⭐ NEW: Get deals based on user role
+     * ⭐ CORRECTED: Get deals based on user role
      * BUYER: Sees deals where they are the buyer
      * SELLER: Sees deals on their own properties
      * AGENT: Sees deals they created
@@ -155,29 +168,34 @@ public class DealService {
         List<DealStatus> deals = new ArrayList<>();
 
         if ("BUYER".equalsIgnoreCase(userRole)) {
-            logger.info("Fetching deals where user {} is BUYER", userId);
+            logger.info("📋 Fetching deals where user {} is BUYER", userId);
             deals = dealStatusRepository.findByBuyerId(userId);
 
         } else if ("SELLER".equalsIgnoreCase(userRole)) {
-            logger.info("Fetching deals where user {} is SELLER", userId);
+            logger.info("📋 Fetching deals where user {} is SELLER", userId);
             // Get all properties owned by this user
             List<Property> sellerProperties = propertyRepository.findByUserId(userId);
-            List<Long> propertyIds = sellerProperties.stream()
-                    .map(Property::getId)
-                    .collect(Collectors.toList());
 
-            if (!propertyIds.isEmpty()) {
+            if (!sellerProperties.isEmpty()) {
+                List<Long> propertyIds = sellerProperties.stream()
+                        .map(Property::getId)
+                        .collect(Collectors.toList());
+
+                // Get all deals on seller's properties
                 deals = dealStatusRepository.findAll().stream()
                         .filter(d -> propertyIds.contains(d.getProperty().getId()))
+                        .sorted(Comparator.comparing(DealStatus::getUpdatedAt).reversed())
                         .collect(Collectors.toList());
             }
+            logger.info("🏠 Found {} properties and {} deals for seller {}",
+                    sellerProperties.size(), deals.size(), userId);
 
         } else if ("AGENT".equalsIgnoreCase(userRole)) {
-            logger.info("Fetching deals where user {} is AGENT", userId);
+            logger.info("📋 Fetching deals where user {} is AGENT", userId);
             deals = dealStatusRepository.findByAgentId(userId);
 
         } else if ("ADMIN".equalsIgnoreCase(userRole)) {
-            logger.info("Fetching ALL deals for ADMIN");
+            logger.info("📋 Fetching ALL deals for ADMIN");
             deals = dealStatusRepository.findAll();
         }
 
@@ -187,9 +205,9 @@ public class DealService {
                 .collect(Collectors.toList());
     }
 
-    // ==================== ADMIN DASHBOARD ⭐ NEW ====================
+    // ==================== ADMIN DASHBOARD ⭐ CORRECTED ====================
     /**
-     * ⭐ NEW: Get admin dashboard with all statistics
+     * ⭐ CORRECTED: Get admin dashboard with all statistics
      */
     public AdminDealDashboardDTO getAdminDashboard() {
         logger.info("📊 Generating admin dashboard");
@@ -228,9 +246,9 @@ public class DealService {
         return dashboard;
     }
 
-    // ==================== AGENT PERFORMANCE METRICS ⭐ NEW ====================
+    // ==================== AGENT PERFORMANCE METRICS ====================
     /**
-     * ⭐ NEW: Get performance metrics for all agents
+     * Get performance metrics for all agents
      */
     public List<AgentPerformanceDTO> getAgentPerformanceMetrics() {
         logger.info("📈 Calculating agent performance metrics");
@@ -298,9 +316,9 @@ public class DealService {
         return performanceList;
     }
 
-    // ==================== GET DEALS BY AGENT (FOR ADMIN) ⭐ NEW ====================
+    // ==================== GET DEALS BY AGENT (FOR ADMIN) ====================
     /**
-     * ⭐ NEW: Get all deals for a specific agent (admin view)
+     * Get all deals for a specific agent (admin view)
      */
     public List<DealDetailDTO> getDealsByAgentForAdmin(Long agentId) {
         logger.info("👤 Fetching all deals for agent {} (Admin view)", agentId);
@@ -313,9 +331,9 @@ public class DealService {
                 .collect(Collectors.toList());
     }
 
-    // ==================== CONVERT TO DETAIL DTO ⭐ NEW ====================
+    // ==================== CONVERT TO DETAIL DTO ====================
     /**
-     * ⭐ NEW: Convert DealStatus to DealDetailDTO with all mobile numbers
+     * Convert DealStatus to DealDetailDTO with all mobile numbers
      */
     private DealDetailDTO convertToDealDetailDTO(DealStatus deal) {
         DealDetailDTO dto = new DealDetailDTO();
@@ -323,7 +341,7 @@ public class DealService {
         dto.setDealId(deal.getId());
         dto.setStage(deal.getStage().name());
         dto.setCurrentStage(deal.getStage().name());
-        dto.setAgreedPrice(deal.getAgreedPrice()); // ⭐ NEW
+        dto.setAgreedPrice(deal.getAgreedPrice());
         dto.setNotes(deal.getNotes());
         dto.setCreatedAt(deal.getCreatedAt());
         dto.setUpdatedAt(deal.getUpdatedAt());
@@ -337,29 +355,29 @@ public class DealService {
             dto.setPropertyCity(deal.getProperty().getCity());
         }
 
-        // Buyer Details (⭐ NEW - with mobile)
+        // Buyer Details (with mobile)
         if (deal.getBuyer() != null) {
             dto.setBuyerId(deal.getBuyer().getId());
             dto.setBuyerName(deal.getBuyer().getFirstName() + " " + deal.getBuyer().getLastName());
             dto.setBuyerEmail(deal.getBuyer().getEmail());
-            dto.setBuyerMobile(deal.getBuyer().getMobileNumber()); // ⭐ NEW
+            dto.setBuyerMobile(deal.getBuyer().getMobileNumber());
         }
 
-        // Seller Details (⭐ NEW - with mobile)
+        // Seller Details (with mobile)
         if (deal.getProperty() != null && deal.getProperty().getUser() != null) {
             User seller = deal.getProperty().getUser();
             dto.setSellerId(seller.getId());
             dto.setSellerName(seller.getFirstName() + " " + seller.getLastName());
             dto.setSellerEmail(seller.getEmail());
-            dto.setSellerMobile(seller.getMobileNumber()); // ⭐ NEW
+            dto.setSellerMobile(seller.getMobileNumber());
         }
 
-        // Agent Details (⭐ NEW - with mobile)
+        // Agent Details (with mobile)
         if (deal.getAgent() != null) {
             dto.setAgentId(deal.getAgent().getId());
             dto.setAgentName(deal.getAgent().getFirstName() + " " + deal.getAgent().getLastName());
             dto.setAgentEmail(deal.getAgent().getEmail());
-            dto.setAgentMobile(deal.getAgent().getMobileNumber()); // ⭐ NEW
+            dto.setAgentMobile(deal.getAgent().getMobileNumber());
         }
 
         return dto;

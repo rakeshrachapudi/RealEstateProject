@@ -29,7 +29,7 @@ public class DealController {
     @Autowired
     private com.example.realestate.repository.UserRepository userRepository;
 
-    // ==================== CREATE DEAL WITH PRICE ⭐ NEW ====================
+    // ==================== CREATE DEAL WITH PRICE ⭐ CORRECTED ====================
     @PostMapping("/create-with-price")
     public ResponseEntity<?> createDealWithPrice(
             @RequestBody CreateDealWithPriceRequestDto request,
@@ -43,17 +43,28 @@ public class DealController {
             User currentUser = userRepository.findByUsername(username)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // Verify only AGENT can create deals
+            // ✅ CRITICAL: Verify only AGENT can create deals
             if (!currentUser.getRole().equals(User.UserRole.AGENT) &&
                     !currentUser.getRole().equals(User.UserRole.ADMIN)) {
-                logger.warn("❌ User {} attempted to create deal but is not an agent", username);
+                logger.warn("❌ User {} attempted to create deal but is not an agent. Role: {}",
+                        username, currentUser.getRole());
                 return new ResponseEntity<>(
                         ApiResponse.error("Only agents can create deals"),
                         HttpStatus.FORBIDDEN
                 );
             }
 
-            // Create deal with price
+            // ✅ NEW: Verify agent is creating deal for themselves (not passing different agentId)
+            if (request.getAgentId() != null && !request.getAgentId().equals(currentUser.getId())) {
+                logger.warn("❌ Agent {} tried to create deal for different agent {}",
+                        currentUser.getId(), request.getAgentId());
+                return new ResponseEntity<>(
+                        ApiResponse.error("Agents can only create deals for themselves"),
+                        HttpStatus.FORBIDDEN
+                );
+            }
+
+            // Create deal with current authenticated agent
             DealStatus deal = dealService.createDealWithPrice(request, currentUser.getId());
 
             // Convert to detail DTO
@@ -74,7 +85,7 @@ public class DealController {
         }
     }
 
-    // ==================== GET MY DEALS BY ROLE ⭐ NEW ====================
+    // ==================== GET MY DEALS BY ROLE ⭐ CORRECTED ====================
     @GetMapping("/my-deals")
     public ResponseEntity<?> getMyDeals(
             @RequestParam String userRole,
@@ -106,7 +117,7 @@ public class DealController {
         }
     }
 
-    // ==================== ADMIN DASHBOARD ⭐ NEW ====================
+    // ==================== ADMIN DASHBOARD ⭐ CORRECTED ====================
     @GetMapping("/admin/dashboard")
     public ResponseEntity<?> getAdminDashboard(Authentication authentication) {
         logger.info("📊 Fetching admin dashboard");
@@ -116,9 +127,10 @@ public class DealController {
             User currentUser = userRepository.findByUsername(username)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // Verify ADMIN role
+            // ✅ Verify ADMIN role only
             if (!currentUser.getRole().equals(User.UserRole.ADMIN)) {
-                logger.warn("❌ User {} attempted to access admin dashboard but is not admin", username);
+                logger.warn("❌ User {} attempted to access admin dashboard but is not admin. Role: {}",
+                        username, currentUser.getRole());
                 return new ResponseEntity<>(
                         ApiResponse.error("Only admins can access this resource"),
                         HttpStatus.FORBIDDEN
@@ -136,7 +148,7 @@ public class DealController {
         }
     }
 
-    // ==================== AGENT PERFORMANCE METRICS ⭐ NEW ====================
+    // ==================== AGENT PERFORMANCE METRICS ====================
     @GetMapping("/admin/agents-performance")
     public ResponseEntity<?> getAgentPerformance(Authentication authentication) {
         logger.info("📈 Fetching agent performance metrics");
@@ -146,8 +158,9 @@ public class DealController {
             User currentUser = userRepository.findByUsername(username)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // Verify ADMIN role
+            // ✅ Verify ADMIN role only
             if (!currentUser.getRole().equals(User.UserRole.ADMIN)) {
+                logger.warn("❌ User {} attempted to access performance metrics but is not admin", username);
                 return new ResponseEntity<>(
                         ApiResponse.error("Only admins can access this resource"),
                         HttpStatus.FORBIDDEN
@@ -165,7 +178,7 @@ public class DealController {
         }
     }
 
-    // ==================== GET DEALS BY AGENT (ADMIN) ⭐ NEW ====================
+    // ==================== GET DEALS BY AGENT (ADMIN) ====================
     @GetMapping("/admin/agent/{agentId}")
     public ResponseEntity<?> getDealsByAgent(
             @PathVariable Long agentId,
@@ -178,8 +191,9 @@ public class DealController {
             User currentUser = userRepository.findByUsername(username)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // Verify ADMIN role
+            // ✅ Verify ADMIN role only
             if (!currentUser.getRole().equals(User.UserRole.ADMIN)) {
+                logger.warn("❌ User {} attempted to access agent deals but is not admin", username);
                 return new ResponseEntity<>(
                         ApiResponse.error("Only admins can access this resource"),
                         HttpStatus.FORBIDDEN
