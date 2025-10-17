@@ -1,84 +1,103 @@
+// rakeshrachapudi/realestateproject/RealEstateProject-43fb79bfe93ea0f3ae6d185115e6fa16af369e3c/realestate-frontend/src/pages/CreateDealModal.jsx
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
 
-const CreateDealModal = ({ property, onClose, onDealCreated }) => {
+const CreateDealModal = ({ propertyId, propertyTitle, onClose, onSuccess }) => {
   const { user } = useAuth();
-  const [step, setStep] = useState(1); // 1: Enter buyer email, 2: Confirm
-  const [buyerEmail, setBuyerEmail] = useState('');
-  const [selectedBuyer, setSelectedBuyer] = useState(null);
+  const [buyerPhone, setBuyerPhone] = useState('');
+  const [buyerName, setBuyerName] = useState('');
+  const [buyerId, setBuyerId] = useState(null);
+  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [buyerFound, setBuyerFound] = useState(false);
 
-  const handleSearchBuyer = async () => {
-    if (!buyerEmail.trim()) {
-      setError('Please enter buyer email');
+  // ✅ FIX: Implemented the buyer search functionality
+  const searchBuyer = async (phone) => {
+    if (!phone || phone.length !== 10) {
       return;
     }
 
-    setLoading(true);
+    setSearching(true);
     setError(null);
+    setBuyerFound(false);
 
     try {
-      // Search for user by email
-      const response = await fetch(
-        `http://localhost:8080/api/users/search?email=${buyerEmail}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          },
-        }
-      );
-
+      const response = await fetch(`http://localhost:8080/api/users/search?phone=${phone}`);
       const data = await response.json();
-
-      if (data && data.data) {
-        setSelectedBuyer(data.data);
-        setStep(2);
+      if (data.success && data.data) {
+        setBuyerId(data.data.id);
+        setBuyerName(`${data.data.firstName} ${data.data.lastName}`);
+        setBuyerFound(true);
+        setError(null);
       } else {
-        setError('Buyer not found. Please check the email.');
+        setBuyerId(null);
+        setBuyerName('');
+        setBuyerFound(false);
+        setError('Buyer not found. They must be registered.');
       }
     } catch (err) {
-      setError('Error searching for buyer: ' + err.message);
+      setError('Error searching for buyer.');
+      console.error('Error searching buyer:', err);
     } finally {
-      setLoading(false);
+      setSearching(false);
+    }
+  };
+
+
+  const handlePhoneChange = (e) => {
+    const phone = e.target.value.replace(/\D/g, ''); // Allow only digits
+    setBuyerPhone(phone);
+    setBuyerId(null);
+    setBuyerFound(false);
+    setError(null);
+    if (phone.length === 10) {
+      searchBuyer(phone);
     }
   };
 
   const handleCreateDeal = async () => {
-    if (!selectedBuyer) {
-      setError('Buyer not selected');
+    setError(null);
+
+    if (!propertyId) {
+      setError('Property is required');
+      return;
+    }
+
+    if (!buyerId) {
+      setError('A registered buyer must be found using their phone number.');
       return;
     }
 
     setLoading(true);
-    setError(null);
 
     try {
       const response = await fetch('http://localhost:8080/api/deals/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         },
         body: JSON.stringify({
-          propertyId: property.id || property.propertyId,
-          buyerId: selectedBuyer.id,
-          agentId: user.id,
-        }),
+          propertyId: propertyId,
+          buyerId: buyerId,
+          agentId: user.id
+        })
       });
 
-      const result = await response.json();
+      const data = await response.json();
 
-      if (result.success || response.ok) {
-        console.log('✅ Deal created:', result);
-        if (onDealCreated) onDealCreated();
+      if (data.success || response.ok) {
+        alert(`✅ Deal created successfully!\nDeal Stage: ${data.data.stage}`);
+        if (onSuccess) onSuccess(data.data);
         onClose();
       } else {
-        setError(result.message || 'Failed to create deal');
+        setError(data.message || 'Failed to create deal');
       }
     } catch (err) {
-      console.error('Error creating deal:', err);
-      setError(err.message || 'Error creating deal');
+      setError('Error creating deal: ' + err.message);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -95,222 +114,158 @@ const CreateDealModal = ({ property, onClose, onDealCreated }) => {
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+    overflowY: 'auto'
   };
 
   const contentStyle = {
     backgroundColor: 'white',
     borderRadius: '12px',
-    width: '90%',
-    maxWidth: '450px',
     padding: '24px',
-    boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-    position: 'relative',
-  };
-
-  const closeBtn = {
-    position: 'absolute',
-    top: '15px',
-    right: '15px',
-    background: 'none',
-    border: 'none',
-    fontSize: '24px',
-    cursor: 'pointer',
-    color: '#6b7280',
-  };
-
-  const titleStyle = {
-    fontSize: '24px',
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: '20px',
-    margin: '0 0 20px 0',
-  };
-
-  const propertyInfoStyle = {
-    padding: '12px',
-    backgroundColor: '#f0f9ff',
-    borderLeft: '4px solid #3b82f6',
-    borderRadius: '6px',
-    marginBottom: '20px',
-    fontSize: '14px',
-  };
-
-  const formGroupStyle = {
-    marginBottom: '16px',
-  };
-
-  const labelStyle = {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: '8px',
-    display: 'block',
-  };
-
-  const inputStyle = {
-    width: '100%',
-    padding: '10px',
-    border: '1px solid #e2e8f0',
-    borderRadius: '6px',
-    fontSize: '14px',
-    boxSizing: 'border-box',
-  };
-
-  const buyerCardStyle = {
-    padding: '12px',
-    border: '2px solid #10b981',
-    borderRadius: '6px',
-    backgroundColor: '#f0fdf4',
-    marginBottom: '16px',
-    fontSize: '14px',
-  };
-
-  const errorStyle = {
-    padding: '12px',
-    backgroundColor: '#fee2e2',
-    color: '#dc2626',
-    borderRadius: '6px',
-    marginBottom: '16px',
-    fontSize: '14px',
-    border: '1px solid #fecaca',
-  };
-
-  const buttonGroupStyle = {
-    display: 'flex',
-    gap: '12px',
+    maxWidth: '500px',
+    width: '90%',
+    boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
     marginTop: '20px',
-  };
-
-  const buttonStyle = {
-    flex: 1,
-    padding: '12px',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontWeight: '600',
-    fontSize: '14px',
-  };
-
-  const primaryButtonStyle = {
-    ...buttonStyle,
-    backgroundColor: '#3b82f6',
-    color: 'white',
-  };
-
-  const secondaryButtonStyle = {
-    ...buttonStyle,
-    backgroundColor: '#e2e8f0',
-    color: '#6b7280',
-  };
-
-  const summaryBoxStyle = {
-    padding: '16px',
-    backgroundColor: '#f8fafc',
-    borderRadius: '8px',
-    border: '1px solid #e2e8f0',
-    marginBottom: '16px',
-    fontSize: '14px',
-    lineHeight: '1.6',
+    marginBottom: '20px'
   };
 
   return (
     <div style={modalStyle} onClick={onClose}>
       <div style={contentStyle} onClick={e => e.stopPropagation()}>
-        <button style={closeBtn} onClick={onClose}>×</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700' }}>➕ Create New Deal</h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '24px',
+              cursor: 'pointer',
+              color: '#6b7280'
+            }}
+          >
+            ×
+          </button>
+        </div>
 
-        <h2 style={titleStyle}>📋 Create New Deal</h2>
+        {error && (
+          <div style={{
+            backgroundColor: '#fee2e2',
+            color: '#dc2626',
+            padding: '12px',
+            borderRadius: '6px',
+            marginBottom: '16px',
+            fontSize: '14px'
+          }}>
+            ❌ {error}
+          </div>
+        )}
 
-        {/* Property Info */}
-        <div style={propertyInfoStyle}>
-          <strong>{property.title}</strong>
-          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-            {property.bedrooms}BHK • ₹{(property.price || 0).toLocaleString('en-IN')}
+        <div style={{
+          padding: '12px',
+          backgroundColor: '#f0f9ff',
+          borderRadius: '8px',
+          border: '1px solid #bfdbfe',
+          marginBottom: '16px'
+        }}>
+          <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Property</div>
+          <div style={{ fontWeight: '600', color: '#1e40af' }}>
+            {propertyTitle || 'Selected Property'}
           </div>
         </div>
 
-        {error && <div style={errorStyle}>❌ {error}</div>}
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '14px' }}>
+            👤 Buyer Phone Number *
+          </label>
+          <input
+            type="tel"
+            placeholder="Enter 10-digit phone number"
+            value={buyerPhone}
+            onChange={handlePhoneChange}
+            maxLength="10"
+            pattern="[0-9]{10}"
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              fontSize: '14px',
+              boxSizing: 'border-box',
+              marginBottom: '8px'
+            }}
+          />
+          <div style={{ fontSize: '12px', color: '#64748b' }}>
+            {searching ? 'Searching...' : buyerFound ? `✅ Found: ${buyerName}` : 'Enter the buyer\'s 10-digit mobile number'}
+          </div>
+        </div>
 
-        {step === 1 ? (
-          <>
-            <div style={formGroupStyle}>
-              <label style={labelStyle}>🔍 Enter Buyer Email</label>
-              <input
-                type="email"
-                placeholder="buyer@example.com"
-                value={buyerEmail}
-                onChange={(e) => {
-                  setBuyerEmail(e.target.value);
-                  setError(null);
-                }}
-                style={inputStyle}
-              />
-              <small style={{ color: '#64748b', marginTop: '4px', display: 'block' }}>
-                Search for registered buyer by their email
-              </small>
-            </div>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '14px' }}>
+            📋 Initial Notes
+          </label>
+          <textarea
+            placeholder="Add initial notes (e.g., 'High priority buyer', 'Budget: 50L')"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              fontSize: '14px',
+              boxSizing: 'border-box',
+              minHeight: '80px',
+              fontFamily: 'inherit'
+            }}
+          />
+        </div>
 
-            <div style={buttonGroupStyle}>
-              <button style={secondaryButtonStyle} onClick={onClose}>
-                Cancel
-              </button>
-              <button
-                style={primaryButtonStyle}
-                onClick={handleSearchBuyer}
-                disabled={loading || !buyerEmail.trim()}
-              >
-                {loading ? '⏳ Searching...' : 'Search Buyer'}
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div style={summaryBoxStyle}>
-              <h3 style={{ margin: '0 0 12px 0', color: '#1e293b' }}>Deal Summary</h3>
+        <div style={{
+          padding: '12px',
+          backgroundColor: '#fef3c7',
+          borderRadius: '8px',
+          border: '1px solid #fcd34d',
+          marginBottom: '16px',
+          fontSize: '12px',
+          color: '#92400e'
+        }}>
+          <strong>ℹ️ Note:</strong> The buyer must be a registered user. The deal will be created in the 'INQUIRY' stage.
+        </div>
 
-              <div style={{ marginBottom: '12px' }}>
-                <strong style={{ color: '#475569' }}>Property:</strong>
-                <div style={{ color: '#64748b' }}>{property.title}</div>
-              </div>
-
-              <div style={{ marginBottom: '12px' }}>
-                <strong style={{ color: '#475569' }}>Buyer:</strong>
-                <div style={{ color: '#64748b' }}>
-                  {selectedBuyer.firstName} {selectedBuyer.lastName}
-                </div>
-              </div>
-
-              <div>
-                <strong style={{ color: '#475569' }}>Initial Stage:</strong>
-                <div style={{ color: '#64748b' }}>🔍 Inquiry</div>
-              </div>
-            </div>
-
-            <div style={buyerCardStyle}>
-              <div style={{ fontWeight: '600', marginBottom: '4px' }}>
-                {selectedBuyer.firstName} {selectedBuyer.lastName}
-              </div>
-              <div style={{ fontSize: '12px', color: '#64748b' }}>
-                📧 {selectedBuyer.email}
-              </div>
-              <div style={{ fontSize: '12px', color: '#64748b' }}>
-                📱 {selectedBuyer.mobileNumber}
-              </div>
-            </div>
-
-            <div style={buttonGroupStyle}>
-              <button style={secondaryButtonStyle} onClick={() => setStep(1)}>
-                ← Back
-              </button>
-              <button
-                style={primaryButtonStyle}
-                onClick={handleCreateDeal}
-                disabled={loading}
-              >
-                {loading ? '⏳ Creating...' : '✅ Create Deal'}
-              </button>
-            </div>
-          </>
-        )}
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={onClose}
+            style={{
+              flex: 1,
+              padding: '10px',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              backgroundColor: '#f8fafc',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '14px'
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleCreateDeal}
+            disabled={loading || !buyerFound}
+            style={{
+              flex: 1,
+              padding: '10px',
+              backgroundColor: (loading || !buyerFound) ? '#ccc' : '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: (loading || !buyerFound) ? 'not-allowed' : 'pointer',
+              fontWeight: '600',
+              fontSize: '14px'
+            }}
+          >
+            {loading ? '⏳ Creating...' : '✅ Create Deal'}
+          </button>
+        </div>
       </div>
     </div>
   );
