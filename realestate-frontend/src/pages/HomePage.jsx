@@ -7,6 +7,9 @@ import PropertyList from '../components/PropertyList';
 import DealsDashboard from '../components/DealsDashboard';
 import { getFeaturedProperties } from '../services/api';
 import { styles } from '../styles.js';
+ // In HomePage.jsx - update the import and usage
+    import BrowsePropertiesForDeal from '../pages/BrowsePropertiesForDeal';
+
 
 function HomePage() {
     const { isAuthenticated, user } = useAuth();
@@ -17,6 +20,13 @@ function HomePage() {
     const [searchLoading, setSearchLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('featured');
     const navigate = useNavigate();
+
+
+
+    // Add state
+    const [showBrowseDeals, setShowBrowseDeals] = useState(false);
+
+
 
     const popularAreas = [
         { name: 'Gachibowli', emoji: '💼' },
@@ -194,6 +204,15 @@ function HomePage() {
                                 ...(activeTab === 'deals' ? styles.activeTab : {})
                             }}
                         >
+                        {showBrowseDeals && (
+                          <BrowsePropertiesForDeal
+                            onClose={() => setShowBrowseDeals(false)}
+                            onDealCreated={() => {
+                              setShowBrowseDeals(false);
+                              fetchProperties();
+                            }}
+                          />
+                        )}
                             📊 My Deals
                         </button>
                     </div>

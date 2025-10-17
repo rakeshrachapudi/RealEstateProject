@@ -24,39 +24,59 @@ const AgentDashboard = () => {
     fetchAgentData();
   }, [user, isAuthenticated]);
 
-  const fetchAgentData = async () => {
-    setLoading(true);
-    setError(null);
-    const token = localStorage.getItem('authToken');
-    const headers = { Authorization: `Bearer ${token}` };
+ const fetchAgentData = async () => {
+   setLoading(true);
+   setError(null);
+   const token = localStorage.getItem('authToken');
+   const headers = { Authorization: `Bearer ${token}` };
 
-    try {
-      const [dealsRes, propsRes, statsRes] = await Promise.all([
-        fetch(`http://localhost:8080/api/deals/agent/${user.id}`, { headers }),
-        fetch(`http://localhost:8080/api/agents/${user.id}/all-properties`, { headers }),
-        fetch(`http://localhost:8080/api/agents/${user.id}/stats`, { headers })
-      ]);
+   try {
+     const [dealsRes, propsRes, statsRes] = await Promise.all([
+       fetch(`http://localhost:8080/api/deals/agent/${user.id}`, { headers }),
+       fetch(`http://localhost:8080/api/agents/${user.id}/all-properties`, { headers }),
+       fetch(`http://localhost:8080/api/agents/${user.id}/stats`, { headers })
+     ]);
 
-      if (dealsRes.ok) {
-        const data = await dealsRes.json();
-        console.log('✅ Deals loaded:', data);
-        setDeals(Array.isArray(data) ? data : (data.data || []));
-      }
-      if (propsRes.ok) {
-        const data = await propsRes.json();
-        setProperties(data.success ? data.data : []);
-      }
-      if (statsRes.ok) {
-        const data = await statsRes.json();
-        setStats(data.success ? data.data : {});
-      }
-    } catch (err) {
-      console.error('Error fetching agent data:', err);
-      setError('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
+     // ✅ FIX: Handle ApiResponse wrapper correctly
+     if (dealsRes.ok) {
+       const responseData = await dealsRes.json();
+       console.log('✅ Full response:', responseData);
+
+       // Handle both direct array and ApiResponse wrapper
+       let dealsList = [];
+       if (Array.isArray(responseData)) {
+         dealsList = responseData;
+       } else if (responseData.success && Array.isArray(responseData.data)) {
+         dealsList = responseData.data;
+       } else if (responseData.data && Array.isArray(responseData.data)) {
+         dealsList = responseData.data;
+       }
+
+       console.log('✅ Deals loaded:', dealsList);
+       setDeals(dealsList);
+     } else {
+       console.error('❌ Deals response not ok:', dealsRes.status);
+       setError('Failed to load deals');
+     }
+
+     if (propsRes.ok) {
+       const data = await propsRes.json();
+       setProperties(data.success ? data.data : []);
+     }
+
+     if (statsRes.ok) {
+       const data = await statsRes.json();
+       setStats(data.success ? data.data : {});
+     }
+   } catch (err) {
+     console.error('Error fetching agent data:', err);
+     setError('Failed to load dashboard data');
+   } finally {
+     setLoading(false);
+   }
+ };
+
+
 
   if (!isAuthenticated) {
     return <div style={styles.container}><h2>Please log in</h2></div>;
