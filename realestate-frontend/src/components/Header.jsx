@@ -1,4 +1,3 @@
-// src/components/Header.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
@@ -8,6 +7,7 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
     const { isAuthenticated, user, logout } = useAuth();
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [isProfileDropdownOpen, setProfileDropdownOpen] = useState(false);
+    const [unreadDeals, setUnreadDeals] = useState(0);
     const navigate = useNavigate();
     const dropdownTimerRef = useRef(null);
 
@@ -17,8 +17,35 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
         };
     }, []);
 
+    useEffect(() => {
+        if (isAuthenticated && user && (user.role === 'AGENT' || user.role === 'ADMIN')) {
+            fetchUnreadDeals();
+        }
+    }, [isAuthenticated, user]);
+
+    const fetchUnreadDeals = async () => {
+        try {
+            const response = await fetch('http://localhost:8080/api/deals/agent/' + user.id, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                const deals = data.data || [];
+                const unread = deals.filter(d => d.stage !== 'COMPLETED').length;
+                setUnreadDeals(unread);
+            }
+        } catch (error) {
+            console.log('Could not fetch deals count');
+        }
+    };
+
     const handleMyPropertiesClick = () => {
         navigate('/my-properties');
+        setActiveDropdown(null);
+    };
+
+    const handleAgentDashboardClick = () => {
+        navigate('/agent-dashboard');
         setActiveDropdown(null);
     };
 
@@ -126,7 +153,6 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
                         <span style={styles.navText}>Home</span>
                     </div>
 
-                    {/* BUY */}
                     <div style={styles.navItem} onMouseEnter={() => handleMouseEnter('buy')} onMouseLeave={handleMouseLeave}>
                         <span style={styles.navText}>Buy ▾</span>
                         {activeDropdown === 'buy' && (
@@ -153,7 +179,6 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
                         )}
                     </div>
 
-                    {/* RENT */}
                     <div style={styles.navItem} onMouseEnter={() => handleMouseEnter('rent')} onMouseLeave={handleMouseLeave}>
                         <span style={styles.navText}>Rent ▾</span>
                         {activeDropdown === 'rent' && (
@@ -180,7 +205,6 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
                         )}
                     </div>
 
-                    {/* SELL */}
                     <div style={styles.navItem} onMouseEnter={() => handleMouseEnter('sell')} onMouseLeave={handleMouseLeave}>
                         <span style={styles.navText}>Sell ▾</span>
                         {activeDropdown === 'sell' && (
@@ -205,16 +229,66 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
                     {isAuthenticated ? (
                         <div style={styles.authSection}>
                             <button onClick={handleMyPropertiesClick} style={{color: 'white', backgroundColor: 'rgba(255, 255, 255, 0.2)', padding: '12px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '14px'}}>My Properties</button>
+
+                            {user && (user.role === 'AGENT' || user.role === 'ADMIN') && (
+                                <button
+                                    onClick={handleAgentDashboardClick}
+                                    style={{
+                                        color: 'white',
+                                        backgroundColor: 'rgba(34, 197, 94, 0.3)',
+                                        padding: '12px 20px',
+                                        borderRadius: '12px',
+                                        border: '2px solid #22c55e',
+                                        cursor: 'pointer',
+                                        fontWeight: 600,
+                                        fontSize: '14px',
+                                        position: 'relative'
+                                    }}
+                                >
+                                    📊 Agent Dashboard
+                                    {unreadDeals > 0 && (
+                                        <span style={{
+                                            position: 'absolute',
+                                            top: '-8px',
+                                            right: '-8px',
+                                            backgroundColor: '#ef4444',
+                                            color: 'white',
+                                            borderRadius: '50%',
+                                            width: '24px',
+                                            height: '24px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '12px',
+                                            fontWeight: '700'
+                                        }}>
+                                            {unreadDeals}
+                                        </span>
+                                    )}
+                                </button>
+                            )}
+
                             <button onClick={onPostPropertyClick} style={styles.postBtn}><span style={styles.btnIcon}>📝</span> Post Property</button>
                             <div style={{ position: 'relative', paddingBottom: '10px' }} onMouseEnter={() => setProfileDropdownOpen(true)} onMouseLeave={() => setProfileDropdownOpen(false)}>
                                 <div style={styles.userSection} className="userSection">
                                     <span style={styles.userIcon}>👤</span>
                                     <span style={styles.userName}>{user?.firstName || 'User'} ▾</span>
+                                    {user && (user.role === 'AGENT' || user.role === 'ADMIN') && (
+                                        <span style={{fontSize: '12px', marginLeft: '8px', backgroundColor: 'rgba(255,255,255,0.3)', padding: '2px 8px', borderRadius: '4px'}}>
+                                            {user.role === 'ADMIN' ? '⚙️ Admin' : '📊 Agent'}
+                                        </span>
+                                    )}
                                 </div>
                                 {isProfileDropdownOpen && (
                                     <div style={styles.profileDropdown}>
                                         <div style={styles.profileDropdownItem} onClick={() => { onProfileClick(); setProfileDropdownOpen(false); }}>View Profile</div>
                                         <div style={styles.profileDropdownItem} onClick={() => { navigate('/my-properties'); setProfileDropdownOpen(false); }}>My Properties</div>
+                                        {user && (user.role === 'AGENT' || user.role === 'ADMIN') && (
+                                            <div style={styles.profileDropdownItem} onClick={() => { navigate('/agent-dashboard'); setProfileDropdownOpen(false); }}>Agent Dashboard</div>
+                                        )}
+                                        {user && (user.role === 'USER') && (
+                                            <div style={styles.profileDropdownItem} onClick={() => { navigate('/my-deals'); setProfileDropdownOpen(false); }}>My Deals</div>
+                                        )}
                                         <div style={{...styles.profileDropdownItem, color: '#dc3545'}} onClick={logout}>Logout</div>
                                     </div>
                                 )}

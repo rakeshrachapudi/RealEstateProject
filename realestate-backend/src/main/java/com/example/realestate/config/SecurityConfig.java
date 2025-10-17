@@ -25,14 +25,22 @@ public class SecurityConfig {
                 .cors(withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers(
-                                "/api/auth/**",
-                                "/api/properties/**",
-                                "/api/areas/**",
-                                "/api/property-types/**"
-                        ).permitAll()
+                        // ✅ FIX: Put SPECIFIC paths first, then GENERAL paths
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/properties/**").permitAll()
+                        .requestMatchers("/api/areas/**").permitAll()
+                        .requestMatchers("/api/users/**").permitAll()
+                        .requestMatchers("/api/deals/**").permitAll()
+                        .requestMatchers("/api/agents/**").permitAll()
+                        .requestMatchers("/api/property-types/**").permitAll()
+
+                        // Admin endpoints - require ADMIN role
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                        // Deals - require authentication
                         .requestMatchers("/api/deals/**").authenticated()
+
+                        // Everything else - require authentication
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

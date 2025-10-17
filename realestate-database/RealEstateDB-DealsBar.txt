@@ -1,0 +1,72 @@
+CREATE TABLE deal_status (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    property_id BIGINT NOT NULL,
+    buyer_id BIGINT NOT NULL,
+    agent_id BIGINT,
+    stage VARCHAR(50) DEFAULT 'INQUIRY' NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    last_updated_by VARCHAR(255),
+    FOREIGN KEY (property_id) REFERENCES property(id) ON DELETE CASCADE,
+    FOREIGN KEY (buyer_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (agent_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_property (property_id),
+    INDEX idx_buyer (buyer_id),
+    INDEX idx_agent (agent_id),
+    INDEX idx_stage (stage)
+);
+
+-- =========================================
+-- FIX: Add Missing Columns to deal_status
+-- =========================================
+
+USE realestate_db;
+
+-- Add agreed_price column
+ALTER TABLE deal_status 
+ADD COLUMN agreed_price DECIMAL(15,2) NULL COMMENT 'Final agreed price for the deal';
+
+-- Add buyer document tracking columns
+ALTER TABLE deal_status 
+ADD COLUMN buyer_doc_url TEXT NULL COMMENT 'URL of buyer document uploaded';
+
+ALTER TABLE deal_status 
+ADD COLUMN buyer_doc_uploaded BOOLEAN DEFAULT FALSE COMMENT 'Whether buyer has uploaded documents';
+
+-- Add confirmation tracking columns
+ALTER TABLE deal_status 
+ADD COLUMN seller_confirmed BOOLEAN DEFAULT FALSE COMMENT 'Whether seller has confirmed the deal';
+
+ALTER TABLE deal_status 
+ADD COLUMN  admin_verified BOOLEAN DEFAULT FALSE COMMENT 'Whether admin has verified the deal';
+
+-- Add payment tracking columns
+ALTER TABLE deal_status 
+ADD COLUMN  payment_initiated BOOLEAN DEFAULT FALSE COMMENT 'Whether payment has been initiated';
+
+ALTER TABLE deal_status 
+ADD COLUMN payment_completed BOOLEAN DEFAULT FALSE COMMENT 'Whether payment has been completed';
+
+-- Add stage-specific timestamp columns
+ALTER TABLE deal_status 
+ADD COLUMN inquiry_date TIMESTAMP NULL COMMENT 'Date when deal entered INQUIRY stage';
+
+ALTER TABLE deal_status 
+ADD COLUMN  shortlist_date TIMESTAMP NULL COMMENT 'Date when deal entered SHORTLIST stage';
+
+ALTER TABLE deal_status 
+ADD COLUMN negotiation_date TIMESTAMP NULL COMMENT 'Date when deal entered NEGOTIATION stage';
+
+ALTER TABLE deal_status 
+ADD COLUMN agreement_date TIMESTAMP NULL COMMENT 'Date when deal entered AGREEMENT stage';
+
+ALTER TABLE deal_status 
+ADD COLUMN registration_date TIMESTAMP NULL COMMENT 'Date when deal entered REGISTRATION stage';
+
+ALTER TABLE deal_status 
+ADD COLUMN payment_date TIMESTAMP NULL COMMENT 'Date when deal entered PAYMENT stage';
+
+ALTER TABLE deal_status 
+ADD COLUMN  completed_date TIMESTAMP NULL COMMENT 'Date when deal was completed';
+

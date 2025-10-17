@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../AuthContext';
 import { getPropertyDetails } from '../services/api';
+import CreateDealModal from './CreateDealModal';
 
 const PropertyDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [showCreateDeal, setShowCreateDeal] = useState(false);
 
   useEffect(() => {
     fetchPropertyDetails();
@@ -176,6 +180,16 @@ const PropertyDetails = () => {
               <button style={styles.contactOwnerBtn}>Contact Owner</button>
               <button style={styles.getPhoneBtn}>Get Phone No.</button>
             </div>
+
+            {/* ✅ CREATE DEAL BUTTON - ONLY FOR AGENTS */}
+            {user && (user.role === 'AGENT' || user.role === 'ADMIN') && (
+              <button
+                onClick={() => setShowCreateDeal(true)}
+                style={styles.createDealBtn}
+              >
+                📋 Create Deal
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -237,6 +251,18 @@ const PropertyDetails = () => {
           </div>
         )}
       </div>
+
+      {/* ✅ CREATE DEAL MODAL */}
+      {showCreateDeal && (
+        <CreateDealModal
+          property={property}
+          onClose={() => setShowCreateDeal(false)}
+          onDealCreated={() => {
+            setShowCreateDeal(false);
+            alert('✅ Deal created successfully!');
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -405,10 +431,12 @@ const styles = {
   ownerPhone: {
     fontSize: 14,
     color: '#6b7280',
+    marginBottom: 12,
   },
   contactButtons: {
     display: 'flex',
     gap: 12,
+    marginBottom: 12,
   },
   contactOwnerBtn: {
     flex: 1,
@@ -431,6 +459,18 @@ const styles = {
     fontWeight: 600,
     cursor: 'pointer',
     fontSize: 14,
+  },
+  createDealBtn: {
+    width: '100%',
+    padding: '12px',
+    backgroundColor: '#3b82f6',
+    color: 'white',
+    border: 'none',
+    borderRadius: 8,
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontSize: 14,
+    transition: 'background 0.2s',
   },
   moreDetails: {
     backgroundColor: '#fff',

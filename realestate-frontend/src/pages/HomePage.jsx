@@ -4,8 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
 import PropertySearch from '../components/PropertySearch';
 import PropertyList from '../components/PropertyList';
+import DealsDashboard from '../components/DealsDashboard';
 import { getFeaturedProperties } from '../services/api';
 import { styles } from '../styles.js';
+import BrowsePropertiesForDeal from '../pages/BrowsePropertiesForDeal';
 
 function HomePage() {
     const { isAuthenticated, user } = useAuth();
@@ -16,6 +18,9 @@ function HomePage() {
     const [searchLoading, setSearchLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('featured');
     const navigate = useNavigate();
+
+    // ✅ FIX: State for Create Deal Modal
+    const [showBrowseDeals, setShowBrowseDeals] = useState(false);
 
     const popularAreas = [
         { name: 'Gachibowli', emoji: '💼' },
@@ -101,7 +106,6 @@ function HomePage() {
         navigate(`/area/${urlArea}`);
     };
 
-    // ⭐ NEW: Handle property updates and deletes
     const handlePropertyUpdated = () => {
         console.log('🔄 Property updated, refreshing lists...');
         fetchProperties();
@@ -164,7 +168,7 @@ function HomePage() {
             </section>
 
             <section style={styles.propertiesSection}>
-                {isAuthenticated && myProperties.length > 0 && !showSearchResults && (
+                {isAuthenticated && !showSearchResults && (
                     <div style={styles.tabContainer}>
                         <button
                             onClick={() => setActiveTab('featured')}
@@ -175,14 +179,26 @@ function HomePage() {
                         >
                             ⭐ Featured Properties
                         </button>
+                        {myProperties.length > 0 && (
+                            <button
+                                onClick={() => setActiveTab('my-properties')}
+                                style={{
+                                    ...styles.tab,
+                                    ...(activeTab === 'my-properties' ? styles.activeTab : {})
+                                }}
+                            >
+                                📁 My Uploaded Properties ({myProperties.length})
+                            </button>
+                        )}
+                        {/* ✅ FIX: Correct My Deals Tab */}
                         <button
-                            onClick={() => setActiveTab('my-properties')}
+                            onClick={() => setActiveTab('deals')}
                             style={{
                                 ...styles.tab,
-                                ...(activeTab === 'my-properties' ? styles.activeTab : {})
+                                ...(activeTab === 'deals' ? styles.activeTab : {})
                             }}
                         >
-                            📁 My Uploaded Properties ({myProperties.length})
+                            📊 My Deals
                         </button>
                     </div>
                 )}
@@ -190,21 +206,50 @@ function HomePage() {
                 <div style={styles.sectionHeader}>
                     <h2 style={styles.sectionTitle}>
                         <span style={styles.sectionIcon}>
-                            {showSearchResults ? '🔍' : activeTab === 'my-properties' ? '📁' : '⭐'}
+                            {showSearchResults ? '🔍' : activeTab === 'my-properties' ? '📁' : activeTab === 'deals' ? '📊' : '⭐'}
                         </span>
                         {showSearchResults
                             ? `Search Results (${searchResults.length} found)`
                             : activeTab === 'my-properties'
                                 ? 'My Uploaded Properties'
-                                : 'Featured Properties'}
+                                : activeTab === 'deals'
+                                    ? 'My Deals'
+                                    : 'Featured Properties'}
                     </h2>
                     {showSearchResults && (
                         <button onClick={handleResetSearch} style={styles.clearSearchBtn}>
                             ✕ Clear Search
                         </button>
                     )}
+                    {/* ✅ FIX: Add Create Deal Button for Agents/Admins */}
+                    {activeTab === 'deals' && user && (user.role === 'AGENT' || user.role === 'ADMIN') && (
+                        <button
+                            onClick={() => setShowBrowseDeals(true)}
+                            style={{
+                                padding: '10px 20px',
+                                backgroundColor: '#10b981',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                fontSize: '14px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}
+                        >
+                            ➕ Create New Deal
+                        </button>
+                    )}
                 </div>
-                {activeTab === 'my-properties' && !showSearchResults ? (
+
+                {/* ✅ FIX: Render Different Content Based on Active Tab */}
+                {activeTab === 'deals' ? (
+                    // Deals Dashboard
+                    <DealsDashboard />
+                ) : activeTab === 'my-properties' ? (
+                    // My Properties
                     myProperties.length > 0 ? (
                         <PropertyList
                             properties={myProperties}
@@ -222,6 +267,7 @@ function HomePage() {
                         </div>
                     )
                 ) : (
+                    // Featured Properties
                     <PropertyList
                         properties={showSearchResults ? searchResults : propsList}
                         loading={searchLoading}
@@ -255,6 +301,17 @@ function HomePage() {
                     </div>
                 </div>
             </section>
+
+            {/* ✅ FIX: Modal Rendered OUTSIDE all sections */}
+            {showBrowseDeals && (
+                <BrowsePropertiesForDeal
+                    onClose={() => setShowBrowseDeals(false)}
+                    onDealCreated={() => {
+                        setShowBrowseDeals(false);
+                        fetchProperties();
+                    }}
+                />
+            )}
         </div>
     );
 }
