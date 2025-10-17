@@ -1,9 +1,8 @@
-// rakeshrachapudi/realestateproject/RealEstateProject-43fb79bfe93ea0f3ae6d185115e6fa16af369e3c/realestate-frontend/src/components/PropertyDetails.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { getPropertyDetails } from '../services/api';
-import CreateDealModal from '../pages/CreateDealModal'; // ✅ FIX: Corrected the import path
+import DealDetailsPopup from '../components/DealDetailsPopup';
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -13,11 +12,24 @@ const PropertyDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [showCreateDeal, setShowCreateDeal] = useState(false);
+  const [existingDeal, setExistingDeal] = useState(null);
+  const [showDealDetails, setShowDealDetails] = useState(false);
+  const [checkingDeal, setCheckingDeal] = useState(false);
+
+  // Create Deal States
+  const [creatingDeal, setCreatingDeal] = useState(false);
+  const [createError, setCreateError] = useState(null);
+  const [buyerPhone, setBuyerPhone] = useState('');
 
   useEffect(() => {
     fetchPropertyDetails();
   }, [id]);
+
+  useEffect(() => {
+    if (property?.id || property?.propertyId) {
+      checkForExistingDeal();
+    }
+  }, [property?.id, property?.propertyId, user?.id]);
 
   const fetchPropertyDetails = async () => {
     try {
@@ -29,6 +41,119 @@ const PropertyDetails = () => {
       setError('Failed to load property details.');
       setLoading(false);
     }
+  };
+
+  const checkForExistingDeal = async () => {
+    if (!user?.id) return;
+
+    setCheckingDeal(true);
+    try {
+      const propertyId = property?.id || property?.propertyId;
+      const response = await fetch(
+        `http://localhost:8080/api/deals/property/${propertyId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        let deal = null;
+
+        if (Array.isArray(data)) {
+          deal = data[0];
+        } else if (data.success && Array.isArray(data.data)) {
+          deal = data.data[0];
+        } else if (data.data && Array.isArray(data.data)) {
+          deal = data.data[0];
+        }
+
+        if (deal) {
+          setExistingDeal(deal);
+        } else {
+          setExistingDeal(null);
+        }
+      }
+    } catch (err) {
+      console.error('Error checking for existing deal:', err);
+      setExistingDeal(null);
+    } finally {
+      setCheckingDeal(false);
+    }
+  };
+
+  const handleCreateDeal = async () => {
+    setCreateError(null);
+
+    // Check if buyer phone is provided
+    if (!buyerPhone || buyerPhone.length !== 10) {
+      setCreateError('Please enter a valid 10-digit buyer phone number');
+      return;
+    }
+
+    setCreatingDeal(true);
+
+    try {
+      // Search for buyer by phone
+      const searchResponse = await fetch(
+        `http://localhost:8080/api/users/search?phone=${buyerPhone}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          }
+        }
+      );
+
+      if (!searchResponse.ok) {
+        setCreateError('Error searching for buyer');
+        setCreatingDeal(false);
+        return;
+      }
+
+      const searchData = await searchResponse.json();
+      const buyer = searchData.success ? searchData.data : searchData;
+
+      if (!buyer || !buyer.id) {
+        setCreateError('Buyer not found. Please check the phone number.');
+        setCreatingDeal(false);
+        return;
+      }
+
+      // Create deal with buyerId and agentId from logged-in user
+      const createResponse = await fetch('http://localhost:8080/api/deals/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          propertyId: property.id || property.propertyId,
+          buyerId: buyer.id,
+          agentId: user.id  // Get from logged-in user (localStorage)
+        })
+      });
+
+      const createData = await createResponse.json();
+
+      if (createData.success || createResponse.ok) {
+        alert('✅ Deal created successfully!');
+        setBuyerPhone('');
+        await checkForExistingDeal();
+      } else {
+        setCreateError(createData.message || 'Failed to create deal');
+      }
+    } catch (err) {
+      setCreateError('Error: ' + err.message);
+    } finally {
+      setCreatingDeal(false);
+    }
+  };
+
+  const handleRefreshDeal = () => {
+    setShowDealDetails(false);
+    checkForExistingDeal();
   };
 
   const formatPrice = (price) => {
@@ -67,6 +192,7 @@ const PropertyDetails = () => {
   const propertyType = property.propertyType?.typeName || property.type || 'N/A';
   const ownerName = property.user ? `${property.user.firstName} ${property.user.lastName}` : 'N/A';
   const ownerMobile = property.user ? property.user.mobileNumber : 'N/A';
+  const isAgent = user && (user.role === 'AGENT' || user.role === 'ADMIN');
 
   return (
     <div style={styles.container}>
@@ -79,28 +205,11 @@ const PropertyDetails = () => {
         <div style={styles.imageSection}>
           <div style={styles.mainImage}>
             <img
-              src={images[selectedImage] || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800'}
+              src={images[0] || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800'}
               alt={property.title}
               style={styles.largeImage}
             />
           </div>
-
-          {images.length > 1 && (
-            <div style={styles.thumbnails}>
-              {images.map((img, idx) => (
-                <img
-                  key={idx}
-                  src={img}
-                  alt={`View ${idx + 1}`}
-                  style={{
-                    ...styles.thumbnail,
-                    border: selectedImage === idx ? '3px solid #3b82f6' : '1px solid #e5e7eb'
-                  }}
-                  onClick={() => setSelectedImage(idx)}
-                />
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Property Info */}
@@ -164,7 +273,7 @@ const PropertyDetails = () => {
             </div>
           </div>
 
-          {/* Contact Owner */}
+          {/* Contact Owner Section */}
           <div style={styles.contactSection}>
             <h3 style={styles.contactTitle}>Contact Owner</h3>
             {property.user && (
@@ -182,14 +291,62 @@ const PropertyDetails = () => {
               <button style={styles.getPhoneBtn}>Get Phone No.</button>
             </div>
 
-            {/* ✅ CREATE DEAL BUTTON - ONLY FOR AGENTS */}
-            {user && (user.role === 'AGENT' || user.role === 'ADMIN') && (
-              <button
-                onClick={() => setShowCreateDeal(true)}
-                style={styles.createDealBtn}
-              >
-                📋 Create Deal
-              </button>
+            {/* Deal Management Section - Only for Agents */}
+            {isAgent && (
+              <div style={styles.dealSection}>
+                <div style={styles.dealSectionTitle}>📋 Deal Management</div>
+
+                {checkingDeal ? (
+                  <div style={styles.loadingDeal}>⏳ Checking for deals...</div>
+                ) : existingDeal ? (
+                  <>
+                    <div style={styles.dealStatusBadge}>
+                      ✅ Deal Stage: <strong>{existingDeal.stage}</strong>
+                    </div>
+                    <button
+                      onClick={() => setShowDealDetails(true)}
+                      style={styles.viewDealBtn}
+                    >
+                      👁️ View Deal
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div style={styles.noDealInfo}>
+                      No deals created yet for this property
+                    </div>
+                    <div style={styles.buyerInputContainer}>
+                      <input
+                        type="tel"
+                        placeholder="Enter buyer phone (10 digits)"
+                        value={buyerPhone}
+                        onChange={(e) => {
+                          const cleaned = e.target.value.replace(/\D/g, '');
+                          setBuyerPhone(cleaned.slice(0, 10));
+                          setCreateError(null);
+                        }}
+                        maxLength="10"
+                        style={styles.buyerInput}
+                        disabled={creatingDeal}
+                      />
+                      <button
+                        onClick={handleCreateDeal}
+                        disabled={creatingDeal || buyerPhone.length !== 10}
+                        style={{
+                          ...styles.createDealBtn,
+                          opacity: creatingDeal || buyerPhone.length !== 10 ? 0.6 : 1,
+                          cursor: creatingDeal || buyerPhone.length !== 10 ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        {creatingDeal ? '⏳ Creating...' : '➕ Create Deal'}
+                      </button>
+                    </div>
+                    {createError && (
+                      <div style={styles.errorMessage}>{createError}</div>
+                    )}
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -213,21 +370,6 @@ const PropertyDetails = () => {
               <span style={styles.detailRowValue}>{property.address}</span>
             </div>
           )}
-
-          <div style={styles.detailRow}>
-            <span style={styles.detailRowLabel}>Furnishing:</span>
-            <span style={styles.detailRowValue}>{property.furnishing || 'Unfurnished'}</span>
-          </div>
-
-          <div style={styles.detailRow}>
-            <span style={styles.detailRowLabel}>Type of Ownership:</span>
-            <span style={styles.detailRowValue}>Freehold</span>
-          </div>
-
-          <div style={styles.detailRow}>
-            <span style={styles.detailRowLabel}>Status:</span>
-            <span style={styles.detailRowValue}>{property.status || 'Available'}</span>
-          </div>
         </div>
 
         {/* Description */}
@@ -253,23 +395,17 @@ const PropertyDetails = () => {
         )}
       </div>
 
-      {/* ✅ FIX: Pass the correct props */}
-      {showCreateDeal && (
-        <CreateDealModal
-          propertyId={property.id || property.propertyId}
-          propertyTitle={property.title}
-          onClose={() => setShowCreateDeal(false)}
-          onSuccess={() => {
-            setShowCreateDeal(false);
-            alert('✅ Deal created successfully!');
-          }}
+      {/* View Deal Modal */}
+      {showDealDetails && existingDeal && (
+        <DealDetailsPopup
+          deal={existingDeal}
+          onClose={handleRefreshDeal}
         />
       )}
     </div>
   );
 };
 
-// Styles (remain unchanged)
 const styles = {
   container: {
     maxWidth: 1200,
@@ -321,19 +457,6 @@ const styles = {
     width: '100%',
     height: 450,
     objectFit: 'cover',
-  },
-  thumbnails: {
-    display: 'flex',
-    gap: 8,
-    overflowX: 'auto',
-  },
-  thumbnail: {
-    width: 100,
-    height: 75,
-    objectFit: 'cover',
-    borderRadius: 8,
-    cursor: 'pointer',
-    transition: 'all 0.3s',
   },
   infoSection: {
     display: 'flex',
@@ -422,6 +545,7 @@ const styles = {
     fontSize: 18,
     fontWeight: 600,
     marginBottom: 12,
+    marginTop: 0,
   },
   ownerInfo: {
     marginBottom: 16,
@@ -463,10 +587,95 @@ const styles = {
     cursor: 'pointer',
     fontSize: 14,
   },
+  dealSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTop: '2px solid #e5e7eb',
+    backgroundColor: '#fef3c7',
+    padding: 16,
+    borderRadius: 8,
+    border: '1px solid #fcd34d',
+  },
+  dealSectionTitle: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: '#92400e',
+    marginBottom: 12,
+    marginTop: 0,
+  },
+  dealStatusBadge: {
+    padding: '12px',
+    backgroundColor: '#d1fae5',
+    color: '#065f46',
+    borderRadius: 6,
+    fontSize: 13,
+    fontWeight: 600,
+    marginBottom: 12,
+    border: '1px solid #6ee7b7',
+    textAlign: 'center',
+  },
+  noDealInfo: {
+    padding: '12px',
+    backgroundColor: '#fef3c7',
+    color: '#92400e',
+    borderRadius: 6,
+    fontSize: 13,
+    fontWeight: 600,
+    marginBottom: 12,
+    border: '1px solid #fcd34d',
+    textAlign: 'center',
+  },
+  loadingDeal: {
+    padding: '12px',
+    backgroundColor: '#dbeafe',
+    color: '#1e40af',
+    borderRadius: 6,
+    fontSize: 13,
+    fontWeight: 600,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    backgroundColor: '#fee2e2',
+    color: '#dc2626',
+    padding: '12px',
+    borderRadius: 6,
+    fontSize: 13,
+    fontWeight: 600,
+    marginTop: 12,
+    border: '1px solid #fecaca',
+    textAlign: 'center',
+  },
+  buyerInputContainer: {
+    display: 'flex',
+    gap: 8,
+    marginBottom: 12,
+  },
+  buyerInput: {
+    flex: 1,
+    padding: '10px 12px',
+    border: '2px solid #e2e8f0',
+    borderRadius: 6,
+    fontSize: 13,
+    fontWeight: 500,
+    boxSizing: 'border-box',
+    transition: 'border-color 0.2s',
+  },
   createDealBtn: {
+    padding: '10px 12px',
+    backgroundColor: '#3b82f6',
+    color: 'white',
+    border: 'none',
+    borderRadius: 6,
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontSize: 13,
+    transition: 'background 0.2s',
+    whiteSpace: 'nowrap',
+  },
+  viewDealBtn: {
     width: '100%',
     padding: '12px',
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#10b981',
     color: 'white',
     border: 'none',
     borderRadius: 8,
