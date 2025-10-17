@@ -236,6 +236,39 @@ const PropertyDetails = () => {
             </div>
           </div>
         )}
+    {/* FOR AGENTS: Create Deal Button */}
+    {user?.role === 'AGENT' && (
+      <button
+        onClick={() => setShowCreateDeal(true)}
+        style={{
+          width: '100%',
+          padding: '12px',
+          backgroundColor: '#3b82f6',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontWeight: '600',
+          fontSize: '14px',
+          marginTop: '12px'
+        }}
+      >
+        ➕ Create Deal for Buyer
+      </button>
+    )}
+
+    {/* Create Deal Modal */}
+    {showCreateDeal && (
+      <CreateDealModal
+        propertyId={property?.id}
+        propertyTitle={property?.title}
+        onClose={() => setShowCreateDeal(false)}
+        onSuccess={() => {
+          // Optionally refresh or show success message
+          console.log('Deal created successfully');
+        }}
+      />
+    )}
       </div>
     </div>
   );

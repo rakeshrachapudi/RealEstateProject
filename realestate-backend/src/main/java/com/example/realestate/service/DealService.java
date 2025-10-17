@@ -31,13 +31,11 @@ public class DealService {
     private UserRepository userRepository;
 
     // ==================== CREATE DEAL ====================
-
     /**
      * Create new deal (Initial Inquiry)
-     *
      * @param propertyId Property ID
-     * @param buyerId    Buyer ID
-     * @param agentId    Optional Agent ID
+     * @param buyerId Buyer ID
+     * @param agentId Optional Agent ID
      * @return Created DealStatus
      */
     public DealStatus createDeal(Long propertyId, Long buyerId, Long agentId) {
@@ -96,13 +94,11 @@ public class DealService {
     }
 
     // ==================== UPDATE DEAL STAGE ====================
-
     /**
      * Update deal stage (Only Agent/Admin can do this)
-     *
-     * @param dealId    Deal ID
-     * @param newStage  New stage
-     * @param notes     Optional notes
+     * @param dealId Deal ID
+     * @param newStage New stage
+     * @param notes Optional notes
      * @param updatedBy Username who made the update
      * @return Updated DealStatus
      */
@@ -141,4 +137,135 @@ public class DealService {
         logger.info("✅ Deal updated - Stage changed from {} to {}", oldStage, newStage);
         return updatedDeal;
     }
+    public List<DealStatus> getDealsByStage(DealStatus.DealStage stage) {
+        return dealStatusRepository.findByStage(stage);
+    }
+
+
+
+    public List<DealStatus> getActiveDealForBuyer(Long buyerId) {
+        return dealStatusRepository.findActiveDealForBuyer(buyerId);
+    }
+
+
+
+
+    // ==================== ASSIGN AGENT ====================
+    /**
+     * Assign agent to deal
+     * @param dealId Deal ID
+     * @param agentId Agent ID
+     * @return Updated DealStatus
+     */
+    public DealStatus assignAgentToDeal(Long dealId, Long agentId, String username) {
+        DealStatus deal = dealStatusRepository.findById(dealId)
+                .orElseThrow(() -> new RuntimeException("Deal not found"));
+
+        User agent = userRepository.findById(agentId)
+                .orElseThrow(() -> new RuntimeException("Agent not found"));
+
+        if (!agent.getRole().equals(User.UserRole.AGENT) &&
+                !agent.getRole().equals(User.UserRole.ADMIN)) {
+            throw new RuntimeException("User is not an agent");
+        }
+
+        deal.setAgent(agent);
+        deal.setLastUpdatedBy(username);
+        return dealStatusRepository.save(deal);
+    }
+
+
+    // ==================== GET DEAL ====================
+    /**
+     * Get deal by ID
+     */
+    public DealStatus getDealById(Long dealId) {
+        logger.info("Fetching deal: {}", dealId);
+        return dealStatusRepository.findById(dealId)
+                .orElseThrow(() -> new RuntimeException("Deal not found"));
+    }
+
+    // ==================== GET DEALS BY PROPERTY ====================
+    /**
+     * Get all deals for a property
+     */
+    public List<DealStatus> getDealsForProperty(Long propertyId) {
+        logger.info("Fetching deals for property: {}", propertyId);
+        List<DealStatus> deals = dealStatusRepository.findByPropertyId(propertyId);
+        logger.info("Found {} deals for property {}", deals.size(), propertyId);
+        return deals;
+    }
+
+    // ==================== GET DEALS BY AGENT ====================
+    /**
+     * Get all deals for an agent
+     */
+    public List<DealStatus> getDealsForAgent(Long agentId) {
+        logger.info("Fetching all deals for agent: {}", agentId);
+        List<DealStatus> deals = dealStatusRepository.findByAgentId(agentId);
+        logger.info("Found {} deals for agent {}", deals.size(), agentId);
+        return deals;
+    }
+
+    /**
+     * Get active deals for an agent (not completed)
+     */
+    public List<DealStatus> getActiveDealsForAgent(Long agentId) {
+        logger.info("Fetching active deals for agent: {}", agentId);
+        List<DealStatus> deals = dealStatusRepository.findActiveDealsForAgent(agentId);
+        logger.info("Found {} active deals for agent {}", deals.size(), agentId);
+        return deals;
+    }
+
+
+
+    // ==================== GET BUYER DEALS ====================
+    /**
+     * Get all deals for a buyer
+     */
+    public List<DealStatus> getBuyerDeals(Long buyerId) {
+        logger.info("Fetching deals for buyer: {}", buyerId);
+        List<DealStatus> deals = dealStatusRepository.findByBuyerId(buyerId);
+        logger.info("Found {} deals for buyer {}", deals.size(), buyerId);
+        return deals;
+    }
+
+
+
+
+    // ==================== FIND OR CREATE ====================
+    /**
+     * Find existing deal or create new one
+     */
+    public DealStatus findOrCreateDeal(Long propertyId, Long buyerId, Long agentId) {
+        logger.info("Finding or creating deal - Property: {}, Buyer: {}", propertyId, buyerId);
+        Optional<DealStatus> existing = dealStatusRepository
+                .findByPropertyIdAndBuyerId(propertyId, buyerId);
+
+        if (existing.isPresent()) {
+            logger.info("Existing deal found: {}", existing.get().getId());
+            return existing.get();
+        }
+
+        logger.info("No existing deal, creating new one");
+        return createDeal(propertyId, buyerId, agentId);
+    }
+
+    // ==================== STATISTICS ====================
+    /**
+     * Get count of deals at stage
+     */
+    public Long getCountByStage(DealStatus.DealStage stage) {
+        return dealStatusRepository.countByStage(stage);
+    }
+
+    /**
+     * Get deals for agent at specific stage
+     */
+    public List<DealStatus> getAgentDealsAtStage(Long agentId, DealStatus.DealStage stage) {
+        logger.info("Fetching deals for agent {} at stage {}", agentId, stage);
+        return dealStatusRepository.findByAgentIdAndStage(agentId, stage);
+    }
+
+
 }
