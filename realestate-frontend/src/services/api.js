@@ -29,6 +29,7 @@ export const verifyToken = async (token) => {
     return response.json();
 };
 
+
 export const getFeaturedProperties = async () => {
     const response = await fetch(`${API_BASE_URL}/properties/featured`);
     return response.json();

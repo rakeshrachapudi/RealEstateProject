@@ -2,15 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
 import DealProgressBar from '../components/DealProgressBar.jsx';
+import CreateDealModal from '../components/CreateDealModal.jsx'; // ✅ Make sure this path is correct
 
 const AgentDashboard = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
   const [deals, setDeals] = useState([]);
   const [properties, setProperties] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // ✅ New states for the Create Deal modal
+  const [showCreateDeal, setShowCreateDeal] = useState(false);
+  const [selectedPropertyId, setSelectedPropertyId] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated || !user || (user.role !== 'AGENT' && user.role !== 'ADMIN')) {
@@ -22,30 +28,28 @@ const AgentDashboard = () => {
 
   const fetchAgentData = async () => {
     setLoading(true);
+    setError(null);
+    const token = localStorage.getItem('authToken');
+    const headers = { Authorization: `Bearer ${token}` };
+
     try {
       const [dealsRes, propsRes, statsRes] = await Promise.all([
-        fetch(`http://localhost:8080/api/deals/agent/${user.id}`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
-        }),
-        fetch(`http://localhost:8080/api/agents/${user.id}/all-properties`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
-        }),
-        fetch(`http://localhost:8080/api/agents/${user.id}/stats`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
-        })
+        fetch(`http://localhost:8080/api/deals/agent/${user.id}`, { headers }),
+        fetch(`http://localhost:8080/api/agents/${user.id}/all-properties`, { headers }),
+        fetch(`http://localhost:8080/api/agents/${user.id}/stats`, { headers })
       ]);
 
       if (dealsRes.ok) {
         const data = await dealsRes.json();
-        setDeals(data.data || data.success ? data.data : []);
+        setDeals(data.success ? data.data : []);
       }
       if (propsRes.ok) {
         const data = await propsRes.json();
-        setProperties(data.data || data.success ? data.data : []);
+        setProperties(data.success ? data.data : []);
       }
       if (statsRes.ok) {
         const data = await statsRes.json();
-        setStats(data.data || data.success ? data.data : {});
+        setStats(data.success ? data.data : {});
       }
     } catch (err) {
       console.error('Error fetching agent data:', err);
@@ -105,59 +109,61 @@ const AgentDashboard = () => {
           <div style={styles.statValue}>{conversionRate}</div>
         </div>
       </div>
-{/* Create Deal Section */}
-<div style={{
-  padding: '16px',
-  backgroundColor: '#f0f9ff',
-  borderRadius: '12px',
-  border: '1px solid #bfdbfe',
-  marginBottom: '24px',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center'
-}}>
-  <div>
-    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e40af', marginBottom: '4px' }}>
-      ➕ Create New Deal
-    </div>
-    <div style={{ fontSize: '12px', color: '#64748b' }}>
-      Create a deal for a buyer interested in a property
-    </div>
-  </div>
-  <button
-    onClick={() => setShowCreateDeal(true)}
-    style={{
-      padding: '10px 20px',
-      backgroundColor: '#3b82f6',
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
-      cursor: 'pointer',
-      fontWeight: '600',
-      whiteSpace: 'nowrap',
-      marginLeft: '12px'
-    }}
-  >
-    + New Deal
-  </button>
-</div>
 
-{/* Create Deal Modal */}
-{showCreateDeal && (
-  <CreateDealModal
-    propertyId={null}
-    propertyTitle="Select during deal creation"
-    onClose={() => {
-      setShowCreateDeal(false);
-      setSelectedPropertyId(null);
-    }}
-    onSuccess={() => {
-      fetchAgentDeals();
-      fetchAgentStats();
-      console.log('Deal created successfully');
-    }}
-  />
-)}
+      {/* ✅ Create Deal Section */}
+      <div style={{
+        padding: '16px',
+        backgroundColor: '#f0f9ff',
+        borderRadius: '12px',
+        border: '1px solid #bfdbfe',
+        marginBottom: '24px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <div>
+          <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e40af', marginBottom: '4px' }}>
+            ➕ Create New Deal
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748b' }}>
+            Create a deal for a buyer interested in a property
+          </div>
+        </div>
+        <button
+          onClick={() => setShowCreateDeal(true)}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: '600',
+            whiteSpace: 'nowrap',
+            marginLeft: '12px'
+          }}
+        >
+          + New Deal
+        </button>
+      </div>
+
+      {/* ✅ Create Deal Modal */}
+      {showCreateDeal && (
+        <CreateDealModal
+          propertyId={selectedPropertyId}
+          propertyTitle="Select during deal creation"
+          onClose={() => {
+            setShowCreateDeal(false);
+            setSelectedPropertyId(null);
+          }}
+          onSuccess={() => {
+            fetchAgentData();
+            console.log('Deal created successfully');
+          }}
+        />
+      )}
+
+      {/* ✅ Active Deals Section */}
       <div style={styles.section}>
         <h2 style={styles.sectionTitle}>💼 Active Deals ({activeDealCount})</h2>
         {deals.length > 0 ? (
@@ -187,6 +193,7 @@ const AgentDashboard = () => {
         )}
       </div>
 
+      {/* ✅ Properties Section */}
       <div style={styles.section}>
         <h2 style={styles.sectionTitle}>🏘️ Properties Under Management ({properties.length})</h2>
         {properties.length > 0 ? (
@@ -208,7 +215,15 @@ const AgentDashboard = () => {
                     <td style={styles.td}>{prop.propertyType || prop.type}</td>
                     <td style={styles.td}>{prop.areaName || prop.city}</td>
                     <td style={styles.td}>{prop.priceDisplay}</td>
-                    <td style={styles.td}><span style={{...styles.statusBadge, backgroundColor: prop.isVerified ? '#d1fae5' : '#fef3c7', color: prop.isVerified ? '#065f46' : '#92400e'}}>{prop.isVerified ? '✅ Verified' : '⏳ Pending'}</span></td>
+                    <td style={styles.td}>
+                      <span style={{
+                        ...styles.statusBadge,
+                        backgroundColor: prop.isVerified ? '#d1fae5' : '#fef3c7',
+                        color: prop.isVerified ? '#065f46' : '#92400e'
+                      }}>
+                        {prop.isVerified ? '✅ Verified' : '⏳ Pending'}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -29,6 +29,8 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/api/properties/**",
                                 "/api/areas/**",
+                                "/api/users/**",
+                                "/api/deals/**",
                                 "/api/property-types/**"
                         ).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

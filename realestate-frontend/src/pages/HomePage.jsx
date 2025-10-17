@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
 import PropertySearch from '../components/PropertySearch';
 import PropertyList from '../components/PropertyList';
+import DealsDashboard from '../components/DealsDashboard';
 import { getFeaturedProperties } from '../services/api';
 import { styles } from '../styles.js';
 
@@ -19,7 +20,7 @@ function HomePage() {
 
     const popularAreas = [
         { name: 'Gachibowli', emoji: '💼' },
-        { name: 'HITEC City', emoji: '🏢' },
+        { name: 'HITEC City', emoji: '🢢' },
         { name: 'Madhapur', emoji: '🌆' },
         { name: 'Kondapur', emoji: '🏘️' },
         { name: 'Kukatpally', emoji: '🏠' },
@@ -101,7 +102,6 @@ function HomePage() {
         navigate(`/area/${urlArea}`);
     };
 
-    // ⭐ NEW: Handle property updates and deletes
     const handlePropertyUpdated = () => {
         console.log('🔄 Property updated, refreshing lists...');
         fetchProperties();
@@ -164,7 +164,7 @@ function HomePage() {
             </section>
 
             <section style={styles.propertiesSection}>
-                {isAuthenticated && myProperties.length > 0 && !showSearchResults && (
+                {isAuthenticated && !showSearchResults && (
                     <div style={styles.tabContainer}>
                         <button
                             onClick={() => setActiveTab('featured')}
@@ -175,14 +175,26 @@ function HomePage() {
                         >
                             ⭐ Featured Properties
                         </button>
+                        {myProperties.length > 0 && (
+                            <button
+                                onClick={() => setActiveTab('my-properties')}
+                                style={{
+                                    ...styles.tab,
+                                    ...(activeTab === 'my-properties' ? styles.activeTab : {})
+                                }}
+                            >
+                                📁 My Uploaded Properties ({myProperties.length})
+                            </button>
+                        )}
+                        {/* ✅ NEW: My Deals Tab */}
                         <button
-                            onClick={() => setActiveTab('my-properties')}
+                            onClick={() => setActiveTab('deals')}
                             style={{
                                 ...styles.tab,
-                                ...(activeTab === 'my-properties' ? styles.activeTab : {})
+                                ...(activeTab === 'deals' ? styles.activeTab : {})
                             }}
                         >
-                            📁 My Uploaded Properties ({myProperties.length})
+                            📊 My Deals
                         </button>
                     </div>
                 )}
@@ -190,13 +202,15 @@ function HomePage() {
                 <div style={styles.sectionHeader}>
                     <h2 style={styles.sectionTitle}>
                         <span style={styles.sectionIcon}>
-                            {showSearchResults ? '🔍' : activeTab === 'my-properties' ? '📁' : '⭐'}
+                            {showSearchResults ? '🔍' : activeTab === 'my-properties' ? '📁' : activeTab === 'deals' ? '📊' : '⭐'}
                         </span>
                         {showSearchResults
                             ? `Search Results (${searchResults.length} found)`
                             : activeTab === 'my-properties'
                                 ? 'My Uploaded Properties'
-                                : 'Featured Properties'}
+                                : activeTab === 'deals'
+                                    ? 'My Deals'
+                                    : 'Featured Properties'}
                     </h2>
                     {showSearchResults && (
                         <button onClick={handleResetSearch} style={styles.clearSearchBtn}>
@@ -204,7 +218,13 @@ function HomePage() {
                         </button>
                     )}
                 </div>
-                {activeTab === 'my-properties' && !showSearchResults ? (
+
+                {/* ✅ RENDER DIFFERENT CONTENT BASED ON ACTIVE TAB */}
+                {activeTab === 'deals' ? (
+                    // Deals Dashboard
+                    <DealsDashboard />
+                ) : activeTab === 'my-properties' ? (
+                    // My Properties
                     myProperties.length > 0 ? (
                         <PropertyList
                             properties={myProperties}
@@ -222,6 +242,7 @@ function HomePage() {
                         </div>
                     )
                 ) : (
+                    // Featured Properties
                     <PropertyList
                         properties={showSearchResults ? searchResults : propsList}
                         loading={searchLoading}
