@@ -1,19 +1,20 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
+import DealDetailModal from '../DealDetailModal';
 
 const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
   const { user } = useAuth();
-  const [step, setStep] = useState(1); // 1: Enter buyer phone, 2: Select property
+  const [step, setStep] = useState(1);
   const [buyerPhone, setBuyerPhone] = useState('');
   const [buyerInfo, setBuyerInfo] = useState(null);
   const [properties, setProperties] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [notes, setNotes] = useState('');
+  const [existingDeals, setExistingDeals] = useState({}); // Track deals by property ID
+  const [selectedDealToView, setSelectedDealToView] = useState(null); // For viewing existing deals
 
-  // ✅ ADD ANIMATION STYLES ON MOUNT
+  // Add animation styles on mount
   useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
@@ -51,6 +52,48 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
     };
   }, []);
 
+  // Fetch deals for the specific buyer
+  const fetchExistingDeals = async (buyerId) => {
+    try {
+      console.log('📥 Checking for existing deals for buyer ID:', buyerId);
+      const response = await fetch(`http://localhost:8080/api/deals/buyer/${buyerId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        }
+      });
+
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log('✅ Full deals response:', responseData);
+
+        let dealsList = [];
+        if (Array.isArray(responseData)) {
+          dealsList = responseData;
+        } else if (responseData.success && Array.isArray(responseData.data)) {
+          dealsList = responseData.data;
+        } else if (responseData.data && Array.isArray(responseData.data)) {
+          dealsList = responseData.data;
+        }
+
+        // Create a map of property ID to deal
+        const dealsMap = {};
+        dealsList.forEach(deal => {
+          const propertyId = deal.property?.id || deal.propertyId;
+          if (propertyId) {
+            dealsMap[propertyId] = deal;
+          }
+        });
+
+        console.log('✅ Found deals for properties:', Object.keys(dealsMap));
+        setExistingDeals(dealsMap);
+      }
+    } catch (err) {
+      console.error('⚠️ Error fetching existing deals:', err);
+      // Continue even if this fails
+      setExistingDeals({});
+    }
+  };
+
   const handleSearchBuyer = async () => {
     if (!buyerPhone || buyerPhone.length !== 10) {
       setError('Please enter a valid 10-digit phone number');
@@ -63,7 +106,6 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
     try {
       console.log('🔍 Searching for buyer with phone:', buyerPhone);
 
-      // Search for buyer by phone
       const response = await fetch(
         `http://localhost:8080/api/users/search?phone=${buyerPhone}`,
         {
@@ -92,6 +134,10 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
           const propertiesArray = Array.isArray(propsData) ? propsData : (propsData.data || []);
           console.log(`✅ Loaded ${propertiesArray.length} properties`);
           setProperties(propertiesArray);
+
+          // Fetch existing deals for this specific buyer
+          await fetchExistingDeals(buyer.id);
+
           setStep(2);
         } else {
           setError('Buyer not found with this phone number. Please check if the buyer is registered.');
@@ -154,153 +200,202 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
     }
   };
 
+  const getPropertyDeal = (propertyId) => {
+    return existingDeals[propertyId] || existingDeals[propertyId.toString()];
+  };
+
   return (
-    <div style={styles.backdrop} className="deal-modal-backdrop" onClick={onClose}>
-      <div style={styles.container} className="deal-modal-content" onClick={e => e.stopPropagation()}>
-        <button style={styles.closeBtn} onClick={onClose}>×</button>
+    <>
+      <div style={styles.backdrop} className="deal-modal-backdrop" onClick={onClose}>
+        <div style={styles.container} className="deal-modal-content" onClick={e => e.stopPropagation()}>
+          <button style={styles.closeBtn} onClick={onClose}>×</button>
 
-        <h1 style={styles.title}>📋 Create New Deal</h1>
+          <h1 style={styles.title}>📋 Create New Deal</h1>
 
-        {error && <div style={styles.error}>❌ {error}</div>}
+          {error && <div style={styles.error}>❌ {error}</div>}
 
-        {step === 1 ? (
-          <div style={styles.step1}>
-            <div style={styles.section}>
-              <h2 style={styles.sectionTitle}>Step 1: Find Buyer</h2>
-              <p style={styles.sectionSubtitle}>Enter the buyer's mobile number to search for them</p>
+          {/* Show if deal already exists for this buyer and property */}
+          {step === 2 && selectedProperty && getPropertyDeal(selectedProperty.id || selectedProperty.propertyId) && (
+            <div style={styles.dealExistsError}>
+              ❌ Deal already exists for this property and buyer
+            </div>
+          )}
 
-              <div style={styles.formGroup}>
-                <label style={styles.label}>📱 Buyer Mobile Number *</label>
-                <input
-                  type="tel"
-                  placeholder="Enter 10-digit mobile number"
-                  value={buyerPhone}
-                  onChange={(e) => {
-                    const cleaned = e.target.value.replace(/\D/g, '');
-                    setBuyerPhone(cleaned);
-                    setError(null);
+          {step === 1 ? (
+            <div style={styles.step1}>
+              <div style={styles.section}>
+                <h2 style={styles.sectionTitle}>Step 1: Find Buyer</h2>
+                <p style={styles.sectionSubtitle}>Enter the buyer's mobile number to search for them</p>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>📱 Buyer Mobile Number *</label>
+                  <input
+                    type="tel"
+                    placeholder="Enter 10-digit mobile number"
+                    value={buyerPhone}
+                    onChange={(e) => {
+                      const cleaned = e.target.value.replace(/\D/g, '');
+                      setBuyerPhone(cleaned);
+                      setError(null);
+                    }}
+                    maxLength="10"
+                    pattern="[0-9]{10}"
+                    style={styles.input}
+                  />
+                </div>
+
+                <div style={styles.hint}>
+                  ℹ️ The buyer must be registered in the system with this phone number. If they don't exist, ask them to sign up first.
+                </div>
+
+                <button
+                  onClick={handleSearchBuyer}
+                  disabled={loading || buyerPhone.length !== 10}
+                  style={{
+                    ...styles.button,
+                    opacity: (loading || buyerPhone.length !== 10) ? 0.6 : 1,
+                    cursor: (loading || buyerPhone.length !== 10) ? 'not-allowed' : 'pointer'
                   }}
-                  maxLength="10"
-                  pattern="[0-9]{10}"
-                  style={styles.input}
-                />
+                >
+                  {loading ? '⏳ Searching...' : '🔍 Search Buyer'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={styles.step2}>
+              {/* Buyer Info Card */}
+              <div style={styles.buyerInfo}>
+                <h3 style={styles.buyerName}>
+                  ✅ {buyerInfo?.firstName} {buyerInfo?.lastName}
+                </h3>
+                <p style={styles.buyerPhone}>📱 {buyerInfo?.mobileNumber}</p>
+                <p style={styles.buyerEmail}>📧 {buyerInfo?.email || 'N/A'}</p>
+                <button
+                  onClick={() => {
+                    console.log('🔄 Changing buyer');
+                    setStep(1);
+                    setBuyerInfo(null);
+                    setProperties([]);
+                    setSelectedProperty(null);
+                    setBuyerPhone('');
+                  }}
+                  style={styles.changeBuyerBtn}
+                >
+                  🔄 Change Buyer
+                </button>
               </div>
 
-              <div style={styles.hint}>
-                ℹ️ The buyer must be registered in the system with this phone number. If they don't exist, ask them to sign up first.
-              </div>
+              {/* Select Property */}
+              <h2 style={styles.sectionTitle}>Step 2: Select Property</h2>
+              <p style={styles.sectionSubtitle}>
+                Choose a property to create the deal ({properties.length} available)
+              </p>
 
-              <button
-                onClick={handleSearchBuyer}
-                disabled={loading || buyerPhone.length !== 10}
-                style={{
-                  ...styles.button,
-                  opacity: (loading || buyerPhone.length !== 10) ? 0.6 : 1,
-                  cursor: (loading || buyerPhone.length !== 10) ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {loading ? '⏳ Searching...' : '🔍 Search Buyer'}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div style={styles.step2}>
-            {/* Buyer Info Card */}
-            <div style={styles.buyerInfo}>
-              <h3 style={styles.buyerName}>
-                ✅ {buyerInfo?.firstName} {buyerInfo?.lastName}
-              </h3>
-              <p style={styles.buyerPhone}>📱 {buyerInfo?.mobileNumber}</p>
-              <p style={styles.buyerEmail}>📧 {buyerInfo?.email || 'N/A'}</p>
-              <button
-                onClick={() => {
-                  console.log('🔄 Changing buyer');
-                  setStep(1);
-                  setBuyerInfo(null);
-                  setProperties([]);
-                  setSelectedProperty(null);
-                  setBuyerPhone('');
-                }}
-                style={styles.changeBuyerBtn}
-              >
-                🔄 Change Buyer
-              </button>
-            </div>
+              {properties.length > 0 ? (
+                <div style={styles.propertiesGrid}>
+                  {properties.map(property => {
+                    const propertyId = property.id || property.propertyId;
+                    const isSelected = selectedProperty?.id === propertyId ||
+                                      selectedProperty?.propertyId === propertyId;
+                    const existingDeal = getPropertyDeal(propertyId);
 
-            {/* Select Property */}
-            <h2 style={styles.sectionTitle}>Step 2: Select Property</h2>
-            <p style={styles.sectionSubtitle}>
-              Choose a property to create the deal ({properties.length} available)
-            </p>
+                    return (
+                      <div
+                        key={propertyId}
+                        style={{
+                          ...styles.propertyItem,
+                          borderColor: isSelected ? '#3b82f6' : '#e2e8f0',
+                          backgroundColor: isSelected ? '#eff6ff' : 'white',
+                          boxShadow: isSelected
+                            ? '0 4px 12px rgba(59, 130, 246, 0.2)'
+                            : '0 1px 3px rgba(0,0,0,0.1)',
+                          opacity: existingDeal ? 0.7 : 1
+                        }}
+                        onClick={() => {
+                          console.log('✅ Property selected:', property);
+                          setSelectedProperty(property);
+                        }}
+                      >
+                        <img
+                          src={property.imageUrl || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop'}
+                          alt={property.title}
+                          style={styles.propertyImage}
+                        />
+                        <div style={styles.propertyDetails}>
+                          <h4 style={styles.propertyTitle}>{property.title}</h4>
+                          <p style={styles.propertyPrice}>
+                            💰 ₹{(property.price || 0).toLocaleString('en-IN')}
+                          </p>
+                          <p style={styles.propertySpecs}>
+                            🛏️ {property.bedrooms} | 🚿 {property.bathrooms} | 📐 {property.areaSqft || 'N/A'} sqft
+                          </p>
+                          <p style={styles.propertyLocation}>
+                            📍 {property.areaName || property.city}
+                          </p>
 
-            {properties.length > 0 ? (
-              <div style={styles.propertiesGrid}>
-                {properties.map(property => {
-                  const isSelected = selectedProperty?.id === property.id ||
-                                    selectedProperty?.propertyId === property.id ||
-                                    selectedProperty?.propertyId === property.propertyId;
+                          {/* ✅ DEAL STATUS BADGE */}
+                          {existingDeal && (
+                            <div style={styles.dealExistsBadge}>
+                              ✅ Deal exists - Stage: {existingDeal.stage}
+                            </div>
+                          )}
 
-                  return (
-                    <div
-                      key={property.id || property.propertyId}
-                      style={{
-                        ...styles.propertyItem,
-                        borderColor: isSelected ? '#3b82f6' : '#e2e8f0',
-                        backgroundColor: isSelected ? '#eff6ff' : 'white',
-                        boxShadow: isSelected
-                          ? '0 4px 12px rgba(59, 130, 246, 0.2)'
-                          : '0 1px 3px rgba(0,0,0,0.1)'
-                      }}
-                      onClick={() => {
-                        console.log('✅ Property selected:', property);
-                        setSelectedProperty(property);
-                      }}
-                    >
-                      <img
-                        src={property.imageUrl || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop'}
-                        alt={property.title}
-                        style={styles.propertyImage}
-                      />
-                      <div style={styles.propertyDetails}>
-                        <h4 style={styles.propertyTitle}>{property.title}</h4>
-                        <p style={styles.propertyPrice}>
-                          💰 ₹{(property.price || 0).toLocaleString('en-IN')}
-                        </p>
-                        <p style={styles.propertySpecs}>
-                          🛏️ {property.bedrooms} | 🚿 {property.bathrooms} | 📐 {property.areaSqft || 'N/A'} sqft
-                        </p>
-                        <p style={styles.propertyLocation}>
-                          📍 {property.areaName || property.city}
-                        </p>
-                        {isSelected && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCreateDeal(property.id || property.propertyId);
-                            }}
-                            disabled={loading}
-                            style={{
-                              ...styles.selectBtn,
-                              opacity: loading ? 0.6 : 1
-                            }}
-                          >
-                            {loading ? '⏳ Creating Deal...' : '✅ Create Deal with This Property'}
-                          </button>
-                        )}
+                          {/* ✅ CONDITIONAL BUTTONS - SHOW ONLY ONE */}
+                          {existingDeal ? (
+                            // Show View Deal Button if deal exists
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDealToView(existingDeal);
+                              }}
+                              style={styles.viewDealBtn}
+                            >
+                              👁️ View Deal
+                            </button>
+                          ) : isSelected ? (
+                            // Show Create Deal Button if property is selected and no deal exists
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCreateDeal(propertyId);
+                              }}
+                              disabled={loading}
+                              style={{
+                                ...styles.selectBtn,
+                                opacity: loading ? 0.6 : 1
+                              }}
+                            >
+                              {loading ? '⏳ Creating Deal...' : '✅ Create Deal with This Property'}
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div style={styles.noProperties}>
-                <p>📭 No properties available to create a deal</p>
-              </div>
-            )}
-          </div>
-        )}
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={styles.noProperties}>
+                  <p>📭 No properties available to create a deal</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* View Deal Modal */}
+      {selectedDealToView && (
+        <DealDetailModal
+          deal={selectedDealToView}
+          onClose={() => setSelectedDealToView(null)}
+          onUpdate={() => {
+            setSelectedDealToView(null);
+            fetchExistingDeals();
+          }}
+          userRole={user.role}
+        />
+      )}
+    </>
   );
 };
 
@@ -364,6 +459,17 @@ const styles = {
     marginBottom: '20px',
     border: '1px solid #fecaca',
     fontWeight: '500'
+  },
+  dealExistsError: {
+    backgroundColor: '#fee2e2',
+    color: '#dc2626',
+    padding: '16px',
+    borderRadius: '8px',
+    marginBottom: '20px',
+    border: '2px solid #fecaca',
+    fontWeight: '600',
+    fontSize: '15px',
+    textAlign: 'center'
   },
   section: {
     marginBottom: '24px'
@@ -505,10 +611,33 @@ const styles = {
     fontSize: '12px',
     color: '#64748b'
   },
+  dealExistsBadge: {
+    padding: '8px 12px',
+    backgroundColor: '#d1fae5',
+    color: '#065f46',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '600',
+    marginBottom: '12px',
+    border: '1px solid #6ee7b7',
+    textAlign: 'center'
+  },
   selectBtn: {
     width: '100%',
     padding: '10px',
     backgroundColor: '#3b82f6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '13px',
+    transition: 'background 0.2s'
+  },
+  viewDealBtn: {
+    width: '100%',
+    padding: '10px',
+    backgroundColor: '#10b981',
     color: 'white',
     border: 'none',
     borderRadius: '6px',
