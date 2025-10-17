@@ -1,8 +1,9 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
-import CreateDealModal from '../pages/CreateDealModal.jsx'; // ✅ Import from pages, not components
-import DealDetailModal from '../DealDetailModal.jsx'; // ✅ Import to view deal details
+import BrowsePropertiesForDeal from '../pages/BrowsePropertiesForDeal.jsx'; // ✅ CHANGED
+import DealDetailModal from '../DealDetailModal.jsx';
 
 const AgentDashboard = () => {
   const { user, isAuthenticated } = useAuth();
@@ -18,68 +19,92 @@ const AgentDashboard = () => {
 
   useEffect(() => {
     if (!isAuthenticated || !user || (user.role !== 'AGENT' && user.role !== 'ADMIN')) {
+      console.log('❌ Access Denied: Not an agent or admin');
       navigate('/');
       return;
     }
+    console.log('✅ Agent Dashboard: User authenticated and authorized');
+    console.log('User Role:', user.role);
     fetchAgentData();
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated, navigate]);
 
- const fetchAgentData = async () => {
-   setLoading(true);
-   setError(null);
-   const token = localStorage.getItem('authToken');
-   const headers = { Authorization: `Bearer ${token}` };
+  const fetchAgentData = async () => {
+    setLoading(true);
+    setError(null);
+    const token = localStorage.getItem('authToken');
+    const headers = { Authorization: `Bearer ${token}` };
 
-   try {
-     const [dealsRes, propsRes, statsRes] = await Promise.all([
-       fetch(`http://localhost:8080/api/deals/agent/${user.id}`, { headers }),
-       fetch(`http://localhost:8080/api/agents/${user.id}/all-properties`, { headers }),
-       fetch(`http://localhost:8080/api/agents/${user.id}/stats`, { headers })
-     ]);
+    try {
+      console.log('📥 Fetching agent data for user:', user.id);
 
-     // ✅ FIX: Handle ApiResponse wrapper correctly
-     if (dealsRes.ok) {
-       const responseData = await dealsRes.json();
-       console.log('✅ Full response:', responseData);
+      const [dealsRes, propsRes, statsRes] = await Promise.all([
+        fetch(`http://localhost:8080/api/deals/agent/${user.id}`, { headers }),
+        fetch(`http://localhost:8080/api/agents/${user.id}/all-properties`, { headers }).catch(() => ({ ok: false })),
+        fetch(`http://localhost:8080/api/agents/${user.id}/stats`, { headers }).catch(() => ({ ok: false }))
+      ]);
 
-       // Handle both direct array and ApiResponse wrapper
-       let dealsList = [];
-       if (Array.isArray(responseData)) {
-         dealsList = responseData;
-       } else if (responseData.success && Array.isArray(responseData.data)) {
-         dealsList = responseData.data;
-       } else if (responseData.data && Array.isArray(responseData.data)) {
-         dealsList = responseData.data;
-       }
+      // ✅ HANDLE DEALS RESPONSE
+      if (dealsRes.ok) {
+        const responseData = await dealsRes.json();
+        console.log('✅ Full deals response:', responseData);
 
-       console.log('✅ Deals loaded:', dealsList);
-       setDeals(dealsList);
-     } else {
-       console.error('❌ Deals response not ok:', dealsRes.status);
-       setError('Failed to load deals');
-     }
+        let dealsList = [];
+        if (Array.isArray(responseData)) {
+          dealsList = responseData;
+        } else if (responseData.success && Array.isArray(responseData.data)) {
+          dealsList = responseData.data;
+        } else if (responseData.data && Array.isArray(responseData.data)) {
+          dealsList = responseData.data;
+        }
 
-     if (propsRes.ok) {
-       const data = await propsRes.json();
-       setProperties(data.success ? data.data : []);
-     }
+        console.log('✅ Deals loaded:', dealsList.length);
+        setDeals(dealsList);
+      } else {
+        console.error('❌ Deals response not ok:', dealsRes.status);
+        setError('Failed to load deals');
+        setDeals([]);
+      }
 
-     if (statsRes.ok) {
-       const data = await statsRes.json();
-       setStats(data.success ? data.data : {});
-     }
-   } catch (err) {
-     console.error('Error fetching agent data:', err);
-     setError('Failed to load dashboard data');
-   } finally {
-     setLoading(false);
-   }
- };
+      // ✅ HANDLE PROPERTIES RESPONSE
+      if (propsRes.ok) {
+        const data = await propsRes.json();
+        console.log('✅ Properties loaded:', data);
+        setProperties(data.success ? data.data : (Array.isArray(data) ? data : []));
+      } else {
+        console.log('⚠️ Properties endpoint failed');
+        setProperties([]);
+      }
 
+      // ✅ HANDLE STATS RESPONSE
+      if (statsRes.ok) {
+        const data = await statsRes.json();
+        console.log('✅ Stats loaded:', data);
+        setStats(data.success ? data.data : {});
+      } else {
+        console.log('⚠️ Stats endpoint failed');
+        setStats({});
+      }
+    } catch (err) {
+      console.error('❌ Error fetching agent data:', err);
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const handleCreateDealClick = () => {
+    console.log('🔧 Debug: Opening create deal modal from AgentDashboard');
+    console.log('User:', user);
+    console.log('User Role:', user?.role);
+    setShowCreateDeal(true);
+  };
 
   if (!isAuthenticated) {
-    return <div style={styles.container}><h2>Please log in</h2></div>;
+    return (
+      <div style={styles.container}>
+        <h2>Please log in</h2>
+      </div>
+    );
   }
 
   if (loading) {
@@ -103,7 +128,7 @@ const AgentDashboard = () => {
         <p style={styles.subtitle}>Manage your deals and properties</p>
       </div>
 
-      {error && <div style={styles.error}>{error}</div>}
+      {error && <div style={styles.error}>❌ {error}</div>}
 
       {/* Stats Grid */}
       <div style={styles.statsGrid}>
@@ -140,7 +165,7 @@ const AgentDashboard = () => {
           </div>
         </div>
         <button
-          onClick={() => setShowCreateDeal(true)}
+          onClick={handleCreateDealClick}
           style={styles.newDealBtn}
         >
           + New Deal
@@ -207,13 +232,15 @@ const AgentDashboard = () => {
         )}
       </div>
 
-      {/* Create Deal Modal */}
+      {/* ✅ CREATE DEAL MODAL - UPDATED */}
       {showCreateDeal && (
-        <CreateDealModal
-          propertyId={null}
-          propertyTitle="Select during deal creation"
-          onClose={() => setShowCreateDeal(false)}
-          onSuccess={() => {
+        <BrowsePropertiesForDeal
+          onClose={() => {
+            console.log('🔧 Debug: Closing modal');
+            setShowCreateDeal(false);
+          }}
+          onDealCreated={() => {
+            console.log('🔧 Debug: Deal created');
             setShowCreateDeal(false);
             fetchAgentData();
           }}
@@ -257,31 +284,178 @@ const getProgressPercentage = (stage) => {
 };
 
 const styles = {
-  container: { maxWidth: 1400, margin: '0 auto', padding: '24px 32px', minHeight: '80vh', backgroundColor: '#f9fafb' },
-  header: { marginBottom: '32px', paddingBottom: '24px', borderBottom: '2px solid #e5e7eb' },
-  title: { fontSize: '36px', fontWeight: '800', color: '#1e293b', marginBottom: '8px' },
-  subtitle: { fontSize: '16px', color: '#64748b', fontWeight: '500' },
-  error: { backgroundColor: '#fee2e2', color: '#dc2626', padding: '16px', borderRadius: '8px', marginBottom: '24px', border: '1px solid #fca5a5' },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' },
-  statCard: { backgroundColor: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', textAlign: 'center', border: '1px solid #e5e7eb' },
-  statIcon: { fontSize: '32px', marginBottom: '12px' },
-  statLabel: { fontSize: '14px', color: '#64748b', marginBottom: '8px' },
-  statValue: { fontSize: '28px', fontWeight: '700', color: '#1e293b' },
-  createDealSection: { padding: '16px', backgroundColor: '#f0f9ff', borderRadius: '12px', border: '1px solid #bfdbfe', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  newDealBtn: { padding: '10px 20px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', whiteSpace: 'nowrap', marginLeft: '12px' },
-  section: { backgroundColor: 'white', padding: '24px', borderRadius: '12px', marginBottom: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' },
-  sectionTitle: { fontSize: '20px', fontWeight: '700', color: '#1e293b', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #e5e7eb' },
-  dealsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' },
-  dealCard: { backgroundColor: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', transition: 'all 0.2s' },
-  stageBadge: { display: 'inline-block', padding: '6px 12px', borderRadius: '6px', color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '12px' },
-  dealTitle: { fontSize: '16px', fontWeight: '600', color: '#1e293b', margin: '0 0 12px 0' },
-  dealMeta: { fontSize: '13px', color: '#64748b', marginBottom: '12px' },
-  metaItem: { margin: '4px 0', lineHeight: '1.4' },
-  progressBar: { width: '100%', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden', marginBottom: '12px' },
-  progressFill: { height: '100%', transition: 'width 0.3s' },
-  viewDealBtn: { width: '100%', padding: '10px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
-  loading: { textAlign: 'center', padding: '80px 20px' },
-  emptyState: { textAlign: 'center', padding: '40px 20px', color: '#64748b', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px dashed #e2e8f0' }
+  container: {
+    maxWidth: 1400,
+    margin: '0 auto',
+    padding: '24px 32px',
+    minHeight: '80vh',
+    backgroundColor: '#f9fafb'
+  },
+  header: {
+    marginBottom: '32px',
+    paddingBottom: '24px',
+    borderBottom: '2px solid #e5e7eb'
+  },
+  title: {
+    fontSize: '36px',
+    fontWeight: '800',
+    color: '#1e293b',
+    margin: 0,
+    marginBottom: '8px'
+  },
+  subtitle: {
+    fontSize: '16px',
+    color: '#64748b',
+    fontWeight: '500',
+    margin: 0
+  },
+  error: {
+    backgroundColor: '#fee2e2',
+    color: '#dc2626',
+    padding: '16px',
+    borderRadius: '8px',
+    marginBottom: '24px',
+    border: '1px solid #fca5a5'
+  },
+  statsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px',
+    marginBottom: '32px'
+  },
+  statCard: {
+    backgroundColor: 'white',
+    padding: '24px',
+    borderRadius: '12px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    textAlign: 'center',
+    border: '1px solid #e5e7eb'
+  },
+  statIcon: {
+    fontSize: '32px',
+    marginBottom: '12px'
+  },
+  statLabel: {
+    fontSize: '14px',
+    color: '#64748b',
+    marginBottom: '8px'
+  },
+  statValue: {
+    fontSize: '28px',
+    fontWeight: '700',
+    color: '#1e293b'
+  },
+  createDealSection: {
+    padding: '16px',
+    backgroundColor: '#f0f9ff',
+    borderRadius: '12px',
+    border: '1px solid #bfdbfe',
+    marginBottom: '24px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  newDealBtn: {
+    padding: '10px 20px',
+    backgroundColor: '#3b82f6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    whiteSpace: 'nowrap',
+    marginLeft: '12px',
+    transition: 'background 0.2s, transform 0.2s',
+    boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)'
+  },
+  section: {
+    backgroundColor: 'white',
+    padding: '24px',
+    borderRadius: '12px',
+    marginBottom: '32px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+  },
+  sectionTitle: {
+    fontSize: '20px',
+    fontWeight: '700',
+    color: '#1e293b',
+    margin: 0,
+    marginBottom: '16px',
+    paddingBottom: '12px',
+    borderBottom: '2px solid #e5e7eb'
+  },
+  dealsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+    gap: '16px'
+  },
+  dealCard: {
+    backgroundColor: '#f8fafc',
+    padding: '16px',
+    borderRadius: '12px',
+    border: '1px solid #e2e8f0',
+    transition: 'all 0.2s'
+  },
+  stageBadge: {
+    display: 'inline-block',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    color: 'white',
+    fontSize: '12px',
+    fontWeight: '600',
+    marginBottom: '12px'
+  },
+  dealTitle: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#1e293b',
+    margin: '0 0 12px 0'
+  },
+  dealMeta: {
+    fontSize: '13px',
+    color: '#64748b',
+    marginBottom: '12px'
+  },
+  metaItem: {
+    margin: '4px 0',
+    lineHeight: '1.4'
+  },
+  progressBar: {
+    width: '100%',
+    height: '6px',
+    backgroundColor: '#e2e8f0',
+    borderRadius: '3px',
+    overflow: 'hidden',
+    marginBottom: '12px'
+  },
+  progressFill: {
+    height: '100%',
+    transition: 'width 0.3s'
+  },
+  viewDealBtn: {
+    width: '100%',
+    padding: '10px',
+    backgroundColor: '#10b981',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '14px',
+    transition: 'background 0.2s'
+  },
+  loading: {
+    textAlign: 'center',
+    padding: '80px 20px'
+  },
+  emptyState: {
+    textAlign: 'center',
+    padding: '40px 20px',
+    color: '#64748b',
+    backgroundColor: '#f9fafb',
+    borderRadius: '8px',
+    border: '1px dashed #e2e8f0'
+  }
 };
 
 export default AgentDashboard;

@@ -1,4 +1,4 @@
-// src/pages/HomePage.jsx
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
@@ -17,10 +17,25 @@ function HomePage() {
     const [showSearchResults, setShowSearchResults] = useState(false);
     const [searchLoading, setSearchLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('featured');
+    const [showBrowseDeals, setShowBrowseDeals] = useState(false);
     const navigate = useNavigate();
 
-    // ✅ FIX: State for Create Deal Modal
-    const [showBrowseDeals, setShowBrowseDeals] = useState(false);
+    // 🔍 DEBUG: Log state changes
+    useEffect(() => {
+        console.log('========== HOMEPAGE STATE CHANGED ==========');
+        console.log('activeTab:', activeTab);
+        console.log('isAuthenticated:', isAuthenticated);
+        console.log('user:', user);
+        console.log('user?.role:', user?.role);
+        console.log('showBrowseDeals:', showBrowseDeals);
+        console.log('Button should be visible?',
+            activeTab === 'deals' &&
+            isAuthenticated &&
+            user &&
+            (user.role === 'AGENT' || user.role === 'ADMIN')
+        );
+        console.log('==========================================');
+    }, [activeTab, isAuthenticated, user, showBrowseDeals]);
 
     const popularAreas = [
         { name: 'Gachibowli', emoji: '💼' },
@@ -122,8 +137,103 @@ function HomePage() {
         }
     };
 
+    // 🔍 DEBUG: Enhanced click handler
+    const handleCreateDealClick = () => {
+        console.log('========== CREATE DEAL BUTTON CLICKED ==========');
+        console.log('Timestamp:', new Date().toLocaleTimeString());
+        console.log('activeTab:', activeTab);
+        console.log('isAuthenticated:', isAuthenticated);
+        console.log('user:', user);
+        console.log('user?.id:', user?.id);
+        console.log('user?.role:', user?.role);
+        console.log('Is Agent/Admin?', user?.role === 'AGENT' || user?.role === 'ADMIN');
+        console.log('Current showBrowseDeals:', showBrowseDeals);
+        console.log('About to call setShowBrowseDeals(true)');
+
+        setShowBrowseDeals(true);
+
+        console.log('✅ setShowBrowseDeals(true) called');
+        console.log('============================================');
+    };
+
+    const buttonShouldBeVisible =
+        activeTab === 'deals' &&
+        isAuthenticated &&
+        user &&
+        (user.role === 'AGENT' || user.role === 'ADMIN');
+
+    console.log('🔍 DEBUG: Button should be visible?', buttonShouldBeVisible);
+    console.log('  - activeTab === "deals"?', activeTab === 'deals');
+    console.log('  - isAuthenticated?', isAuthenticated);
+    console.log('  - user exists?', !!user);
+    console.log('  - user.role is AGENT/ADMIN?', user?.role === 'AGENT' || user?.role === 'ADMIN');
+
     return (
         <div style={styles.container}>
+            {/* DEBUG BOX - Remove after fixing */}
+            <div style={{
+                position: 'fixed',
+                top: 100,
+                right: 10,
+                backgroundColor: '#1e293b',
+                color: '#10b981',
+                padding: '16px',
+                borderRadius: '8px',
+                fontSize: '11px',
+                maxWidth: '380px',
+                zIndex: 9999,
+                border: '2px solid #10b981',
+                fontFamily: 'monospace',
+                lineHeight: '1.5',
+                maxHeight: '300px',
+                overflowY: 'auto'
+            }}>
+                <div style={{fontWeight: 'bold', marginBottom: '8px', fontSize: '12px'}}>🔍 DEBUG INFO</div>
+                <div>Tab: <span style={{color: '#fbbf24'}}>{activeTab}</span></div>
+                <div>Auth: <span style={{color: '#fbbf24'}}>{isAuthenticated ? '✅' : '❌'}</span></div>
+                <div>User: <span style={{color: '#fbbf24'}}>{user?.firstName || 'NONE'}</span></div>
+                <div>Role: <span style={{color: '#fbbf24'}}>{user?.role || 'NONE'}</span></div>
+                <div>Modal: <span style={{color: '#fbbf24'}}>{showBrowseDeals ? '✅ OPEN' : '❌ CLOSED'}</span></div>
+                <div>Btn Visible: <span style={{color: buttonShouldBeVisible ? '#10b981' : '#ef4444'}}>
+                    {buttonShouldBeVisible ? '✅ YES' : '❌ NO'}
+                </span></div>
+                <button
+                    onClick={() => {
+                        console.clear();
+                        console.log('=== FULL STATE LOG ===');
+                        console.log({activeTab, isAuthenticated, user, showBrowseDeals});
+                    }}
+                    style={{
+                        marginTop: '8px',
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        cursor: 'pointer',
+                        backgroundColor: '#10b981',
+                        color: '#1e293b',
+                        border: 'none',
+                        borderRadius: '4px'
+                    }}
+                >
+                    Log State
+                </button>
+                <button
+                    onClick={() => setShowBrowseDeals(!showBrowseDeals)}
+                    style={{
+                        marginTop: '8px',
+                        marginLeft: '8px',
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        cursor: 'pointer',
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px'
+                    }}
+                >
+                    Toggle Modal
+                </button>
+            </div>
+
             <section style={styles.heroSection}>
                 <div style={styles.heroContent}>
                     <h1 style={styles.mainTitle}>
@@ -171,7 +281,10 @@ function HomePage() {
                 {isAuthenticated && !showSearchResults && (
                     <div style={styles.tabContainer}>
                         <button
-                            onClick={() => setActiveTab('featured')}
+                            onClick={() => {
+                                console.log('📊 Switching to Featured tab');
+                                setActiveTab('featured');
+                            }}
                             style={{
                                 ...styles.tab,
                                 ...(activeTab === 'featured' ? styles.activeTab : {})
@@ -181,7 +294,10 @@ function HomePage() {
                         </button>
                         {myProperties.length > 0 && (
                             <button
-                                onClick={() => setActiveTab('my-properties')}
+                                onClick={() => {
+                                    console.log('📁 Switching to My Properties tab');
+                                    setActiveTab('my-properties');
+                                }}
                                 style={{
                                     ...styles.tab,
                                     ...(activeTab === 'my-properties' ? styles.activeTab : {})
@@ -190,9 +306,11 @@ function HomePage() {
                                 📁 My Uploaded Properties ({myProperties.length})
                             </button>
                         )}
-                        {/* ✅ FIX: Correct My Deals Tab */}
                         <button
-                            onClick={() => setActiveTab('deals')}
+                            onClick={() => {
+                                console.log('📊 Switching to Deals tab');
+                                setActiveTab('deals');
+                            }}
                             style={{
                                 ...styles.tab,
                                 ...(activeTab === 'deals' ? styles.activeTab : {})
@@ -221,35 +339,48 @@ function HomePage() {
                             ✕ Clear Search
                         </button>
                     )}
-                    {/* ✅ FIX: Add Create Deal Button for Agents/Admins */}
-                    {activeTab === 'deals' && user && (user.role === 'AGENT' || user.role === 'ADMIN') && (
+
+                    {/* ✅ CREATE DEAL BUTTON - WITH DEBUG */}
+                    {buttonShouldBeVisible ? (
                         <button
-                            onClick={() => setShowBrowseDeals(true)}
+                            onClick={handleCreateDealClick}
                             style={{
-                                padding: '10px 20px',
+                                padding: '12px 24px',
                                 backgroundColor: '#10b981',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '8px',
                                 cursor: 'pointer',
-                                fontWeight: '600',
+                                fontWeight: '700',
                                 fontSize: '14px',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '8px'
+                                gap: '8px',
+                                transition: 'background 0.2s, transform 0.2s',
+                                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.backgroundColor = '#059669';
+                                e.target.style.transform = 'translateY(-2px)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.backgroundColor = '#10b981';
+                                e.target.style.transform = 'translateY(0)';
                             }}
                         >
                             ➕ Create New Deal
                         </button>
+                    ) : (
+                        <div style={{padding: '8px 16px', backgroundColor: '#fee2e2', borderRadius: '8px', color: '#dc2626', fontSize: '12px'}}>
+                            ❌ Button not visible: activeTab={activeTab}, auth={isAuthenticated}, role={user?.role}
+                        </div>
                     )}
                 </div>
 
-                {/* ✅ FIX: Render Different Content Based on Active Tab */}
+                {/* ✅ RENDER DIFFERENT CONTENT BASED ON ACTIVE TAB */}
                 {activeTab === 'deals' ? (
-                    // Deals Dashboard
                     <DealsDashboard />
                 ) : activeTab === 'my-properties' ? (
-                    // My Properties
                     myProperties.length > 0 ? (
                         <PropertyList
                             properties={myProperties}
@@ -267,7 +398,6 @@ function HomePage() {
                         </div>
                     )
                 ) : (
-                    // Featured Properties
                     <PropertyList
                         properties={showSearchResults ? searchResults : propsList}
                         loading={searchLoading}
@@ -302,16 +432,26 @@ function HomePage() {
                 </div>
             </section>
 
-            {/* ✅ FIX: Modal Rendered OUTSIDE all sections */}
+            {/* ✅ CREATE DEAL MODAL */}
+            {console.log('Modal render check: showBrowseDeals =', showBrowseDeals)}
             {showBrowseDeals && (
-                <BrowsePropertiesForDeal
-                    onClose={() => setShowBrowseDeals(false)}
-                    onDealCreated={() => {
-                        setShowBrowseDeals(false);
-                        fetchProperties();
-                    }}
-                />
+                <>
+                    {console.log('✅ Rendering BrowsePropertiesForDeal modal')}
+                    <BrowsePropertiesForDeal
+                        onClose={() => {
+                            console.log('🔧 Debug: Closing modal');
+                            setShowBrowseDeals(false);
+                        }}
+                        onDealCreated={() => {
+                            console.log('🔧 Debug: Deal created');
+                            setShowBrowseDeals(false);
+                            fetchProperties();
+                            setActiveTab('deals');
+                        }}
+                    />
+                </>
             )}
+            {!showBrowseDeals && console.log('Modal NOT rendering - showBrowseDeals is false')}
         </div>
     );
 }
