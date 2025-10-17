@@ -5,16 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="42dfceb5-b8ee-4b67-a031-eae8b466d127" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/UserController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/CreateDealModal.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/DealsDashBoard.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/config/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/DealController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/DealController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/DealDashBoard.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/PropertyDetails.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/PropertyDetails.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/DealProgressBar.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/DealProgressBar.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/pages/AgentDashboard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/AgentDashboard.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pages/HomePage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/HomePage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/api.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/api.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
