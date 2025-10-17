@@ -1,8 +1,7 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
-import BrowsePropertiesForDeal from '../pages/BrowsePropertiesForDeal.jsx'; // ✅ CHANGED
+import BrowsePropertiesForDeal from '../pages/BrowsePropertiesForDeal.jsx';
 import DealDetailModal from '../DealDetailModal.jsx';
 
 const AgentDashboard = () => {
@@ -16,6 +15,7 @@ const AgentDashboard = () => {
   const [error, setError] = useState(null);
   const [showCreateDeal, setShowCreateDeal] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState(null);
+  const [filterTab, setFilterTab] = useState('active'); // 'active', 'completed', 'properties', 'total'
 
   useEffect(() => {
     if (!isAuthenticated || !user || (user.role !== 'AGENT' && user.role !== 'ADMIN')) {
@@ -37,13 +37,9 @@ const AgentDashboard = () => {
     try {
       console.log('📥 Fetching agent data for user:', user.id);
 
-      const [dealsRes, propsRes, statsRes] = await Promise.all([
-        fetch(`http://localhost:8080/api/deals/agent/${user.id}`, { headers }),
-        fetch(`http://localhost:8080/api/agents/${user.id}/all-properties`, { headers }).catch(() => ({ ok: false })),
-        fetch(`http://localhost:8080/api/agents/${user.id}/stats`, { headers }).catch(() => ({ ok: false }))
-      ]);
+      // Fetch deals
+      const dealsRes = await fetch(`http://localhost:8080/api/deals/agent/${user.id}`, { headers });
 
-      // ✅ HANDLE DEALS RESPONSE
       if (dealsRes.ok) {
         const responseData = await dealsRes.json();
         console.log('✅ Full deals response:', responseData);
@@ -65,7 +61,9 @@ const AgentDashboard = () => {
         setDeals([]);
       }
 
-      // ✅ HANDLE PROPERTIES RESPONSE
+      // Fetch properties
+      const propsRes = await fetch(`http://localhost:8080/api/agents/${user.id}/all-properties`, { headers }).catch(() => ({ ok: false }));
+
       if (propsRes.ok) {
         const data = await propsRes.json();
         console.log('✅ Properties loaded:', data);
@@ -75,7 +73,9 @@ const AgentDashboard = () => {
         setProperties([]);
       }
 
-      // ✅ HANDLE STATS RESPONSE
+      // Fetch stats
+      const statsRes = await fetch(`http://localhost:8080/api/agents/${user.id}/stats`, { headers }).catch(() => ({ ok: false }));
+
       if (statsRes.ok) {
         const data = await statsRes.json();
         console.log('✅ Stats loaded:', data);
@@ -93,10 +93,37 @@ const AgentDashboard = () => {
   };
 
   const handleCreateDealClick = () => {
-    console.log('🔧 Debug: Opening create deal modal from AgentDashboard');
-    console.log('User:', user);
-    console.log('User Role:', user?.role);
+    console.log('➕ Opening create deal modal');
     setShowCreateDeal(true);
+  };
+
+  // Calculate counts
+  const activeDealCount = deals.filter(d => d.stage !== 'COMPLETED').length;
+  const completedDealCount = deals.filter(d => d.stage === 'COMPLETED').length;
+
+  // Filter deals based on active tab
+  const displayedDeals = filterTab === 'active'
+    ? deals.filter(d => d.stage !== 'COMPLETED')
+    : filterTab === 'completed'
+    ? deals.filter(d => d.stage === 'COMPLETED')
+    : filterTab === 'total'
+    ? deals
+    : [];
+
+  // Get section title
+  const getSectionTitle = () => {
+    switch(filterTab) {
+      case 'active':
+        return `📈 Active Deals (${activeDealCount})`;
+      case 'completed':
+        return `✅ Completed Deals (${completedDealCount})`;
+      case 'properties':
+        return `🏠 Properties Managed (${properties.length})`;
+      case 'total':
+        return `📊 Total Deals (${deals.length})`;
+      default:
+        return 'Deals';
+    }
   };
 
   if (!isAuthenticated) {
@@ -118,9 +145,6 @@ const AgentDashboard = () => {
     );
   }
 
-  const activeDealCount = deals.filter(d => d.stage !== 'COMPLETED').length;
-  const completedDealCount = deals.filter(d => d.stage === 'COMPLETED').length;
-
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -132,22 +156,34 @@ const AgentDashboard = () => {
 
       {/* Stats Grid */}
       <div style={styles.statsGrid}>
-        <div style={styles.statCard}>
+        <div
+          style={styles.statCard}
+          onClick={() => setFilterTab('active')}
+        >
           <div style={styles.statIcon}>📈</div>
           <div style={styles.statLabel}>Active Deals</div>
           <div style={styles.statValue}>{activeDealCount}</div>
         </div>
-        <div style={styles.statCard}>
+        <div
+          style={styles.statCard}
+          onClick={() => setFilterTab('completed')}
+        >
           <div style={styles.statIcon}>✅</div>
           <div style={styles.statLabel}>Completed Deals</div>
           <div style={styles.statValue}>{completedDealCount}</div>
         </div>
-        <div style={styles.statCard}>
+        <div
+          style={styles.statCard}
+          onClick={() => setFilterTab('properties')}
+        >
           <div style={styles.statIcon}>🏠</div>
           <div style={styles.statLabel}>Properties Managed</div>
           <div style={styles.statValue}>{properties.length}</div>
         </div>
-        <div style={styles.statCard}>
+        <div
+          style={styles.statCard}
+          onClick={() => setFilterTab('total')}
+        >
           <div style={styles.statIcon}>📊</div>
           <div style={styles.statLabel}>Total Deals</div>
           <div style={styles.statValue}>{deals.length}</div>
@@ -172,75 +208,167 @@ const AgentDashboard = () => {
         </button>
       </div>
 
-      {/* Deals Grid */}
+      {/* Deals Section with Tabs */}
       <div style={styles.section}>
-        <h2 style={styles.sectionTitle}>💼 All Deals ({deals.length})</h2>
-        {deals.length > 0 ? (
-          <div style={styles.dealsGrid}>
-            {deals.map(deal => (
-              <div key={deal.id || deal.dealId} style={styles.dealCard}>
-                {/* Stage Badge */}
-                <div style={{...styles.stageBadge, backgroundColor: getStageColor(deal.stage)}}>
-                  {deal.stage}
-                </div>
+        {/* Tab Navigation */}
+        <div style={styles.tabContainer}>
+          <button
+            onClick={() => setFilterTab('active')}
+            style={{
+              ...styles.tab,
+              ...(filterTab === 'active' ? styles.activeTab : {})
+            }}
+          >
+            📈 Active Deals ({activeDealCount})
+          </button>
+          <button
+            onClick={() => setFilterTab('completed')}
+            style={{
+              ...styles.tab,
+              ...(filterTab === 'completed' ? styles.activeTab : {})
+            }}
+          >
+            ✅ Completed Deals ({completedDealCount})
+          </button>
+          <button
+            onClick={() => setFilterTab('properties')}
+            style={{
+              ...styles.tab,
+              ...(filterTab === 'properties' ? styles.activeTab : {})
+            }}
+          >
+            🏠 Managed Properties ({properties.length})
+          </button>
+          <button
+            onClick={() => setFilterTab('total')}
+            style={{
+              ...styles.tab,
+              ...(filterTab === 'total' ? styles.activeTab : {})
+            }}
+          >
+            📊 Total Deals ({deals.length})
+          </button>
+        </div>
 
-                {/* Deal Info */}
-                <h3 style={styles.dealTitle}>{deal.property?.title || 'Property'}</h3>
+        <h2 style={styles.sectionTitle}>
+          {getSectionTitle()}
+        </h2>
 
-                <div style={styles.dealMeta}>
-                  <p style={styles.metaItem}>
-                    📍 {deal.property?.city || 'Location'}
-                  </p>
-                  <p style={styles.metaItem}>
-                    👤 Buyer: {deal.buyer?.firstName || 'N/A'} {deal.buyer?.lastName || ''}
-                  </p>
-                  {deal.agreedPrice && (
+        {/* Active, Completed, or Total Deals View */}
+        {filterTab !== 'properties' ? (
+          displayedDeals.length > 0 ? (
+            <div style={styles.dealsGrid}>
+              {displayedDeals.map(deal => (
+                <div key={deal.id || deal.dealId} style={styles.dealCard}>
+                  {/* Stage Badge */}
+                  <div style={{...styles.stageBadge, backgroundColor: getStageColor(deal.stage)}}>
+                    {deal.stage}
+                  </div>
+
+                  {/* Deal Info */}
+                  <h3 style={styles.dealTitle}>{deal.property?.title || 'Property'}</h3>
+
+                  <div style={styles.dealMeta}>
                     <p style={styles.metaItem}>
-                      💰 ₹{deal.agreedPrice.toLocaleString('en-IN')}
+                      📍 {deal.property?.city || 'Location'}
                     </p>
-                  )}
-                  <p style={styles.metaItem}>
-                    📅 {new Date(deal.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
+                    <p style={styles.metaItem}>
+                      👤 Buyer: {deal.buyer?.firstName || 'N/A'} {deal.buyer?.lastName || ''}
+                    </p>
+                    {deal.agreedPrice && (
+                      <p style={styles.metaItem}>
+                        💰 ₹{deal.agreedPrice.toLocaleString('en-IN')}
+                      </p>
+                    )}
+                    <p style={styles.metaItem}>
+                      📅 {new Date(deal.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
 
-                {/* Progress Bar */}
-                <div style={styles.progressBar}>
-                  <div
-                    style={{
-                      ...styles.progressFill,
-                      width: `${getProgressPercentage(deal.stage)}%`,
-                      backgroundColor: getStageColor(deal.stage)
-                    }}
-                  />
-                </div>
+                  {/* Progress Bar */}
+                  <div style={styles.progressBar}>
+                    <div
+                      style={{
+                        ...styles.progressFill,
+                        width: `${getProgressPercentage(deal.stage)}%`,
+                        backgroundColor: getStageColor(deal.stage)
+                      }}
+                    />
+                  </div>
 
-                {/* Action Button */}
-                <button
-                  onClick={() => setSelectedDeal(deal)}
-                  style={styles.viewDealBtn}
-                >
-                  📋 View & Manage Deal
-                </button>
-              </div>
-            ))}
-          </div>
+                  {/* Action Button */}
+                  <button
+                    onClick={() => setSelectedDeal(deal)}
+                    style={styles.viewDealBtn}
+                  >
+                    📋 View & Manage Deal
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={styles.emptyState}>
+              <p>
+                {filterTab === 'active'
+                  ? '📭 No active deals yet. Create one to get started!'
+                  : filterTab === 'completed'
+                  ? '📭 No completed deals yet.'
+                  : '📭 No deals found.'}
+              </p>
+            </div>
+          )
         ) : (
-          <div style={styles.emptyState}>
-            <p>No deals yet. Create one to get started!</p>
-          </div>
+          /* Properties View */
+          properties.length > 0 ? (
+            <div style={styles.dealsGrid}>
+              {properties.map(prop => (
+                <div key={prop.id || prop.propertyId} style={styles.propertyCard}>
+                  <img
+                    src={prop.imageUrl || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop'}
+                    alt={prop.title}
+                    style={{...styles.propertyImage, cursor: 'pointer'}}
+                    onClick={() => navigate(`/property/${prop.id || prop.propertyId}`)}
+                  />
+                  <h3 style={{...styles.dealTitle, padding: '12px 16px 0 16px', marginBottom: '12px'}}>{prop.title}</h3>
+                  <div style={{...styles.dealMeta, padding: '0 16px'}}>
+                    <p style={styles.metaItem}>
+                      💰 ₹{(prop.price || 0).toLocaleString('en-IN')}
+                    </p>
+                    <p style={styles.metaItem}>
+                      🛏️ {prop.bedrooms} Bed | 🚿 {prop.bathrooms} Bath
+                    </p>
+                    <p style={styles.metaItem}>
+                      📐 {prop.areaSqft || 'N/A'} sqft
+                    </p>
+                    <p style={styles.metaItem}>
+                      📍 {prop.areaName || prop.city}
+                    </p>
+                  </div>
+                  {prop.isFeatured && (
+                    <div style={{...styles.stageBadge, backgroundColor: '#f59e0b', marginTop: '12px', marginLeft: '16px'}}>
+                      ⭐ Featured
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={styles.emptyState}>
+              <p>📭 No properties managed yet.</p>
+            </div>
+          )
         )}
       </div>
 
-      {/* ✅ CREATE DEAL MODAL - UPDATED */}
+      {/* Create Deal Modal */}
       {showCreateDeal && (
         <BrowsePropertiesForDeal
           onClose={() => {
-            console.log('🔧 Debug: Closing modal');
+            console.log('Closing modal');
             setShowCreateDeal(false);
           }}
           onDealCreated={() => {
-            console.log('🔧 Debug: Deal created');
+            console.log('Deal created');
             setShowCreateDeal(false);
             fetchAgentData();
           }}
@@ -329,7 +457,9 @@ const styles = {
     borderRadius: '12px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
     textAlign: 'center',
-    border: '1px solid #e5e7eb'
+    border: '1px solid #e5e7eb',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
   },
   statIcon: {
     fontSize: '32px',
@@ -375,12 +505,33 @@ const styles = {
     marginBottom: '32px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
   },
+  tabContainer: {
+    display: 'flex',
+    gap: '12px',
+    marginBottom: '24px',
+    paddingBottom: '12px',
+    borderBottom: '2px solid #e5e7eb'
+  },
+  tab: {
+    padding: '12px 20px',
+    background: '#f8fafc',
+    color: '#64748b',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '600',
+    transition: 'all 0.2s'
+  },
+  activeTab: {
+    backgroundColor: '#3b82f6',
+    color: 'white'
+  },
   sectionTitle: {
     fontSize: '20px',
     fontWeight: '700',
     color: '#1e293b',
-    margin: 0,
-    marginBottom: '16px',
+    margin: '0 0 16px 0',
     paddingBottom: '12px',
     borderBottom: '2px solid #e5e7eb'
   },
@@ -455,6 +606,19 @@ const styles = {
     backgroundColor: '#f9fafb',
     borderRadius: '8px',
     border: '1px dashed #e2e8f0'
+  },
+  propertyCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: '12px',
+    border: '1px solid #e2e8f0',
+    overflow: 'hidden',
+    transition: 'all 0.2s',
+    padding: '0 0 16px 0'
+  },
+  propertyImage: {
+    width: '100%',
+    height: '180px',
+    objectFit: 'cover'
   }
 };
 
