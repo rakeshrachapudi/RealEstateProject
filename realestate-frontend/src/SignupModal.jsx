@@ -117,7 +117,7 @@ const SignupModal = ({ onClose, onSignupSuccess }) => {
                 </button>
 
                 <h2 style={{ fontSize: '24px', marginBottom: '20px', color: '#3498db' }}>
-                    ✨ Step 1: Enter Details
+                    ✨ CREATE ACCOUNT
                 </h2>
 
                 {error && (

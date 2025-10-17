@@ -9,11 +9,11 @@ function LoginModal({ onClose }) {
     });
     const [isSigningUp, setIsSigningUp] = useState(false);
     const [registerData, setRegisterData] = useState({
+        firstName: '',
+        lastName: '',
         username: '',
         email: '',
         password: '',
-        firstName: '',
-        lastName: '',
         mobileNumber: '',
     });
     const [error, setError] = useState(null);
@@ -219,27 +219,7 @@ function LoginModal({ onClose }) {
                 ) : (
                     // REGISTRATION FORM
                     <form onSubmit={handleRegister}>
-                        <h2 style={{ marginTop: 0, marginBottom: '1.5rem' }}>✨ Register</h2>
-
-                        <input
-                            type="text"
-                            name="username"
-                            placeholder="Username"
-                            value={registerData.username}
-                            onChange={handleRegisterChange}
-                            style={inputStyle}
-                            required
-                        />
-
-                        <input
-                            type="email"
-                            name="email"
-                            placeholder="Email"
-                            value={registerData.email}
-                            onChange={handleRegisterChange}
-                            style={inputStyle}
-                            required
-                        />
+                        <h2 style={{ marginTop: 0, marginBottom: '1.5rem' }}>✨ CREATE ACCOUNT</h2>
 
                         <input
                             type="text"
@@ -260,7 +240,25 @@ function LoginModal({ onClose }) {
                             style={inputStyle}
                             required
                         />
+                         <input
+                            type="text"
+                            name="username"
+                            placeholder="Username"
+                            value={registerData.username}
+                            onChange={handleRegisterChange}
+                            style={inputStyle}
+                            required
+                        />
 
+                        <input
+                          type="email"
+                          name="email"
+                          placeholder="Email"
+                          value={registerData.email}
+                          onChange={handleRegisterChange}
+                          style={inputStyle}
+                          required
+                        />
                         <input
                             type="tel"
                             name="mobileNumber"
