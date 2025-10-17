@@ -18,36 +18,56 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
     }, []);
 
     useEffect(() => {
+        // Only fetch if authenticated and user is agent/admin
         if (isAuthenticated && user && (user.role === 'AGENT' || user.role === 'ADMIN')) {
-            fetchUnreadDeals();
+            // Since backend is ignored, we won't actually fetch
+            console.log("Simulating check for unread deals for Agent/Admin:", user.id);
+            // fetchUnreadDeals(); // Keep commented out as backend is ignored
+        } else {
+             setUnreadDeals(0); // Reset if not applicable
         }
     }, [isAuthenticated, user]);
 
+    // --- Keep fetchUnreadDeals, but commented out or dummy ---
     const fetchUnreadDeals = async () => {
-        try {
-            const response = await fetch('http://localhost:8080/api/deals/agent/' + user.id, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                const deals = data.data || [];
-                const unread = deals.filter(d => d.stage !== 'COMPLETED').length;
-                setUnreadDeals(unread);
-            }
-        } catch (error) {
-            console.log('Could not fetch deals count');
-        }
+        // try {
+        //     // const response = await fetch('http://localhost:8080/api/deals/agent/' + user.id, {
+        //     //     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } // Use 'token'
+        //     // });
+        //     // if (response.ok) {
+        //     //     const data = await response.json();
+        //     //     const deals = data.data || [];
+        //     //     const unread = deals.filter(d => d.stage !== 'COMPLETED').length;
+        //     //     setUnreadDeals(unread);
+        //     // }
+        //     console.log("Actual fetchUnreadDeals call would go here");
+        // } catch (error) {
+        //     console.log('Could not fetch deals count (simulated)');
+        // }
+        console.log("Simulating fetchUnreadDeals (ignoring backend)");
+        // setUnreadDeals(3); // Example: Set dummy value for UI testing
     };
+    // --- End ---
 
     const handleMyPropertiesClick = () => {
         navigate('/my-properties');
-        setActiveDropdown(null);
+        setActiveDropdown(null); // Close main dropdown
+        setProfileDropdownOpen(false); // Close profile dropdown
     };
 
     const handleAgentDashboardClick = () => {
         navigate('/agent-dashboard');
-        setActiveDropdown(null);
+        setActiveDropdown(null); // Close main dropdown
+        setProfileDropdownOpen(false); // Close profile dropdown
     };
+
+    // --- ADDED: Handler for My Agreements ---
+    const handleMyAgreementsClick = () => {
+        navigate('/my-agreements'); // Navigate to the agreements page
+        setProfileDropdownOpen(false); // Close the profile dropdown
+    };
+    // --- END ADDITION ---
+
 
     const handleMouseEnter = (dropdown) => {
         if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current);
@@ -81,9 +101,15 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
     };
 
     const handleSellItemClick = (item) => {
-        if (item.type === 'navigate') navigate(item.path);
-        else if (item.type === 'action' && item.key === 'postProperty') onPostPropertyClick();
-        setActiveDropdown(null);
+        if (item.type === 'navigate') {
+             navigate(item.path);
+             setActiveDropdown(null); // Close main dropdown
+             setProfileDropdownOpen(false); // Close profile dropdown too
+        } else if (item.type === 'action' && item.key === 'postProperty') {
+            onPostPropertyClick();
+            setActiveDropdown(null);
+             setProfileDropdownOpen(false);
+        }
     };
 
     const dropdownData = {
@@ -242,7 +268,8 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
                                         cursor: 'pointer',
                                         fontWeight: 600,
                                         fontSize: '14px',
-                                        position: 'relative'
+                                        position: 'relative',
+                                        marginLeft: '10px' // Added some margin
                                     }}
                                 >
                                     📊 Agent Dashboard
@@ -268,8 +295,8 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
                                 </button>
                             )}
 
-                            <button onClick={onPostPropertyClick} style={styles.postBtn}><span style={styles.btnIcon}>📝</span> Post Property</button>
-                            <div style={{ position: 'relative', paddingBottom: '10px' }} onMouseEnter={() => setProfileDropdownOpen(true)} onMouseLeave={() => setProfileDropdownOpen(false)}>
+                            <button onClick={onPostPropertyClick} style={{...styles.postBtn, marginLeft: '10px'}}><span style={styles.btnIcon}>📝</span> Post Property</button> {/* Added margin */}
+                            <div style={{ position: 'relative' /* Removed paddingBottom */ }} onMouseEnter={() => setProfileDropdownOpen(true)} onMouseLeave={() => setProfileDropdownOpen(false)}>
                                 <div style={styles.userSection} className="userSection">
                                     <span style={styles.userIcon}>👤</span>
                                     <span style={styles.userName}>{user?.firstName || 'User'} ▾</span>
@@ -282,13 +309,20 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
                                 {isProfileDropdownOpen && (
                                     <div style={styles.profileDropdown}>
                                         <div style={styles.profileDropdownItem} onClick={() => { onProfileClick(); setProfileDropdownOpen(false); }}>View Profile</div>
-                                        <div style={styles.profileDropdownItem} onClick={() => { navigate('/my-properties'); setProfileDropdownOpen(false); }}>My Properties</div>
+                                        {/* --- ADDED: My Agreements Link --- */}
+                                        <div style={styles.profileDropdownItem} onClick={handleMyAgreementsClick}>
+                                            My Agreements
+                                        </div>
+                                        {/* --- END ADDITION --- */}
+                                        <div style={styles.profileDropdownItem} onClick={handleMyPropertiesClick}>My Properties</div> {/* Corrected onClick */}
                                         {user && (user.role === 'AGENT' || user.role === 'ADMIN') && (
-                                            <div style={styles.profileDropdownItem} onClick={() => { navigate('/agent-dashboard'); setProfileDropdownOpen(false); }}>Agent Dashboard</div>
+                                            <div style={styles.profileDropdownItem} onClick={handleAgentDashboardClick}>Agent Dashboard</div> // Corrected onClick
                                         )}
                                         {user && (user.role === 'USER') && (
                                             <div style={styles.profileDropdownItem} onClick={() => { navigate('/my-deals'); setProfileDropdownOpen(false); }}>My Deals</div>
                                         )}
+                                        {/* Separator */}
+                                        <hr style={{ border: 0, borderTop: '1px solid #eee', margin: '8px 0' }} />
                                         <div style={{...styles.profileDropdownItem, color: '#dc3545'}} onClick={logout}>Logout</div>
                                     </div>
                                 )}
