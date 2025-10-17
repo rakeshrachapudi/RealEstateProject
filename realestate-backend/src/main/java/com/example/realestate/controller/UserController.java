@@ -17,12 +17,26 @@ public class UserController {
     private UserRepository userRepository;
 
     @GetMapping("/search")
-    public ResponseEntity<?> searchByEmail(@RequestParam String email) {
-        Optional<User> user = userRepository.findByEmail(email);
-        if (user.isPresent()) {
-            return ResponseEntity.ok(ApiResponse.success(user.get()));
+    public ResponseEntity<?> searchUser(
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String phone) {
+
+        if (email != null && !email.isEmpty()) {
+            Optional<User> user = userRepository.findByEmail(email);
+            if (user.isPresent()) {
+                return ResponseEntity.ok(ApiResponse.success(user.get()));
+            }
         }
+
+        if (phone != null && !phone.isEmpty()) {
+            Optional<User> user = userRepository.findByMobileNumber(phone);
+            if (user.isPresent()) {
+                return ResponseEntity.ok(ApiResponse.success(user.get()));
+            }
+        }
+
         return ResponseEntity.badRequest()
                 .body(ApiResponse.error("User not found"));
     }
+
 }

@@ -1,9 +1,9 @@
 package com.example.realestate.controller;
 
 import com.example.realestate.model.DealStatus;
-import com.example.realestate.model.User;
 import com.example.realestate.service.DealService;
 import com.example.realestate.dto.ApiResponse;
+import com.example.realestate.dto.DealDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/deals")
@@ -38,16 +39,15 @@ public class DealController {
     }
 
     static class UpdateDealStageRequest {
-        public DealStatus.DealStage stage;
+        public String stage;
         public String notes;
 
-        public DealStatus.DealStage getStage() { return stage; }
+        public String getStage() { return stage; }
         public String getNotes() { return notes; }
     }
 
     static class AssignAgentRequest {
         public Long agentId;
-
         public Long getAgentId() { return agentId; }
     }
 
@@ -69,9 +69,10 @@ public class DealController {
                     request.agentId
             );
 
+            DealDTO dealDTO = convertToDTO(deal);
             return ResponseEntity
                     .status(HttpStatus.CREATED)
-                    .body(ApiResponse.success(deal));
+                    .body(ApiResponse.success(dealDTO));
 
         } catch (Exception e) {
             logger.error("❌ Error creating deal: ", e);
@@ -87,7 +88,8 @@ public class DealController {
 
         try {
             DealStatus deal = dealService.getDealById(dealId);
-            return ResponseEntity.ok(ApiResponse.success(deal));
+            DealDTO dealDTO = convertToDTO(deal);
+            return ResponseEntity.ok(ApiResponse.success(dealDTO));
 
         } catch (Exception e) {
             logger.error("❌ Error fetching deal: ", e);
@@ -103,19 +105,28 @@ public class DealController {
             Authentication authentication) {
 
         logger.info("📊 Updating deal stage - DealId: {}, NewStage: {}, User: {}",
-                dealId, request.stage, authentication.getName());
+                dealId, request.stage, authentication != null ? authentication.getName() : "Unknown");
 
         try {
-            String username = authentication.getName();
+            String username = authentication != null ? authentication.getName() : "system";
+
+            // Convert string stage to enum
+            DealStatus.DealStage stage = DealStatus.DealStage.valueOf(request.stage.toUpperCase());
 
             DealStatus deal = dealService.updateDealStage(
                     dealId,
-                    request.stage,
+                    stage,
                     request.notes,
                     username
             );
 
-            return ResponseEntity.ok(ApiResponse.success(deal));
+            DealDTO dealDTO = convertToDTO(deal);
+            return ResponseEntity.ok(ApiResponse.success(dealDTO));
+
+        } catch (IllegalArgumentException e) {
+            logger.error("❌ Invalid stage: {}", request.stage);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid stage: " + request.stage));
 
         } catch (Exception e) {
             logger.error("❌ Error updating deal stage: ", e);
@@ -131,11 +142,11 @@ public class DealController {
             @RequestBody AssignAgentRequest request,
             Authentication authentication) {
 
-        logger.info("👤 Assigning agent to deal - DealId: {}, AgentId: {}, AssignedBy: {}",
-                dealId, request.agentId, authentication.getName());
+        logger.info("👤 Assigning agent to deal - DealId: {}, AgentId: {}",
+                dealId, request.agentId);
 
         try {
-            String username = authentication.getName();
+            String username = authentication != null ? authentication.getName() : "system";
 
             DealStatus deal = dealService.assignAgentToDeal(
                     dealId,
@@ -143,26 +154,11 @@ public class DealController {
                     username
             );
 
-            return ResponseEntity.ok(ApiResponse.success(deal));
+            DealDTO dealDTO = convertToDTO(deal);
+            return ResponseEntity.ok(ApiResponse.success(dealDTO));
 
         } catch (Exception e) {
             logger.error("❌ Error assigning agent: ", e);
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(e.getMessage()));
-        }
-    }
-
-    // ==================== GET DEALS BY PROPERTY ====================
-    @GetMapping("/property/{propertyId}")
-    public ResponseEntity<?> getPropertyDeals(@PathVariable Long propertyId) {
-        logger.info("🏠 Fetching deals for property: {}", propertyId);
-
-        try {
-            List<DealStatus> deals = dealService.getDealsForProperty(propertyId);
-            return ResponseEntity.ok(ApiResponse.success(deals));
-
-        } catch (Exception e) {
-            logger.error("❌ Error fetching property deals: ", e);
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(e.getMessage()));
         }
@@ -175,7 +171,11 @@ public class DealController {
 
         try {
             List<DealStatus> deals = dealService.getDealsForAgent(agentId);
-            return ResponseEntity.ok(ApiResponse.success(deals));
+            List<DealDTO> dealDTOs = deals.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(ApiResponse.success(dealDTOs));
 
         } catch (Exception e) {
             logger.error("❌ Error fetching agent deals: ", e);
@@ -191,7 +191,11 @@ public class DealController {
 
         try {
             List<DealStatus> deals = dealService.getActiveDealsForAgent(agentId);
-            return ResponseEntity.ok(ApiResponse.success(deals));
+            List<DealDTO> dealDTOs = deals.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(ApiResponse.success(dealDTOs));
 
         } catch (Exception e) {
             logger.error("❌ Error fetching active agent deals: ", e);
@@ -207,7 +211,11 @@ public class DealController {
 
         try {
             List<DealStatus> deals = dealService.getBuyerDeals(buyerId);
-            return ResponseEntity.ok(ApiResponse.success(deals));
+            List<DealDTO> dealDTOs = deals.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(ApiResponse.success(dealDTOs));
 
         } catch (Exception e) {
             logger.error("❌ Error fetching buyer deals: ", e);
@@ -223,7 +231,11 @@ public class DealController {
 
         try {
             List<DealStatus> deals = dealService.getActiveDealForBuyer(buyerId);
-            return ResponseEntity.ok(ApiResponse.success(deals));
+            List<DealDTO> dealDTOs = deals.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(ApiResponse.success(dealDTOs));
 
         } catch (Exception e) {
             logger.error("❌ Error fetching active buyer deals: ", e);
@@ -240,7 +252,11 @@ public class DealController {
         try {
             DealStatus.DealStage dealStage = DealStatus.DealStage.valueOf(stage.toUpperCase());
             List<DealStatus> deals = dealService.getDealsByStage(dealStage);
-            return ResponseEntity.ok(ApiResponse.success(deals));
+            List<DealDTO> dealDTOs = deals.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(ApiResponse.success(dealDTOs));
 
         } catch (IllegalArgumentException e) {
             logger.error("❌ Invalid stage: {}", stage);
@@ -274,27 +290,56 @@ public class DealController {
         }
     }
 
-    // ==================== GET AGENT DEALS AT STAGE ====================
-    @GetMapping("/agent/{agentId}/stage/{stage}")
-    public ResponseEntity<?> getAgentDealsAtStage(
-            @PathVariable Long agentId,
-            @PathVariable String stage) {
+    // ==================== HELPER METHOD ====================
+    private DealDTO convertToDTO(DealStatus deal) {
+        DealDTO dto = new DealDTO();
 
-        logger.info("📊 Fetching deals for agent {} at stage {}", agentId, stage);
+        dto.setId(deal.getId());
+        dto.setDealId(deal.getId());
+        dto.setStage(deal.getStage().name());
+        dto.setCurrentStage(deal.getStage().name());
+        dto.setNotes(deal.getNotes());
+        dto.setCreatedAt(deal.getCreatedAt());
+        dto.setUpdatedAt(deal.getUpdatedAt());
+        dto.setLastUpdatedBy(deal.getLastUpdatedBy());
 
-        try {
-            DealStatus.DealStage dealStage = DealStatus.DealStage.valueOf(stage.toUpperCase());
-            List<DealStatus> deals = dealService.getAgentDealsAtStage(agentId, dealStage);
-            return ResponseEntity.ok(ApiResponse.success(deals));
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Invalid stage: " + stage));
-
-        } catch (Exception e) {
-            logger.error("❌ Error fetching agent deals at stage: ", e);
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(e.getMessage()));
+        // Property info
+        if (deal.getProperty() != null) {
+            dto.setPropertyId(deal.getProperty().getId());
+            dto.setProperty(new DealDTO.PropertyInfo(
+                    deal.getProperty().getId(),
+                    deal.getProperty().getTitle(),
+                    deal.getProperty().getCity(),
+                    deal.getProperty().getPrice() != null ? deal.getProperty().getPrice().doubleValue() : 0,
+                    deal.getProperty().getBedrooms(),
+                    deal.getProperty().getImageUrl()
+            ));
         }
+
+        // Buyer info
+        if (deal.getBuyer() != null) {
+            dto.setBuyerId(deal.getBuyer().getId());
+            dto.setBuyer(new DealDTO.UserInfo(
+                    deal.getBuyer().getId(),
+                    deal.getBuyer().getFirstName(),
+                    deal.getBuyer().getLastName(),
+                    deal.getBuyer().getEmail(),
+                    deal.getBuyer().getMobileNumber()
+            ));
+        }
+
+        // Agent info
+        if (deal.getAgent() != null) {
+            dto.setAgentId(deal.getAgent().getId());
+            dto.setAgent(new DealDTO.UserInfo(
+                    deal.getAgent().getId(),
+                    deal.getAgent().getFirstName(),
+                    deal.getAgent().getLastName(),
+                    deal.getAgent().getEmail(),
+                    deal.getAgent().getMobileNumber()
+            ));
+        }
+
+        return dto;
     }
 }

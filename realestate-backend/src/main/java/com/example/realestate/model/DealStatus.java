@@ -1,8 +1,8 @@
 package com.example.realestate.model;
 
 import jakarta.persistence.*;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -12,6 +12,12 @@ public class DealStatus {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    // ⭐ NEW: dealId for frontend compatibility
+    @JsonProperty("dealId")
+    public Long getDealId() {
+        return this.id;
+    }
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "property_id", nullable = false)
@@ -23,14 +29,67 @@ public class DealStatus {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "agent_id")
-    private User agent; // Agent assigned to this deal
+    private User agent;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "stage", nullable = false)
     private DealStage stage = DealStage.INQUIRY;
 
+    // ⭐ NEW: currentStage alias for frontend
+    @JsonProperty("currentStage")
+    public DealStage getCurrentStage() {
+        return this.stage;
+    }
+
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
+
+    // ⭐ NEW: Agreed Price
+    @Column(name = "agreed_price", precision = 15, scale = 2)
+    private BigDecimal agreedPrice;
+
+    // ⭐ NEW: Document tracking
+    @Column(name = "buyer_doc_url", columnDefinition = "TEXT")
+    private String buyerDocUrl;
+
+    @Column(name = "buyer_doc_uploaded")
+    private Boolean buyerDocUploaded = false;
+
+    // ⭐ NEW: Confirmation tracking
+    @Column(name = "seller_confirmed")
+    private Boolean sellerConfirmed = false;
+
+    @Column(name = "admin_verified")
+    private Boolean adminVerified = false;
+
+    // ⭐ NEW: Payment tracking
+    @Column(name = "payment_initiated")
+    private Boolean paymentInitiated = false;
+
+    @Column(name = "payment_completed")
+    private Boolean paymentCompleted = false;
+
+    // ⭐ NEW: Stage-specific timestamps
+    @Column(name = "inquiry_date")
+    private LocalDateTime inquiryDate;
+
+    @Column(name = "shortlist_date")
+    private LocalDateTime shortlistDate;
+
+    @Column(name = "negotiation_date")
+    private LocalDateTime negotiationDate;
+
+    @Column(name = "agreement_date")
+    private LocalDateTime agreementDate;
+
+    @Column(name = "registration_date")
+    private LocalDateTime registrationDate;
+
+    @Column(name = "payment_date")
+    private LocalDateTime paymentDate;
+
+    @Column(name = "completed_date")
+    private LocalDateTime completedDate;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -39,7 +98,7 @@ public class DealStatus {
     private LocalDateTime updatedAt;
 
     @Column(name = "last_updated_by")
-    private String lastUpdatedBy; // Username of who updated
+    private String lastUpdatedBy;
 
     // ==================== ENUM: Deal Stages ====================
     public enum DealStage {
@@ -59,13 +118,8 @@ public class DealStatus {
             this.label = label;
         }
 
-        public int getOrder() {
-            return order;
-        }
-
-        public String getLabel() {
-            return label;
-        }
+        public int getOrder() { return order; }
+        public String getLabel() { return label; }
     }
 
     // ==================== JPA CALLBACKS ====================
@@ -73,6 +127,7 @@ public class DealStatus {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        inquiryDate = LocalDateTime.now(); // Set inquiry date on creation
     }
 
     @PreUpdate
@@ -97,97 +152,84 @@ public class DealStatus {
     }
 
     // ==================== GETTERS & SETTERS ====================
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public Property getProperty() { return property; }
+    public void setProperty(Property property) { this.property = property; }
 
-    public Property getProperty() {
-        return property;
-    }
+    public User getBuyer() { return buyer; }
+    public void setBuyer(User buyer) { this.buyer = buyer; }
 
-    public void setProperty(Property property) {
-        this.property = property;
-    }
+    public User getAgent() { return agent; }
+    public void setAgent(User agent) { this.agent = agent; }
 
-    public User getBuyer() {
-        return buyer;
-    }
+    public DealStage getStage() { return stage; }
+    public void setStage(DealStage stage) { this.stage = stage; }
 
-    public void setBuyer(User buyer) {
-        this.buyer = buyer;
-    }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 
-    public User getAgent() {
-        return agent;
-    }
+    public BigDecimal getAgreedPrice() { return agreedPrice; }
+    public void setAgreedPrice(BigDecimal agreedPrice) { this.agreedPrice = agreedPrice; }
 
-    public void setAgent(User agent) {
-        this.agent = agent;
-    }
+    public String getBuyerDocUrl() { return buyerDocUrl; }
+    public void setBuyerDocUrl(String buyerDocUrl) { this.buyerDocUrl = buyerDocUrl; }
 
-    public DealStage getStage() {
-        return stage;
-    }
+    public Boolean getBuyerDocUploaded() { return buyerDocUploaded; }
+    public void setBuyerDocUploaded(Boolean buyerDocUploaded) { this.buyerDocUploaded = buyerDocUploaded; }
 
-    public void setStage(DealStage stage) {
-        this.stage = stage;
-    }
+    public Boolean getSellerConfirmed() { return sellerConfirmed; }
+    public void setSellerConfirmed(Boolean sellerConfirmed) { this.sellerConfirmed = sellerConfirmed; }
 
-    public String getNotes() {
-        return notes;
-    }
+    public Boolean getAdminVerified() { return adminVerified; }
+    public void setAdminVerified(Boolean adminVerified) { this.adminVerified = adminVerified; }
 
-    public void setNotes(String notes) {
-        this.notes = notes;
-    }
+    public Boolean getPaymentInitiated() { return paymentInitiated; }
+    public void setPaymentInitiated(Boolean paymentInitiated) { this.paymentInitiated = paymentInitiated; }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+    public Boolean getPaymentCompleted() { return paymentCompleted; }
+    public void setPaymentCompleted(Boolean paymentCompleted) { this.paymentCompleted = paymentCompleted; }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
+    public LocalDateTime getInquiryDate() { return inquiryDate; }
+    public void setInquiryDate(LocalDateTime inquiryDate) { this.inquiryDate = inquiryDate; }
 
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
+    public LocalDateTime getShortlistDate() { return shortlistDate; }
+    public void setShortlistDate(LocalDateTime shortlistDate) { this.shortlistDate = shortlistDate; }
 
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    public LocalDateTime getNegotiationDate() { return negotiationDate; }
+    public void setNegotiationDate(LocalDateTime negotiationDate) { this.negotiationDate = negotiationDate; }
 
-    public String getLastUpdatedBy() {
-        return lastUpdatedBy;
-    }
+    public LocalDateTime getAgreementDate() { return agreementDate; }
+    public void setAgreementDate(LocalDateTime agreementDate) { this.agreementDate = agreementDate; }
 
-    public void setLastUpdatedBy(String lastUpdatedBy) {
-        this.lastUpdatedBy = lastUpdatedBy;
-    }
+    public LocalDateTime getRegistrationDate() { return registrationDate; }
+    public void setRegistrationDate(LocalDateTime registrationDate) { this.registrationDate = registrationDate; }
 
-    // ==================== HELPER METHODS ====================
-    public String getStageLable() {
-        return this.stage.getLabel();
-    }
+    public LocalDateTime getPaymentDate() { return paymentDate; }
+    public void setPaymentDate(LocalDateTime paymentDate) { this.paymentDate = paymentDate; }
 
-    public int getStageOrder() {
-        return this.stage.getOrder();
-    }
+    public LocalDateTime getCompletedDate() { return completedDate; }
+    public void setCompletedDate(LocalDateTime completedDate) { this.completedDate = completedDate; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getLastUpdatedBy() { return lastUpdatedBy; }
+    public void setLastUpdatedBy(String lastUpdatedBy) { this.lastUpdatedBy = lastUpdatedBy; }
 
     @Override
     public String toString() {
         return "DealStatus{" +
                 "id=" + id +
-                ", property=" + property.getId() +
-                ", buyer=" + buyer.getUsername() +
-                ", agent=" + (agent != null ? agent.getUsername() : "null") +
                 ", stage=" + stage +
+                ", buyerDocUploaded=" + buyerDocUploaded +
+                ", sellerConfirmed=" + sellerConfirmed +
+                ", paymentCompleted=" + paymentCompleted +
                 ", createdAt=" + createdAt +
-                ", updatedAt=" + updatedAt +
                 '}';
     }
 }
