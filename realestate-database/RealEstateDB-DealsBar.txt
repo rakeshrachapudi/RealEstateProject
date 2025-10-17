@@ -25,7 +25,7 @@ USE realestate_db;
 
 -- Add agreed_price column
 ALTER TABLE deal_status 
-ADD COLUMN greed_price DECIMAL(15,2) NULL COMMENT 'Final agreed price for the deal';
+ADD COLUMN agreed_price DECIMAL(15,2) NULL COMMENT 'Final agreed price for the deal';
 
 -- Add buyer document tracking columns
 ALTER TABLE deal_status 
