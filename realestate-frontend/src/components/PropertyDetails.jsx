@@ -1,8 +1,9 @@
+// rakeshrachapudi/realestateproject/RealEstateProject-43fb79bfe93ea0f3ae6d185115e6fa16af369e3c/realestate-frontend/src/components/PropertyDetails.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { getPropertyDetails } from '../services/api';
-import CreateDealModal from './CreateDealModal';
+import CreateDealModal from '../pages/CreateDealModal'; // ✅ FIX: Corrected the import path
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -252,12 +253,13 @@ const PropertyDetails = () => {
         )}
       </div>
 
-      {/* ✅ CREATE DEAL MODAL */}
+      {/* ✅ FIX: Pass the correct props */}
       {showCreateDeal && (
         <CreateDealModal
-          property={property}
+          propertyId={property.id || property.propertyId}
+          propertyTitle={property.title}
           onClose={() => setShowCreateDeal(false)}
-          onDealCreated={() => {
+          onSuccess={() => {
             setShowCreateDeal(false);
             alert('✅ Deal created successfully!');
           }}
@@ -267,6 +269,7 @@ const PropertyDetails = () => {
   );
 };
 
+// Styles (remain unchanged)
 const styles = {
   container: {
     maxWidth: 1200,
