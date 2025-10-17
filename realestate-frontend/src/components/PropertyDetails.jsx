@@ -44,40 +44,108 @@ const PropertyDetails = () => {
   };
 
   const checkForExistingDeal = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('❌ No user ID for checking deals');
+      return;
+    }
 
     setCheckingDeal(true);
     try {
       const propertyId = property?.id || property?.propertyId;
-      const response = await fetch(
-        `http://localhost:8080/api/deals/property/${propertyId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+      console.log('🔍 Checking for deals with propertyId:', propertyId);
+      console.log('👤 User ID:', user.id);
+
+      // First, try to fetch deals by property ID
+      try {
+        const response = await fetch(
+          `http://localhost:8080/api/deals/property/${propertyId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            }
+          }
+        );
+
+        console.log('📊 Property deals endpoint response status:', response.status);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('📥 Property deals response:', data);
+
+          let deals = [];
+          if (Array.isArray(data)) {
+            deals = data;
+          } else if (data.success && Array.isArray(data.data)) {
+            deals = data.data;
+          } else if (data.data && Array.isArray(data.data)) {
+            deals = data.data;
+          }
+
+          if (deals.length > 0) {
+            console.log('✅ Deal found via property endpoint:', deals[0]);
+            setExistingDeal(deals[0]);
+            setCheckingDeal(false);
+            return;
           }
         }
-      );
+      } catch (err) {
+        console.log('⚠️ Property deals endpoint error:', err.message);
+      }
 
-      if (response.ok) {
-        const data = await response.json();
-        let deal = null;
+      // Fallback: Fetch agent's all deals and filter by property
+      console.log('🔄 Trying fallback - fetching agent deals...');
+      try {
+        const response = await fetch(
+          `http://localhost:8080/api/deals/agent/${user.id}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            }
+          }
+        );
 
-        if (Array.isArray(data)) {
-          deal = data[0];
-        } else if (data.success && Array.isArray(data.data)) {
-          deal = data.data[0];
-        } else if (data.data && Array.isArray(data.data)) {
-          deal = data.data[0];
-        }
+        console.log('📊 Agent deals endpoint response status:', response.status);
 
-        if (deal) {
-          setExistingDeal(deal);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('📥 Agent deals response:', data);
+
+          let deals = [];
+          if (Array.isArray(data)) {
+            deals = data;
+          } else if (data.success && Array.isArray(data.data)) {
+            deals = data.data;
+          } else if (data.data && Array.isArray(data.data)) {
+            deals = data.data;
+          }
+
+          console.log(`📋 Total agent deals found: ${deals.length}`);
+
+          // Find deal for this specific property
+          const propertyDeal = deals.find(d => {
+            const dealPropId = d.property?.id || d.propertyId;
+            const matches = dealPropId === propertyId || dealPropId == propertyId;
+            console.log(`Comparing deal property ${dealPropId} with current property ${propertyId}: ${matches}`);
+            return matches;
+          });
+
+          if (propertyDeal) {
+            console.log('✅ Deal found via agent deals endpoint:', propertyDeal);
+            setExistingDeal(propertyDeal);
+          } else {
+            console.log('❌ No deal found for this property in agent deals');
+            setExistingDeal(null);
+          }
         } else {
+          console.log('❌ Agent deals endpoint failed with status:', response.status);
           setExistingDeal(null);
         }
+      } catch (err) {
+        console.error('❌ Error fetching agent deals:', err);
+        setExistingDeal(null);
       }
     } catch (err) {
-      console.error('Error checking for existing deal:', err);
+      console.error('❌ Error in checkForExistingDeal:', err);
       setExistingDeal(null);
     } finally {
       setCheckingDeal(false);
@@ -96,6 +164,8 @@ const PropertyDetails = () => {
     setCreatingDeal(true);
 
     try {
+      console.log('🔍 Searching for buyer with phone:', buyerPhone);
+
       // Search for buyer by phone
       const searchResponse = await fetch(
         `http://localhost:8080/api/users/search?phone=${buyerPhone}`,
@@ -115,11 +185,15 @@ const PropertyDetails = () => {
       const searchData = await searchResponse.json();
       const buyer = searchData.success ? searchData.data : searchData;
 
+      console.log('👤 Buyer search result:', buyer);
+
       if (!buyer || !buyer.id) {
         setCreateError('Buyer not found. Please check the phone number.');
         setCreatingDeal(false);
         return;
       }
+
+      console.log('✅ Buyer found:', buyer.id);
 
       // Create deal with buyerId and agentId from logged-in user
       const createResponse = await fetch('http://localhost:8080/api/deals/create', {
@@ -131,20 +205,29 @@ const PropertyDetails = () => {
         body: JSON.stringify({
           propertyId: property.id || property.propertyId,
           buyerId: buyer.id,
-          agentId: user.id  // Get from logged-in user (localStorage)
+          agentId: user.id
         })
       });
 
       const createData = await createResponse.json();
+      console.log('📤 Deal creation response:', createData);
 
       if (createData.success || createResponse.ok) {
+        console.log('✅ Deal created successfully');
         alert('✅ Deal created successfully!');
         setBuyerPhone('');
-        await checkForExistingDeal();
+        setCreateError(null);
+
+        // Wait a moment then refresh
+        setTimeout(() => {
+          checkForExistingDeal();
+        }, 500);
       } else {
+        console.log('❌ Deal creation failed:', createData);
         setCreateError(createData.message || 'Failed to create deal');
       }
     } catch (err) {
+      console.error('❌ Error creating deal:', err);
       setCreateError('Error: ' + err.message);
     } finally {
       setCreatingDeal(false);
@@ -300,14 +383,22 @@ const PropertyDetails = () => {
                   <div style={styles.loadingDeal}>⏳ Checking for deals...</div>
                 ) : existingDeal ? (
                   <>
-                    <div style={styles.dealStatusBadge}>
-                      ✅ Deal Stage: <strong>{existingDeal.stage}</strong>
+                    <div style={styles.dealExistsBadge}>
+                      <strong>✅ Deal Already Created</strong>
+                    </div>
+                    <div style={styles.dealStageInfo}>
+                      <div style={styles.dealStageBadge}>
+                        Stage: <strong>{existingDeal.stage || existingDeal.currentStage || 'INQUIRY'}</strong>
+                      </div>
+                      <div style={styles.dealCreatedDate}>
+                        Created: {new Date(existingDeal.createdAt).toLocaleDateString()}
+                      </div>
                     </div>
                     <button
                       onClick={() => setShowDealDetails(true)}
                       style={styles.viewDealBtn}
                     >
-                      👁️ View Deal
+                      👁️ View & Manage Deal
                     </button>
                   </>
                 ) : (
@@ -603,7 +694,7 @@ const styles = {
     marginBottom: 12,
     marginTop: 0,
   },
-  dealStatusBadge: {
+  dealExistsBadge: {
     padding: '12px',
     backgroundColor: '#d1fae5',
     color: '#065f46',
@@ -613,6 +704,24 @@ const styles = {
     marginBottom: 12,
     border: '1px solid #6ee7b7',
     textAlign: 'center',
+  },
+  dealStageInfo: {
+    marginBottom: 12,
+    padding: '12px',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    border: '1px solid #e5e7eb',
+  },
+  dealStageBadge: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: '#1e40af',
+    marginBottom: 8,
+  },
+  dealCreatedDate: {
+    fontSize: 12,
+    color: '#64748b',
+    fontStyle: 'italic',
   },
   noDealInfo: {
     padding: '12px',
