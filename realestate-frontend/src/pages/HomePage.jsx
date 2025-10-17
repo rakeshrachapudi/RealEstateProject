@@ -7,9 +7,7 @@ import PropertyList from '../components/PropertyList';
 import DealsDashboard from '../components/DealsDashboard';
 import { getFeaturedProperties } from '../services/api';
 import { styles } from '../styles.js';
- // In HomePage.jsx - update the import and usage
-    import BrowsePropertiesForDeal from '../pages/BrowsePropertiesForDeal';
-
+import BrowsePropertiesForDeal from '../pages/BrowsePropertiesForDeal';
 
 function HomePage() {
     const { isAuthenticated, user } = useAuth();
@@ -21,16 +19,12 @@ function HomePage() {
     const [activeTab, setActiveTab] = useState('featured');
     const navigate = useNavigate();
 
-
-
-    // Add state
+    // ✅ FIX: State for Create Deal Modal
     const [showBrowseDeals, setShowBrowseDeals] = useState(false);
-
-
 
     const popularAreas = [
         { name: 'Gachibowli', emoji: '💼' },
-        { name: 'HITEC City', emoji: '🢢' },
+        { name: 'HITEC City', emoji: '🏢' },
         { name: 'Madhapur', emoji: '🌆' },
         { name: 'Kondapur', emoji: '🏘️' },
         { name: 'Kukatpally', emoji: '🏠' },
@@ -196,7 +190,7 @@ function HomePage() {
                                 📁 My Uploaded Properties ({myProperties.length})
                             </button>
                         )}
-                        {/* ✅ NEW: My Deals Tab */}
+                        {/* ✅ FIX: Correct My Deals Tab */}
                         <button
                             onClick={() => setActiveTab('deals')}
                             style={{
@@ -204,15 +198,6 @@ function HomePage() {
                                 ...(activeTab === 'deals' ? styles.activeTab : {})
                             }}
                         >
-                        {showBrowseDeals && (
-                          <BrowsePropertiesForDeal
-                            onClose={() => setShowBrowseDeals(false)}
-                            onDealCreated={() => {
-                              setShowBrowseDeals(false);
-                              fetchProperties();
-                            }}
-                          />
-                        )}
                             📊 My Deals
                         </button>
                     </div>
@@ -236,9 +221,30 @@ function HomePage() {
                             ✕ Clear Search
                         </button>
                     )}
+                    {/* ✅ FIX: Add Create Deal Button for Agents/Admins */}
+                    {activeTab === 'deals' && user && (user.role === 'AGENT' || user.role === 'ADMIN') && (
+                        <button
+                            onClick={() => setShowBrowseDeals(true)}
+                            style={{
+                                padding: '10px 20px',
+                                backgroundColor: '#10b981',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                fontSize: '14px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}
+                        >
+                            ➕ Create New Deal
+                        </button>
+                    )}
                 </div>
 
-                {/* ✅ RENDER DIFFERENT CONTENT BASED ON ACTIVE TAB */}
+                {/* ✅ FIX: Render Different Content Based on Active Tab */}
                 {activeTab === 'deals' ? (
                     // Deals Dashboard
                     <DealsDashboard />
@@ -295,6 +301,17 @@ function HomePage() {
                     </div>
                 </div>
             </section>
+
+            {/* ✅ FIX: Modal Rendered OUTSIDE all sections */}
+            {showBrowseDeals && (
+                <BrowsePropertiesForDeal
+                    onClose={() => setShowBrowseDeals(false)}
+                    onDealCreated={() => {
+                        setShowBrowseDeals(false);
+                        fetchProperties();
+                    }}
+                />
+            )}
         </div>
     );
 }
