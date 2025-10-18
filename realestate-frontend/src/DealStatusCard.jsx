@@ -1,3 +1,4 @@
+// src/components/DealStatusCard.jsx
 import React, { useState } from 'react';
 
 const DealStatusCard = ({ deal, onViewDetails }) => {

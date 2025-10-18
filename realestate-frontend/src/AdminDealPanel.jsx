@@ -79,7 +79,7 @@ const AdminDealPanel = () => {
 
   const gridStyle = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
     gap: '16px',
     marginTop: '16px'
   };
@@ -103,73 +103,144 @@ const AdminDealPanel = () => {
 
     return (
       <div style={gridStyle}>
-        {filtered.map((deal) => (
-          <div
-            key={deal.id}
-            style={cardStyle}
-            onClick={() => setSelectedDeal(deal)}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-          >
-            <div style={{ marginBottom: '8px' }}>
-              <span style={{
-                display: 'inline-block',
-                padding: '4px 8px',
-                backgroundColor: '#f59e0b',
-                color: 'white',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: '600'
-              }}>
-                {deal.stage}
-              </span>
-            </div>
+        {filtered.map((deal) => {
+          const buyer = deal.buyer;
+          const seller = deal.property?.user;
+          const agent = deal.agent;
 
-            <h4 style={{ margin: '0 0 8px 0', color: '#1e293b', fontWeight: '600' }}>
-              {deal.property?.title}
-            </h4>
-
-            <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#64748b' }}>
-              Buyer: {deal.buyer?.firstName} {deal.buyer?.lastName}
-            </p>
-
-            {deal.agent && (
-              <p style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#64748b' }}>
-                Agent: {deal.agent?.firstName}
-              </p>
-            )}
-
-            <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#64748b' }}>
-              Created: {new Date(deal.createdAt).toLocaleDateString()}
-            </p>
-
-            <button
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '12px'
+          return (
+            <div
+              key={deal.id}
+              style={cardStyle}
+              onClick={() => setSelectedDeal(deal)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
               }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedDeal(deal);
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
-              View Details
-            </button>
-          </div>
-        ))}
+              {/* Stage Badge */}
+              <div style={{ marginBottom: '8px' }}>
+                <span style={{
+                  display: 'inline-block',
+                  padding: '4px 8px',
+                  backgroundColor: '#f59e0b',
+                  color: 'white',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: '600'
+                }}>
+                  {deal.stage}
+                </span>
+              </div>
+
+              {/* Property Title */}
+              <h4 style={{ margin: '0 0 12px 0', color: '#1e293b', fontWeight: '600', fontSize: '14px' }}>
+                🏠 {deal.property?.title}
+              </h4>
+
+              {/* Agreed Price - Highlighted */}
+              {deal.agreedPrice && (
+                <div style={{
+                  padding: '8px',
+                  backgroundColor: '#dcfce7',
+                  borderRadius: '6px',
+                  marginBottom: '10px',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  color: '#065f46'
+                }}>
+                  💰 ₹{deal.agreedPrice.toLocaleString('en-IN')}
+                </div>
+              )}
+
+              {/* Buyer Details */}
+              <div style={{
+                padding: '8px',
+                backgroundColor: 'rgba(255,255,255,0.6)',
+                borderRadius: '6px',
+                marginBottom: '8px',
+                fontSize: '12px'
+              }}>
+                <div style={{ fontWeight: '600', color: '#1e293b', marginBottom: '2px' }}>
+                  👤 Buyer: {buyer?.firstName} {buyer?.lastName}
+                </div>
+                {buyer?.mobileNumber && (
+                  <div style={{ color: '#64748b', fontSize: '11px' }}>
+                    📞 {buyer.mobileNumber}
+                  </div>
+                )}
+              </div>
+
+              {/* Seller Details */}
+              {seller && (
+                <div style={{
+                  padding: '8px',
+                  backgroundColor: 'rgba(255,255,255,0.6)',
+                  borderRadius: '6px',
+                  marginBottom: '8px',
+                  fontSize: '12px'
+                }}>
+                  <div style={{ fontWeight: '600', color: '#1e293b', marginBottom: '2px' }}>
+                    🏢 Seller: {seller.firstName} {seller.lastName}
+                  </div>
+                  {seller.mobileNumber && (
+                    <div style={{ color: '#64748b', fontSize: '11px' }}>
+                      📞 {seller.mobileNumber}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Agent Details */}
+              {agent && (
+                <div style={{
+                  padding: '8px',
+                  backgroundColor: 'rgba(255,255,255,0.6)',
+                  borderRadius: '6px',
+                  marginBottom: '8px',
+                  fontSize: '12px'
+                }}>
+                  <div style={{ fontWeight: '600', color: '#1e293b', marginBottom: '2px' }}>
+                    📊 Agent ID: {agent.id}
+                  </div>
+                  <div style={{ color: '#64748b', fontSize: '11px' }}>
+                    {agent.firstName} {agent.lastName}
+                  </div>
+                </div>
+              )}
+
+              {/* Date */}
+              <p style={{ margin: '8px 0 12px 0', fontSize: '11px', color: '#64748b' }}>
+                📅 {new Date(deal.createdAt).toLocaleDateString()}
+              </p>
+
+              {/* View Button */}
+              <button
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '12px'
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedDeal(deal);
+                }}
+              >
+                View & Manage Deal
+              </button>
+            </div>
+          );
+        })}
       </div>
     );
   };
