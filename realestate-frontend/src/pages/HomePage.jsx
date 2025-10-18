@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
 import PropertySearch from '../components/PropertySearch';
 import PropertyList from '../components/PropertyList';
+import DealsDashboard from '../components/DealsDashboard';
 import { getFeaturedProperties } from '../services/api';
 import { styles } from '../styles.js';
 import BrowsePropertiesForDeal from '../pages/BrowsePropertiesForDeal';
@@ -31,28 +32,6 @@ function HomePage() {
         { name: 'Jubilee Hills', emoji: '🏛️' }
     ];
 
-    // Helper function to safely extract deals from API response
-    const extractDealsFromResponse = (response) => {
-        if (!response) return [];
-
-        // If response has success flag
-        if (response.success) {
-            const data = response.data;
-            if (Array.isArray(data)) {
-                return data;
-            } else if (data && typeof data === 'object') {
-                return [data];
-            }
-        }
-
-        // If response is directly the data
-        if (Array.isArray(response)) {
-            return response;
-        }
-
-        return [];
-    };
-
     const fetchProperties = async () => {
         try {
             const response = await getFeaturedProperties();
@@ -77,11 +56,13 @@ function HomePage() {
 
     const fetchMyProperties = async () => {
         if (!isAuthenticated || !user?.id) {
+            console.log('❌ Not authenticated or no user ID');
             setMyProperties([]);
             return;
         }
 
         try {
+            console.log('📥 Fetching properties uploaded by user ID:', user.id);
             const response = await fetch(`http://localhost:8080/api/properties/user/${user.id}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
@@ -91,9 +72,13 @@ function HomePage() {
             if (response.ok) {
                 const data = await response.json();
                 const propertiesArray = Array.isArray(data) ? data : (data.data || []);
+
                 const verifiedProperties = propertiesArray.filter(prop => prop.user?.id === user.id);
+
+                console.log(`✅ Found ${propertiesArray.length} properties, verified ${verifiedProperties.length}`);
                 setMyProperties(verifiedProperties);
             } else {
+                console.log('❌ Failed to fetch my properties:', response.status);
                 setMyProperties([]);
             }
         } catch (error) {
@@ -102,97 +87,137 @@ function HomePage() {
         }
     };
 
+    // ✅ FETCH MY DEALS - Multi-role deal fetching with NEW endpoint
     const fetchMyDeals = async () => {
         if (!isAuthenticated || !user?.id) {
+            console.log('❌ Not authenticated or missing user info');
             setMyDeals([]);
             return;
         }
 
         try {
-            console.log('Fetching deals for user:', user.id, 'Role:', user.role);
+            console.log('📥 Fetching deals for user ID:', user.id);
 
+            const authToken = localStorage.getItem('authToken');
             const allDeals = [];
-            const seenDealIds = new Set();
+            const dealIds = new Set();
 
-            // Helper to add deals without duplicates
-            const addDeals = (deals) => {
-                if (!Array.isArray(deals)) return;
+            // ✅ 1. Fetch by primary role (AGENT, ADMIN, etc.)
+            if (user.role) {
+                try {
+                    const roleResponse = await fetch(
+                        `http://localhost:8080/api/deals/user/${user.id}/role/${user.role}`,
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`
+                            }
+                        }
+                    );
 
-                deals.forEach(deal => {
-                    const dealId = deal.dealId || deal.id;
-                    if (dealId && !seenDealIds.has(dealId)) {
-                        allDeals.push(deal);
-                        seenDealIds.add(dealId);
+                    console.log(`📊 Primary role (${user.role}) response status:`, roleResponse.status);
+
+                    if (roleResponse.ok) {
+                        const roleData = await roleResponse.json();
+                        console.log(`📊 Primary role (${user.role}) response:`, roleData);
+
+                        let roleDealsList = [];
+                        if (Array.isArray(roleData)) {
+                            roleDealsList = roleData;
+                        } else if (roleData.data && Array.isArray(roleData.data)) {
+                            roleDealsList = roleData.data;
+                        }
+
+                        console.log(`✅ Found ${roleDealsList.length} deals for primary role: ${user.role}`);
+
+                        roleDealsList.forEach(deal => {
+                            if (!dealIds.has(deal.dealId || deal.id)) {
+                                allDeals.push(deal);
+                                dealIds.add(deal.dealId || deal.id);
+                            }
+                        });
                     }
-                });
-            };
+                } catch (err) {
+                    console.error('⚠️ Error fetching deals by primary role:', err);
+                }
+            }
 
-            // 1. Fetch by user's primary role
+            // ✅ 2. If not AGENT/ADMIN, also fetch as BUYER
+            if (user.role !== 'AGENT' && user.role !== 'ADMIN') {
+                try {
+                    const buyerResponse = await fetch(
+                        `http://localhost:8080/api/deals/user/${user.id}/role/BUYER`,
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`
+                            }
+                        }
+                    );
+
+                    console.log(`📊 BUYER role response status:`, buyerResponse.status);
+
+                    if (buyerResponse.ok) {
+                        const buyerData = await buyerResponse.json();
+                        console.log(`📊 BUYER role response:`, buyerData);
+
+                        let buyerDealsList = [];
+                        if (Array.isArray(buyerData)) {
+                            buyerDealsList = buyerData;
+                        } else if (buyerData.data && Array.isArray(buyerData.data)) {
+                            buyerDealsList = buyerData.data;
+                        }
+
+                        console.log(`✅ Found ${buyerDealsList.length} deals as BUYER`);
+
+                        buyerDealsList.forEach(deal => {
+                            if (!dealIds.has(deal.dealId || deal.id)) {
+                                allDeals.push(deal);
+                                dealIds.add(deal.dealId || deal.id);
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.error('⚠️ Error fetching deals as BUYER:', err);
+                }
+            }
+
+            // ✅ 3. Also fetch as SELLER
             try {
-                const roleResponse = await fetch(
-                    `http://localhost:8080/api/deals/my-deals?userRole=${user.role}`,
+                const sellerResponse = await fetch(
+                    `http://localhost:8080/api/deals/user/${user.id}/role/SELLER`,
                     {
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                            'Authorization': `Bearer ${authToken}`
                         }
                     }
                 );
 
-                if (roleResponse.ok) {
-                    const roleData = await roleResponse.json();
-                    const roleDeals = extractDealsFromResponse(roleData);
-                    addDeals(roleDeals);
-                    console.log(`Found ${roleDeals.length} deals for role ${user.role}`);
+                console.log(`📊 SELLER role response status:`, sellerResponse.status);
+
+                if (sellerResponse.ok) {
+                    const sellerData = await sellerResponse.json();
+                    console.log(`📊 SELLER role response:`, sellerData);
+
+                    let sellerDealsList = [];
+                    if (Array.isArray(sellerData)) {
+                        sellerDealsList = sellerData;
+                    } else if (sellerData.data && Array.isArray(sellerData.data)) {
+                        sellerDealsList = sellerData.data;
+                    }
+
+                    console.log(`✅ Found ${sellerDealsList.length} deals as SELLER`);
+
+                    sellerDealsList.forEach(deal => {
+                        if (!dealIds.has(deal.dealId || deal.id)) {
+                            allDeals.push(deal);
+                            dealIds.add(deal.dealId || deal.id);
+                        }
+                    });
                 }
             } catch (err) {
-                console.warn('Error fetching role-based deals:', err);
+                console.error('⚠️ Error fetching deals as SELLER:', err);
             }
 
-            // 2. If not AGENT/ADMIN, also fetch as BUYER
-            if (user.role !== 'AGENT' && user.role !== 'ADMIN') {
-                try {
-                    const buyerResponse = await fetch(
-                        `http://localhost:8080/api/deals/my-deals?userRole=BUYER`,
-                        {
-                            headers: {
-                                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                            }
-                        }
-                    );
-
-                    if (buyerResponse.ok) {
-                        const buyerData = await buyerResponse.json();
-                        const buyerDeals = extractDealsFromResponse(buyerData);
-                        addDeals(buyerDeals);
-                        console.log(`Found ${buyerDeals.length} deals as BUYER`);
-                    }
-                } catch (err) {
-                    console.warn('Error fetching buyer deals:', err);
-                }
-
-                // 3. Also fetch as SELLER
-                try {
-                    const sellerResponse = await fetch(
-                        `http://localhost:8080/api/deals/my-deals?userRole=SELLER`,
-                        {
-                            headers: {
-                                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                            }
-                        }
-                    );
-
-                    if (sellerResponse.ok) {
-                        const sellerData = await sellerResponse.json();
-                        const sellerDeals = extractDealsFromResponse(sellerData);
-                        addDeals(sellerDeals);
-                        console.log(`Found ${sellerDeals.length} deals as SELLER`);
-                    }
-                } catch (err) {
-                    console.warn('Error fetching seller deals:', err);
-                }
-            }
-
-            console.log(`Total unique deals: ${allDeals.length}`);
+            console.log(`✅ FINAL: Total combined deals: ${allDeals.length}`, allDeals);
             setMyDeals(allDeals);
 
         } catch (error) {
@@ -203,11 +228,14 @@ function HomePage() {
 
     const fetchMyDealsProperties = async () => {
         if (!isAuthenticated || !user?.id) {
+            console.log('❌ Not authenticated for deals');
             setMyDealsProperties([]);
             return;
         }
 
         try {
+            console.log('📥 Fetching deals for user properties ID:', user.id);
+
             const userPropsResponse = await fetch(`http://localhost:8080/api/properties/user/${user.id}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
@@ -215,6 +243,7 @@ function HomePage() {
             });
 
             if (!userPropsResponse.ok) {
+                console.log('❌ Failed to fetch user properties');
                 setMyDealsProperties([]);
                 return;
             }
@@ -229,9 +258,12 @@ function HomePage() {
             );
 
             if (userPropertyIds.size === 0) {
+                console.log('ℹ️ User has no uploaded properties');
                 setMyDealsProperties([]);
                 return;
             }
+
+            console.log(`✅ Found ${userPropertyIds.size} user properties`);
 
             let allDeals = [];
 
@@ -246,9 +278,11 @@ function HomePage() {
                         allDeals = [...allDeals, ...deals];
                     }
                 } catch (err) {
-                    console.warn('Error fetching agent deals:', err);
+                    console.log('⚠️ Error fetching agent deals:', err);
                 }
             }
+
+            console.log(`✅ Found ${allDeals.length} total deals`);
 
             const propertiesFromDeals = [];
             const seenPropertyIds = new Set();
@@ -269,6 +303,7 @@ function HomePage() {
                 }
             });
 
+            console.log(`✅ Found ${propertiesFromDeals.length} deals on user's own properties`);
             setMyDealsProperties(propertiesFromDeals);
 
         } catch (error) {
@@ -281,10 +316,12 @@ function HomePage() {
         fetchProperties();
 
         if (isAuthenticated && user?.id) {
+            console.log('✅ User authenticated:', user.id, user.firstName, 'Role:', user.role);
             fetchMyProperties();
             fetchMyDeals();
             fetchMyDealsProperties();
         } else {
+            console.log('❌ User logged out, clearing data');
             setMyProperties([]);
             setMyDeals([]);
             setMyDealsProperties([]);
@@ -328,6 +365,7 @@ function HomePage() {
     };
 
     const handlePropertyUpdated = () => {
+        console.log('🔄 Property updated, refreshing lists...');
         fetchProperties();
         if (isAuthenticated && user?.id) {
             fetchMyProperties();
@@ -337,6 +375,7 @@ function HomePage() {
     };
 
     const handlePropertyDeleted = () => {
+        console.log('🔄 Property deleted, refreshing lists...');
         fetchProperties();
         if (isAuthenticated && user?.id) {
             fetchMyProperties();
@@ -350,7 +389,7 @@ function HomePage() {
     };
 
     const buttonShouldBeVisible =
-        activeTab === 'my-deals' &&
+        activeTab === 'deals' &&
         isAuthenticated &&
         user &&
         (user.role === 'AGENT' || user.role === 'ADMIN');
@@ -361,27 +400,12 @@ function HomePage() {
         ? getFilteredPropertiesByArea()
         : activeTab === 'my-properties'
         ? myProperties
-        : activeTab === 'my-deals'
-        ? myDeals
-        : activeTab === 'property-deals'
+        : activeTab === 'deals'
         ? myDealsProperties
         : propsList;
 
     const dealsPropertyCount = myDealsProperties.length;
     const dealsCount = myDeals.length;
-
-    const getStageColor = (stage) => {
-        const colors = {
-            'INQUIRY': '#3b82f6',
-            'SHORTLIST': '#8b5cf6',
-            'NEGOTIATION': '#f59e0b',
-            'AGREEMENT': '#10b981',
-            'REGISTRATION': '#06b6d4',
-            'PAYMENT': '#ec4899',
-            'COMPLETED': '#22c55e',
-        };
-        return colors[stage] || '#6b7280';
-    };
 
     return (
         <div style={styles.container}>
@@ -541,43 +565,16 @@ function HomePage() {
                         </p>
                     </div>
                 ) : activeTab === 'my-deals' ? (
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                        gap: '16px',
-                    }}>
+                    <div style={styles.dealsGrid}>
                         {myDeals.map(deal => (
-                            <div key={deal.dealId || deal.id} style={{
-                                padding: '16px',
-                                backgroundColor: '#f8fafc',
-                                borderRadius: '12px',
-                                border: '1px solid #e2e8f0',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                            }}>
-                                <div style={{
-                                    display: 'inline-block',
-                                    padding: '6px 12px',
-                                    borderRadius: '6px',
-                                    color: 'white',
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    marginBottom: '12px',
-                                    backgroundColor: getStageColor(deal.stage || deal.currentStage)
-                                }}>
-                                    {deal.stage || deal.currentStage}
+                            <div key={deal.dealId || deal.id} style={styles.dealCard}>
+                                <div style={{...styles.stageBadge, backgroundColor: getStageColor(deal.stage)}}>
+                                    {deal.stage}
                                 </div>
-                                <h4 style={{
-                                    fontSize: '16px',
-                                    fontWeight: '700',
-                                    color: '#1e293b',
-                                    margin: '0 0 12px 0',
-                                }}>
-                                    {deal.propertyTitle || 'Property'}
-                                </h4>
+                                <h4 style={styles.dealTitle}>{deal.propertyTitle || 'Property'}</h4>
                                 {deal.agreedPrice && (
                                     <p style={{color: '#10b981', fontWeight: '700', margin: '8px 0'}}>
-                                        💰 ₹{parseFloat(deal.agreedPrice).toLocaleString('en-IN')}
+                                        💰 ₹{deal.agreedPrice.toLocaleString('en-IN')}
                                     </p>
                                 )}
                                 <p style={{fontSize: '13px', color: '#64748b', margin: '4px 0'}}>
@@ -585,9 +582,6 @@ function HomePage() {
                                 </p>
                                 <p style={{fontSize: '13px', color: '#64748b', margin: '4px 0'}}>
                                     🏠 Seller: {deal.sellerName || 'N/A'}
-                                </p>
-                                <p style={{fontSize: '13px', color: '#64748b', margin: '4px 0'}}>
-                                    📊 Agent: {deal.agentName || 'N/A'}
                                 </p>
                                 <p style={{fontSize: '12px', color: '#94a3b8', margin: '8px 0 0 0'}}>
                                     {new Date(deal.createdAt).toLocaleDateString()}
@@ -653,5 +647,51 @@ function HomePage() {
         </div>
     );
 }
+
+function getStageColor(stage) {
+    const colors = {
+        'INQUIRY': '#3b82f6',
+        'SHORTLIST': '#8b5cf6',
+        'NEGOTIATION': '#f59e0b',
+        'AGREEMENT': '#10b981',
+        'REGISTRATION': '#06b6d4',
+        'PAYMENT': '#ec4899',
+        'COMPLETED': '#22c55e',
+    };
+    return colors[stage] || '#6b7280';
+}
+
+const dealCardStyles = {
+    dealsGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+        gap: '16px',
+    },
+    dealCard: {
+        padding: '16px',
+        backgroundColor: '#f8fafc',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+    },
+    stageBadge: {
+        display: 'inline-block',
+        padding: '6px 12px',
+        borderRadius: '6px',
+        color: 'white',
+        fontSize: '12px',
+        fontWeight: '600',
+        marginBottom: '12px',
+    },
+    dealTitle: {
+        fontSize: '16px',
+        fontWeight: '700',
+        color: '#1e293b',
+        margin: '0 0 12px 0',
+    }
+};
+
+Object.assign(styles, dealCardStyles);
 
 export default HomePage;

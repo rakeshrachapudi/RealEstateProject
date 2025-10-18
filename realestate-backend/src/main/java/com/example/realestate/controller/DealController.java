@@ -29,13 +29,42 @@ public class DealController {
     @Autowired
     private com.example.realestate.repository.UserRepository userRepository;
 
+    // ==================== ✅ NEW: GET DEALS BY USER AND ROLE ====================
+    @GetMapping("/user/{userId}/role/{userRole}")
+    public ResponseEntity<?> getDealsByUserAndRole(
+            @PathVariable Long userId,
+            @PathVariable String userRole,
+            Authentication authentication) {
+
+        logger.info("📥 Fetching deals for user {} with role {}", userId, userRole);
+
+        try {
+            // Validate role parameter
+            if (!isValidRole(userRole)) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Invalid role: " + userRole));
+            }
+
+            // Get deals by role
+            List<DealDetailDTO> deals = dealService.getDealsByRole(userId, userRole);
+
+            logger.info("✅ Found {} deals for {} user {}", deals.size(), userRole, userId);
+            return ResponseEntity.ok(ApiResponse.success(deals));
+
+        } catch (Exception e) {
+            logger.error("❌ Error fetching deals: ", e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
     // ==================== CREATE DEAL WITH PRICE ⭐ CORRECTED ====================
     @PostMapping("/create-with-price")
     public ResponseEntity<?> createDealWithPrice(
             @RequestBody CreateDealWithPriceRequestDto request,
             Authentication authentication) {
 
-        logger.info("📝 Creating deal with agreed price");
+        logger.info("🎯 Creating deal with agreed price");
 
         try {
             // Extract agent ID from authentication
@@ -215,7 +244,7 @@ public class DealController {
 
     @PostMapping("/create")
     public ResponseEntity<?> createDeal(@RequestBody CreateDealRequest request) {
-        logger.info("📝 Creating new deal");
+        logger.info("🎯 Creating new deal");
 
         try {
             if (request.propertyId == null || request.buyerId == null) {
@@ -243,7 +272,7 @@ public class DealController {
 
     @GetMapping("/{dealId}")
     public ResponseEntity<?> getDeal(@PathVariable Long dealId) {
-        logger.info("🔍 Fetching deal: {}", dealId);
+        logger.info("🎯 Fetching deal: {}", dealId);
 
         try {
             DealStatus deal = dealService.getDealById(dealId);
@@ -309,9 +338,6 @@ public class DealController {
                     .body(ApiResponse.error(e.getMessage()));
         }
     }
-
-    // Add this NEW endpoint to your DealController.java
-// Place it after the existing @GetMapping("/admin/agent/{agentId}") endpoint
 
     // ==================== GET ALL DEALS BY STAGE (ADMIN) ⭐ NEW ====================
     @GetMapping("/stage/{stage}")
@@ -395,21 +421,6 @@ public class DealController {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(e.getMessage()));
         }
-    }
-    @GetMapping("/debug/user/{userId}/role/{userRole}")
-    public ResponseEntity<?> debugDealsByRole(
-            @PathVariable Long userId,
-            @PathVariable String userRole) {
-
-        logger.info("DEBUG: Fetching deals for user {} with role {}", userId, userRole);
-
-        List<DealDetailDTO> deals = dealService.getDealsByRole(userId, userRole);
-
-        logger.info("DEBUG: Found {} deals", deals.size());
-        deals.forEach(d -> logger.info("DEBUG DEAL: ID={}, Buyer={}, Seller={}, Stage={}",
-                d.getDealId(), d.getBuyerId(), d.getSellerId(), d.getStage()));
-
-        return ResponseEntity.ok(Map.of("success", true, "data", deals));
     }
 
     @GetMapping("/buyer/{buyerId}")
