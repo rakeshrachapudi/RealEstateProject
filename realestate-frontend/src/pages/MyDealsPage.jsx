@@ -34,7 +34,7 @@ const MyDealsPage = () => {
       switch (user.role) {
         // BUYER: Sees deals they're interested in (deals where they are the buyer)
         case 'BUYER':
-          console.log('📥 Fetching buyer deals...');
+          console.log('🔥 Fetching buyer deals...');
           const buyerRes = await fetch(
             `http://localhost:8080/api/deals/buyer/${user.id}`,
             { headers }
@@ -48,7 +48,7 @@ const MyDealsPage = () => {
 
         // SELLER: Sees deals on their own properties
         case 'SELLER':
-          console.log('📥 Fetching seller deals...');
+          console.log('🔥 Fetching seller deals...');
           const sellerRes = await fetch(
             'http://localhost:8080/api/deals/my-deals?userRole=SELLER',
             { headers }
@@ -62,7 +62,7 @@ const MyDealsPage = () => {
 
         // AGENT: Sees only deals they created
         case 'AGENT':
-          console.log('📥 Fetching agent deals...');
+          console.log('🔥 Fetching agent deals...');
           const agentRes = await fetch(
             `http://localhost:8080/api/deals/agent/${user.id}`,
             { headers }
@@ -76,7 +76,7 @@ const MyDealsPage = () => {
 
         // ADMIN: Sees all deals across all agents
         case 'ADMIN':
-          console.log('📥 Fetching all deals for admin...');
+          console.log('🔥 Fetching all deals for admin...');
           const stages = ['INQUIRY', 'SHORTLIST', 'NEGOTIATION', 'AGREEMENT', 'REGISTRATION', 'PAYMENT', 'COMPLETED'];
           const allDeals = [];
 
@@ -151,6 +151,14 @@ const MyDealsPage = () => {
     return colors[stage] || '#6b7280';
   };
 
+  const formatPrice = (price) => {
+    if (!price) return 'N/A';
+    if (typeof price === 'number') {
+      return price.toLocaleString('en-IN');
+    }
+    return String(price);
+  };
+
   const filteredDeals = getFilteredDeals();
   const activeDealCount = deals.filter(d => (d.stage || d.currentStage) !== 'COMPLETED').length;
   const completedDealCount = deals.filter(d => (d.stage || d.currentStage) === 'COMPLETED').length;
@@ -208,7 +216,7 @@ const MyDealsPage = () => {
       {/* Deals Grid or Empty State */}
       {filteredDeals.length === 0 ? (
         <div style={styles.emptyState}>
-          <div style={styles.emptyIcon}>📭</div>
+          <div style={styles.emptyIcon}>🔭</div>
           <h3 style={styles.emptyTitle}>No Deals Found</h3>
           <p style={styles.emptyText}>
             {activeFilter === 'active' && 'No active deals at the moment'}
@@ -223,6 +231,14 @@ const MyDealsPage = () => {
               key={deal.id || deal.dealId}
               style={styles.dealCard}
               onClick={() => setSelectedDeal(deal)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+              }}
             >
               {/* Stage Badge */}
               <div
@@ -235,55 +251,80 @@ const MyDealsPage = () => {
               </div>
 
               {/* Property Title */}
-              <h3 style={styles.dealTitle}>{deal.property?.title || 'Property'}</h3>
+              <h3 style={styles.dealTitle}>
+                {deal.propertyTitle || deal.property?.title || 'Property'}
+              </h3>
 
-              {/* Deal Info */}
-              <div style={styles.dealInfo}>
-                <div style={styles.infoRow}>
-                  <span>📍</span>
-                  <span>{deal.property?.city || 'Location'}</span>
+              {/* Agreed Price - Prominent Display */}
+              {deal.agreedPrice && (
+                <div style={styles.priceDisplay}>
+                  💰 ₹{formatPrice(deal.agreedPrice)}
                 </div>
+              )}
 
-                {/* Show buyer for seller and admin */}
-                {(user?.role === 'SELLER' || user?.role === 'ADMIN') && deal.buyer && (
-                  <div style={styles.infoRow}>
-                    <span>👤</span>
-                    <span>{deal.buyer.firstName} {deal.buyer.lastName}</span>
+              {/* Buyer Details */}
+              {deal.buyer && (
+                <div style={styles.personDetail}>
+                  <div style={{ fontWeight: '600', color: '#1e293b' }}>👤 Buyer</div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>
+                    {deal.buyerName || `${deal.buyer?.firstName} ${deal.buyer?.lastName}`}
                   </div>
-                )}
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                    📞 {deal.buyerMobile || deal.buyer?.mobileNumber || 'N/A'}
+                  </div>
+                </div>
+              )}
 
-                {/* Show seller for buyer and admin */}
-                {(user?.role === 'BUYER' || user?.role === 'ADMIN') && deal.property?.user && (
-                  <div style={styles.infoRow}>
-                    <span>🏠</span>
-                    <span>{deal.property.user.firstName} {deal.property.user.lastName}</span>
+              {/* Seller Details - Show for Buyers and Admins */}
+              {(user?.role === 'BUYER' || user?.role === 'ADMIN') && deal.property?.user && (
+                <div style={styles.personDetail}>
+                  <div style={{ fontWeight: '600', color: '#1e293b' }}>🏠 Seller</div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>
+                    {deal.sellerName || `${deal.property.user?.firstName} ${deal.property.user?.lastName}`}
                   </div>
-                )}
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                    📞 {deal.sellerMobile || deal.property.user?.mobileNumber || 'N/A'}
+                  </div>
+                </div>
+              )}
 
-                {/* Show agent for admin */}
-                {user?.role === 'ADMIN' && deal.agent && (
-                  <div style={styles.infoRow}>
-                    <span>📊</span>
-                    <span>Agent: {deal.agent.firstName} {deal.agent.lastName}</span>
+              {/* Seller as Current User - Show for Sellers */}
+              {user?.role === 'SELLER' && deal.property?.user && (
+                <div style={styles.personDetail}>
+                  <div style={{ fontWeight: '600', color: '#1e293b' }}>🏠 Seller (You)</div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>
+                    {deal.sellerName || `${deal.property.user?.firstName} ${deal.property.user?.lastName}`}
                   </div>
-                )}
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                    📞 {deal.sellerMobile || deal.property.user?.mobileNumber || 'N/A'}
+                  </div>
+                </div>
+              )}
 
-                {/* Price */}
-                {deal.agreedPrice && (
-                  <div style={styles.priceRow}>
-                    <span>💰</span>
-                    <span>₹{deal.agreedPrice.toLocaleString('en-IN')}</span>
+              {/* Agent Details */}
+              {deal.agent && (
+                <div style={styles.personDetail}>
+                  <div style={{ fontWeight: '600', color: '#1e293b' }}>📊 Agent</div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>
+                    {deal.agentName || `${deal.agent?.firstName} ${deal.agent?.lastName}`}
                   </div>
-                )}
-              </div>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                    📧 {deal.agentEmail || deal.agent?.email || 'N/A'}
+                  </div>
+                </div>
+              )}
 
               {/* Date */}
               <div style={styles.date}>
-                {new Date(deal.createdAt).toLocaleDateString()}
+                Created: {new Date(deal.createdAt).toLocaleDateString()}
               </div>
 
               {/* View Button */}
-              <button style={styles.viewBtn}>
+              <button
+                style={styles.viewBtn}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}
+              >
                 📋 View Details
               </button>
             </div>
@@ -393,7 +434,7 @@ const styles = {
     borderRadius: '12px',
     border: '1px solid #e2e8f0',
     cursor: 'pointer',
-    transition: 'all 0.2s',
+    transition: 'all 0.3s ease',
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   },
   stageBadge: {
@@ -411,25 +452,26 @@ const styles = {
     color: '#1e293b',
     margin: '0 0 12px 0',
   },
-  dealInfo: {
-    marginBottom: '12px',
-  },
-  infoRow: {
-    display: 'flex',
-    gap: '8px',
-    alignItems: 'center',
-    fontSize: '14px',
-    color: '#64748b',
-    marginBottom: '8px',
-  },
-  priceRow: {
-    display: 'flex',
-    gap: '8px',
-    alignItems: 'center',
+  priceDisplay: {
     fontSize: '16px',
-    color: '#10b981',
     fontWeight: '700',
-    marginTop: '12px',
+    color: '#10b981',
+    backgroundColor: '#ecfdf5',
+    padding: '10px 12px',
+    borderRadius: '6px',
+    marginBottom: '12px',
+    border: '1px solid #86efac',
+  },
+  personDetail: {
+    padding: '10px 12px',
+    backgroundColor: '#f8fafc',
+    borderRadius: '6px',
+    marginBottom: '10px',
+    fontSize: '13px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    borderLeft: '3px solid #3b82f6',
   },
   date: {
     fontSize: '12px',

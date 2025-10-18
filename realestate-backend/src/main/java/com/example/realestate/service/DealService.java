@@ -338,10 +338,14 @@ public class DealService {
     private DealDetailDTO convertToDealDetailDTO(DealStatus deal) {
         DealDetailDTO dto = new DealDetailDTO();
 
+
+
         dto.setDealId(deal.getId());
         dto.setStage(deal.getStage().name());
         dto.setCurrentStage(deal.getStage().name());
-        dto.setAgreedPrice(deal.getAgreedPrice());
+        if (deal.getAgreedPrice() != null) {
+            dto.setAgreedPrice(deal.getAgreedPrice());
+        }
         dto.setNotes(deal.getNotes());
         dto.setCreatedAt(deal.getCreatedAt());
         dto.setUpdatedAt(deal.getUpdatedAt());

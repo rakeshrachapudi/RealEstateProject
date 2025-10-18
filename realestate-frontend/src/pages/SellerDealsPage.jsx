@@ -68,6 +68,14 @@ const SellerDealsPage = () => {
     return colors[stage] || '#6b7280';
   };
 
+  const formatPrice = (price) => {
+    if (!price) return 'N/A';
+    if (typeof price === 'number') {
+      return price.toLocaleString('en-IN');
+    }
+    return String(price);
+  };
+
   const filteredDeals = getFilteredDeals();
   const activeDealCount = deals.filter(d => (d.stage || d.currentStage) !== 'COMPLETED').length;
   const completedDealCount = deals.filter(d => (d.stage || d.currentStage) === 'COMPLETED').length;
@@ -125,7 +133,7 @@ const SellerDealsPage = () => {
       {/* Deals Grid */}
       {filteredDeals.length === 0 ? (
         <div style={containerStyles.emptyStateStyle}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📭</div>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔭</div>
           <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#1e293b', margin: '0 0 8px 0' }}>
             No Deals Yet
           </h3>
@@ -142,6 +150,14 @@ const SellerDealsPage = () => {
               key={deal.id || deal.dealId}
               style={containerStyles.cardStyle}
               onClick={() => setSelectedDeal(deal)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+              }}
             >
               {/* Stage Badge */}
               <div
@@ -154,41 +170,55 @@ const SellerDealsPage = () => {
               </div>
 
               {/* Property Title */}
-              <h3 style={containerStyles.cardTitleStyle}>{deal.property?.title}</h3>
+              <h3 style={containerStyles.cardTitleStyle}>
+                {deal.propertyTitle || deal.property?.title || 'Property'}
+              </h3>
 
-              {/* Deal Information */}
-              <div style={containerStyles.dealInfoStyle}>
-                <div style={containerStyles.infoRowStyle}>
-                  <span>👤 Buyer:</span>
-                  <span style={{ fontWeight: '600', color: '#1e293b' }}>
-                    {deal.buyer?.firstName} {deal.buyer?.lastName}
-                  </span>
+              {/* Agreed Price - Prominent Display */}
+              {deal.agreedPrice && (
+                <div style={containerStyles.priceDisplayStyle}>
+                  💰 ₹{formatPrice(deal.agreedPrice)}
                 </div>
+              )}
 
-                <div style={containerStyles.infoRowStyle}>
-                  <span>📞 Buyer Phone:</span>
-                  <span style={{ fontWeight: '600', color: '#1e293b' }}>
-                    {deal.buyer?.mobileNumber || 'N/A'}
-                  </span>
+              {/* Buyer Details */}
+              {deal.buyer && (
+                <div style={containerStyles.personDetailStyle}>
+                  <div style={{ fontWeight: '600', color: '#1e293b' }}>👤 Buyer</div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>
+                    {deal.buyerName || `${deal.buyer?.firstName} ${deal.buyer?.lastName}`}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                    📞 {deal.buyerMobile || deal.buyer?.mobileNumber || 'N/A'}
+                  </div>
                 </div>
+              )}
 
-                {deal.agent && (
-                  <div style={containerStyles.infoRowStyle}>
-                    <span>📊 Agent:</span>
-                    <span style={{ fontWeight: '600', color: '#1e293b' }}>
-                      {deal.agent.firstName} {deal.agent.lastName}
-                    </span>
+              {/* Seller Details */}
+              {deal.property?.user && (
+                <div style={containerStyles.personDetailStyle}>
+                  <div style={{ fontWeight: '600', color: '#1e293b' }}>🏠 Seller (You)</div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>
+                    {deal.sellerName || `${deal.property.user?.firstName} ${deal.property.user?.lastName}`}
                   </div>
-                )}
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                    📞 {deal.sellerMobile || deal.property.user?.mobileNumber || 'N/A'}
+                  </div>
+                </div>
+              )}
 
-                {deal.agreedPrice && (
-                  <div style={{...containerStyles.infoRowStyle, marginTop: '8px'}}>
-                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#10b981' }}>
-                      💰 ₹{deal.agreedPrice.toLocaleString('en-IN')}
-                    </span>
+              {/* Agent Details */}
+              {deal.agent && (
+                <div style={containerStyles.personDetailStyle}>
+                  <div style={{ fontWeight: '600', color: '#1e293b' }}>📊 Agent</div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>
+                    {deal.agentName || `${deal.agent?.firstName} ${deal.agent?.lastName}`}
                   </div>
-                )}
-              </div>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                    📧 {deal.agentEmail || deal.agent?.email || 'N/A'}
+                  </div>
+                </div>
+              )}
 
               {/* Date */}
               <div style={containerStyles.dateStyle}>
@@ -196,7 +226,11 @@ const SellerDealsPage = () => {
               </div>
 
               {/* View Button */}
-              <button style={containerStyles.viewBtnStyle}>
+              <button
+                style={containerStyles.viewBtnStyle}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
+              >
                 📋 View Details
               </button>
             </div>
@@ -256,12 +290,8 @@ const containerStyles = {
     borderRadius: '12px',
     border: '1px solid #e2e8f0',
     cursor: 'pointer',
-    transition: 'all 0.2s',
+    transition: 'all 0.3s ease',
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-    ':hover': {
-      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-      transform: 'translateY(-2px)',
-    }
   },
   stageBadgeStyle: {
     display: 'inline-block',
@@ -278,16 +308,26 @@ const containerStyles = {
     color: '#1e293b',
     margin: '0 0 12px 0',
   },
-  dealInfoStyle: {
+  priceDisplayStyle: {
+    fontSize: '16px',
+    fontWeight: '700',
+    color: '#10b981',
+    backgroundColor: '#ecfdf5',
+    padding: '10px 12px',
+    borderRadius: '6px',
     marginBottom: '12px',
-    fontSize: '13px',
-    color: '#64748b',
+    border: '1px solid #86efac',
   },
-  infoRowStyle: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    marginBottom: '6px',
+  personDetailStyle: {
+    padding: '10px 12px',
+    backgroundColor: '#f8fafc',
+    borderRadius: '6px',
+    marginBottom: '10px',
     fontSize: '13px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    borderLeft: '3px solid #3b82f6',
   },
   dateStyle: {
     fontSize: '12px',
