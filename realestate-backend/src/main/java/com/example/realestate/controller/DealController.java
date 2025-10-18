@@ -29,16 +29,29 @@ public class DealController {
     @Autowired
     private com.example.realestate.repository.UserRepository userRepository;
 
-    // ==================== ✅ NEW: GET DEALS BY USER AND ROLE ====================
+    // ==================== GET DEALS BY USER AND ROLE ====================
     @GetMapping("/user/{userId}/role/{userRole}")
     public ResponseEntity<?> getDealsByUserAndRole(
             @PathVariable Long userId,
             @PathVariable String userRole,
             Authentication authentication) {
 
-        logger.info("📥 Fetching deals for user {} with role {}", userId, userRole);
+        logger.info("Fetching deals for user {} with role {}", userId, userRole);
 
         try {
+            // Validate userId
+            if (userId == null || userId <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Valid user ID is required"));
+            }
+
+            // Fetch user by ID
+            User currentUser = userRepository.findById(userId)
+                    .orElseThrow(() -> {
+                        logger.error("❌ User not found with ID: {}", userId);
+                        return new RuntimeException("User not found with ID: " + userId);
+                    });
+
             // Validate role parameter
             if (!isValidRole(userRole)) {
                 return ResponseEntity.badRequest()
@@ -58,37 +71,35 @@ public class DealController {
         }
     }
 
-    // ==================== CREATE DEAL WITH PRICE ⭐ CORRECTED ====================
+    // ==================== CREATE DEAL WITH PRICE ====================
     @PostMapping("/create-with-price")
     public ResponseEntity<?> createDealWithPrice(
             @RequestBody CreateDealWithPriceRequestDto request,
             Authentication authentication) {
 
-        logger.info("🎯 Creating deal with agreed price");
+        logger.info("Creating deal with agreed price");
 
         try {
-            // Extract agent ID from authentication
-            String username = authentication != null ? authentication.getName() : "system";
-            User currentUser = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+            // Extract agent ID from request
+            if (request.getAgentId() == null || request.getAgentId() <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Valid agent ID is required"));
+            }
 
-            // ✅ CRITICAL: Verify only AGENT can create deals
+            // Fetch user by ID
+            User currentUser = userRepository.findById(request.getAgentId())
+                    .orElseThrow(() -> {
+                        logger.error("❌ User not found with ID: {}", request.getAgentId());
+                        return new RuntimeException("User not found with ID: " + request.getAgentId());
+                    });
+
+            // Verify only AGENT can create deals
             if (!currentUser.getRole().equals(User.UserRole.AGENT) &&
                     !currentUser.getRole().equals(User.UserRole.ADMIN)) {
                 logger.warn("❌ User {} attempted to create deal but is not an agent. Role: {}",
-                        username, currentUser.getRole());
+                        currentUser.getId(), currentUser.getRole());
                 return new ResponseEntity<>(
                         ApiResponse.error("Only agents can create deals"),
-                        HttpStatus.FORBIDDEN
-                );
-            }
-
-            // ✅ NEW: Verify agent is creating deal for themselves (not passing different agentId)
-            if (request.getAgentId() != null && !request.getAgentId().equals(currentUser.getId())) {
-                logger.warn("❌ Agent {} tried to create deal for different agent {}",
-                        currentUser.getId(), request.getAgentId());
-                return new ResponseEntity<>(
-                        ApiResponse.error("Agents can only create deals for themselves"),
                         HttpStatus.FORBIDDEN
                 );
             }
@@ -114,18 +125,30 @@ public class DealController {
         }
     }
 
-    // ==================== GET MY DEALS BY ROLE ⭐ CORRECTED ====================
+    // ==================== GET MY DEALS BY ROLE ====================
     @GetMapping("/my-deals")
     public ResponseEntity<?> getMyDeals(
             @RequestParam String userRole,
+            @RequestParam Long userId,
             Authentication authentication) {
 
-        logger.info("📋 Fetching deals for role: {}", userRole);
+        logger.info("Fetching deals for user {} with role: {}", userId, userRole);
 
         try {
-            String username = authentication != null ? authentication.getName() : "system";
-            User currentUser = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+            // Validate userId
+            if (userId == null || userId <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Valid user ID is required"));
+            }
+
+            // Fetch user by ID
+            User currentUser = userRepository.findById(userId)
+                    .orElseThrow(() -> {
+                        logger.error("❌ User not found with ID: {}", userId);
+                        return new RuntimeException("User not found with ID: " + userId);
+                    });
+
+            logger.debug("✅ Found user: {} with role: {}", currentUser.getId(), currentUser.getRole());
 
             // Validate role parameter
             if (!isValidRole(userRole)) {
@@ -146,20 +169,31 @@ public class DealController {
         }
     }
 
-    // ==================== ADMIN DASHBOARD ⭐ CORRECTED ====================
+    // ==================== ADMIN DASHBOARD ====================
     @GetMapping("/admin/dashboard")
-    public ResponseEntity<?> getAdminDashboard(Authentication authentication) {
-        logger.info("📊 Fetching admin dashboard");
+    public ResponseEntity<?> getAdminDashboard(
+            @RequestParam Long userId,
+            Authentication authentication) {
+        logger.info("Fetching admin dashboard for user {}", userId);
 
         try {
-            String username = authentication != null ? authentication.getName() : "system";
-            User currentUser = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+            // Validate userId
+            if (userId == null || userId <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Valid user ID is required"));
+            }
 
-            // ✅ Verify ADMIN role only
+            // Fetch user by ID
+            User currentUser = userRepository.findById(userId)
+                    .orElseThrow(() -> {
+                        logger.error("❌ User not found with ID: {}", userId);
+                        return new RuntimeException("User not found with ID: " + userId);
+                    });
+
+            // Verify ADMIN role only
             if (!currentUser.getRole().equals(User.UserRole.ADMIN)) {
                 logger.warn("❌ User {} attempted to access admin dashboard but is not admin. Role: {}",
-                        username, currentUser.getRole());
+                        userId, currentUser.getRole());
                 return new ResponseEntity<>(
                         ApiResponse.error("Only admins can access this resource"),
                         HttpStatus.FORBIDDEN
@@ -179,17 +213,28 @@ public class DealController {
 
     // ==================== AGENT PERFORMANCE METRICS ====================
     @GetMapping("/admin/agents-performance")
-    public ResponseEntity<?> getAgentPerformance(Authentication authentication) {
-        logger.info("📈 Fetching agent performance metrics");
+    public ResponseEntity<?> getAgentPerformance(
+            @RequestParam Long userId,
+            Authentication authentication) {
+        logger.info("Fetching agent performance metrics for user {}", userId);
 
         try {
-            String username = authentication != null ? authentication.getName() : "system";
-            User currentUser = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+            // Validate userId
+            if (userId == null || userId <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Valid user ID is required"));
+            }
 
-            // ✅ Verify ADMIN role only
+            // Fetch user by ID
+            User currentUser = userRepository.findById(userId)
+                    .orElseThrow(() -> {
+                        logger.error("❌ User not found with ID: {}", userId);
+                        return new RuntimeException("User not found with ID: " + userId);
+                    });
+
+            // Verify ADMIN role only
             if (!currentUser.getRole().equals(User.UserRole.ADMIN)) {
-                logger.warn("❌ User {} attempted to access performance metrics but is not admin", username);
+                logger.warn("❌ User {} attempted to access performance metrics but is not admin", userId);
                 return new ResponseEntity<>(
                         ApiResponse.error("Only admins can access this resource"),
                         HttpStatus.FORBIDDEN
@@ -211,18 +256,28 @@ public class DealController {
     @GetMapping("/admin/agent/{agentId}")
     public ResponseEntity<?> getDealsByAgent(
             @PathVariable Long agentId,
+            @RequestParam Long userId,
             Authentication authentication) {
 
-        logger.info("👤 Fetching deals for agent {} (Admin view)", agentId);
+        logger.info("Fetching deals for agent {} (Admin view) requested by user {}", agentId, userId);
 
         try {
-            String username = authentication != null ? authentication.getName() : "system";
-            User currentUser = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+            // Validate userId
+            if (userId == null || userId <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Valid user ID is required"));
+            }
 
-            // ✅ Verify ADMIN role only
+            // Fetch user by ID
+            User currentUser = userRepository.findById(userId)
+                    .orElseThrow(() -> {
+                        logger.error("❌ User not found with ID: {}", userId);
+                        return new RuntimeException("User not found with ID: " + userId);
+                    });
+
+            // Verify ADMIN role only
             if (!currentUser.getRole().equals(User.UserRole.ADMIN)) {
-                logger.warn("❌ User {} attempted to access agent deals but is not admin", username);
+                logger.warn("❌ User {} attempted to access agent deals but is not admin", userId);
                 return new ResponseEntity<>(
                         ApiResponse.error("Only admins can access this resource"),
                         HttpStatus.FORBIDDEN
@@ -244,7 +299,7 @@ public class DealController {
 
     @PostMapping("/create")
     public ResponseEntity<?> createDeal(@RequestBody CreateDealRequest request) {
-        logger.info("🎯 Creating new deal");
+        logger.info("Creating new deal");
 
         try {
             if (request.propertyId == null || request.buyerId == null) {
@@ -272,7 +327,7 @@ public class DealController {
 
     @GetMapping("/{dealId}")
     public ResponseEntity<?> getDeal(@PathVariable Long dealId) {
-        logger.info("🎯 Fetching deal: {}", dealId);
+        logger.info("Fetching deal: {}", dealId);
 
         try {
             DealStatus deal = dealService.getDealById(dealId);
@@ -291,7 +346,7 @@ public class DealController {
             @RequestBody UpdateDealStageRequest request,
             Authentication authentication) {
 
-        logger.info("📊 Updating deal stage - DealId: {}, NewStage: {}", dealId, request.stage);
+        logger.info("Updating deal stage - DealId: {}, NewStage: {}", dealId, request.stage);
 
         try {
             String username = authentication != null ? authentication.getName() : "system";
@@ -322,7 +377,7 @@ public class DealController {
 
     @GetMapping("/agent/{agentId}")
     public ResponseEntity<?> getAgentDeals(@PathVariable Long agentId) {
-        logger.info("👤 Fetching all deals for agent: {}", agentId);
+        logger.info("Fetching all deals for agent: {}", agentId);
 
         try {
             List<DealStatus> deals = dealService.getDealsForAgent(agentId);
@@ -339,22 +394,32 @@ public class DealController {
         }
     }
 
-    // ==================== GET ALL DEALS BY STAGE (ADMIN) ⭐ NEW ====================
+    // ==================== GET ALL DEALS BY STAGE (ADMIN) ====================
     @GetMapping("/stage/{stage}")
     public ResponseEntity<?> getDealsByStage(
             @PathVariable String stage,
+            @RequestParam Long userId,
             Authentication authentication) {
 
-        logger.info("📊 Fetching deals by stage: {} (Admin)", stage);
+        logger.info("Fetching deals by stage: {} (Admin) for user {}", stage, userId);
 
         try {
-            String username = authentication != null ? authentication.getName() : "system";
-            User currentUser = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+            // Validate userId
+            if (userId == null || userId <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Valid user ID is required"));
+            }
 
-            // ✅ Verify ADMIN role only
+            // Fetch user by ID
+            User currentUser = userRepository.findById(userId)
+                    .orElseThrow(() -> {
+                        logger.error("❌ User not found with ID: {}", userId);
+                        return new RuntimeException("User not found with ID: " + userId);
+                    });
+
+            // Verify ADMIN role only
             if (!currentUser.getRole().equals(User.UserRole.ADMIN)) {
-                logger.warn("❌ User {} attempted to access stage deals but is not admin", username);
+                logger.warn("❌ User {} attempted to access stage deals but is not admin", userId);
                 return new ResponseEntity<>(
                         ApiResponse.error("Only admins can access this resource"),
                         HttpStatus.FORBIDDEN
@@ -387,19 +452,30 @@ public class DealController {
         }
     }
 
-    // ==================== GET STATS BY STAGE (ADMIN) ⭐ NEW ====================
+    // ==================== GET STATS BY STAGE (ADMIN) ====================
     @GetMapping("/stats/by-stage")
-    public ResponseEntity<?> getStatsByStage(Authentication authentication) {
-        logger.info("📊 Fetching deal stats by stage (Admin)");
+    public ResponseEntity<?> getStatsByStage(
+            @RequestParam Long userId,
+            Authentication authentication) {
+        logger.info("Fetching deal stats by stage (Admin) for user {}", userId);
 
         try {
-            String username = authentication != null ? authentication.getName() : "system";
-            User currentUser = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+            // Validate userId
+            if (userId == null || userId <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Valid user ID is required"));
+            }
 
-            // ✅ Verify ADMIN role only
+            // Fetch user by ID
+            User currentUser = userRepository.findById(userId)
+                    .orElseThrow(() -> {
+                        logger.error("❌ User not found with ID: {}", userId);
+                        return new RuntimeException("User not found with ID: " + userId);
+                    });
+
+            // Verify ADMIN role only
             if (!currentUser.getRole().equals(User.UserRole.ADMIN)) {
-                logger.warn("❌ User {} attempted to access stats but is not admin", username);
+                logger.warn("❌ User {} attempted to access stats but is not admin", userId);
                 return new ResponseEntity<>(
                         ApiResponse.error("Only admins can access this resource"),
                         HttpStatus.FORBIDDEN
@@ -425,7 +501,7 @@ public class DealController {
 
     @GetMapping("/buyer/{buyerId}")
     public ResponseEntity<?> getBuyerDeals(@PathVariable Long buyerId) {
-        logger.info("👥 Fetching deals for buyer: {}", buyerId);
+        logger.info("Fetching deals for buyer: {}", buyerId);
 
         try {
             List<DealStatus> deals = dealService.getBuyerDeals(buyerId);

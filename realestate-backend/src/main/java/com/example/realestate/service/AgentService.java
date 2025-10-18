@@ -32,7 +32,7 @@ public class AgentService {
     private UserRepository userRepository;
 
     public Map<String, Object> getAgentDashboard(Long agentId) {
-        logger.info("📊 Generating dashboard for agent: {}", agentId);
+        logger.info("Generating dashboard for agent: {}", agentId);
 
         Map<String, Object> dashboard = new HashMap<>();
 
@@ -67,7 +67,7 @@ public class AgentService {
     }
 
     public List<PropertyDTO> getAllPropertiesForAgent(Integer page, Integer size) {
-        logger.info("🏠 Fetching all properties (page: {}, size: {})", page, size);
+        logger.info("Fetching all properties (page: {}, size: {})", page, size);
         List<Property> properties = propertyRepository.findByIsActiveTrueOrderByCreatedAtDesc();
 
         return properties.stream()
@@ -76,7 +76,7 @@ public class AgentService {
     }
 
     public Map<String, Object> getAgentStats(Long agentId) {
-        logger.info("📈 Calculating stats for agent: {}", agentId);
+        logger.info("Calculating stats for agent: {}", agentId);
 
         Map<String, Object> stats = new HashMap<>();
 
@@ -99,12 +99,13 @@ public class AgentService {
                 .count();
         stats.put("propertiesManaged", propertiesManaged);
 
+        // FIXED: Changed stage.getLabel() to stage.name()
         Map<String, Long> stageBreakdown = new HashMap<>();
         for (DealStatus.DealStage stage : DealStatus.DealStage.values()) {
             long count = allDeals.stream()
                     .filter(d -> d.getStage() == stage)
                     .count();
-            stageBreakdown.put(stage.getLabel(), count);
+            stageBreakdown.put(stage.name(), count);  // ✅ FIXED: was getLabel()
         }
         stats.put("stageBreakdown", stageBreakdown);
 

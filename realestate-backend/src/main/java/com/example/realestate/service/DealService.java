@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -335,11 +336,12 @@ public class DealService {
     /**
      * Convert DealStatus to DealDetailDTO with all mobile numbers
      */
+    // Replace the convertToDealDetailDTO() method in DealService.java with this:
+
     private DealDetailDTO convertToDealDetailDTO(DealStatus deal) {
         DealDetailDTO dto = new DealDetailDTO();
 
-
-
+        // Deal Info
         dto.setDealId(deal.getId());
         dto.setStage(deal.getStage().name());
         dto.setCurrentStage(deal.getStage().name());
@@ -367,7 +369,7 @@ public class DealService {
             dto.setBuyerMobile(deal.getBuyer().getMobileNumber());
         }
 
-        // Seller Details (with mobile)
+        // Seller Details (with mobile) - from property owner
         if (deal.getProperty() != null && deal.getProperty().getUser() != null) {
             User seller = deal.getProperty().getUser();
             dto.setSellerId(seller.getId());
@@ -384,36 +386,105 @@ public class DealService {
             dto.setAgentMobile(deal.getAgent().getMobileNumber());
         }
 
+        // ==================== NEW: MAP STAGE DATE FIELDS ====================
+        dto.setInquiryDate(deal.getInquiryDate());
+        dto.setShortlistDate(deal.getShortlistDate());
+        dto.setNegotiationDate(deal.getNegotiationDate());
+        dto.setAgreementDate(deal.getAgreementDate());
+        dto.setRegistrationDate(deal.getRegistrationDate());
+        dto.setPaymentDate(deal.getPaymentDate());
+        dto.setCompletedDate(deal.getCompletedDate());
+
         return dto;
     }
-
     // ==================== EXISTING METHODS (KEPT FOR COMPATIBILITY) ====================
+
 
     public DealStatus updateDealStage(Long dealId, DealStatus.DealStage newStage,
                                       String notes, String updatedBy) {
         logger.info("Updating deal {} to stage {}", dealId, newStage);
 
         DealStatus deal = dealStatusRepository.findById(dealId)
-                .orElseThrow(() -> new RuntimeException("Deal not found"));
+                .orElseThrow(() -> {
+                    logger.error("Deal not found: {}", dealId);
+                    return new RuntimeException("Deal not found");
+                });
 
+        // Check if stage is valid progression (cannot go backwards)
         if (newStage.getOrder() < deal.getStage().getOrder()) {
+            logger.warn("Attempted to move deal {} to previous stage", dealId);
             throw new RuntimeException("Cannot move deal to a previous stage");
         }
 
+        // Store old stage for logging
         DealStatus.DealStage oldStage = deal.getStage();
+
+        // Update stage
         deal.setStage(newStage);
 
+        // ==================== NEW: Set the corresponding stage date field ====================
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        switch (newStage) {
+            case INQUIRY:
+                if (deal.getInquiryDate() == null) {
+                    deal.setInquiryDate(now);
+                    logger.info("Set inquiry date for deal {}", dealId);
+                }
+                break;
+            case SHORTLIST:
+                if (deal.getShortlistDate() == null) {
+                    deal.setShortlistDate(now);
+                    logger.info("Set shortlist date for deal {}", dealId);
+                }
+                break;
+            case NEGOTIATION:
+                if (deal.getNegotiationDate() == null) {
+                    deal.setNegotiationDate(now);
+                    logger.info("Set negotiation date for deal {}", dealId);
+                }
+                break;
+            case AGREEMENT:
+                if (deal.getAgreementDate() == null) {
+                    deal.setAgreementDate(now);
+                    logger.info("Set agreement date for deal {}", dealId);
+                }
+                break;
+            case REGISTRATION:
+                if (deal.getRegistrationDate() == null) {
+                    deal.setRegistrationDate(now);
+                    logger.info("Set registration date for deal {}", dealId);
+                }
+                break;
+            case PAYMENT:
+                if (deal.getPaymentDate() == null) {
+                    deal.setPaymentDate(now);
+                    logger.info("Set payment date for deal {}", dealId);
+                }
+                break;
+            case COMPLETED:
+                if (deal.getCompletedDate() == null) {
+                    deal.setCompletedDate(now);
+                    logger.info("Set completed date for deal {}", dealId);
+                }
+                break;
+        }
+
+        // Append notes with timestamp
         if (notes != null && !notes.trim().isEmpty()) {
             String existingNotes = deal.getNotes() != null ? deal.getNotes() : "";
             String timestamp = java.time.LocalDateTime.now()
                     .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-            deal.setNotes(existingNotes + "\n[" + timestamp + " - " + updatedBy + "] " + notes);
+            String newNotes = existingNotes + "\n[" + timestamp + " - " + updatedBy + "] " + notes;
+            deal.setNotes(newNotes);
         }
 
+        // Update metadata
         deal.setLastUpdatedBy(updatedBy);
+        deal.setUpdatedAt(LocalDateTime.now());
+
 
         DealStatus updatedDeal = dealStatusRepository.save(deal);
-        logger.info("✅ Deal updated - Stage changed from {} to {}", oldStage, newStage);
+        logger.info("✅ Deal updated - Stage changed from {} to {}, Stage date updated", oldStage, newStage);
         return updatedDeal;
     }
 
