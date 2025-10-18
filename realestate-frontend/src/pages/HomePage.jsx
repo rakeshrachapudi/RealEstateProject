@@ -6,6 +6,7 @@ import PropertyList from '../components/PropertyList';
 import { getFeaturedProperties } from '../services/api';
 import { styles } from '../styles.js';
 import BrowsePropertiesForDeal from '../pages/BrowsePropertiesForDeal';
+import DealDetailModal from '../DealDetailModal.jsx';
 
 function HomePage() {
     const { isAuthenticated, user } = useAuth();
@@ -19,6 +20,7 @@ function HomePage() {
     const [activeTab, setActiveTab] = useState('featured');
     const [selectedArea, setSelectedArea] = useState(null);
     const [showBrowseDeals, setShowBrowseDeals] = useState(false);
+    const [selectedDeal, setSelectedDeal] = useState(null);
     const navigate = useNavigate();
 
     const popularAreas = [
@@ -359,6 +361,12 @@ function HomePage() {
         return colors[stage] || '#6b7280';
     };
 
+    const formatPrice = (price) => {
+        if (!price) return 'N/A';
+        if (typeof price === 'number') return price.toLocaleString('en-IN');
+        return String(price);
+    };
+
     return (
         <div style={styles.container}>
             <section style={styles.heroSection}>
@@ -521,26 +529,21 @@ function HomePage() {
                         gap: '16px',
                     }}>
                         {myDeals.map(deal => {
-                            const propertyId = deal.propertyId || deal.id;
                             return (
                                 <div
                                     key={deal.dealId || deal.id}
-                                    onClick={() => {
-                                        if (propertyId) navigate(`/property/${propertyId}`);
-                                    }}
                                     style={{
                                         padding: '16px',
                                         backgroundColor: '#f8fafc',
                                         borderRadius: '12px',
                                         border: '1px solid #e2e8f0',
-                                        cursor: propertyId ? 'pointer' : 'default',
+                                        cursor: 'pointer',
                                         transition: 'all 0.2s',
                                     }}
+                                    onClick={() => navigate(`/property/${deal.propertyId || deal.property?.id}`)}
                                     onMouseEnter={(e) => {
-                                        if (propertyId) {
-                                            e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
-                                            e.currentTarget.style.transform = 'translateY(-4px)';
-                                        }
+                                        e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
+                                        e.currentTarget.style.transform = 'translateY(-4px)';
                                     }}
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.boxShadow = 'none';
@@ -569,12 +572,12 @@ function HomePage() {
                                     )}
                                     {deal.propertyPrice && (
                                         <p style={{color: '#667eea', fontWeight: '700', margin: '8px 0'}}>
-                                            💵 ₹{parseFloat(deal.propertyPrice).toLocaleString('en-IN')}
+                                            💵 ₹{formatPrice(deal.propertyPrice)}
                                         </p>
                                     )}
                                     {deal.agreedPrice && (
                                         <p style={{color: '#10b981', fontWeight: '700', margin: '4px 0'}}>
-                                            ✅ Agreed: ₹{parseFloat(deal.agreedPrice).toLocaleString('en-IN')}
+                                            ✅ Agreed: ₹{formatPrice(deal.agreedPrice)}
                                         </p>
                                     )}
                                     <div style={{borderTop: '1px solid #e2e8f0', margin: '12px 0', paddingTop: '12px'}}>
@@ -591,6 +594,31 @@ function HomePage() {
                                     <p style={{fontSize: '11px', color: '#94a3b8', margin: '12px 0 0 0'}}>
                                         {new Date(deal.createdAt).toLocaleDateString()}
                                     </p>
+
+                                    {/* VIEW DEAL BUTTON - Opens Modal Only */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedDeal(deal);
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            marginTop: '12px',
+                                            padding: '10px 16px',
+                                            backgroundColor: '#10b981',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            fontWeight: '600',
+                                            fontSize: '14px',
+                                            cursor: 'pointer',
+                                            transition: 'background 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
+                                        onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
+                                    >
+                                        📋 View Deal Details
+                                    </button>
                                 </div>
                             );
                         })}
@@ -646,6 +674,20 @@ function HomePage() {
                         fetchMyDealsProperties();
                         setActiveTab('my-deals');
                     }}
+                />
+            )}
+
+            {/* DEAL DETAIL MODAL */}
+            {selectedDeal && (
+                <DealDetailModal
+                    deal={selectedDeal}
+                    onClose={() => setSelectedDeal(null)}
+                    onUpdate={() => {
+                        setSelectedDeal(null);
+                        fetchMyDeals();
+                    }}
+                    userRole={user?.role}
+                    showOnlyOverview={user?.role === 'BUYER' || user?.role === 'SELLER'}
                 />
             )}
         </div>

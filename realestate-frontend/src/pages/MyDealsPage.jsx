@@ -1,4 +1,3 @@
-// src/pages/MyDealsPage.jsx - REQUIREMENT: Role-based deal viewing
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
@@ -17,7 +16,6 @@ const MyDealsPage = () => {
       navigate('/');
       return;
     }
-    // REQUIREMENT: Fetch role-based deals
     fetchRoleBasedDeals();
   }, [user, navigate]);
 
@@ -34,7 +32,6 @@ const MyDealsPage = () => {
       let dealsData = [];
 
       switch (user.role) {
-        // REQUIREMENT: BUYER - Sees deals where they are the buyer
         case 'BUYER':
           console.log('Fetching buyer deals (deals interested in)...');
           const buyerRes = await fetch(
@@ -47,11 +44,10 @@ const MyDealsPage = () => {
           }
           break;
 
-        // REQUIREMENT: SELLER - Sees deals on their own properties
         case 'SELLER':
           console.log('Fetching seller deals (deals on my properties)...');
           const sellerRes = await fetch(
-            'http://localhost:8080/api/deals/my-deals?userRole=SELLER',
+            `http://localhost:8080/api/deals/my-deals?userRole=SELLER&userId=${user.id}`,
             { headers }
           );
           if (sellerRes.ok) {
@@ -60,7 +56,6 @@ const MyDealsPage = () => {
           }
           break;
 
-        // REQUIREMENT: AGENT - Sees only deals created by them
         case 'AGENT':
           console.log('Fetching agent deals (deals created by me)...');
           const agentRes = await fetch(
@@ -73,21 +68,19 @@ const MyDealsPage = () => {
           }
           break;
 
-        // REQUIREMENT: ADMIN - Sees all deals (will be separated by agent on frontend)
         case 'ADMIN':
           console.log('Fetching all deals for admin (separated by agent)...');
           const adminRes = await fetch(
-            'http://localhost:8080/api/deals/admin/dashboard',
+            `http://localhost:8080/api/deals/admin/dashboard?userId=${user.id}`,
             { headers }
           );
           if (adminRes.ok) {
             const data = await adminRes.json();
             if (data.success && data.data && data.data.agentPerformance) {
-              // Collect all deals from all agents
               const allDeals = [];
               for (const agentPerf of data.data.agentPerformance) {
                 const agentDealsRes = await fetch(
-                  `http://localhost:8080/api/deals/admin/agent/${agentPerf.agentId}`,
+                  `http://localhost:8080/api/deals/admin/agent/${agentPerf.agentId}?userId=${user.id}`,
                   { headers }
                 );
                 if (agentDealsRes.ok) {
@@ -172,6 +165,9 @@ const MyDealsPage = () => {
   const activeDealCount = deals.filter(d => (d.stage || d.currentStage) !== 'COMPLETED').length;
   const completedDealCount = deals.filter(d => (d.stage || d.currentStage) === 'COMPLETED').length;
 
+  // Determine if user should see all tabs or only overview
+  const showOnlyOverview = user?.role === 'BUYER' || user?.role === 'SELLER';
+
   if (loading) {
     return (
       <div style={styles.container}>
@@ -239,7 +235,7 @@ const MyDealsPage = () => {
             <div
               key={deal.id || deal.dealId}
               style={styles.dealCard}
-              onClick={() => setSelectedDeal(deal)}
+              onClick={() => navigate(`/property/${deal.propertyId || deal.property?.id}`)}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-4px)';
                 e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
@@ -259,7 +255,7 @@ const MyDealsPage = () => {
                 {deal.stage || deal.currentStage}
               </div>
 
-              {/* Property Title */}
+              {/* Deal Title */}
               <h3 style={styles.dealTitle}>
                 {deal.propertyTitle || deal.property?.title || 'Property'}
               </h3>
@@ -267,13 +263,13 @@ const MyDealsPage = () => {
               {/* Agreed Price */}
               {deal.agreedPrice && (
                 <div style={styles.priceDisplay}>
-                  💰 ₹{formatPrice(deal.agreedPrice)}
+                  💵 ₹{formatPrice(deal.agreedPrice)}
                 </div>
               )}
 
               {/* Location */}
               <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#64748b' }}>
-                📍 {deal.property?.city || 'Location'}
+                📍 {deal.propertyCity || deal.property?.city || 'Location'}
               </p>
 
               {/* Buyer Details - Show for sellers and admins */}
@@ -292,7 +288,7 @@ const MyDealsPage = () => {
               {/* Seller Details - Show for buyers and admins */}
               {(user?.role === 'BUYER' || user?.role === 'ADMIN') && deal.property?.user && (
                 <div style={styles.personDetail}>
-                  <div style={{ fontWeight: '600', color: '#1e293b' }}>🏠 Seller</div>
+                  <div style={{ fontWeight: '600', color: '#1e293b' }}>🏢 Seller</div>
                   <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>
                     {deal.sellerName || `${deal.property.user?.firstName} ${deal.property.user?.lastName}`}
                   </div>
@@ -320,13 +316,17 @@ const MyDealsPage = () => {
                 Created: {new Date(deal.createdAt).toLocaleDateString()}
               </div>
 
-              {/* View Button */}
+              {/* View Deal Button */}
               <button
-                style={styles.viewBtn}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedDeal(deal);
+                }}
+                style={styles.viewDealBtn}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
               >
-                📋 View Details
+                📋 View Deal Details
               </button>
             </div>
           ))}
@@ -343,6 +343,7 @@ const MyDealsPage = () => {
             fetchRoleBasedDeals();
           }}
           userRole={user?.role}
+          showOnlyOverview={showOnlyOverview}
         />
       )}
     </div>
@@ -479,10 +480,10 @@ const styles = {
     color: '#94a3b8',
     marginBottom: '16px',
   },
-  viewBtn: {
+  viewDealBtn: {
     width: '100%',
-    padding: '10px 16px',
-    backgroundColor: '#3b82f6',
+    padding: '12px 16px',
+    backgroundColor: '#10b981',
     color: 'white',
     border: 'none',
     borderRadius: '8px',

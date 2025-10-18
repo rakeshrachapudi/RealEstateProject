@@ -93,7 +93,7 @@ const PropertyDetails = () => {
       }
 
       // Fallback: Fetch agent's all deals and filter by property
-      console.log('🔄 Trying fallback - fetching agent deals...');
+      console.log('📄 Trying fallback - fetching agent deals...');
       try {
         const response = await fetch(
           `http://localhost:8080/api/deals/agent/${user.id}`,
@@ -274,7 +274,6 @@ const PropertyDetails = () => {
   const amenitiesList = property.amenities ? property.amenities.split(',').map(a => a.trim()) : [];
   const propertyType = property.propertyType?.typeName || property.type || 'N/A';
   const ownerName = property.user ? `${property.user.firstName} ${property.user.lastName}` : 'N/A';
-  const ownerMobile = property.user ? property.user.mobileNumber : 'N/A';
   const isAgent = user && (user.role === 'AGENT' || user.role === 'ADMIN');
 
   return (
@@ -356,21 +355,17 @@ const PropertyDetails = () => {
             </div>
           </div>
 
-          {/* Contact Owner Section */}
+          {/* Contact Agent Section */}
           <div style={styles.contactSection}>
-            <h3 style={styles.contactTitle}>Contact Owner</h3>
-            {property.user && (
-              <div style={styles.ownerInfo}>
-                <div style={styles.ownerName}>{ownerName}</div>
-                {ownerMobile !== 'N/A' && (
-                  <div style={styles.ownerPhone}>
-                    📞 {ownerMobile}
-                  </div>
-                )}
-              </div>
-            )}
+                          {property.user && (
+                            <div style={styles.ownerInfo}>
+                              Dear <div style={styles.ownerName}>{ownerName}</div>
+                            </div>
+                          )}
+            <h3 style={styles.contactTitle}>Contact Agent</h3>
+
             <div style={styles.contactButtons}>
-              <button style={styles.contactOwnerBtn}>Contact Owner</button>
+              <button style={styles.contactOwnerBtn}>Contact Agent</button>
               <button style={styles.getPhoneBtn}>Get Phone No.</button>
             </div>
 
@@ -645,11 +640,6 @@ const styles = {
     fontSize: 16,
     fontWeight: 600,
     marginBottom: 8,
-  },
-  ownerPhone: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 12,
   },
   contactButtons: {
     display: 'flex',

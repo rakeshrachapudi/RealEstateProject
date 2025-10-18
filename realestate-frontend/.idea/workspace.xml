@@ -5,8 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="42dfceb5-b8ee-4b67-a031-eae8b466d127" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/src/DealProgressBar.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/DealDetailModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/DealDetailModal.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/PropertyDetails.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/PropertyDetails.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/pages/HomePage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/HomePage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/MyDealsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/MyDealsPage.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,12 +40,13 @@
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "git-widget-placeholder": "feature/Deals",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Code1/RealEstateProject/realestate-frontend/src/components",
+    "last_opened_file_path": "C:/Code1/RealEstateProject/realestate-frontend/src",
     "settings.editor.selected.configurable": "preferences.pluginManager"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Code1\RealEstateProject\realestate-frontend\src" />
       <recent name="C:\Code1\RealEstateProject\realestate-frontend\src\components" />
       <recent name="C:\Code1\RealEstateProject\realestate-frontend\src\pages" />
     </key>
