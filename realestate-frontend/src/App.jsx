@@ -19,7 +19,7 @@ import HomePage from './pages/HomePage.jsx';
 import SearchResultsPage from './pages/SearchResultsPage.jsx';
 import MyPropertiesPage from './pages/MyPropertiesPage.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
-import AgentDashboard from './pages/AgentDashboard.jsx';
+import AgentDashboard from './pages/AgentDashBoard.jsx';
 import BuyerDeals from './BuyerDeals.jsx';
 import MyDealsPage from './pages/MyDealsPage.jsx';
 import AdminAgentsDashboard from './pages/AdminAgentsDashBoard.jsx';
