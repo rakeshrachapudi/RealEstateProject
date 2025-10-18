@@ -56,9 +56,13 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
     };
 
     const handleAgentDashboardClick = () => {
-        navigate('/agent-dashboard');
-        setActiveDropdown(null); // Close main dropdown
-        setProfileDropdownOpen(false); // Close profile dropdown
+        if (user?.role === 'ADMIN') {
+            navigate('/admin-deals');
+        } else {
+            navigate('/agent-dashboard');
+        }
+        setActiveDropdown(null);
+        setProfileDropdownOpen(false);
     };
 
     // --- ADDED: Handler for My Agreements ---
@@ -260,19 +264,19 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
                                 <button
                                     onClick={handleAgentDashboardClick}
                                     style={{
-                                        color: 'white',
-                                        backgroundColor: 'rgba(34, 197, 94, 0.3)',
-                                        padding: '12px 20px',
-                                        borderRadius: '12px',
-                                        border: '2px solid #22c55e',
-                                        cursor: 'pointer',
-                                        fontWeight: 600,
-                                        fontSize: '14px',
-                                        position: 'relative',
-                                        marginLeft: '10px' // Added some margin
-                                    }}
+                                                                    color: 'white',
+                                                                    backgroundColor: 'rgba(34, 197, 94, 0.3)',
+                                                                    padding: '12px 20px',
+                                                                    borderRadius: '12px',
+                                                                    border: '2px solid #22c55e',
+                                                                    cursor: 'pointer',
+                                                                    fontWeight: 600,
+                                                                    fontSize: '14px',
+                                                                    position: 'relative',
+                                                                    marginLeft: '10px' // Added some margin
+                                                                }}
                                 >
-                                    📊 Agent Dashboard
+                                    {user.role === 'ADMIN' ? '⚙️ Admin Dashboard' : '📊 Agent Dashboard'}
                                     {unreadDeals > 0 && (
                                         <span style={{
                                             position: 'absolute',
@@ -316,7 +320,9 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
                                         {/* --- END ADDITION --- */}
                                         <div style={styles.profileDropdownItem} onClick={handleMyPropertiesClick}>My Properties</div> {/* Corrected onClick */}
                                         {user && (user.role === 'AGENT' || user.role === 'ADMIN') && (
-                                            <div style={styles.profileDropdownItem} onClick={handleAgentDashboardClick}>Agent Dashboard</div> // Corrected onClick
+                                            <div style={styles.profileDropdownItem} onClick={handleAgentDashboardClick}>
+                                                {user.role === 'ADMIN' ? '⚙️ Admin Dashboard' : '📊 Agent Dashboard'}
+                                            </div>
                                         )}
                                         {user && (user.role === 'USER') && (
                                             <div style={styles.profileDropdownItem} onClick={() => { navigate('/my-deals'); setProfileDropdownOpen(false); }}>My Deals</div>

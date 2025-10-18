@@ -25,22 +25,28 @@ public class SecurityConfig {
                 .cors(withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
-                        // ✅ FIX: Put SPECIFIC paths first, then GENERAL paths
+                        // ==================== PUBLIC ENDPOINTS ====================
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/properties/**").permitAll()
                         .requestMatchers("/api/areas/**").permitAll()
                         .requestMatchers("/api/users/**").permitAll()
                         .requestMatchers("/api/deals/**").permitAll()
-                        .requestMatchers("/api/agents/**").permitAll()
                         .requestMatchers("/api/property-types/**").permitAll()
 
-                        // Admin endpoints - require ADMIN role
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // ==================== ADMIN ONLY ENDPOINTS ====================
+                        // ⭐ CRITICAL: Use hasAuthority() NOT hasRole()
+                        // hasRole() adds "ROLE_" prefix, but our DB stores just "ADMIN"
+                        .requestMatchers("/api/deals/admin/**").hasAuthority("ADMIN")
+                        .requestMatchers("/api/deals/stage/**").hasAuthority("ADMIN")
 
-                        // Deals - require authentication
+                        // ==================== AGENT ENDPOINTS ====================
+                        .requestMatchers("/api/agents/**").authenticated()
+
+                        // ==================== AUTHENTICATED DEAL ENDPOINTS ====================
+                        // All other /api/deals/** endpoints require authentication
                         .requestMatchers("/api/deals/**").authenticated()
 
-                        // Everything else - require authentication
+                        // ==================== DEFAULT: Everything else requires authentication ====================
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

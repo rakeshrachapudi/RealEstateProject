@@ -6,6 +6,7 @@ const AdminDealPanel = () => {
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchDeals();
@@ -13,33 +14,62 @@ const AdminDealPanel = () => {
 
   const fetchDeals = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/deals/stats/by-stage', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        }
-      });
-      const data = await response.json();
-      console.log('📊 Deal Stats:', data);
+      setError(null);
+      const headers = {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+      };
 
-      // Fetch all deals at different stages
+      console.log('🔍 Fetching admin deals...');
+
+      // Fetch all deals from all stages
       const allDeals = [];
       const stages = ['INQUIRY', 'SHORTLIST', 'NEGOTIATION', 'AGREEMENT', 'REGISTRATION', 'PAYMENT'];
 
       for (const stage of stages) {
-        const res = await fetch(`http://localhost:8080/api/deals/stage/${stage}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        try {
+          console.log(`📥 Fetching stage: ${stage}`);
+
+          const res = await fetch(`http://localhost:8080/api/deals/stage/${stage}`, {
+            headers
+          });
+
+          console.log(`Stage ${stage} response status:`, res.status);
+
+          if (!res.ok) {
+            console.warn(`⚠️ Stage ${stage} failed with status ${res.status}`);
+            continue;
           }
-        });
-        const stageData = await res.json();
-        if (stageData.success && stageData.data) {
-          allDeals.push(...stageData.data);
+
+          const stageData = await res.json();
+          console.log(`Stage ${stage} response:`, stageData);
+
+          let dealsArray = [];
+
+          // Handle different response formats
+          if (Array.isArray(stageData)) {
+            dealsArray = stageData;
+          } else if (stageData.success && Array.isArray(stageData.data)) {
+            dealsArray = stageData.data;
+          } else if (stageData.data && Array.isArray(stageData.data)) {
+            dealsArray = stageData.data;
+          }
+
+          if (dealsArray.length > 0) {
+            console.log(`✅ Found ${dealsArray.length} deals in ${stage}`);
+            allDeals.push(...dealsArray);
+          }
+        } catch (stageError) {
+          console.error(`❌ Error fetching stage ${stage}:`, stageError);
         }
       }
 
+      console.log(`✅ Total deals loaded: ${allDeals.length}`);
+      console.log('All deals:', allDeals);
       setPendingDeals(allDeals);
+
     } catch (error) {
-      console.error('Error fetching deals:', error);
+      console.error('❌ Error fetching deals:', error);
+      setError(`Error loading deals: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -258,6 +288,19 @@ const AdminDealPanel = () => {
   return (
     <div style={containerStyle}>
       <h1 style={titleStyle}>⚙️ Admin Dashboard - Deal Management</h1>
+
+      {error && (
+        <div style={{
+          padding: '12px 16px',
+          backgroundColor: '#fee2e2',
+          color: '#dc2626',
+          borderRadius: '8px',
+          marginBottom: '16px',
+          border: '1px solid #fecaca'
+        }}>
+          ❌ {error}
+        </div>
+      )}
 
       <div style={tabsStyle}>
         <button

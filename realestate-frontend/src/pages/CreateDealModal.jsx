@@ -14,12 +14,17 @@ const CreateDealModal = ({ propertyId, propertyTitle, onClose, onSuccess }) => {
   const [error, setError] = useState(null);
   const [property, setProperty] = useState(null);
 
-  // Fetch property details on mount
+  // Requirement: Only agents can create deals
   useEffect(() => {
+    if (user?.role !== 'AGENT' && user?.role !== 'ADMIN') {
+      setError('Only agents can create deals');
+      onClose();
+      return;
+    }
     if (propertyId) {
       fetchPropertyDetails();
     }
-  }, [propertyId]);
+  }, [propertyId, user, onClose]);
 
   const fetchPropertyDetails = async () => {
     try {
@@ -135,6 +140,10 @@ const CreateDealModal = ({ propertyId, propertyTitle, onClose, onSuccess }) => {
 
   const sellerInfo = property?.user || {};
   const getAgentName = () => user?.firstName ? `${user.firstName} ${user.lastName}` : 'Agent';
+  const formatPrice = (price) => {
+    if (!price) return '0';
+    return Number(price).toLocaleString('en-IN');
+  };
 
   return (
     <div style={styles.backdrop} onClick={onClose}>
@@ -192,69 +201,7 @@ const CreateDealModal = ({ propertyId, propertyTitle, onClose, onSuccess }) => {
         {/* Step 2: Deal Details */}
         {step === 2 && (
           <div>
-            {/* Buyer Info Box */}
-            <div style={styles.infoCard}>
-              <h4 style={styles.infoCardTitle}>✅ Buyer Selected</h4>
-              <div style={styles.infoCardContent}>
-                <div style={styles.infoItem}>
-                  <span>👤 Name:</span>
-                  <span style={styles.bold}>{buyerInfo?.firstName} {buyerInfo?.lastName}</span>
-                </div>
-                <div style={styles.infoItem}>
-                  <span>📱 Mobile:</span>
-                  <span style={styles.bold}>{buyerInfo?.mobileNumber}</span>
-                </div>
-                <div style={styles.infoItem}>
-                  <span>📧 Email:</span>
-                  <span style={styles.bold}>{buyerInfo?.email || 'N/A'}</span>
-                </div>
-              </div>
-              <button
-                onClick={handleBack}
-                style={{
-                  ...styles.changeBtn,
-                  marginTop: '12px'
-                }}
-              >
-                🔄 Change Buyer
-              </button>
-            </div>
-
-            {/* Property Info Box */}
-            <div style={styles.infoCard}>
-              <h4 style={styles.infoCardTitle}>🏠 Property</h4>
-              <div style={styles.infoCardContent}>
-                <div style={styles.infoItem}>
-                  <span>Title:</span>
-                  <span style={styles.bold}>{propertyTitle || property?.title}</span>
-                </div>
-                <div style={styles.infoItem}>
-                  <span>Price:</span>
-                  <span style={styles.bold}>₹{(property?.price || 0).toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Seller Info Box */}
-            <div style={styles.infoCard}>
-              <h4 style={styles.infoCardTitle}>🏢 Seller / Property Owner</h4>
-              <div style={styles.infoCardContent}>
-                <div style={styles.infoItem}>
-                  <span>Name:</span>
-                  <span style={styles.bold}>{sellerInfo.firstName} {sellerInfo.lastName}</span>
-                </div>
-                <div style={styles.infoItem}>
-                  <span>📱 Mobile:</span>
-                  <span style={styles.bold}>{sellerInfo.mobileNumber || 'N/A'}</span>
-                </div>
-                <div style={styles.infoItem}>
-                  <span>📧 Email:</span>
-                  <span style={styles.bold}>{sellerInfo.email || 'N/A'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Agent Info Box */}
+            {/* REQUIREMENT: Show Agent ID */}
             <div style={styles.infoCard}>
               <h4 style={styles.infoCardTitle}>📊 Agent Creating Deal</h4>
               <div style={styles.infoCardContent}>
@@ -273,7 +220,69 @@ const CreateDealModal = ({ propertyId, propertyTitle, onClose, onSuccess }) => {
               </div>
             </div>
 
-            {/* Deal Price Input */}
+            {/* REQUIREMENT: Show Buyer Mobile */}
+            <div style={styles.infoCard}>
+              <h4 style={styles.infoCardTitle}>✅ Buyer Selected</h4>
+              <div style={styles.infoCardContent}>
+                <div style={styles.infoItem}>
+                  <span>👤 Name:</span>
+                  <span style={styles.bold}>{buyerInfo?.firstName} {buyerInfo?.lastName}</span>
+                </div>
+                <div style={styles.infoItem}>
+                  <span>📱 Mobile (REQUIREMENT):</span>
+                  <span style={{...styles.bold, color: '#3b82f6'}}>{buyerInfo?.mobileNumber}</span>
+                </div>
+                <div style={styles.infoItem}>
+                  <span>📧 Email:</span>
+                  <span style={styles.bold}>{buyerInfo?.email || 'N/A'}</span>
+                </div>
+              </div>
+              <button
+                onClick={handleBack}
+                style={{
+                  ...styles.changeBtn,
+                  marginTop: '12px'
+                }}
+              >
+                🔄 Change Buyer
+              </button>
+            </div>
+
+            {/* REQUIREMENT: Show Seller Mobile */}
+            <div style={styles.infoCard}>
+              <h4 style={styles.infoCardTitle}>🏠 Seller / Property Owner</h4>
+              <div style={styles.infoCardContent}>
+                <div style={styles.infoItem}>
+                  <span>Name:</span>
+                  <span style={styles.bold}>{sellerInfo.firstName} {sellerInfo.lastName}</span>
+                </div>
+                <div style={styles.infoItem}>
+                  <span>📱 Mobile (REQUIREMENT):</span>
+                  <span style={{...styles.bold, color: '#3b82f6'}}>{sellerInfo.mobileNumber || 'N/A'}</span>
+                </div>
+                <div style={styles.infoItem}>
+                  <span>📧 Email:</span>
+                  <span style={styles.bold}>{sellerInfo.email || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Property Info Box */}
+            <div style={styles.infoCard}>
+              <h4 style={styles.infoCardTitle}>🏘 Property</h4>
+              <div style={styles.infoCardContent}>
+                <div style={styles.infoItem}>
+                  <span>Title:</span>
+                  <span style={styles.bold}>{propertyTitle || property?.title}</span>
+                </div>
+                <div style={styles.infoItem}>
+                  <span>Price:</span>
+                  <span style={styles.bold}>₹{formatPrice(property?.price)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* REQUIREMENT: Deal Price Input */}
             <div style={styles.formGroup}>
               <label style={styles.label}>💰 Agreed Deal Price (₹) *</label>
               <input
@@ -286,6 +295,11 @@ const CreateDealModal = ({ propertyId, propertyTitle, onClose, onSuccess }) => {
                 }}
                 style={styles.input}
               />
+              {dealPrice && (
+                <div style={styles.pricePreview}>
+                  Price: ₹{formatPrice(dealPrice)}
+                </div>
+              )}
             </div>
 
             {/* Notes */}
@@ -329,7 +343,13 @@ const CreateDealModal = ({ propertyId, propertyTitle, onClose, onSuccess }) => {
 
         {/* Info Box */}
         <div style={styles.noteBox}>
-          <strong>ℹ️ Note:</strong> The buyer must be a registered user in the system. This deal will be created in the 'INQUIRY' stage.
+          <strong>ℹ️ REQUIREMENT:</strong> Only agents can create deals. This deal shows:
+          <ul style={{margin: '8px 0', paddingLeft: '20px'}}>
+            <li>✅ Agent ID: {user?.id}</li>
+            <li>✅ Buyer Mobile: {buyerInfo?.mobileNumber || 'To be filled'}</li>
+            <li>✅ Seller Mobile: {sellerInfo.mobileNumber || 'N/A'}</li>
+            <li>✅ Deal Price: ₹{dealPrice ? formatPrice(dealPrice) : 'To be filled'}</li>
+          </ul>
         </div>
       </div>
     </div>
@@ -467,6 +487,12 @@ const styles = {
     fontSize: '12px',
     color: '#64748b',
     marginTop: '8px'
+  },
+  pricePreview: {
+    fontSize: '13px',
+    color: '#10b981',
+    marginTop: '8px',
+    fontWeight: '600'
   },
   formGroup: {
     marginBottom: '16px'

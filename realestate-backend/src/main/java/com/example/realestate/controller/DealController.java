@@ -310,6 +310,93 @@ public class DealController {
         }
     }
 
+    // Add this NEW endpoint to your DealController.java
+// Place it after the existing @GetMapping("/admin/agent/{agentId}") endpoint
+
+    // ==================== GET ALL DEALS BY STAGE (ADMIN) ⭐ NEW ====================
+    @GetMapping("/stage/{stage}")
+    public ResponseEntity<?> getDealsByStage(
+            @PathVariable String stage,
+            Authentication authentication) {
+
+        logger.info("📊 Fetching deals by stage: {} (Admin)", stage);
+
+        try {
+            String username = authentication != null ? authentication.getName() : "system";
+            User currentUser = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // ✅ Verify ADMIN role only
+            if (!currentUser.getRole().equals(User.UserRole.ADMIN)) {
+                logger.warn("❌ User {} attempted to access stage deals but is not admin", username);
+                return new ResponseEntity<>(
+                        ApiResponse.error("Only admins can access this resource"),
+                        HttpStatus.FORBIDDEN
+                );
+            }
+
+            // Convert stage string to enum
+            DealStatus.DealStage dealStage;
+            try {
+                dealStage = DealStatus.DealStage.valueOf(stage.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                logger.error("❌ Invalid stage: {}", stage);
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Invalid stage: " + stage));
+            }
+
+            // Get deals by stage
+            List<DealStatus> deals = dealService.getDealsByStage(dealStage);
+            List<DealDetailDTO> dealDTOs = deals.stream()
+                    .map(this::convertToDetailDTO)
+                    .collect(java.util.stream.Collectors.toList());
+
+            logger.info("✅ Found {} deals in stage: {}", dealDTOs.size(), stage);
+            return ResponseEntity.ok(ApiResponse.success(dealDTOs));
+
+        } catch (Exception e) {
+            logger.error("❌ Error fetching deals by stage: ", e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    // ==================== GET STATS BY STAGE (ADMIN) ⭐ NEW ====================
+    @GetMapping("/stats/by-stage")
+    public ResponseEntity<?> getStatsByStage(Authentication authentication) {
+        logger.info("📊 Fetching deal stats by stage (Admin)");
+
+        try {
+            String username = authentication != null ? authentication.getName() : "system";
+            User currentUser = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // ✅ Verify ADMIN role only
+            if (!currentUser.getRole().equals(User.UserRole.ADMIN)) {
+                logger.warn("❌ User {} attempted to access stats but is not admin", username);
+                return new ResponseEntity<>(
+                        ApiResponse.error("Only admins can access this resource"),
+                        HttpStatus.FORBIDDEN
+                );
+            }
+
+            // Get stats by stage
+            Map<String, Long> statsByStage = new HashMap<>();
+            for (DealStatus.DealStage stage : DealStatus.DealStage.values()) {
+                Long count = dealService.getCountByStage(stage);
+                statsByStage.put(stage.name(), count);
+            }
+
+            logger.info("✅ Stats by stage calculated");
+            return ResponseEntity.ok(ApiResponse.success(statsByStage));
+
+        } catch (Exception e) {
+            logger.error("❌ Error fetching stats: ", e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
     @GetMapping("/buyer/{buyerId}")
     public ResponseEntity<?> getBuyerDeals(@PathVariable Long buyerId) {
         logger.info("👥 Fetching deals for buyer: {}", buyerId);

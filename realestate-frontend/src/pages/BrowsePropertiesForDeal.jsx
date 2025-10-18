@@ -1,4 +1,4 @@
-// src/pages/BrowsePropertiesForDeal.jsx
+// src/pages/BrowsePropertiesForDeal.jsx - REQUIREMENT: Agent only creates deals
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import DealDetailsPopup from '../components/DealDetailsPopup';
@@ -17,7 +17,14 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
   const [existingDeals, setExistingDeals] = useState({});
   const [selectedDealToView, setSelectedDealToView] = useState(null);
 
+  // REQUIREMENT: Only agents can access this modal
   useEffect(() => {
+    if (user?.role !== 'AGENT' && user?.role !== 'ADMIN') {
+      setError('❌ Only agents can create deals');
+      setTimeout(onClose, 2000);
+      return;
+    }
+
     const style = document.createElement('style');
     style.textContent = `
       @keyframes slideUp {
@@ -33,7 +40,7 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
     `;
     document.head.appendChild(style);
     return () => document.head.removeChild(style);
-  }, []);
+  }, [user, onClose]);
 
   const searchBuyer = async (phone) => {
     if (!phone || phone.length !== 10) return;
@@ -110,6 +117,7 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
     }
   };
 
+  // REQUIREMENT: Create deal with agreed price - Agent ID, Buyer mobile, Seller mobile, Deal price
   const handleCreateDeal = async (propertyId) => {
     if (!buyerInfo || !propertyId || !dealPrice) {
       setError('Please enter deal price');
@@ -127,8 +135,8 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
         body: JSON.stringify({
           propertyId: propertyId,
           buyerId: buyerInfo.id,
-          agentId: user.id,
-          agreedPrice: parseInt(dealPrice)
+          agentId: user.id,  // REQUIREMENT: Agent ID
+          agreedPrice: parseFloat(dealPrice)  // REQUIREMENT: Deal price
         })
       });
       const data = await response.json();
@@ -157,6 +165,27 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
     }
   };
 
+  const formatPrice = (price) => {
+    if (!price) return '0';
+    return Number(price).toLocaleString('en-IN');
+  };
+
+  // REQUIREMENT: Check if only agent
+  if (user?.role !== 'AGENT' && user?.role !== 'ADMIN') {
+    return (
+      <div style={styles.backdrop} onClick={onClose}>
+        <div style={styles.container} onClick={e => e.stopPropagation()}>
+          <button style={styles.closeBtn} onClick={onClose}>×</button>
+          <div style={{ textAlign: 'center', padding: '40px', color: '#dc2626' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>❌</div>
+            <h2>Access Denied</h2>
+            <p>Only agents can create deals</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {selectedDealToView && (
@@ -167,6 +196,12 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
         <div style={styles.container} className="deal-modal-content" onClick={e => e.stopPropagation()}>
           <button style={styles.closeBtn} onClick={onClose}>×</button>
           <h1 style={styles.title}>📋 Create New Deal</h1>
+
+          {/* REQUIREMENT: Show Agent ID */}
+          <div style={styles.agentInfo}>
+            <span style={{ fontWeight: '600' }}>📊 Agent ID: {user?.id}</span>
+          </div>
+
           {error && <div style={styles.error}>❌ {error}</div>}
 
           {step === 2 && selectedProperty && getPropertyDeal(selectedProperty.id || selectedProperty.propertyId) && (
@@ -199,6 +234,7 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
             </div>
           ) : (
             <div style={styles.step2}>
+              {/* REQUIREMENT: Show Buyer Mobile */}
               <div style={styles.buyerInfo}>
                 <h3 style={styles.buyerName}>✅ {buyerInfo?.firstName} {buyerInfo?.lastName}</h3>
                 <p style={styles.buyerPhone}>📱 {buyerInfo?.mobileNumber}</p>
@@ -249,23 +285,23 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
                         />
                         <div style={styles.propertyDetails}>
                           <h4 style={styles.propertyTitle}>{property.title}</h4>
-                          <p style={styles.propertyPrice}>💰 ₹{(property.price || 0).toLocaleString('en-IN')}</p>
+                          <p style={styles.propertyPrice}>💰 ₹{formatPrice(property.price)}</p>
                           <p style={styles.propertySpecs}>
                             🛏️ {property.bedrooms} | 🚿 {property.bathrooms} | 📐 {property.areaSqft || 'N/A'} sqft
                           </p>
                           <p style={styles.propertyLocation}>📍 {property.areaName || property.city}</p>
 
-                          {/* ✅ SELLER INFO */}
+                          {/* REQUIREMENT: Show Seller Mobile */}
                           {property.user && (
                             <div style={styles.sellerInfo}>
-                              <p style={styles.sellerLabel}>👤 Seller: {property.user.firstName} {property.user.lastName}</p>
-                              <p style={styles.sellerPhone}>📞 {property.user.mobileNumber || 'N/A'}</p>
+                              <p style={styles.sellerLabel}>🏠 Seller: {property.user.firstName} {property.user.lastName}</p>
+                              <p style={styles.sellerPhone}>📱 {property.user.mobileNumber || 'N/A'}</p>
                             </div>
                           )}
 
-                          {/* ✅ AGENT ID */}
-                          <div style={styles.agentInfo}>
-                            <p style={styles.agentLabel}>🏢 Agent ID: {user.id}</p>
+                          {/* REQUIREMENT: Show Agent ID */}
+                          <div style={styles.agentInfoSmall}>
+                            <p style={styles.agentLabel}>📊 Agent ID: {user.id}</p>
                           </div>
 
                           {existingDeal ? (
@@ -285,7 +321,7 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
                             </>
                           ) : isSelected ? (
                             <>
-                              {/* ✅ DEAL PRICE INPUT */}
+                              {/* REQUIREMENT: Deal Price Input */}
                               <div style={{ marginBottom: '12px' }}>
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px', color: '#1e293b' }}>
                                   💰 Deal Price (₹) *
@@ -304,6 +340,11 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
                                     boxSizing: 'border-box'
                                   }}
                                 />
+                                {dealPrice && (
+                                  <div style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>
+                                    ₹{formatPrice(dealPrice)}
+                                  </div>
+                                )}
                               </div>
                               <button
                                 onClick={(e) => {
@@ -324,7 +365,7 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
                 </div>
               ) : (
                 <div style={styles.noProperties}>
-                  <p>📭 No properties available to create a deal</p>
+                  <p>🔭 No properties available to create a deal</p>
                 </div>
               )}
             </div>
@@ -357,6 +398,17 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
               </button>
             </div>
           )}
+
+          {/* Info Box */}
+          <div style={styles.noteBox}>
+            <strong>ℹ️ REQUIREMENT:</strong> Only agents can create deals. This deal will show:
+            <ul style={{margin: '8px 0', paddingLeft: '20px'}}>
+              <li>✅ Agent ID: {user?.id}</li>
+              <li>✅ Buyer Mobile: From Step 1</li>
+              <li>✅ Seller Mobile: From property details</li>
+              <li>✅ Deal Price: From Step 2</li>
+            </ul>
+          </div>
         </div>
       </div>
     </>
@@ -412,8 +464,17 @@ const styles = {
     fontSize: '28px',
     fontWeight: '800',
     color: '#1e293b',
-    marginBottom: '24px',
+    marginBottom: '12px',
     marginTop: 0
+  },
+  agentInfo: {
+    padding: '12px 16px',
+    backgroundColor: '#fef3c7',
+    borderRadius: '8px',
+    border: '1px solid #fcd34d',
+    marginBottom: '16px',
+    fontSize: '13px',
+    color: '#92400e'
   },
   error: {
     backgroundColor: '#fee2e2',
@@ -605,7 +666,7 @@ const styles = {
     fontSize: '12px',
     color: '#0369a1'
   },
-  agentInfo: {
+  agentInfoSmall: {
     padding: '8px 12px',
     backgroundColor: '#fef3c7',
     borderRadius: '6px',
@@ -663,7 +724,16 @@ const styles = {
     border: '1px dashed #e2e8f0'
   },
   step1: { marginTop: '16px' },
-  step2: { marginTop: '16px' }
+  step2: { marginTop: '16px' },
+  noteBox: {
+    backgroundColor: '#fef3c7',
+    border: '1px solid #fcd34d',
+    padding: '12px 16px',
+    borderRadius: '8px',
+    fontSize: '13px',
+    color: '#92400e',
+    marginTop: '20px'
+  }
 };
 
 export default BrowsePropertiesForDeal;

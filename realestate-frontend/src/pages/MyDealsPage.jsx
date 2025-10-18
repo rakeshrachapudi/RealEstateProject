@@ -1,4 +1,4 @@
-// src/pages/MyDealsPage.jsx
+// src/pages/MyDealsPage.jsx - REQUIREMENT: Role-based deal viewing
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
@@ -17,24 +17,26 @@ const MyDealsPage = () => {
       navigate('/');
       return;
     }
+    // REQUIREMENT: Fetch role-based deals
     fetchRoleBasedDeals();
   }, [user, navigate]);
 
   const fetchRoleBasedDeals = async () => {
     setLoading(true);
     try {
-      let dealsData = [];
       const headers = {
         'Authorization': `Bearer ${localStorage.getItem('authToken')}`
       };
 
-      console.log('👤 User Role:', user.role);
-      console.log('👤 User ID:', user.id);
+      console.log('User Role:', user.role);
+      console.log('User ID:', user.id);
+
+      let dealsData = [];
 
       switch (user.role) {
-        // BUYER: Sees deals they're interested in (deals where they are the buyer)
+        // REQUIREMENT: BUYER - Sees deals where they are the buyer
         case 'BUYER':
-          console.log('🔥 Fetching buyer deals...');
+          console.log('Fetching buyer deals (deals interested in)...');
           const buyerRes = await fetch(
             `http://localhost:8080/api/deals/buyer/${user.id}`,
             { headers }
@@ -42,13 +44,12 @@ const MyDealsPage = () => {
           if (buyerRes.ok) {
             const data = await buyerRes.json();
             dealsData = Array.isArray(data) ? data : (data.data || []);
-            console.log(`✅ Buyer deals found: ${dealsData.length}`);
           }
           break;
 
-        // SELLER: Sees deals on their own properties
+        // REQUIREMENT: SELLER - Sees deals on their own properties
         case 'SELLER':
-          console.log('🔥 Fetching seller deals...');
+          console.log('Fetching seller deals (deals on my properties)...');
           const sellerRes = await fetch(
             'http://localhost:8080/api/deals/my-deals?userRole=SELLER',
             { headers }
@@ -56,13 +57,12 @@ const MyDealsPage = () => {
           if (sellerRes.ok) {
             const data = await sellerRes.json();
             dealsData = data.success ? data.data : [];
-            console.log(`✅ Seller deals found: ${dealsData.length}`);
           }
           break;
 
-        // AGENT: Sees only deals they created
+        // REQUIREMENT: AGENT - Sees only deals created by them
         case 'AGENT':
-          console.log('🔥 Fetching agent deals...');
+          console.log('Fetching agent deals (deals created by me)...');
           const agentRes = await fetch(
             `http://localhost:8080/api/deals/agent/${user.id}`,
             { headers }
@@ -70,37 +70,46 @@ const MyDealsPage = () => {
           if (agentRes.ok) {
             const data = await agentRes.json();
             dealsData = Array.isArray(data) ? data : (data.data || []);
-            console.log(`✅ Agent deals found: ${dealsData.length}`);
           }
           break;
 
-        // ADMIN: Sees all deals across all agents
+        // REQUIREMENT: ADMIN - Sees all deals (will be separated by agent on frontend)
         case 'ADMIN':
-          console.log('🔥 Fetching all deals for admin...');
-          const stages = ['INQUIRY', 'SHORTLIST', 'NEGOTIATION', 'AGREEMENT', 'REGISTRATION', 'PAYMENT', 'COMPLETED'];
-          const allDeals = [];
-
-          for (const stage of stages) {
-            const res = await fetch(
-              `http://localhost:8080/api/deals/stage/${stage}`,
-              { headers }
-            );
-            if (res.ok) {
-              const stageData = await res.json();
-              if (stageData.success && stageData.data) {
-                allDeals.push(...stageData.data);
+          console.log('Fetching all deals for admin (separated by agent)...');
+          const adminRes = await fetch(
+            'http://localhost:8080/api/deals/admin/dashboard',
+            { headers }
+          );
+          if (adminRes.ok) {
+            const data = await adminRes.json();
+            if (data.success && data.data && data.data.agentPerformance) {
+              // Collect all deals from all agents
+              const allDeals = [];
+              for (const agentPerf of data.data.agentPerformance) {
+                const agentDealsRes = await fetch(
+                  `http://localhost:8080/api/deals/admin/agent/${agentPerf.agentId}`,
+                  { headers }
+                );
+                if (agentDealsRes.ok) {
+                  const agentDeals = await agentDealsRes.json();
+                  if (Array.isArray(agentDeals)) {
+                    allDeals.push(...agentDeals);
+                  } else if (agentDeals.data) {
+                    allDeals.push(...(Array.isArray(agentDeals.data) ? agentDeals.data : []));
+                  }
+                }
               }
+              dealsData = allDeals;
             }
           }
-          dealsData = allDeals;
-          console.log(`✅ Admin deals found: ${dealsData.length}`);
           break;
 
         default:
-          console.log('❌ Unknown role:', user.role);
+          console.log('Unknown role:', user.role);
       }
 
       setDeals(dealsData);
+      console.log(`Loaded ${dealsData.length} deals for role: ${user.role}`);
     } catch (error) {
       console.error('Error fetching deals:', error);
       setDeals([]);
@@ -130,10 +139,10 @@ const MyDealsPage = () => {
 
   const getPageDescription = () => {
     const descriptions = {
-      'BUYER': 'Track properties you\'re interested in purchasing',
-      'SELLER': 'Monitor deals on your listed properties',
-      'AGENT': 'Manage deals you\'ve created for buyers',
-      'ADMIN': 'View and manage all deals across agents'
+      'BUYER': 'Deals for properties you are interested in purchasing',
+      'SELLER': 'All deals on your listed properties',
+      'AGENT': 'Deals you have created for buyers',
+      'ADMIN': 'View all deals separated by agent'
     };
     return descriptions[user?.role] || 'Your deals';
   };
@@ -255,15 +264,20 @@ const MyDealsPage = () => {
                 {deal.propertyTitle || deal.property?.title || 'Property'}
               </h3>
 
-              {/* Agreed Price - Prominent Display */}
+              {/* Agreed Price */}
               {deal.agreedPrice && (
                 <div style={styles.priceDisplay}>
                   💰 ₹{formatPrice(deal.agreedPrice)}
                 </div>
               )}
 
-              {/* Buyer Details */}
-              {deal.buyer && (
+              {/* Location */}
+              <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#64748b' }}>
+                📍 {deal.property?.city || 'Location'}
+              </p>
+
+              {/* Buyer Details - Show for sellers and admins */}
+              {(user?.role === 'SELLER' || user?.role === 'ADMIN') && deal.buyer && (
                 <div style={styles.personDetail}>
                   <div style={{ fontWeight: '600', color: '#1e293b' }}>👤 Buyer</div>
                   <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>
@@ -275,7 +289,7 @@ const MyDealsPage = () => {
                 </div>
               )}
 
-              {/* Seller Details - Show for Buyers and Admins */}
+              {/* Seller Details - Show for buyers and admins */}
               {(user?.role === 'BUYER' || user?.role === 'ADMIN') && deal.property?.user && (
                 <div style={styles.personDetail}>
                   <div style={{ fontWeight: '600', color: '#1e293b' }}>🏠 Seller</div>
@@ -288,20 +302,7 @@ const MyDealsPage = () => {
                 </div>
               )}
 
-              {/* Seller as Current User - Show for Sellers */}
-              {user?.role === 'SELLER' && deal.property?.user && (
-                <div style={styles.personDetail}>
-                  <div style={{ fontWeight: '600', color: '#1e293b' }}>🏠 Seller (You)</div>
-                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>
-                    {deal.sellerName || `${deal.property.user?.firstName} ${deal.property.user?.lastName}`}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                    📞 {deal.sellerMobile || deal.property.user?.mobileNumber || 'N/A'}
-                  </div>
-                </div>
-              )}
-
-              {/* Agent Details */}
+              {/* Agent Details - Show for all roles */}
               {deal.agent && (
                 <div style={styles.personDetail}>
                   <div style={{ fontWeight: '600', color: '#1e293b' }}>📊 Agent</div>
@@ -309,7 +310,7 @@ const MyDealsPage = () => {
                     {deal.agentName || `${deal.agent?.firstName} ${deal.agent?.lastName}`}
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                    📧 {deal.agentEmail || deal.agent?.email || 'N/A'}
+                    ID: {deal.agentId || deal.agent?.id}
                   </div>
                 </div>
               )}
