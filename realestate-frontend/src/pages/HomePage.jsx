@@ -12,7 +12,8 @@ function HomePage() {
     const { isAuthenticated, user } = useAuth();
     const [propsList, setPropsList] = useState([]);
     const [myProperties, setMyProperties] = useState([]);
-    const [myDealsProperties, setMyDealsProperties] = useState([]); // ✅ NEW: Properties with deals
+    const [myDealsProperties, setMyDealsProperties] = useState([]);
+    const [myDeals, setMyDeals] = useState([]);
     const [searchResults, setSearchResults] = useState([]);
     const [showSearchResults, setShowSearchResults] = useState(false);
     const [searchLoading, setSearchLoading] = useState(false);
@@ -31,15 +32,6 @@ function HomePage() {
         { name: 'Jubilee Hills', emoji: '🏛️' }
     ];
 
-    useEffect(() => {
-        fetchProperties();
-        if (isAuthenticated && user?.id) {
-            fetchMyProperties();
-            fetchMyDealsProperties(); // ✅ NEW: Fetch properties with deals
-        }
-    }, [isAuthenticated, user]);
-
-    // ✅ 1. FEATURED PROPERTIES - All properties on site
     const fetchProperties = async () => {
         try {
             const response = await getFeaturedProperties();
@@ -62,39 +54,194 @@ function HomePage() {
         }
     };
 
-    // ✅ 2. MY UPLOADED PROPERTIES - Properties uploaded by current user
     const fetchMyProperties = async () => {
-        if (!user?.id) {
-            console.log('❌ No user ID for fetching properties');
+        if (!isAuthenticated || !user?.id) {
+            console.log('❌ Not authenticated or no user ID');
+            setMyProperties([]);
             return;
         }
+
         try {
             console.log('📥 Fetching properties uploaded by user ID:', user.id);
-            const response = await fetch(`http://localhost:8080/api/properties/user/${user.id}`);
+            const response = await fetch(`http://localhost:8080/api/properties/user/${user.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                }
+            });
+
             if (response.ok) {
                 const data = await response.json();
                 const propertiesArray = Array.isArray(data) ? data : (data.data || []);
-                console.log(`✅ Found ${propertiesArray.length} properties uploaded by user`);
-                setMyProperties(propertiesArray);
+
+                const verifiedProperties = propertiesArray.filter(prop => prop.user?.id === user.id);
+
+                console.log(`✅ Found ${propertiesArray.length} properties, verified ${verifiedProperties.length}`);
+                setMyProperties(verifiedProperties);
             } else {
                 console.log('❌ Failed to fetch my properties:', response.status);
+                setMyProperties([]);
             }
         } catch (error) {
             console.error('Error loading my properties:', error);
+            setMyProperties([]);
         }
     };
 
-    // ✅ 3. MY DEALS PROPERTIES - Deals ONLY on properties posted by the user
-    const fetchMyDealsProperties = async () => {
-        if (!user?.id) {
-            console.log('❌ No user ID for fetching deals');
+    // ✅ FETCH MY DEALS - Multi-role deal fetching with NEW endpoint
+    const fetchMyDeals = async () => {
+        if (!isAuthenticated || !user?.id) {
+            console.log('❌ Not authenticated or missing user info');
+            setMyDeals([]);
             return;
         }
+
+        try {
+            console.log('📥 Fetching deals for user ID:', user.id);
+
+            const authToken = localStorage.getItem('authToken');
+            const allDeals = [];
+            const dealIds = new Set();
+
+            // ✅ 1. Fetch by primary role (AGENT, ADMIN, etc.)
+            if (user.role) {
+                try {
+                    const roleResponse = await fetch(
+                        `http://localhost:8080/api/deals/user/${user.id}/role/${user.role}`,
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`
+                            }
+                        }
+                    );
+
+                    console.log(`📊 Primary role (${user.role}) response status:`, roleResponse.status);
+
+                    if (roleResponse.ok) {
+                        const roleData = await roleResponse.json();
+                        console.log(`📊 Primary role (${user.role}) response:`, roleData);
+
+                        let roleDealsList = [];
+                        if (Array.isArray(roleData)) {
+                            roleDealsList = roleData;
+                        } else if (roleData.data && Array.isArray(roleData.data)) {
+                            roleDealsList = roleData.data;
+                        }
+
+                        console.log(`✅ Found ${roleDealsList.length} deals for primary role: ${user.role}`);
+
+                        roleDealsList.forEach(deal => {
+                            if (!dealIds.has(deal.dealId || deal.id)) {
+                                allDeals.push(deal);
+                                dealIds.add(deal.dealId || deal.id);
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.error('⚠️ Error fetching deals by primary role:', err);
+                }
+            }
+
+            // ✅ 2. If not AGENT/ADMIN, also fetch as BUYER
+            if (user.role !== 'AGENT' && user.role !== 'ADMIN') {
+                try {
+                    const buyerResponse = await fetch(
+                        `http://localhost:8080/api/deals/user/${user.id}/role/BUYER`,
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`
+                            }
+                        }
+                    );
+
+                    console.log(`📊 BUYER role response status:`, buyerResponse.status);
+
+                    if (buyerResponse.ok) {
+                        const buyerData = await buyerResponse.json();
+                        console.log(`📊 BUYER role response:`, buyerData);
+
+                        let buyerDealsList = [];
+                        if (Array.isArray(buyerData)) {
+                            buyerDealsList = buyerData;
+                        } else if (buyerData.data && Array.isArray(buyerData.data)) {
+                            buyerDealsList = buyerData.data;
+                        }
+
+                        console.log(`✅ Found ${buyerDealsList.length} deals as BUYER`);
+
+                        buyerDealsList.forEach(deal => {
+                            if (!dealIds.has(deal.dealId || deal.id)) {
+                                allDeals.push(deal);
+                                dealIds.add(deal.dealId || deal.id);
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.error('⚠️ Error fetching deals as BUYER:', err);
+                }
+            }
+
+            // ✅ 3. Also fetch as SELLER
+            try {
+                const sellerResponse = await fetch(
+                    `http://localhost:8080/api/deals/user/${user.id}/role/SELLER`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    }
+                );
+
+                console.log(`📊 SELLER role response status:`, sellerResponse.status);
+
+                if (sellerResponse.ok) {
+                    const sellerData = await sellerResponse.json();
+                    console.log(`📊 SELLER role response:`, sellerData);
+
+                    let sellerDealsList = [];
+                    if (Array.isArray(sellerData)) {
+                        sellerDealsList = sellerData;
+                    } else if (sellerData.data && Array.isArray(sellerData.data)) {
+                        sellerDealsList = sellerData.data;
+                    }
+
+                    console.log(`✅ Found ${sellerDealsList.length} deals as SELLER`);
+
+                    sellerDealsList.forEach(deal => {
+                        if (!dealIds.has(deal.dealId || deal.id)) {
+                            allDeals.push(deal);
+                            dealIds.add(deal.dealId || deal.id);
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error('⚠️ Error fetching deals as SELLER:', err);
+            }
+
+            console.log(`✅ FINAL: Total combined deals: ${allDeals.length}`, allDeals);
+            setMyDeals(allDeals);
+
+        } catch (error) {
+            console.error('Error loading deals:', error);
+            setMyDeals([]);
+        }
+    };
+
+    const fetchMyDealsProperties = async () => {
+        if (!isAuthenticated || !user?.id) {
+            console.log('❌ Not authenticated for deals');
+            setMyDealsProperties([]);
+            return;
+        }
+
         try {
             console.log('📥 Fetching deals for user properties ID:', user.id);
 
-            // First, get all user's uploaded properties
-            const userPropsResponse = await fetch(`http://localhost:8080/api/properties/user/${user.id}`);
+            const userPropsResponse = await fetch(`http://localhost:8080/api/properties/user/${user.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                }
+            });
+
             if (!userPropsResponse.ok) {
                 console.log('❌ Failed to fetch user properties');
                 setMyDealsProperties([]);
@@ -104,24 +251,22 @@ function HomePage() {
             const userPropsData = await userPropsResponse.json();
             const userProperties = Array.isArray(userPropsData) ? userPropsData : (userPropsData.data || []);
 
-            if (userProperties.length === 0) {
+            const userPropertyIds = new Set(
+                userProperties
+                    .filter(prop => prop.user?.id === user.id)
+                    .map(prop => prop.id || prop.propertyId)
+            );
+
+            if (userPropertyIds.size === 0) {
                 console.log('ℹ️ User has no uploaded properties');
                 setMyDealsProperties([]);
                 return;
             }
 
-            console.log(`✅ Found ${userProperties.length} properties uploaded by user`);
-
-            // Create a Set of user's property IDs
-            const userPropertyIds = new Set(
-                userProperties.map(prop => prop.id || prop.propertyId)
-            );
-
-            console.log('User property IDs:', Array.from(userPropertyIds));
+            console.log(`✅ Found ${userPropertyIds.size} user properties`);
 
             let allDeals = [];
 
-            // Fetch agent deals (deals created by this user as an agent)
             if (user.role === 'AGENT' || user.role === 'ADMIN') {
                 try {
                     const agentResponse = await fetch(`http://localhost:8080/api/deals/agent/${user.id}`, {
@@ -137,16 +282,14 @@ function HomePage() {
                 }
             }
 
-            console.log(`✅ Found ${allDeals.length} agent deals`);
+            console.log(`✅ Found ${allDeals.length} total deals`);
 
-            // ✅ Filter deals to only include those on user's own uploaded properties
             const propertiesFromDeals = [];
             const seenPropertyIds = new Set();
 
             allDeals.forEach(deal => {
                 const propertyId = deal.property?.id || deal.propertyId;
 
-                // Only include if: property exists, it's the user's property, and we haven't seen it yet
                 if (propertyId && userPropertyIds.has(propertyId) && !seenPropertyIds.has(propertyId) && deal.property) {
                     seenPropertyIds.add(propertyId);
                     propertiesFromDeals.push({
@@ -169,6 +312,23 @@ function HomePage() {
         }
     };
 
+    useEffect(() => {
+        fetchProperties();
+
+        if (isAuthenticated && user?.id) {
+            console.log('✅ User authenticated:', user.id, user.firstName, 'Role:', user.role);
+            fetchMyProperties();
+            fetchMyDeals();
+            fetchMyDealsProperties();
+        } else {
+            console.log('❌ User logged out, clearing data');
+            setMyProperties([]);
+            setMyDeals([]);
+            setMyDealsProperties([]);
+            setActiveTab('featured');
+        }
+    }, [isAuthenticated, user?.id, user?.role]);
+
     const handleSearchResults = (results) => {
         setSearchResults(results);
         setShowSearchResults(true);
@@ -190,7 +350,6 @@ function HomePage() {
     };
 
     const handleAreaClick = (area) => {
-        console.log('🔍 Area clicked:', area.name);
         setSelectedArea(area.name);
         setShowSearchResults(false);
         setActiveTab('featured');
@@ -198,7 +357,6 @@ function HomePage() {
 
     const getFilteredPropertiesByArea = () => {
         if (!selectedArea) return propsList;
-
         return propsList.filter(property => {
             const propertyArea = (property.areaName || property.area?.areaName || '').toLowerCase();
             const searchArea = selectedArea.toLowerCase();
@@ -211,6 +369,7 @@ function HomePage() {
         fetchProperties();
         if (isAuthenticated && user?.id) {
             fetchMyProperties();
+            fetchMyDeals();
             fetchMyDealsProperties();
         }
     };
@@ -220,12 +379,12 @@ function HomePage() {
         fetchProperties();
         if (isAuthenticated && user?.id) {
             fetchMyProperties();
+            fetchMyDeals();
             fetchMyDealsProperties();
         }
     };
 
     const handleCreateDealClick = () => {
-        console.log('📋 Create deal clicked');
         setShowBrowseDeals(true);
     };
 
@@ -235,7 +394,6 @@ function HomePage() {
         user &&
         (user.role === 'AGENT' || user.role === 'ADMIN');
 
-    // ✅ Determine which properties to display based on active tab
     const displayedProperties = showSearchResults
         ? searchResults
         : selectedArea
@@ -246,8 +404,8 @@ function HomePage() {
         ? myDealsProperties
         : propsList;
 
-    // ✅ Get counts for each tab
     const dealsPropertyCount = myDealsProperties.length;
+    const dealsCount = myDeals.length;
 
     return (
         <div style={styles.container}>
@@ -291,7 +449,6 @@ function HomePage() {
                                 borderColor: selectedArea === area.name ? '#667eea' : '#e2e8f0',
                                 boxShadow: selectedArea === area.name ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none'
                             }}
-                            className="areaButton"
                         >
                             <span style={styles.areaEmoji}>{area.emoji}</span>
                             {area.name}
@@ -303,12 +460,8 @@ function HomePage() {
             <section style={styles.propertiesSection}>
                 {isAuthenticated && !showSearchResults && !selectedArea && (
                     <div style={styles.tabContainer}>
-                        {/* ✅ TAB 1: FEATURED PROPERTIES - All properties on site */}
                         <button
-                            onClick={() => {
-                                console.log('📊 Switching to Featured tab');
-                                setActiveTab('featured');
-                            }}
+                            onClick={() => setActiveTab('featured')}
                             style={{
                                 ...styles.tab,
                                 ...(activeTab === 'featured' ? styles.activeTab : {})
@@ -317,13 +470,9 @@ function HomePage() {
                             ⭐ Featured Properties ({propsList.length})
                         </button>
 
-                        {/* ✅ TAB 2: MY UPLOADED PROPERTIES - Properties uploaded by user */}
                         {myProperties.length > 0 && (
                             <button
-                                onClick={() => {
-                                    console.log('📁 Switching to My Properties tab');
-                                    setActiveTab('my-properties');
-                                }}
+                                onClick={() => setActiveTab('my-properties')}
                                 style={{
                                     ...styles.tab,
                                     ...(activeTab === 'my-properties' ? styles.activeTab : {})
@@ -333,19 +482,27 @@ function HomePage() {
                             </button>
                         )}
 
-                        {/* ✅ TAB 3: MY DEALS - Properties with deals created */}
-                        {dealsPropertyCount > 0 && (
+                        {dealsCount > 0 && (
                             <button
-                                onClick={() => {
-                                    console.log('📊 Switching to My Deals tab');
-                                    setActiveTab('deals');
-                                }}
+                                onClick={() => setActiveTab('my-deals')}
                                 style={{
                                     ...styles.tab,
-                                    ...(activeTab === 'deals' ? styles.activeTab : {})
+                                    ...(activeTab === 'my-deals' ? styles.activeTab : {})
                                 }}
                             >
-                                📊 Properties with Deals ({dealsPropertyCount})
+                                📊 My Deals ({dealsCount})
+                            </button>
+                        )}
+
+                        {dealsPropertyCount > 0 && (
+                            <button
+                                onClick={() => setActiveTab('property-deals')}
+                                style={{
+                                    ...styles.tab,
+                                    ...(activeTab === 'property-deals' ? styles.activeTab : {})
+                                }}
+                            >
+                                🏠 Deals on My Properties ({dealsPropertyCount})
                             </button>
                         )}
                     </div>
@@ -354,7 +511,7 @@ function HomePage() {
                 <div style={styles.sectionHeader}>
                     <h2 style={styles.sectionTitle}>
                         <span style={styles.sectionIcon}>
-                            {showSearchResults ? '🔍' : selectedArea ? '📍' : activeTab === 'my-properties' ? '📁' : activeTab === 'deals' ? '📊' : '⭐'}
+                            {showSearchResults ? '🔍' : selectedArea ? '📍' : activeTab === 'my-properties' ? '📁' : activeTab === 'my-deals' ? '📊' : activeTab === 'property-deals' ? '🏠' : '⭐'}
                         </span>
                         {showSearchResults
                             ? `Search Results (${searchResults.length} found)`
@@ -362,8 +519,10 @@ function HomePage() {
                             ? `Properties in ${selectedArea} (${getFilteredPropertiesByArea().length} found)`
                             : activeTab === 'my-properties'
                             ? `My Uploaded Properties (${myProperties.length} found)`
-                            : activeTab === 'deals'
-                            ? `Properties with Deals (${myDealsProperties.length} found)`
+                            : activeTab === 'my-deals'
+                            ? `My Deals (${myDeals.length} found)`
+                            : activeTab === 'property-deals'
+                            ? `Deals on My Properties (${myDealsProperties.length} found)`
                             : `Featured Properties (${propsList.length} found)`}
                     </h2>
                     <div style={{display: 'flex', gap: '12px', alignItems: 'center'}}>
@@ -397,13 +556,45 @@ function HomePage() {
                     </div>
                 </div>
 
-                {/* ✅ Display properties or deals based on active tab */}
-                {activeTab === 'deals' && myDealsProperties.length === 0 ? (
+                {activeTab === 'my-deals' && myDeals.length === 0 ? (
                     <div style={styles.emptyState}>
                         <div style={styles.emptyIcon}>📭</div>
                         <h3 style={styles.emptyTitle}>No Deals Yet</h3>
                         <p style={styles.emptyText}>
-                            You haven't created any deals yet. Create one to see properties here.
+                            You don't have any deals yet.
+                        </p>
+                    </div>
+                ) : activeTab === 'my-deals' ? (
+                    <div style={styles.dealsGrid}>
+                        {myDeals.map(deal => (
+                            <div key={deal.dealId || deal.id} style={styles.dealCard}>
+                                <div style={{...styles.stageBadge, backgroundColor: getStageColor(deal.stage)}}>
+                                    {deal.stage}
+                                </div>
+                                <h4 style={styles.dealTitle}>{deal.propertyTitle || 'Property'}</h4>
+                                {deal.agreedPrice && (
+                                    <p style={{color: '#10b981', fontWeight: '700', margin: '8px 0'}}>
+                                        💰 ₹{deal.agreedPrice.toLocaleString('en-IN')}
+                                    </p>
+                                )}
+                                <p style={{fontSize: '13px', color: '#64748b', margin: '4px 0'}}>
+                                    👤 Buyer: {deal.buyerName || 'N/A'}
+                                </p>
+                                <p style={{fontSize: '13px', color: '#64748b', margin: '4px 0'}}>
+                                    🏠 Seller: {deal.sellerName || 'N/A'}
+                                </p>
+                                <p style={{fontSize: '12px', color: '#94a3b8', margin: '8px 0 0 0'}}>
+                                    {new Date(deal.createdAt).toLocaleDateString()}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                ) : activeTab === 'property-deals' && myDealsProperties.length === 0 ? (
+                    <div style={styles.emptyState}>
+                        <div style={styles.emptyIcon}>📭</div>
+                        <h3 style={styles.emptyTitle}>No Deals on Your Properties</h3>
+                        <p style={styles.emptyText}>
+                            No one has shown interest in your properties yet.
                         </p>
                     </div>
                 ) : (
@@ -447,13 +638,60 @@ function HomePage() {
                     onDealCreated={() => {
                         setShowBrowseDeals(false);
                         fetchProperties();
-                        fetchMyDealsProperties(); // ✅ Refresh deals properties
-                        setActiveTab('deals');
+                        fetchMyDeals();
+                        fetchMyDealsProperties();
+                        setActiveTab('my-deals');
                     }}
                 />
             )}
         </div>
     );
 }
+
+function getStageColor(stage) {
+    const colors = {
+        'INQUIRY': '#3b82f6',
+        'SHORTLIST': '#8b5cf6',
+        'NEGOTIATION': '#f59e0b',
+        'AGREEMENT': '#10b981',
+        'REGISTRATION': '#06b6d4',
+        'PAYMENT': '#ec4899',
+        'COMPLETED': '#22c55e',
+    };
+    return colors[stage] || '#6b7280';
+}
+
+const dealCardStyles = {
+    dealsGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+        gap: '16px',
+    },
+    dealCard: {
+        padding: '16px',
+        backgroundColor: '#f8fafc',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+    },
+    stageBadge: {
+        display: 'inline-block',
+        padding: '6px 12px',
+        borderRadius: '6px',
+        color: 'white',
+        fontSize: '12px',
+        fontWeight: '600',
+        marginBottom: '12px',
+    },
+    dealTitle: {
+        fontSize: '16px',
+        fontWeight: '700',
+        color: '#1e293b',
+        margin: '0 0 12px 0',
+    }
+};
+
+Object.assign(styles, dealCardStyles);
 
 export default HomePage;

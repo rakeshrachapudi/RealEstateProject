@@ -7,12 +7,16 @@ const DealDetailModal = ({ deal, onClose, onUpdate, userRole }) => {
     const [showDocUpload, setShowDocUpload] = useState(false);
     const [updating, setUpdating] = useState(false);
     const [notes, setNotes] = useState('');
-    const [newStage, setNewStage] = useState(deal.currentStage);
+    const [newStage, setNewStage] = useState(deal.currentStage || deal.stage);
+
+    // ✅ FIX: Standardize deal ID - handle both id and dealId
+    const dealId = deal.id || deal.dealId;
+    const currentStage = deal.currentStage || deal.stage;
 
     const handleUpdateStage = async () => {
         setUpdating(true);
         try {
-            const response = await fetch(`http://localhost:8080/api/deals/${deal.dealId}/stage`, {
+            const response = await fetch(`http://localhost:8080/api/deals/${dealId}/stage`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -26,9 +30,13 @@ const DealDetailModal = ({ deal, onClose, onUpdate, userRole }) => {
                 alert('✅ Deal updated');
                 onUpdate();
                 onClose();
+            } else {
+                console.error('Update failed:', data.message);
+                alert('❌ Error: ' + (data.message || 'Failed to update deal'));
             }
         } catch (err) {
-            alert('Error updating deal');
+            console.error('Error updating deal:', err);
+            alert('Error updating deal: ' + err.message);
         } finally {
             setUpdating(false);
         }
@@ -36,7 +44,7 @@ const DealDetailModal = ({ deal, onClose, onUpdate, userRole }) => {
 
     const handleSellerConfirm = async () => {
         try {
-            const response = await fetch(`http://localhost:8080/api/deals/${deal.dealId}/seller-confirm`, {
+            const response = await fetch(`http://localhost:8080/api/deals/${dealId}/seller-confirm`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -52,13 +60,13 @@ const DealDetailModal = ({ deal, onClose, onUpdate, userRole }) => {
                 onClose();
             }
         } catch (err) {
-            alert('Error confirming deal');
+            alert('Error confirming deal: ' + err.message);
         }
     };
 
     const handleCompletePayment = async () => {
         try {
-            const response = await fetch(`http://localhost:8080/api/deals/${deal.dealId}/complete-payment`, {
+            const response = await fetch(`http://localhost:8080/api/deals/${dealId}/complete-payment`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -72,7 +80,7 @@ const DealDetailModal = ({ deal, onClose, onUpdate, userRole }) => {
                 onClose();
             }
         } catch (err) {
-            alert('Error completing payment');
+            alert('Error completing payment: ' + err.message);
         }
     };
 
@@ -131,7 +139,7 @@ const DealDetailModal = ({ deal, onClose, onUpdate, userRole }) => {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                 }}>
-                    <h2 style={{ margin: 0 }}>{deal.property?.title}</h2>
+                    <h2 style={{ margin: 0 }}>{deal.property?.title || 'Deal'}</h2>
                     <button
                         onClick={onClose}
                         style={{
@@ -161,7 +169,7 @@ const DealDetailModal = ({ deal, onClose, onUpdate, userRole }) => {
                 <div style={tabContentStyle}>
                     {activeTab === 'overview' && (
                         <div>
-                            <DealProgress currentStage={deal.currentStage} dealData={deal} />
+                            <DealProgress currentStage={currentStage} dealData={deal} />
 
                             <div style={{
                                 display: 'grid',
@@ -188,7 +196,7 @@ const DealDetailModal = ({ deal, onClose, onUpdate, userRole }) => {
                                 }}>
                                     <div style={{ fontSize: '12px', color: '#64748b' }}>Seller</div>
                                     <div style={{ fontWeight: '600' }}>
-                                        {deal.seller?.firstName} {deal.seller?.lastName}
+                                        {deal.seller?.firstName} {deal.seller?.lastName} or {deal.property?.user?.firstName} {deal.property?.user?.lastName}
                                     </div>
                                 </div>
                                 <div style={{
@@ -249,7 +257,7 @@ const DealDetailModal = ({ deal, onClose, onUpdate, userRole }) => {
 
                     {activeTab === 'actions' && (
                         <div>
-                            {deal.currentStage === 'INQUIRY' && (
+                            {currentStage === 'INQUIRY' && (
                                 <div style={{
                                     padding: '16px',
                                     backgroundColor: '#f0f9ff',
@@ -275,7 +283,7 @@ const DealDetailModal = ({ deal, onClose, onUpdate, userRole }) => {
                                 </div>
                             )}
 
-                            {(userRole === 'AGENT' || userRole === 'ADMIN') && deal.currentStage !== 'COMPLETED' && (
+                            {(userRole === 'AGENT' || userRole === 'ADMIN') && currentStage !== 'COMPLETED' && (
                                 <div style={{
                                     padding: '16px',
                                     backgroundColor: '#f0fdf4',
@@ -340,7 +348,7 @@ const DealDetailModal = ({ deal, onClose, onUpdate, userRole }) => {
                                 </div>
                             )}
 
-                            {userRole === 'SELLER' && deal.currentStage === 'REGISTRATION' && !deal.sellerConfirmed && (
+                            {userRole === 'SELLER' && currentStage === 'REGISTRATION' && !deal.sellerConfirmed && (
                                 <button
                                     onClick={handleSellerConfirm}
                                     style={{
@@ -358,7 +366,7 @@ const DealDetailModal = ({ deal, onClose, onUpdate, userRole }) => {
                                 </button>
                             )}
 
-                            {deal.currentStage === 'PAYMENT' && deal.paymentInitiated && !deal.paymentCompleted && (
+                            {currentStage === 'PAYMENT' && deal.paymentInitiated && !deal.paymentCompleted && (
                                 <button
                                     onClick={handleCompletePayment}
                                     style={{
@@ -382,9 +390,12 @@ const DealDetailModal = ({ deal, onClose, onUpdate, userRole }) => {
 
             {showDocUpload && (
                 <DocumentUploadModal
-                    dealId={deal.dealId}
+                    dealId={dealId}
                     onClose={() => setShowDocUpload(false)}
-                    onSuccess={onUpdate}
+                    onSuccess={() => {
+                        setShowDocUpload(false);
+                        onUpdate();
+                    }}
                 />
             )}
         </div>
