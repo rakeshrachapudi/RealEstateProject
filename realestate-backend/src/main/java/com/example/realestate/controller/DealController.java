@@ -396,6 +396,21 @@ public class DealController {
                     .body(ApiResponse.error(e.getMessage()));
         }
     }
+    @GetMapping("/debug/user/{userId}/role/{userRole}")
+    public ResponseEntity<?> debugDealsByRole(
+            @PathVariable Long userId,
+            @PathVariable String userRole) {
+
+        logger.info("DEBUG: Fetching deals for user {} with role {}", userId, userRole);
+
+        List<DealDetailDTO> deals = dealService.getDealsByRole(userId, userRole);
+
+        logger.info("DEBUG: Found {} deals", deals.size());
+        deals.forEach(d -> logger.info("DEBUG DEAL: ID={}, Buyer={}, Seller={}, Stage={}",
+                d.getDealId(), d.getBuyerId(), d.getSellerId(), d.getStage()));
+
+        return ResponseEntity.ok(Map.of("success", true, "data", deals));
+    }
 
     @GetMapping("/buyer/{buyerId}")
     public ResponseEntity<?> getBuyerDeals(@PathVariable Long buyerId) {
