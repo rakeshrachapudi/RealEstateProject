@@ -28,9 +28,13 @@ const MyDealsPage = () => {
         'Authorization': `Bearer ${localStorage.getItem('authToken')}`
       };
 
+      console.log('👤 User Role:', user.role);
+      console.log('👤 User ID:', user.id);
+
       switch (user.role) {
+        // BUYER: Sees deals they're interested in (deals where they are the buyer)
         case 'BUYER':
-          // Buyer sees deals where they are the buyer
+          console.log('📥 Fetching buyer deals...');
           const buyerRes = await fetch(
             `http://localhost:8080/api/deals/buyer/${user.id}`,
             { headers }
@@ -38,11 +42,13 @@ const MyDealsPage = () => {
           if (buyerRes.ok) {
             const data = await buyerRes.json();
             dealsData = Array.isArray(data) ? data : (data.data || []);
+            console.log(`✅ Buyer deals found: ${dealsData.length}`);
           }
           break;
 
+        // SELLER: Sees deals on their own properties
         case 'SELLER':
-          // Seller sees deals on their own properties
+          console.log('📥 Fetching seller deals...');
           const sellerRes = await fetch(
             'http://localhost:8080/api/deals/my-deals?userRole=SELLER',
             { headers }
@@ -50,11 +56,13 @@ const MyDealsPage = () => {
           if (sellerRes.ok) {
             const data = await sellerRes.json();
             dealsData = data.success ? data.data : [];
+            console.log(`✅ Seller deals found: ${dealsData.length}`);
           }
           break;
 
+        // AGENT: Sees only deals they created
         case 'AGENT':
-          // Agent sees only deals they created
+          console.log('📥 Fetching agent deals...');
           const agentRes = await fetch(
             `http://localhost:8080/api/deals/agent/${user.id}`,
             { headers }
@@ -62,23 +70,34 @@ const MyDealsPage = () => {
           if (agentRes.ok) {
             const data = await agentRes.json();
             dealsData = Array.isArray(data) ? data : (data.data || []);
+            console.log(`✅ Agent deals found: ${dealsData.length}`);
           }
           break;
 
+        // ADMIN: Sees all deals across all agents
         case 'ADMIN':
-          // Admin sees all deals (you might want to add pagination)
-          const adminRes = await fetch(
-            'http://localhost:8080/api/deals/admin/all',
-            { headers }
-          );
-          if (adminRes.ok) {
-            const data = await adminRes.json();
-            dealsData = data.success ? data.data : [];
+          console.log('📥 Fetching all deals for admin...');
+          const stages = ['INQUIRY', 'SHORTLIST', 'NEGOTIATION', 'AGREEMENT', 'REGISTRATION', 'PAYMENT', 'COMPLETED'];
+          const allDeals = [];
+
+          for (const stage of stages) {
+            const res = await fetch(
+              `http://localhost:8080/api/deals/stage/${stage}`,
+              { headers }
+            );
+            if (res.ok) {
+              const stageData = await res.json();
+              if (stageData.success && stageData.data) {
+                allDeals.push(...stageData.data);
+              }
+            }
           }
+          dealsData = allDeals;
+          console.log(`✅ Admin deals found: ${dealsData.length}`);
           break;
 
         default:
-          break;
+          console.log('❌ Unknown role:', user.role);
       }
 
       setDeals(dealsData);
@@ -218,7 +237,7 @@ const MyDealsPage = () => {
               {/* Property Title */}
               <h3 style={styles.dealTitle}>{deal.property?.title || 'Property'}</h3>
 
-              {/* Deal Information */}
+              {/* Deal Info */}
               <div style={styles.dealInfo}>
                 <div style={styles.infoRow}>
                   <span>📍</span>
@@ -324,6 +343,7 @@ const styles = {
     marginBottom: '24px',
     borderBottom: '2px solid #e2e8f0',
     paddingBottom: '12px',
+    flexWrap: 'wrap',
   },
   tab: {
     padding: '10px 20px',
@@ -386,7 +406,7 @@ const styles = {
     marginBottom: '12px',
   },
   dealTitle: {
-    fontSize: '16px',
+    fontSize: '18px',
     fontWeight: '700',
     color: '#1e293b',
     margin: '0 0 12px 0',
@@ -398,7 +418,7 @@ const styles = {
     display: 'flex',
     gap: '8px',
     alignItems: 'center',
-    fontSize: '13px',
+    fontSize: '14px',
     color: '#64748b',
     marginBottom: '8px',
   },

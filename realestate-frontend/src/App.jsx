@@ -27,6 +27,8 @@ import SellerDealsPage from './pages/SellerDealsPage.jsx';
 import RentalAgreementPage from './pages/RentalAgreementPage.jsx';
 import MyAgreementsPage from './pages/MyAgreementsPage.jsx';
 
+
+
 function AppContent() {
     const navigate = useNavigate();
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);

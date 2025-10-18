@@ -1,4 +1,4 @@
-// src/pages/BrowsePropertiesForDeal.jsx (Updated)
+// src/pages/BrowsePropertiesForDeal.jsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import DealDetailsPopup from '../components/DealDetailsPopup';
@@ -10,6 +10,7 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
   const [buyerInfo, setBuyerInfo] = useState(null);
   const [properties, setProperties] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState(null);
+  const [dealPrice, setDealPrice] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searching, setSearching] = useState(false);
@@ -110,8 +111,8 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
   };
 
   const handleCreateDeal = async (propertyId) => {
-    if (!buyerInfo || !propertyId) {
-      setError('Please select a property');
+    if (!buyerInfo || !propertyId || !dealPrice) {
+      setError('Please enter deal price');
       return;
     }
     setLoading(true);
@@ -126,7 +127,8 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
         body: JSON.stringify({
           propertyId: propertyId,
           buyerId: buyerInfo.id,
-          agentId: user.id
+          agentId: user.id,
+          agreedPrice: parseInt(dealPrice)
         })
       });
       const data = await response.json();
@@ -208,6 +210,7 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
                     setProperties([]);
                     setSelectedProperty(null);
                     setBuyerPhone('');
+                    setDealPrice('');
                   }}
                   style={styles.changeBuyerBtn}
                 >
@@ -215,9 +218,9 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
                 </button>
               </div>
 
-              <h2 style={styles.sectionTitle}>Step 2: Select Property</h2>
+              <h2 style={styles.sectionTitle}>Step 2: Select Property & Price</h2>
               <p style={styles.sectionSubtitle}>
-                Choose a property to create the deal ({properties.length} available)
+                Choose a property and enter deal price ({properties.length} available)
               </p>
 
               {properties.length > 0 ? (
@@ -237,7 +240,7 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
                           boxShadow: isSelected ? '0 4px 12px rgba(59, 130, 246, 0.2)' : '0 1px 3px rgba(0,0,0,0.1)',
                           opacity: existingDeal ? 0.7 : 1
                         }}
-                        onClick={() => setSelectedProperty(property)}
+                        onClick={() => !existingDeal && setSelectedProperty(property)}
                       >
                         <img
                           src={property.imageUrl || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop'}
@@ -252,7 +255,7 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
                           </p>
                           <p style={styles.propertyLocation}>📍 {property.areaName || property.city}</p>
 
-                          {/* SELLER INFO - NEW */}
+                          {/* ✅ SELLER INFO */}
                           {property.user && (
                             <div style={styles.sellerInfo}>
                               <p style={styles.sellerLabel}>👤 Seller: {property.user.firstName} {property.user.lastName}</p>
@@ -260,7 +263,7 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
                             </div>
                           )}
 
-                          {/* AGENT ID - NEW */}
+                          {/* ✅ AGENT ID */}
                           <div style={styles.agentInfo}>
                             <p style={styles.agentLabel}>🏢 Agent ID: {user.id}</p>
                           </div>
@@ -281,16 +284,38 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
                               </button>
                             </>
                           ) : isSelected ? (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCreateDeal(propertyId);
-                              }}
-                              disabled={loading}
-                              style={{ ...styles.selectBtn, opacity: loading ? 0.6 : 1 }}
-                            >
-                              {loading ? '⏳ Creating...' : '✅ Create Deal'}
-                            </button>
+                            <>
+                              {/* ✅ DEAL PRICE INPUT */}
+                              <div style={{ marginBottom: '12px' }}>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px', color: '#1e293b' }}>
+                                  💰 Deal Price (₹) *
+                                </label>
+                                <input
+                                  type="number"
+                                  placeholder="Enter agreed price"
+                                  value={dealPrice}
+                                  onChange={(e) => setDealPrice(e.target.value.replace(/\D/g, ''))}
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    boxSizing: 'border-box'
+                                  }}
+                                />
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCreateDeal(propertyId);
+                                }}
+                                disabled={loading || !dealPrice}
+                                style={{ ...styles.selectBtn, opacity: (loading || !dealPrice) ? 0.6 : 1 }}
+                              >
+                                {loading ? '⏳ Creating...' : '✅ Create Deal'}
+                              </button>
+                            </>
                           ) : null}
                         </div>
                       </div>
