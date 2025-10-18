@@ -22,7 +22,7 @@ import PlaceholderPage from './pages/PlaceholderPage.jsx';
 import AgentDashboard from './pages/AgentDashboard.jsx';
 import BuyerDeals from './BuyerDeals.jsx';
 import MyDealsPage from './pages/MyDealsPage.jsx';
-import AdminAgentsDashboard from './pages/AdminAgentsDashboard.jsx';
+import AdminAgentsDashboard from './pages/AdminAgentsDashBoard.jsx';
 import SellerDealsPage from './pages/SellerDealsPage.jsx';
 import RentalAgreementPage from './pages/RentalAgreementPage.jsx';
 import MyAgreementsPage from './pages/MyAgreementsPage.jsx';
