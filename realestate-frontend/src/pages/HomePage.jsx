@@ -33,6 +33,23 @@ function HomePage() {
         { name: 'Jubilee Hills', emoji: '🛒' }
     ];
 
+    /**
+     * Helper function to safely parse JSON from a response.
+     * This prevents the "Unexpected end of JSON input" error.
+     */
+    const safeParseJson = async (response) => {
+        const text = await response.text();
+        if (!text) {
+            return null; // Return null if the response body is empty
+        }
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            console.error('Failed to parse JSON:', text, e);
+            return null; // Return null if parsing fails
+        }
+    };
+
     const extractDealsFromResponse = (response) => {
         if (!response) return [];
         if (response.success) {
@@ -78,10 +95,14 @@ function HomePage() {
             });
 
             if (response.ok) {
-                const data = await response.json();
-                const propertiesArray = Array.isArray(data) ? data : (data.data || []);
-                const verifiedProperties = propertiesArray.filter(prop => prop.user?.id === user.id);
-                setMyProperties(verifiedProperties);
+                const data = await safeParseJson(response);
+                if (data) {
+                    const propertiesArray = Array.isArray(data) ? data : (data.data || []);
+                    const verifiedProperties = propertiesArray.filter(prop => prop.user?.id === user.id);
+                    setMyProperties(verifiedProperties);
+                } else {
+                    setMyProperties([]); // Set empty if response was empty
+                }
             } else {
                 setMyProperties([]);
             }
@@ -126,10 +147,12 @@ function HomePage() {
                     { headers: { 'Authorization': `Bearer ${token}` } }
                 );
                 if (roleResponse.ok) {
-                    const roleData = await roleResponse.json();
-                    console.log(`Role response for ${user.role}:`, roleData);
-                    const roleDeals = extractDealsFromResponse(roleData);
-                    addDeals(roleDeals, `role ${user.role}`);
+                    const roleData = await safeParseJson(roleResponse);
+                    if (roleData) {
+                        console.log(`Role response for ${user.role}:`, roleData);
+                        const roleDeals = extractDealsFromResponse(roleData);
+                        addDeals(roleDeals, `role ${user.role}`);
+                    }
                 } else {
                     console.error(`Failed to fetch ${user.role} deals:`, roleResponse.status);
                 }
@@ -145,10 +168,12 @@ function HomePage() {
                         { headers: { 'Authorization': `Bearer ${token}` } }
                     );
                     if (buyerResponse.ok) {
-                        const buyerData = await buyerResponse.json();
-                        console.log('Buyer response:', buyerData);
-                        const buyerDeals = extractDealsFromResponse(buyerData);
-                        addDeals(buyerDeals, 'BUYER');
+                        const buyerData = await safeParseJson(buyerResponse);
+                        if (buyerData) {
+                            console.log('Buyer response:', buyerData);
+                            const buyerDeals = extractDealsFromResponse(buyerData);
+                            addDeals(buyerDeals, 'BUYER');
+                        }
                     } else {
                         console.error('Failed to fetch BUYER deals:', buyerResponse.status);
                     }
@@ -163,10 +188,12 @@ function HomePage() {
                         { headers: { 'Authorization': `Bearer ${token}` } }
                     );
                     if (sellerResponse.ok) {
-                        const sellerData = await sellerResponse.json();
-                        console.log('Seller response:', sellerData);
-                        const sellerDeals = extractDealsFromResponse(sellerData);
-                        addDeals(sellerDeals, 'SELLER');
+                        const sellerData = await safeParseJson(sellerResponse);
+                        if (sellerData) {
+                            console.log('Seller response:', sellerData);
+                            const sellerDeals = extractDealsFromResponse(sellerData);
+                            addDeals(sellerDeals, 'SELLER');
+                        }
                     } else {
                         console.error('Failed to fetch SELLER deals:', sellerResponse.status);
                     }
@@ -199,9 +226,13 @@ function HomePage() {
                 return;
             }
 
-            const userPropsData = await userPropsResponse.json();
-            const userProperties = Array.isArray(userPropsData) ? userPropsData : (userPropsData.data || []);
+            const userPropsData = await safeParseJson(userPropsResponse);
+            if (!userPropsData) {
+                setMyDealsProperties([]); // Set empty and return if no data
+                return;
+            }
 
+            const userProperties = Array.isArray(userPropsData) ? userPropsData : (userPropsData.data || []);
             const userPropertyIds = new Set(
                 userProperties.filter(prop => prop.user?.id === user.id).map(prop => prop.id || prop.propertyId)
             );
@@ -219,9 +250,11 @@ function HomePage() {
                         headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
                     });
                     if (agentResponse.ok) {
-                        const agentData = await agentResponse.json();
-                        const deals = Array.isArray(agentData) ? agentData : (agentData.data || []);
-                        allDeals = [...allDeals, ...deals];
+                        const agentData = await safeParseJson(agentResponse);
+                        if (agentData) {
+                            const deals = Array.isArray(agentData) ? agentData : (agentData.data || []);
+                            allDeals = [...allDeals, ...deals];
+                        }
                     }
                 } catch (err) {
                     console.warn('Error fetching agent deals:', err);
@@ -603,179 +636,117 @@ function HomePage() {
                         </div>
                     </div>
 
-                    {activeTab === 'my-deals' && myDeals.length === 0 ? (
-                        <div style={styles.emptyState}>
-                            <div style={styles.emptyIcon}>🔭</div>
-                            <h3 style={styles.emptyTitle}>No Deals Yet</h3>
-                            <p style={styles.emptyText}>You don't have any deals yet.</p>
-                        </div>
-                    ) : activeTab === 'my-deals' ? (
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                            gap: '16px',
-                        }}>
-                            {myDeals.map(deal => {
-                                return (
-                                    <div
-                                        key={deal.dealId || deal.id}
-                                        style={{
-                                            padding: '16px',
-                                            backgroundColor: '#f8fafc',
-                                            borderRadius: '12px',
-                                            border: '1px solid #e2e8f0',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s',
-                                        }}
-                                        onClick={() => navigate(`/property/${deal.propertyId || deal.property?.id}`)}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
-                                            e.currentTarget.style.transform = 'translateY(-4px)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.boxShadow = 'none';
-                                            e.currentTarget.style.transform = 'translateY(0)';
-                                        }}
-                                    >
-                                        <div style={{
-                                            display: 'inline-block',
-                                            padding: '6px 12px',
-                                            borderRadius: '6px',
-                                            color: 'white',
-                                            fontSize: '12px',
-                                            fontWeight: '600',
-                                            marginBottom: '12px',
-                                            backgroundColor: getStageColor(deal.stage || deal.currentStage)
-                                        }}>
-                                            {deal.stage || deal.currentStage}
-                                        </div>
-                                        <h4 style={{fontSize: '16px', fontWeight: '700', color: '#1e293b', margin: '0 0 12px 0'}}>
-                                            {deal.propertyTitle || 'Property'}
-                                        </h4>
-                                        {deal.propertyCity && (
-                                            <p style={{fontSize: '13px', color: '#64748b', margin: '4px 0'}}>
-                                                📍 {deal.propertyCity}
-                                            </p>
-                                        )}
-                                        {deal.propertyPrice && (
-                                            <p style={{color: '#667eea', fontWeight: '700', margin: '8px 0'}}>
-                                                💵 ₹{formatPrice(deal.propertyPrice)}
-                                            </p>
-                                        )}
-                                        {deal.agreedPrice && (
-                                            <p style={{color: '#10b981', fontWeight: '700', margin: '4px 0'}}>
-                                                ✅ Agreed: ₹{formatPrice(deal.agreedPrice)}
-                                            </p>
-                                        )}
-                                        <div style={{borderTop: '1px solid #e2e8f0', margin: '12px 0', paddingTop: '12px'}}>
-                                            <p style={{fontSize: '12px', color: '#64748b', margin: '4px 0'}}>
-                                                👤 Buyer: {deal.buyerName || 'N/A'}
-                                            </p>
-                                            <p style={{fontSize: '12px', color: '#64748b', margin: '4px 0'}}>
-                                                🏠 Seller: {deal.sellerName || 'N/A'}
-                                            </p>
-                                            <p style={{fontSize: '12px', color: '#64748b', margin: '4px 0'}}>
-                                                📊 Agent: {deal.agentName || 'N/A'}
-                                            </p>
-                                        </div>
-                                        <p style={{fontSize: '11px', color: '#94a3b8', margin: '12px 0 0 0'}}>
-                                            {new Date(deal.createdAt).toLocaleDateString()}
-                                        </p>
-
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedDeal(deal);
-                                            }}
-                                            style={{
-                                                width: '100%',
-                                                marginTop: '12px',
-                                                padding: '10px 16px',
-                                                backgroundColor: '#10b981',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '8px',
-                                                fontWeight: '600',
-                                                fontSize: '14px',
-                                                cursor: 'pointer',
-                                                transition: 'background 0.2s'
-                                            }}
-                                            onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
-                                            onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
-                                        >
-                                            📋 View Deal Details
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : activeTab === 'property-deals' && myDealsProperties.length === 0 ? (
-                        <div style={styles.emptyState}>
-                            <div style={styles.emptyIcon}>🔭</div>
-                            <h3 style={styles.emptyTitle}>No Deals on Your Properties</h3>
-                            <p style={styles.emptyText}>No one has shown interest in your properties yet.</p>
+                    {/* Main Content Area */}
+                    {searchLoading ? (
+                        <div style={styles.loadingState}>
+                            <div style={styles.spinner}></div>
+                            <h3 style={styles.loadingTitle}>Searching...</h3>
                         </div>
                     ) : (
-                        <PropertyList
-                            properties={displayedProperties}
-                            loading={searchLoading}
-                            onPropertyUpdated={handlePropertyUpdated}
-                            onPropertyDeleted={handlePropertyDeleted}
-                        />
+                        activeTab === 'my-deals' && myDeals.length === 0 ? (
+                            <div style={styles.emptyState}>
+                                <div style={styles.emptyIcon}>🔭</div>
+                                <h3 style={styles.emptyTitle}>No Deals Yet</h3>
+                                <p style={styles.emptyText}>You don't have any deals yet.</p>
+                            </div>
+                        ) : activeTab === 'my-deals' ? (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                                gap: '16px',
+                            }}>
+                                {myDeals.map(deal => {
+                                    return (
+                                        <div
+                                            key={deal.dealId || deal.id}
+                                            style={{
+                                                padding: '16px',
+                                                backgroundColor: '#f8fafc',
+                                                borderRadius: '12px',
+                                                border: '1px solid #e2e8f0',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                            }}
+                                            onClick={() => navigate(`/property/${deal.propertyId || deal.property?.id}`)}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
+                                                e.currentTarget.style.transform = 'translateY(-4px)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.boxShadow = 'none';
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                            }}
+                                        >
+                                            <div style={{
+                                                display: 'inline-block',
+                                                padding: '6px 12px',
+                                                borderRadius: '6px',
+                                                color: 'white',
+                                                fontSize: '12px',
+                                                fontWeight: '600',
+                                                marginBottom: '12px',
+                                                backgroundColor: getStageColor(deal.stage || deal.currentStage)
+                                            }}>
+                                                {deal.stage || deal.currentStage}
+                                            </div>
+                                            <h4 style={{fontSize: '16px', fontWeight: '700', color: '#1e293b', margin: '0 0 12px 0'}}>
+                                                {deal.propertyTitle || 'Property'}
+                                            </h4>
+                                            {deal.propertyCity && (
+                                                <p style={{fontSize: '13px', color: '#64748b', margin: '4px 0'}}>
+                                                    📍 {deal.propertyCity}
+                                                </p>
+                                            )}
+                                            {deal.propertyPrice && (
+                                                <p style={{color: '#667eea', fontWeight: '700', margin: '8px 0'}}>
+                                                    💵 ₹{formatPrice(deal.propertyPrice)}
+                                                </p>
+                                            )}
+                                            {deal.agreedPrice && (
+                                                <p style={{color: '#10b981', fontWeight: '700', margin: '4px 0'}}>
+                                                    ✅ Agreed: ₹{formatPrice(deal.agreedPrice)}
+                                                </p>
+                                            )}
+                                            <div style={{borderTop: '1px solid #e2e8f0', margin: '12px 0', paddingTop: '12px'}}>
+                                                <p style={{fontSize: '12px', color: '#64748b', margin: '4px 0'}}>
+                                                    👤 Buyer: {deal.buyerName || 'N/A'}
+                                                </p>
+                                                {/* ⭐ FIX APPLIED HERE: The previous line was an unclosed <p> tag */}
+                                                <p style={{fontSize: '12px', color: '#64748b', margin: '4px 0'}}>
+                                                    📞 Mobile: {deal.buyerMobile || 'N/A'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <PropertyList
+                                properties={displayedProperties}
+                                onPropertyUpdated={handlePropertyUpdated}
+                                onPropertyDeleted={handlePropertyDeleted}
+                                activeTab={activeTab} // Pass activeTab for conditional rendering inside PropertyList
+                            />
+                        )
                     )}
                 </section>
 
-                <section style={styles.statsSection}>
-                    <div style={styles.statsGrid}>
-                        <div style={styles.statCard}>
-                            <div style={styles.statIcon}>🏠</div>
-                            <div style={styles.statNumber}>10,000+</div>
-                            <div style={styles.statLabel}>Properties Listed</div>
-                        </div>
-                        <div style={styles.statCard}>
-                            <div style={styles.statIcon}>👥</div>
-                            <div style={styles.statNumber}>50,000+</div>
-                            <div style={styles.statLabel}>Happy Customers</div>
-                        </div>
-                        <div style={styles.statCard}>
-                            <div style={styles.statIcon}>🏙️</div>
-                            <div style={styles.statNumber}>25+</div>
-                            <div style={styles.statLabel}>Areas Covered</div>
-                        </div>
-                        <div style={styles.statCard}>
-                            <div style={styles.statIcon}>⭐</div>
-                            <div style={styles.statNumber}>4.8/5</div>
-                            <div style={styles.statLabel}>Customer Rating</div>
-                        </div>
-                    </div>
-                </section>
+                {showBrowseDeals && (
+                    <BrowsePropertiesForDeal
+                        onClose={() => setShowBrowseDeals(false)}
+                        agentId={user?.id}
+                        onDealCreated={fetchMyDeals}
+                    />
+                )}
+
+                {selectedDeal && (
+                    <DealDetailModal
+                        deal={selectedDeal}
+                        onClose={() => setSelectedDeal(null)}
+                        onDealUpdated={fetchMyDeals}
+                    />
+                )}
             </div>
-
-            {showBrowseDeals && (
-                <BrowsePropertiesForDeal
-                    onClose={() => setShowBrowseDeals(false)}
-                    onDealCreated={() => {
-                        setShowBrowseDeals(false);
-                        fetchProperties();
-                        fetchMyDeals();
-                        fetchMyDealsProperties();
-                        setActiveTab('my-deals');
-                    }}
-                />
-            )}
-
-            {selectedDeal && (
-                <DealDetailModal
-                    deal={selectedDeal}
-                    onClose={() => setSelectedDeal(null)}
-                    onUpdate={() => {
-                        setSelectedDeal(null);
-                        fetchMyDeals();
-                    }}
-                    userRole={user?.role}
-                    showOnlyOverview={user?.role === 'BUYER' || user?.role === 'SELLER'}
-                />
-            )}
         </>
     );
 }

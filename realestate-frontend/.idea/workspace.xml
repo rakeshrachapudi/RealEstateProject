@@ -5,9 +5,26 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="42dfceb5-b8ee-4b67-a031-eae8b466d127" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/PriceRequestController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/PriceInterestRequest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/model/Deal.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/model/PriceRequest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/model/PriceRequestStatus.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/repository/DealRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/repository/PriceRequestRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/config/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/AuthController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/AuthController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/DealController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/DealController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/PropertyController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/PropertyController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/repository/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/repository/UserRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/service/PropertyService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/service/PropertyService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/resources/application.properties" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/AdminDealPanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/AdminDealPanel.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pages/MyDealsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/MyDealsPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/AuthContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/AuthContext.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/PropertyDetails.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/PropertyDetails.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/AgentDashboard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/AgentDashboard.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/HomePage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/HomePage.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -28,19 +45,19 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;feature/Deals&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Code1/RealEstateProject/realestate-frontend/src&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "git-widget-placeholder": "feature/Deals",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Code/REP/RealEstateProject/realestate-frontend",
+    "settings.editor.selected.configurable": "preferences.pluginManager"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Code1\RealEstateProject\realestate-frontend\src" />

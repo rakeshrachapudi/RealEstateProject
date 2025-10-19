@@ -1,5 +1,13 @@
 package com.example.realestate.service;
 
+// Import for the new DTO
+import com.example.realestate.dto.PriceInterestRequest;
+
+// Imports for new Price Request logic
+import com.example.realestate.model.PriceRequest;
+import com.example.realestate.model.PriceRequestStatus;
+import com.example.realestate.repository.PriceRequestRepository;
+
 import com.example.realestate.model.Property;
 import com.example.realestate.repository.PropertyRepository;
 import com.example.realestate.model.User;
@@ -30,12 +38,17 @@ public class PropertyService {
     private final UserRepository userRepository;
     private final AreaRepository areaRepository;
     private final PropertyTypeRepository propertyTypeRepository;
+    private final PriceRequestRepository priceRequestRepository; // ⭐ 1. ADD PriceRequest REPOSITORY
 
-    public PropertyService(PropertyRepository repo, UserRepository userRepository, AreaRepository areaRepository, PropertyTypeRepository propertyTypeRepository) {
+    // ⭐ 2. UPDATE CONSTRUCTOR
+    public PropertyService(PropertyRepository repo, UserRepository userRepository,
+                           AreaRepository areaRepository, PropertyTypeRepository propertyTypeRepository,
+                           PriceRequestRepository priceRequestRepository) { // ⭐ Add PriceRequestRepository
         this.repo = repo;
         this.userRepository = userRepository;
         this.areaRepository = areaRepository;
         this.propertyTypeRepository = propertyTypeRepository;
+        this.priceRequestRepository = priceRequestRepository; // ⭐ Add this line
     }
 
     /**
@@ -102,8 +115,7 @@ public class PropertyService {
     }
 
     /**
-     * ⭐ UPDATED: Helper method to convert Property Entity to PropertyDTO
-     * NOW INCLUDES USER INFORMATION!
+     * Helper method to convert Property Entity to PropertyDTO
      */
     private PropertyDTO convertToDTO(Property property) {
         PropertyDTO dto = new PropertyDTO();
@@ -128,7 +140,6 @@ public class PropertyService {
         dto.setOwnerType(property.getOwnerType());
         dto.setIsVerified(property.getIsVerified());
 
-        // ⭐ NEW: Set user information
         if (property.getUser() != null) {
             PropertyDTO.UserDTO userDTO = new PropertyDTO.UserDTO();
             userDTO.setId(property.getUser().getId());
@@ -143,7 +154,6 @@ public class PropertyService {
             logger.warn("Property {} has no user associated!", property.getId());
         }
 
-        // Area/Location details
         if (property.getArea() != null) {
             dto.setAreaName(property.getArea().getAreaName());
             dto.setPincode(property.getArea().getPincode());
@@ -165,9 +175,6 @@ public class PropertyService {
     public List<Property> findByCity(String city) { return repo.findByCityIgnoreCase(city); }
 
     public List<Property> findByAreaName(String areaName) { return repo.findByAreaNameAndIsActiveTrue(areaName); }
-// In PropertyService.java
-
-    // In PropertyService.java
 
     /**
      * Update property
@@ -176,60 +183,34 @@ public class PropertyService {
         Property property = repo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Property not found with id: " + id));
 
-        // Update non-entity fields
+        // ... (all your update logic) ...
         if (propertyDetails.getTitle() != null) property.setTitle(propertyDetails.getTitle());
         if (propertyDetails.getDescription() != null) property.setDescription(propertyDetails.getDescription());
-        if (propertyDetails.getPrice() != null) property.setPrice(propertyDetails.getPrice());
-        if (propertyDetails.getPriceDisplay() != null) property.setPriceDisplay(propertyDetails.getPriceDisplay());
-        if (propertyDetails.getBedrooms() != null) property.setBedrooms(propertyDetails.getBedrooms());
-        if (propertyDetails.getBathrooms() != null) property.setBathrooms(propertyDetails.getBathrooms());
-        if (propertyDetails.getBalconies() != null) property.setBalconies(propertyDetails.getBalconies());
-        if (propertyDetails.getAreaSqft() != null) property.setAreaSqft(propertyDetails.getAreaSqft());
-        if (propertyDetails.getAddress() != null) property.setAddress(propertyDetails.getAddress());
-        if (propertyDetails.getImageUrl() != null) property.setImageUrl(propertyDetails.getImageUrl());
-        if (propertyDetails.getAmenities() != null) property.setAmenities(propertyDetails.getAmenities());
-        if (propertyDetails.getStatus() != null) property.setStatus(propertyDetails.getStatus());
-        if (propertyDetails.getListingType() != null) property.setListingType(propertyDetails.getListingType());
-        if (propertyDetails.getIsFeatured() != null) property.setIsFeatured(propertyDetails.getIsFeatured());
+        // ... etc ...
 
-        // ⭐ FIX 1: Handle Area (Resolves TransientPropertyValueException for Area, and type mismatch for AreaRepository)
         if (propertyDetails.getArea() != null) {
-            // ASSUMPTION: Area entity's ID getter is getAreaId() and returns Integer (based on AreaRepository<Area, Integer> and DTO)
             Integer areaId = propertyDetails.getArea().getAreaId();
-
             if (areaId != null) {
-                // Fetch the managed Area entity by its Integer ID
                 Area area = areaRepository.findById(areaId)
                         .orElseThrow(() -> new EntityNotFoundException("Area not found with ID: " + areaId));
                 property.setArea(area);
             }
         }
 
-        // ⭐ FIX 2: Handle PropertyType (Resolves "Cannot resolve getId" and type mismatch for PropertyTypeRepository)
         if (propertyDetails.getPropertyType() != null) {
-            // ASSUMPTION: PropertyType entity's ID getter is getPropertyTypeId() and returns Integer
-            // This is a strong assumption based on the two compilation errors you provided.
             Integer propertyTypeId = propertyDetails.getPropertyType().getPropertyTypeId();
-
             if (propertyTypeId != null) {
-                // Fetch the managed PropertyType entity. Assuming PropertyTypeRepository uses Integer key like AreaRepository.
                 PropertyType propertyType = propertyTypeRepository.findById(propertyTypeId)
                         .orElseThrow(() -> new EntityNotFoundException("PropertyType not found with ID: " + propertyTypeId));
                 property.setPropertyType(propertyType);
             }
         }
 
-
-        // New fields
-        if (propertyDetails.getOwnerType() != null) property.setOwnerType(propertyDetails.getOwnerType());
-        if (propertyDetails.getIsReadyToMove() != null) property.setIsReadyToMove(propertyDetails.getIsReadyToMove());
-        if (propertyDetails.getIsVerified() != null) property.setIsVerified(propertyDetails.getIsVerified());
-
-        // Also update the 'type' string field if needed (backward compatibility field)
-        if (propertyDetails.getType() != null) property.setType(propertyDetails.getType());
+        // ... (rest of your update logic) ...
 
         return repo.save(property);
     }
+
     /**
      * Soft delete property
      */
@@ -238,5 +219,37 @@ public class PropertyService {
                 .orElseThrow(() -> new EntityNotFoundException("Property not found with id: " + id));
         property.setIsActive(false);
         repo.save(property);
+    }
+
+    // =================================================================
+    // ⭐ 3. REPLACED METHOD FOR HANDLING INTERESTED PRICE ⭐
+    // =================================================================
+    /**
+     * Creates a single Price Request (a notification) that agents/admins can see.
+     */
+    public void notifyAdminsAndAgents(PriceInterestRequest request) {
+
+        Property property = repo.findById(request.getPropertyId())
+                .orElseThrow(() -> new EntityNotFoundException("Property not found with id: " + request.getPropertyId()));
+
+        User submittingUser = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("Submitting user not found with id: " + request.getUserId()));
+
+        System.out.println("--- NEW PRICE REQUEST RECEIVED ---");
+        System.out.println("Property: " + property.getTitle());
+        System.out.println("From User: " + submittingUser.getEmail());
+
+        // Create ONE price request and put it in the "PENDING" pool
+        PriceRequest newRequest = new PriceRequest();
+        newRequest.setProperty(property);
+        newRequest.setBuyer(submittingUser);
+        if (request.getPrice() != null) {
+            newRequest.setInterestedPrice(BigDecimal.valueOf(request.getPrice()));
+        }
+        newRequest.setStatus(PriceRequestStatus.PENDING); // Set as PENDING
+
+        priceRequestRepository.save(newRequest);
+
+        System.out.println("✅ Price Request saved. Awaiting agent acceptance.");
     }
 }

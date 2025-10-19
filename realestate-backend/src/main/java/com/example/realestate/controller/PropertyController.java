@@ -1,9 +1,11 @@
 package com.example.realestate.controller;
 
+// ⭐ Import the DTO for the price request
+import com.example.realestate.dto.PriceInterestRequest;
 import com.example.realestate.model.Property;
 import com.example.realestate.service.PropertyService;
 import com.example.realestate.dto.PropertyPostRequestDto;
-import com.example.realestate.dto.PropertyDTO; // ⭐ Import PropertyDTO
+import com.example.realestate.dto.PropertyDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -11,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.persistence.EntityNotFoundException;
+import java.util.HashMap; // For success message
+import java.util.Map;     // For success message
 import java.util.List;
 import java.util.Optional;
 
@@ -31,6 +35,7 @@ public class PropertyController {
      */
     @PostMapping
     public ResponseEntity<?> create(@RequestBody PropertyPostRequestDto dto) {
+        // ... (your existing create method is perfect) ...
         logger.info("Attempting to create new property from DTO.");
         try {
             Property createdProperty = service.postProperty(dto);
@@ -46,12 +51,49 @@ public class PropertyController {
         }
     }
 
+    // =================================================================
+    // ⭐ NEW METHOD TO ADD FOR INTERESTED PRICE ⭐
+    // =================================================================
+    /**
+     * Handles the submission of an interested price from a user.
+     * This will call the service logic to notify all agents and admins.
+     * Endpoint: POST /api/properties/interested-price
+     */
+    @PostMapping("/interested-price")
+    public ResponseEntity<?> submitInterestedPrice(@RequestBody PriceInterestRequest request) {
+        logger.info("Received interested price request for propertyId: {} from userId: {}",
+                request.getPropertyId(), request.getUserId());
+        try {
+            // The service will handle finding all agents/admins and notifying them
+            service.notifyAdminsAndAgents(request);
+
+            // Create a simple success response
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Price request submitted successfully.");
+
+            // Return 200 OK
+            return ResponseEntity.ok(response);
+
+        } catch (EntityNotFoundException e) {
+            logger.error("Error submitting price request: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            logger.error("Unexpected error submitting price request.", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+    // =================================================================
+    // (End of new method)
+    // =================================================================
+
+
     /**
      * ⭐ CRITICAL FIX: Get properties by user (UPDATED to return DTOs)
      * Endpoint: GET /api/properties/user/{userId}
      */
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<PropertyDTO>> byUser(@PathVariable Long userId) {
+        // ... (your existing byUser method is perfect) ...
         logger.info("Fetching properties for user ID: {}", userId);
         List<PropertyDTO> userProperties = service.getPropertiesByUser(userId);
 

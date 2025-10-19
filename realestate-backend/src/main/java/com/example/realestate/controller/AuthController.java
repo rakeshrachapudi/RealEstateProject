@@ -3,6 +3,7 @@ package com.example.realestate.controller;
 import com.example.realestate.model.User;
 import com.example.realestate.repository.UserRepository;
 import com.example.realestate.dto.ApiResponse;
+import com.example.realestate.security.JwtUtil; // ⭐ 1. Import JwtUtil
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;                       // ⭐ 2. Import List
 import java.util.Map;
 import java.util.Optional;
 
@@ -28,6 +30,9 @@ public class AuthController {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtUtil jwtUtil; // ⭐ 3. Autowire JwtUtil
 
     // DTOs
     static class LoginRequest {
@@ -88,11 +93,13 @@ public class AuthController {
                 );
             }
 
+            // ⭐ Generate REAL JWT Token using the corrected helper method
             String token = generateJWT(user);
+
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Login successful!");
             response.put("token", token);
-            response.put("user", user);
+            response.put("user", user); // Consider creating a UserDTO to avoid sending password hash
 
             LOGGER.info("✅ User logged in successfully: {}", user.getUsername());
             return ResponseEntity.ok(ApiResponse.success(response));
@@ -145,16 +152,18 @@ public class AuthController {
             newUser.setFirstName(request.getFirstName());
             newUser.setLastName(request.getLastName());
             newUser.setMobileNumber(request.getMobileNumber());
-            newUser.setRole(User.UserRole.USER);
+            newUser.setRole(User.UserRole.USER); // Default role
             newUser.setIsActive(true);
 
             User savedUser = userRepository.save(newUser);
 
+            // ⭐ Generate REAL JWT Token using the corrected helper method
             String token = generateJWT(savedUser);
+
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Registration successful!");
             response.put("token", token);
-            response.put("user", savedUser);
+            response.put("user", savedUser); // Consider UserDTO
 
             LOGGER.info("✅ User registered successfully: {}", savedUser.getUsername());
             return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.CREATED);
@@ -169,6 +178,7 @@ public class AuthController {
     }
 
     // ==================== VERIFY TOKEN ENDPOINT ====================
+    // This is a basic verify, doesn't fully validate signature/claims via JwtUtil
     @GetMapping("/verify")
     public ResponseEntity<?> verifyToken(@RequestHeader("Authorization") String token) {
         LOGGER.info("Verifying token");
@@ -182,8 +192,21 @@ public class AuthController {
             }
 
             String jwtToken = token.substring(7);
-            // In production, validate JWT signature and expiry
-            return ResponseEntity.ok(ApiResponse.success(Map.of("valid", true)));
+
+            // ⭐ Use JwtUtil for proper validation
+            boolean isValid = jwtUtil.isTokenValid(jwtToken);
+            if (isValid) {
+                String username = jwtUtil.getUsername(jwtToken);
+                // Optionally fetch user from DB to confirm they still exist/are active
+                Optional<User> userOpt = userRepository.findByUsername(username);
+                if (userOpt.isPresent() && userOpt.get().getIsActive()) {
+                    return ResponseEntity.ok(ApiResponse.success(Map.of("valid", true, "user", userOpt.get()))); // Return user info
+                } else {
+                    return new ResponseEntity<>(ApiResponse.error("User not found or inactive"), HttpStatus.UNAUTHORIZED);
+                }
+            } else {
+                return new ResponseEntity<>(ApiResponse.error("Invalid or expired token"), HttpStatus.UNAUTHORIZED);
+            }
 
         } catch (Exception e) {
             LOGGER.error("❌ Token verification error: ", e);
@@ -195,8 +218,11 @@ public class AuthController {
     }
 
     // ==================== HELPER METHODS ====================
+    // ⭐ Corrected method using JwtUtil
     private String generateJWT(User user) {
-        // Simplified JWT - In production, use proper JWT library (jjwt)
-        return "jwt_" + user.getId() + "_" + System.currentTimeMillis();
+        // Get the user's role as a string ("USER", "AGENT", "ADMIN")
+        String role = user.getRole().name();
+        // Call jwtUtil to generate the REAL token with username and roles list
+        return jwtUtil.generateToken(user.getUsername(), List.of(role));
     }
 }
