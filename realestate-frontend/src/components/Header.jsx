@@ -18,41 +18,38 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
     }, []);
 
     useEffect(() => {
-        // Only fetch if authenticated and user is agent/admin
         if (isAuthenticated && user && (user.role === 'AGENT' || user.role === 'ADMIN')) {
-            // Since backend is ignored, we won't actually fetch
-            console.log("Simulating check for unread deals for Agent/Admin:", user.id);
-            // fetchUnreadDeals(); // Keep commented out as backend is ignored
+            console.log("User role detected:", user.role);
         } else {
-             setUnreadDeals(0); // Reset if not applicable
+            setUnreadDeals(0);
         }
     }, [isAuthenticated, user]);
 
-    // --- Keep fetchUnreadDeals, but commented out or dummy ---
-    const fetchUnreadDeals = async () => {
-        // try {
-        //     // const response = await fetch('http://localhost:8080/api/deals/agent/' + user.id, {
-        //     //     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } // Use 'token'
-        //     // });
-        //     // if (response.ok) {
-        //     //     const data = await response.json();
-        //     //     const deals = data.data || [];
-        //     //     const unread = deals.filter(d => d.stage !== 'COMPLETED').length;
-        //     //     setUnreadDeals(unread);
-        //     // }
-        //     console.log("Actual fetchUnreadDeals call would go here");
-        // } catch (error) {
-        //     console.log('Could not fetch deals count (simulated)');
-        // }
-        console.log("Simulating fetchUnreadDeals (ignoring backend)");
-        // setUnreadDeals(3); // Example: Set dummy value for UI testing
-    };
-    // --- End ---
-
     const handleMyPropertiesClick = () => {
         navigate('/my-properties');
-        setActiveDropdown(null); // Close main dropdown
-        setProfileDropdownOpen(false); // Close profile dropdown
+        setActiveDropdown(null);
+        setProfileDropdownOpen(false);
+    };
+
+    const handleViewDealsClick = () => {
+        console.log("Navigating to admin deals...");
+        navigate('/admin-deals');
+        setActiveDropdown(null);
+        setProfileDropdownOpen(false);
+    };
+
+    const handleViewAgentsClick = () => {
+        console.log("Navigating to view agents...");
+        navigate('/admin-agents');
+        setActiveDropdown(null);
+        setProfileDropdownOpen(false);
+    };
+
+    const handleViewUsersClick = () => {
+        console.log("Navigating to view users...");
+        navigate('/admin-users');
+        setActiveDropdown(null);
+        setProfileDropdownOpen(false);
     };
 
     const handleAgentDashboardClick = () => {
@@ -65,13 +62,10 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
         setProfileDropdownOpen(false);
     };
 
-    // --- ADDED: Handler for My Agreements ---
     const handleMyAgreementsClick = () => {
-        navigate('/my-agreements'); // Navigate to the agreements page
-        setProfileDropdownOpen(false); // Close the profile dropdown
+        navigate('/my-agreements');
+        setProfileDropdownOpen(false);
     };
-    // --- END ADDITION ---
-
 
     const handleMouseEnter = (dropdown) => {
         if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current);
@@ -106,13 +100,13 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
 
     const handleSellItemClick = (item) => {
         if (item.type === 'navigate') {
-             navigate(item.path);
-             setActiveDropdown(null); // Close main dropdown
-             setProfileDropdownOpen(false); // Close profile dropdown too
+            navigate(item.path);
+            setActiveDropdown(null);
+            setProfileDropdownOpen(false);
         } else if (item.type === 'action' && item.key === 'postProperty') {
             onPostPropertyClick();
             setActiveDropdown(null);
-             setProfileDropdownOpen(false);
+            setProfileDropdownOpen(false);
         }
     };
 
@@ -170,6 +164,9 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
             ]
         }
     };
+
+    // Debug logging
+    console.log("Header rendered - User:", user, "Role:", user?.role, "Is Admin:", user?.role === 'ADMIN');
 
     return (
         <header style={styles.header}>
@@ -260,23 +257,78 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
                         <div style={styles.authSection}>
                             <button onClick={handleMyPropertiesClick} style={{color: 'white', backgroundColor: 'rgba(255, 255, 255, 0.2)', padding: '12px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '14px'}}>My Properties</button>
 
-                            {user && (user.role === 'AGENT' || user.role === 'ADMIN') && (
+                            {user && user.role === 'ADMIN' && (
+                                <>
+                                    <button
+                                        onClick={handleViewDealsClick}
+                                        style={{
+                                            color: 'white',
+                                            backgroundColor: 'rgba(34, 197, 94, 0.3)',
+                                            padding: '12px 20px',
+                                            borderRadius: '12px',
+                                            border: '2px solid #22c55e',
+                                            cursor: 'pointer',
+                                            fontWeight: 600,
+                                            fontSize: '14px',
+                                            marginLeft: '10px'
+                                        }}
+                                    >
+                                        📋 View Deals
+                                    </button>
+
+                                    <button
+                                        onClick={handleViewAgentsClick}
+                                        style={{
+                                            color: 'white',
+                                            backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                                            padding: '12px 20px',
+                                            borderRadius: '12px',
+                                            border: '2px solid #3b82f6',
+                                            cursor: 'pointer',
+                                            fontWeight: 600,
+                                            fontSize: '14px',
+                                            marginLeft: '10px'
+                                        }}
+                                    >
+                                        👥 View Agents
+                                    </button>
+
+                                    <button
+                                        onClick={handleViewUsersClick}
+                                        style={{
+                                            color: 'white',
+                                            backgroundColor: 'rgba(139, 92, 246, 0.3)',
+                                            padding: '12px 20px',
+                                            borderRadius: '12px',
+                                            border: '2px solid #8b5cf6',
+                                            cursor: 'pointer',
+                                            fontWeight: 600,
+                                            fontSize: '14px',
+                                            marginLeft: '10px'
+                                        }}
+                                    >
+                                        👨‍💼 View Users
+                                    </button>
+                                </>
+                            )}
+
+                            {user && user.role === 'AGENT' && (
                                 <button
                                     onClick={handleAgentDashboardClick}
                                     style={{
-                                                                    color: 'white',
-                                                                    backgroundColor: 'rgba(34, 197, 94, 0.3)',
-                                                                    padding: '12px 20px',
-                                                                    borderRadius: '12px',
-                                                                    border: '2px solid #22c55e',
-                                                                    cursor: 'pointer',
-                                                                    fontWeight: 600,
-                                                                    fontSize: '14px',
-                                                                    position: 'relative',
-                                                                    marginLeft: '10px' // Added some margin
-                                                                }}
+                                        color: 'white',
+                                        backgroundColor: 'rgba(34, 197, 94, 0.3)',
+                                        padding: '12px 20px',
+                                        borderRadius: '12px',
+                                        border: '2px solid #22c55e',
+                                        cursor: 'pointer',
+                                        fontWeight: 600,
+                                        fontSize: '14px',
+                                        marginLeft: '10px',
+                                        position: 'relative'
+                                    }}
                                 >
-                                    {user.role === 'ADMIN' ? '⚙️ Admin Dashboard' : '📊 Agent Dashboard'}
+                                    📊 Agent Dashboard
                                     {unreadDeals > 0 && (
                                         <span style={{
                                             position: 'absolute',
@@ -299,8 +351,8 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
                                 </button>
                             )}
 
-                            <button onClick={onPostPropertyClick} style={{...styles.postBtn, marginLeft: '10px'}}><span style={styles.btnIcon}>📝</span> Post Property</button> {/* Added margin */}
-                            <div style={{ position: 'relative' /* Removed paddingBottom */ }} onMouseEnter={() => setProfileDropdownOpen(true)} onMouseLeave={() => setProfileDropdownOpen(false)}>
+                            <button onClick={onPostPropertyClick} style={{...styles.postBtn, marginLeft: '10px'}}><span style={styles.btnIcon}>📝</span> Post Property</button>
+                            <div style={{ position: 'relative' }} onMouseEnter={() => setProfileDropdownOpen(true)} onMouseLeave={() => setProfileDropdownOpen(false)}>
                                 <div style={styles.userSection} className="userSection">
                                     <span style={styles.userIcon}>👤</span>
                                     <span style={styles.userName}>{user?.firstName || 'User'} ▾</span>
@@ -313,21 +365,18 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
                                 {isProfileDropdownOpen && (
                                     <div style={styles.profileDropdown}>
                                         <div style={styles.profileDropdownItem} onClick={() => { onProfileClick(); setProfileDropdownOpen(false); }}>View Profile</div>
-                                        {/* --- ADDED: My Agreements Link --- */}
                                         <div style={styles.profileDropdownItem} onClick={handleMyAgreementsClick}>
                                             My Agreements
                                         </div>
-                                        {/* --- END ADDITION --- */}
-                                        <div style={styles.profileDropdownItem} onClick={handleMyPropertiesClick}>My Properties</div> {/* Corrected onClick */}
+                                        <div style={styles.profileDropdownItem} onClick={handleMyPropertiesClick}>My Properties</div>
                                         {user && (user.role === 'AGENT' || user.role === 'ADMIN') && (
                                             <div style={styles.profileDropdownItem} onClick={handleAgentDashboardClick}>
                                                 {user.role === 'ADMIN' ? '⚙️ Admin Dashboard' : '📊 Agent Dashboard'}
                                             </div>
                                         )}
-                                        {user && (user.role === 'USER') && (
+                                        {user && user.role === 'USER' && (
                                             <div style={styles.profileDropdownItem} onClick={() => { navigate('/my-deals'); setProfileDropdownOpen(false); }}>My Deals</div>
                                         )}
-                                        {/* Separator */}
                                         <hr style={{ border: 0, borderTop: '1px solid #eee', margin: '8px 0' }} />
                                         <div style={{...styles.profileDropdownItem, color: '#dc3545'}} onClick={logout}>Logout</div>
                                     </div>
@@ -336,7 +385,7 @@ function Header({ onLoginClick, onSignupClick, onPostPropertyClick, onProfileCli
                         </div>
                     ) : (
                         <div style={styles.authButtons}>
-                            <button onClick={onLoginClick} style={styles.loginBtn}><span style={styles.btnIcon}>🔑</span> Login</button>
+                            <button onClick={onLoginClick} style={styles.loginBtn}><span style={styles.btnIcon}>🔐</span> Login</button>
                             <button onClick={onSignupClick} style={styles.signupBtn}><span style={styles.btnIcon}>✨</span> Sign Up</button>
                         </div>
                     )}

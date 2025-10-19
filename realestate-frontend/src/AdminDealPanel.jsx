@@ -228,26 +228,28 @@ const AdminDealPanel = () => {
     gap: '16px'
   };
 
-  const cardStyle = {
-    padding: '16px',
-    backgroundColor: '#fef3c7',
-    borderRadius: '12px',
-    border: '1px solid #fcd34d',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-  };
+   const cardStyle = {
+     padding: '16px',
+     backgroundColor: '#f3f4f6',
+     borderRadius: '12px',
+     border: '1px solid #e5e7eb',
+     cursor: 'pointer',
+     transition: 'all 0.2s',
+     boxShadow: '0 2px 8px rgba(0,0,0,0.08), 0 0 12px rgba(59, 130, 246, 0.1)',
+     background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)'
+   };
 
   const stageBadgeStyle = {
-    display: 'inline-block',
-    padding: '4px 8px',
-    backgroundColor: '#f59e0b',
-    color: 'white',
-    borderRadius: '4px',
-    fontSize: '11px',
-    fontWeight: '600',
-    marginBottom: '8px'
-  };
+      display: 'inline-block',
+      padding: '4px 8px',
+      backgroundColor: '#f59e0b',
+      color: 'white',
+      borderRadius: '4px',
+      fontSize: '11px',
+      fontWeight: '600',
+      marginBottom: '8px',
+      boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)'
+    };
 
   const titleSmallStyle = {
     margin: '0 0 12px 0',
