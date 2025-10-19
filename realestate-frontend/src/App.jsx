@@ -11,6 +11,9 @@ import UserProfileModal from './UserProfileModal.jsx';
 import PropertyEditModal from './PropertyEditModal.jsx';
 import AdminDealPanel from './AdminDealPanel.jsx';
 
+import AdminUsersPage from './pages/AdminUsersPage';
+
+
 import Header from './components/Header.jsx';
 import PropertyDetails from './components/PropertyDetails.jsx';
 import PropertyTypePage from './components/PropertyTypePage.jsx';
@@ -22,7 +25,7 @@ import PlaceholderPage from './pages/PlaceholderPage.jsx';
 import AgentDashboard from './pages/AgentDashboard.jsx';
 import BuyerDeals from './BuyerDeals.jsx';
 import MyDealsPage from './pages/MyDealsPage.jsx';
-import AdminAgentsDashboard from './pages/AdminAgentsDashboard.jsx';
+import AdminAgentsPage from './pages/AdminAgentsPage';
 import SellerDealsPage from './pages/SellerDealsPage.jsx';
 import RentalAgreementPage from './pages/RentalAgreementPage.jsx';
 import MyAgreementsPage from './pages/MyAgreementsPage.jsx';
@@ -81,7 +84,9 @@ function AppContent() {
 
                 {/* Admin Pages */}
                 <Route path="/admin-deals" element={<AdminDealPanel />} />
-                <Route path="/admin-agents" element={<AdminAgentsDashboard />} />
+               {/* NEW ADMIN ROUTES - Add these */}
+                        <Route path="/admin-agents" element={<AdminAgentsPage />} />
+                        <Route path="/admin-users" element={<AdminUsersPage />} />
 
                 {/* Agreement Pages */}
                 <Route path="/rental-agreement" element={<RentalAgreementPage />} />

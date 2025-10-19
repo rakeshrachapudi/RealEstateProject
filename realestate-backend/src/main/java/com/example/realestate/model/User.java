@@ -22,6 +22,7 @@ public class User {
     private String firstName;
     private String lastName;
     private String mobileNumber;
+    private String address;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -71,6 +72,9 @@ public class User {
 
     public String getMobileNumber() { return mobileNumber; }
     public void setMobileNumber(String mobileNumber) { this.mobileNumber = mobileNumber; }
+
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
 
     public UserRole getRole() { return role; }
     public void setRole(UserRole role) { this.role = role; }
