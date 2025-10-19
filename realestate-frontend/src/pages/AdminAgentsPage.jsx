@@ -12,6 +12,7 @@ const AdminAgentsPage = () => {
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [agentDeals, setAgentDeals] = useState([]);
   const [dealsLoading, setDealsLoading] = useState(false);
+  const [selectedDeal, setSelectedDeal] = useState(null);
   const [editingAgent, setEditingAgent] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
@@ -317,7 +318,19 @@ const AdminAgentsPage = () => {
                 ) : (
                   <div style={styles.dealsGrid}>
                     {agentDeals.map(deal => (
-                      <div key={deal.id || deal.dealId} style={styles.dealCard}>
+                      <div
+                        key={deal.id || deal.dealId}
+                        style={styles.dealCard}
+                        onClick={() => setSelectedDeal(deal)}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
+                          e.currentTarget.style.transform = 'translateY(-4px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                      >
                         <div
                           style={{
                             ...styles.dealStageBadge,
@@ -359,6 +372,118 @@ const AdminAgentsPage = () => {
           )}
         </div>
       </div>
+
+      {selectedDeal && (
+        <div style={styles.modal}>
+          <div style={styles.modalContent}>
+            <div style={styles.modalHeader}>
+              <h3>Deal Details</h3>
+              <button onClick={() => setSelectedDeal(null)} style={styles.closeBtn}>✕</button>
+            </div>
+
+            <div style={styles.dealDetailsGrid}>
+              <div>
+                <p style={styles.label}>Deal Stage</p>
+                <div style={{
+                  display: 'inline-block',
+                  padding: '6px 12px',
+                  backgroundColor: getStageColor(selectedDeal.stage || selectedDeal.currentStage),
+                  color: 'white',
+                  borderRadius: '6px',
+                  fontWeight: '600',
+                  fontSize: '13px'
+                }}>
+                  {selectedDeal.stage || selectedDeal.currentStage}
+                </div>
+              </div>
+              <div>
+                <p style={styles.label}>Created Date</p>
+                <p style={styles.value}>{new Date(selectedDeal.createdAt).toLocaleDateString()}</p>
+              </div>
+            </div>
+
+            <div style={styles.sectionDivider}>
+              <h4 style={styles.sectionTitle}>Property Details</h4>
+              <div style={styles.dealDetailsGrid}>
+                <div>
+                  <p style={styles.label}>Property Title</p>
+                  <p style={styles.value}>{selectedDeal.property?.title || selectedDeal.propertyTitle}</p>
+                </div>
+                {selectedDeal.property?.city && (
+                  <div>
+                    <p style={styles.label}>Location</p>
+                    <p style={styles.value}>{selectedDeal.property.city}</p>
+                  </div>
+                )}
+                {selectedDeal.property?.price && (
+                  <div>
+                    <p style={styles.label}>Property Price</p>
+                    <p style={styles.value}>₹{selectedDeal.property.price.toLocaleString('en-IN')}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {selectedDeal.agreedPrice && (
+              <div style={styles.sectionDivider}>
+                <h4 style={styles.sectionTitle}>Agreed Price</h4>
+                <p style={{fontSize: '18px', fontWeight: '700', color: '#10b981'}}>₹{selectedDeal.agreedPrice.toLocaleString('en-IN')}</p>
+              </div>
+            )}
+
+            {selectedDeal.buyer && (
+              <div style={styles.sectionDivider}>
+                <h4 style={styles.sectionTitle}>Buyer Information</h4>
+                <div style={styles.dealDetailsGrid}>
+                  <div>
+                    <p style={styles.label}>Name</p>
+                    <p style={styles.value}>{selectedDeal.buyer.firstName} {selectedDeal.buyer.lastName}</p>
+                  </div>
+                  <div>
+                    <p style={styles.label}>Email</p>
+                    <p style={styles.value}>{selectedDeal.buyer.email}</p>
+                  </div>
+                  <div>
+                    <p style={styles.label}>Phone</p>
+                    <p style={styles.value}>{selectedDeal.buyer.mobileNumber}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedDeal.property?.user && (
+              <div style={styles.sectionDivider}>
+                <h4 style={styles.sectionTitle}>Seller Information</h4>
+                <div style={styles.dealDetailsGrid}>
+                  <div>
+                    <p style={styles.label}>Name</p>
+                    <p style={styles.value}>{selectedDeal.property.user.firstName} {selectedDeal.property.user.lastName}</p>
+                  </div>
+                  <div>
+                    <p style={styles.label}>Email</p>
+                    <p style={styles.value}>{selectedDeal.property.user.email}</p>
+                  </div>
+                  <div>
+                    <p style={styles.label}>Phone</p>
+                    <p style={styles.value}>{selectedDeal.property.user.mobileNumber}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedDeal.notes && (
+              <div style={styles.sectionDivider}>
+                <h4 style={styles.sectionTitle}>Notes</h4>
+                <p style={styles.value}>{selectedDeal.notes}</p>
+              </div>
+            )}
+
+            <div style={styles.modalButtons}>
+              <button onClick={() => setSelectedDeal(null)} style={styles.cancelBtn}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showEditModal && editingAgent && (
         <div style={styles.modal}>
@@ -542,6 +667,19 @@ const styles = {
     color: '#64748b',
     margin: 0
   },
+  viewDealsBtn: {
+    width: '100%',
+    marginTop: '12px',
+    padding: '10px 16px',
+    backgroundColor: '#3b82f6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '13px',
+    transition: 'background 0.2s'
+  },
   rightPanel: {
     backgroundColor: 'white',
     borderRadius: '12px',
@@ -645,7 +783,13 @@ const styles = {
     padding: '12px',
     backgroundColor: '#f8fafc',
     borderRadius: '8px',
-    border: '1px solid #e2e8f0'
+    border: '1px solid #e2e8f0',
+    cursor: 'pointer',
+    transition: 'all 0.3s',
+    ':hover': {
+      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+      transform: 'translateY(-2px)'
+    }
   },
   dealStageBadge: {
     display: 'inline-block',
@@ -677,6 +821,23 @@ const styles = {
     fontSize: '10px',
     color: '#94a3b8',
     margin: '4px 0'
+  },
+  dealDetailsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gap: '16px',
+    marginBottom: '12px'
+  },
+  sectionDivider: {
+    marginTop: '16px',
+    paddingTop: '16px',
+    borderTop: '1px solid #e2e8f0'
+  },
+  sectionTitle: {
+    fontSize: '14px',
+    fontWeight: '700',
+    color: '#1e293b',
+    margin: '0 0 12px 0'
   },
   emptyDeals: {
     textAlign: 'center',

@@ -11,8 +11,11 @@ const AdminUsersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
+  const [userDeals, setUserDeals] = useState([]);
+  const [dealsLoading, setDealsLoading] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedDeal, setSelectedDeal] = useState(null);
 
   useEffect(() => {
     if (user?.role !== 'ADMIN') {
@@ -41,6 +44,62 @@ const AdminUsersPage = () => {
       console.error('Error fetching users:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUserDeals = async (selectedUserData) => {
+    setDealsLoading(true);
+    try {
+      let allDeals = [];
+
+      // If user is an AGENT, fetch deals they created
+      if (selectedUserData.role === 'AGENT') {
+        console.log('Fetching agent deals for agent ID:', selectedUserData.id);
+        const agentResponse = await fetch(`http://localhost:8080/api/deals/admin/agent/${selectedUserData.id}?userId=${user.id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          }
+        });
+
+        console.log('Agent deals response status:', agentResponse.status);
+
+        if (agentResponse.ok) {
+          const data = await agentResponse.json();
+          console.log('Agent deals response:', data);
+          const deals = data.success ? (data.data || []) : (Array.isArray(data) ? data : []);
+          allDeals = [...allDeals, ...deals];
+        } else {
+          console.warn('Agent deals response not ok:', agentResponse.status);
+        }
+      }
+      // If user is a regular USER, fetch deals where they're a buyer
+      else if (selectedUserData.role === 'USER') {
+        console.log('Fetching buyer deals for user ID:', selectedUserData.id);
+        const buyerResponse = await fetch(`http://localhost:8080/api/deals/user/${selectedUserData.id}/role/BUYER`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          }
+        });
+
+        console.log('Buyer deals response status:', buyerResponse.status);
+
+        if (buyerResponse.ok) {
+          const data = await buyerResponse.json();
+          console.log('Buyer deals response:', data);
+          const deals = data.success ? (data.data || []) : (Array.isArray(data) ? data : []);
+          allDeals = [...allDeals, ...deals];
+        } else {
+          console.warn('Buyer deals response not ok:', buyerResponse.status);
+        }
+      }
+
+      console.log('Total deals loaded for user:', allDeals.length);
+      setUserDeals(allDeals);
+    } catch (error) {
+      console.error('Error fetching user deals:', error);
+      setUserDeals([]);
+    } finally {
+      setDealsLoading(false);
     }
   };
 
@@ -73,6 +132,11 @@ const AdminUsersPage = () => {
     filterUsers(users, searchTerm, role);
   };
 
+  const handleSelectUser = (userToSelect) => {
+    setSelectedUser(userToSelect);
+    fetchUserDeals(userToSelect);
+  };
+
   const handleEditUser = (userToEdit) => {
     setEditingUser({ ...userToEdit });
     setShowEditModal(true);
@@ -91,8 +155,10 @@ const AdminUsersPage = () => {
 
       if (response.ok) {
         const updated = await response.json();
-        setUsers(users.map(u => u.id === editingUser.id ? (updated.data || editingUser) : u));
-        filterUsers(users.map(u => u.id === editingUser.id ? (updated.data || editingUser) : u), searchTerm, filterRole);
+        const updatedUser = updated.data || editingUser;
+        setUsers(users.map(u => u.id === editingUser.id ? updatedUser : u));
+        filterUsers(users.map(u => u.id === editingUser.id ? updatedUser : u), searchTerm, filterRole);
+        setSelectedUser(updatedUser);
         setShowEditModal(false);
         setEditingUser(null);
         alert('User updated successfully!');
@@ -119,6 +185,7 @@ const AdminUsersPage = () => {
           setUsers(users.filter(u => u.id !== userId));
           filterUsers(users.filter(u => u.id !== userId), searchTerm, filterRole);
           setSelectedUser(null);
+          setUserDeals([]);
           alert('User deleted successfully!');
         } else {
           alert('Failed to delete user');
@@ -128,6 +195,19 @@ const AdminUsersPage = () => {
         alert('Error deleting user');
       }
     }
+  };
+
+  const getStageColor = (stage) => {
+    const colors = {
+      'INQUIRY': '#3b82f6',
+      'SHORTLIST': '#8b5cf6',
+      'NEGOTIATION': '#f59e0b',
+      'AGREEMENT': '#10b981',
+      'REGISTRATION': '#06b6d4',
+      'PAYMENT': '#ec4899',
+      'COMPLETED': '#22c55e',
+    };
+    return colors[stage] || '#6b7280';
   };
 
   if (loading) {
@@ -214,9 +294,10 @@ const AdminUsersPage = () => {
                   style={{
                     ...styles.userCard,
                     backgroundColor: selectedUser?.id === u.id ? '#dbeafe' : 'white',
-                    borderColor: selectedUser?.id === u.id ? '#3b82f6' : '#e2e8f0'
+                    borderColor: selectedUser?.id === u.id ? '#3b82f6' : '#e2e8f0',
+                    cursor: 'pointer'
                   }}
-                  onClick={() => setSelectedUser(u)}
+                  onClick={() => handleSelectUser(u)}
                 >
                   <div style={styles.userCardHeader}>
                     <div>
@@ -242,66 +323,238 @@ const AdminUsersPage = () => {
 
         <div style={styles.userDetails}>
           {selectedUser ? (
-            <div style={styles.detailsCard}>
-              <h2 style={styles.detailsTitle}>User Details</h2>
-              <div style={styles.detailsGrid}>
-                <div>
-                  <p style={styles.label}>First Name</p>
-                  <p style={styles.value}>{selectedUser.firstName}</p>
+            <>
+              <div style={styles.detailsCard}>
+                <h2 style={styles.detailsTitle}>User Details</h2>
+                <div style={styles.detailsGrid}>
+                  <div>
+                    <p style={styles.label}>First Name</p>
+                    <p style={styles.value}>{selectedUser.firstName}</p>
+                  </div>
+                  <div>
+                    <p style={styles.label}>Last Name</p>
+                    <p style={styles.value}>{selectedUser.lastName}</p>
+                  </div>
+                  <div>
+                    <p style={styles.label}>Email</p>
+                    <p style={styles.value}>{selectedUser.email}</p>
+                  </div>
+                  <div>
+                    <p style={styles.label}>Phone</p>
+                    <p style={styles.value}>{selectedUser.mobileNumber || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p style={styles.label}>Role</p>
+                    <span style={{...styles.roleBadge, backgroundColor: getRoleColor(selectedUser.role)}}>
+                      {selectedUser.role}
+                    </span>
+                  </div>
+                  <div>
+                    <p style={styles.label}>Member Since</p>
+                    <p style={styles.value}>{new Date(selectedUser.createdAt).toLocaleDateString()}</p>
+                  </div>
                 </div>
-                <div>
-                  <p style={styles.label}>Last Name</p>
-                  <p style={styles.value}>{selectedUser.lastName}</p>
-                </div>
-                <div>
-                  <p style={styles.label}>Email</p>
-                  <p style={styles.value}>{selectedUser.email}</p>
-                </div>
-                <div>
-                  <p style={styles.label}>Phone</p>
-                  <p style={styles.value}>{selectedUser.mobileNumber || 'N/A'}</p>
-                </div>
-                <div>
-                  <p style={styles.label}>Role</p>
-                  <span style={{...styles.roleBadge, backgroundColor: getRoleColor(selectedUser.role)}}>
-                    {selectedUser.role}
-                  </span>
-                </div>
-                <div>
-                  <p style={styles.label}>Member Since</p>
-                  <p style={styles.value}>{new Date(selectedUser.createdAt).toLocaleDateString()}</p>
+
+                {selectedUser.address && (
+                  <div style={styles.addressSection}>
+                    <p style={styles.label}>Address</p>
+                    <p style={styles.value}>{selectedUser.address}</p>
+                  </div>
+                )}
+
+                <div style={styles.actionButtons}>
+                  <button
+                    onClick={() => handleEditUser(selectedUser)}
+                    style={styles.editBtn}
+                  >
+                    ✏️ Edit User
+                  </button>
+                  <button
+                    onClick={() => handleDeleteUser(selectedUser.id)}
+                    style={styles.deleteBtn}
+                  >
+                    🗑️ Delete User
+                  </button>
                 </div>
               </div>
 
-              {selectedUser.address && (
-                <div style={styles.addressSection}>
-                  <p style={styles.label}>Address</p>
-                  <p style={styles.value}>{selectedUser.address}</p>
-                </div>
-              )}
+              <div style={styles.dealsSection}>
+                <h3 style={styles.dealsTitle}>Deals ({userDeals.length})</h3>
 
-              <div style={styles.actionButtons}>
-                <button
-                  onClick={() => handleEditUser(selectedUser)}
-                  style={styles.editBtn}
-                >
-                  ✏️ Edit User
-                </button>
-                <button
-                  onClick={() => handleDeleteUser(selectedUser.id)}
-                  style={styles.deleteBtn}
-                >
-                  🗑️ Delete User
-                </button>
+                {dealsLoading ? (
+                  <div style={styles.loading}>⏳ Loading deals...</div>
+                ) : userDeals.length === 0 ? (
+                  <div style={styles.emptyDeals}>
+                    <p>No deals for this user</p>
+                  </div>
+                ) : (
+                  <div style={styles.dealsGrid}>
+                    {userDeals.map(deal => (
+                      <div
+                        key={deal.id || deal.dealId}
+                        style={styles.dealCard}
+                        onClick={() => setSelectedDeal(deal)}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
+                          e.currentTarget.style.transform = 'translateY(-4px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        <div
+                          style={{
+                            ...styles.dealStageBadge,
+                            backgroundColor: getStageColor(deal.stage || deal.currentStage)
+                          }}
+                        >
+                          {deal.stage || deal.currentStage}
+                        </div>
+
+                        <h4 style={styles.dealTitle}>{deal.property?.title || deal.propertyTitle}</h4>
+
+                        {deal.property?.city && (
+                          <p style={styles.dealMeta}>📍 {deal.property.city}</p>
+                        )}
+
+                        {deal.seller && (
+                          <p style={styles.dealMeta}>🏠 Seller: {deal.seller.firstName} {deal.seller.lastName}</p>
+                        )}
+
+                        {deal.agreedPrice && (
+                          <p style={styles.dealPrice}>💰 ₹{deal.agreedPrice.toLocaleString('en-IN')}</p>
+                        )}
+
+                        <p style={styles.dealDate}>📅 {new Date(deal.createdAt).toLocaleDateString()}</p>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDeal(deal);
+                          }}
+                          style={styles.viewDealDetailsBtn}
+                        >
+                          View Deal Details
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
+            </>
           ) : (
             <div style={styles.emptyDetails}>
-              <p>👈 Select a user to view details</p>
+              <p>👈 Select a user to view details and deals</p>
             </div>
           )}
         </div>
       </div>
+
+      {selectedDeal && (
+        <div style={styles.modal}>
+          <div style={styles.modalContent}>
+            <div style={styles.modalHeader}>
+              <h3>Deal Details</h3>
+              <button onClick={() => setSelectedDeal(null)} style={styles.closeBtn}>✕</button>
+            </div>
+
+            <div style={styles.dealDetailsGrid}>
+              <div>
+                <p style={styles.label}>Deal Stage</p>
+                <div style={{
+                  display: 'inline-block',
+                  padding: '6px 12px',
+                  backgroundColor: getStageColor(selectedDeal.stage || selectedDeal.currentStage),
+                  color: 'white',
+                  borderRadius: '6px',
+                  fontWeight: '600',
+                  fontSize: '13px'
+                }}>
+                  {selectedDeal.stage || selectedDeal.currentStage}
+                </div>
+              </div>
+              <div>
+                <p style={styles.label}>Created Date</p>
+                <p style={styles.value}>{new Date(selectedDeal.createdAt).toLocaleDateString()}</p>
+              </div>
+            </div>
+
+            <div style={styles.sectionDivider}>
+              <h4 style={styles.sectionTitle}>Property Details</h4>
+              <div style={styles.dealDetailsGrid}>
+                <div>
+                  <p style={styles.label}>Property Title</p>
+                  <p style={styles.value}>{selectedDeal.property?.title || selectedDeal.propertyTitle}</p>
+                </div>
+                {selectedDeal.property?.city && (
+                  <div>
+                    <p style={styles.label}>Location</p>
+                    <p style={styles.value}>{selectedDeal.property.city}</p>
+                  </div>
+                )}
+                {selectedDeal.property?.price && (
+                  <div>
+                    <p style={styles.label}>Property Price</p>
+                    <p style={styles.value}>₹{selectedDeal.property.price.toLocaleString('en-IN')}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {selectedDeal.agreedPrice && (
+              <div style={styles.sectionDivider}>
+                <h4 style={styles.sectionTitle}>Agreed Price</h4>
+                <p style={{fontSize: '18px', fontWeight: '700', color: '#10b981'}}>₹{selectedDeal.agreedPrice.toLocaleString('en-IN')}</p>
+              </div>
+            )}
+
+            {selectedDeal.seller && (
+              <div style={styles.sectionDivider}>
+                <h4 style={styles.sectionTitle}>Seller Information</h4>
+                <div style={styles.dealDetailsGrid}>
+                  <div>
+                    <p style={styles.label}>Name</p>
+                    <p style={styles.value}>{selectedDeal.seller.firstName} {selectedDeal.seller.lastName}</p>
+                  </div>
+                  <div>
+                    <p style={styles.label}>Email</p>
+                    <p style={styles.value}>{selectedDeal.seller.email}</p>
+                  </div>
+                  <div>
+                    <p style={styles.label}>Phone</p>
+                    <p style={styles.value}>{selectedDeal.seller.mobileNumber}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedDeal.agent && (
+              <div style={styles.sectionDivider}>
+                <h4 style={styles.sectionTitle}>Agent Information</h4>
+                <div style={styles.dealDetailsGrid}>
+                  <div>
+                    <p style={styles.label}>Name</p>
+                    <p style={styles.value}>{selectedDeal.agent.firstName} {selectedDeal.agent.lastName}</p>
+                  </div>
+                  <div>
+                    <p style={styles.label}>Email</p>
+                    <p style={styles.value}>{selectedDeal.agent.email}</p>
+                  </div>
+                  <div>
+                    <p style={styles.label}>Phone</p>
+                    <p style={styles.value}>{selectedDeal.agent.mobileNumber}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div style={styles.modalButtons}>
+              <button onClick={() => setSelectedDeal(null)} style={styles.cancelBtn}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showEditModal && editingUser && (
         <div style={styles.modal}>
@@ -395,7 +648,7 @@ const getRoleColor = (role) => {
 
 const styles = {
   container: {
-    maxWidth: 1600,
+    maxWidth: 1800,
     margin: '0 auto',
     padding: '24px 32px',
     minHeight: '100vh',
@@ -457,14 +710,15 @@ const styles = {
   },
   mainContent: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    gridTemplateColumns: '350px 1fr',
     gap: '24px'
   },
   usersList: {
     backgroundColor: 'white',
     borderRadius: '12px',
     padding: '20px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+    height: 'fit-content'
   },
   usersHeader: {
     marginBottom: '16px',
@@ -474,15 +728,12 @@ const styles = {
   usersGrid: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
-    maxHeight: '70vh',
-    overflowY: 'auto'
+    gap: '12px'
   },
   userCard: {
     padding: '12px',
     borderRadius: '8px',
     border: '1px solid',
-    cursor: 'pointer',
     transition: 'all 0.2s'
   },
   userCardHeader: {
@@ -512,16 +763,21 @@ const styles = {
   },
   userInfo: {
     fontSize: '12px',
-    color: '#64748b'
+    color: '#64748b',
+    margin: 0
   },
   userDetails: {
     backgroundColor: 'white',
     borderRadius: '12px',
     padding: '20px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+    overflowY: 'auto',
+    maxHeight: 'calc(100vh - 200px)'
   },
   detailsCard: {
-    height: '100%'
+    marginBottom: '24px',
+    paddingBottom: '24px',
+    borderBottom: '2px solid #e2e8f0'
   },
   detailsTitle: {
     fontSize: '20px',
@@ -580,9 +836,85 @@ const styles = {
     fontWeight: '600',
     fontSize: '14px'
   },
+  dealsSection: {
+    marginTop: '24px'
+  },
+  dealsTitle: {
+    fontSize: '18px',
+    fontWeight: '700',
+    color: '#1e293b',
+    margin: '0 0 16px 0'
+  },
+  dealsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+    gap: '12px'
+  },
+  dealCard: {
+    padding: '12px',
+    backgroundColor: '#f8fafc',
+    borderRadius: '8px',
+    border: '1px solid #e2e8f0',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+  },
+  dealStageBadge: {
+    display: 'inline-block',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    color: 'white',
+    fontSize: '10px',
+    fontWeight: '600',
+    marginBottom: '8px'
+  },
+  dealTitle: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#1e293b',
+    margin: '0 0 8px 0'
+  },
+  dealMeta: {
+    fontSize: '11px',
+    color: '#64748b',
+    margin: '4px 0'
+  },
+  dealPrice: {
+    fontSize: '12px',
+    fontWeight: '700',
+    color: '#10b981',
+    margin: '8px 0 4px 0'
+  },
+  dealDate: {
+    fontSize: '10px',
+    color: '#94a3b8',
+    margin: '4px 0'
+  },
+  viewDealDetailsBtn: {
+    width: '100%',
+    marginTop: '8px',
+    padding: '6px 10px',
+    backgroundColor: '#3b82f6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '11px',
+    transition: 'background 0.2s'
+  },
+  emptyDeals: {
+    textAlign: 'center',
+    padding: '20px',
+    color: '#64748b',
+    backgroundColor: '#f8fafc',
+    borderRadius: '8px',
+    border: '1px dashed #e2e8f0',
+    fontSize: '13px'
+  },
   emptyDetails: {
     textAlign: 'center',
-    padding: '40px 20px',
+    padding: '60px 20px',
     color: '#64748b'
   },
   emptyState: {
@@ -609,7 +941,7 @@ const styles = {
     backgroundColor: 'white',
     borderRadius: '12px',
     padding: '24px',
-    maxWidth: '500px',
+    maxWidth: '600px',
     width: '90%',
     maxHeight: '90vh',
     overflowY: 'auto'
@@ -628,6 +960,23 @@ const styles = {
     fontSize: '24px',
     cursor: 'pointer',
     color: '#64748b'
+  },
+  dealDetailsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gap: '16px',
+    marginBottom: '12px'
+  },
+  sectionDivider: {
+    marginTop: '16px',
+    paddingTop: '16px',
+    borderTop: '1px solid #e2e8f0'
+  },
+  sectionTitle: {
+    fontSize: '14px',
+    fontWeight: '700',
+    color: '#1e293b',
+    margin: '0 0 12px 0'
   },
   formGroup: {
     marginBottom: '16px'
