@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import DealDetailsPopup from '../components/DealDetailsPopup';
+import { BACKEND_BASE_URL } from "../config/config";
 
 const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
   const { user } = useAuth();
@@ -47,7 +48,7 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
 
     setSearching(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/users/search?phone=${phone}`, {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/users/search?phone=${phone}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
       });
 
@@ -56,7 +57,7 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
         const buyer = data.success ? data.data : data;
         if (buyer && buyer.id) {
           setBuyerInfo(buyer);
-          const propsResponse = await fetch('http://localhost:8080/api/properties');
+          const propsResponse = await fetch(`${BACKEND_BASE_URL}/api/properties`);
           const propsData = await propsResponse.json();
           const propertiesArray = Array.isArray(propsData) ? propsData : (propsData.data || []);
           setProperties(propertiesArray);
@@ -77,7 +78,7 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
 
   const fetchExistingDeals = async (buyerId) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/deals/buyer/${buyerId}`, {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/deals/buyer/${buyerId}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
       });
 
@@ -126,7 +127,7 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:8080/api/deals/create', {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/deals/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

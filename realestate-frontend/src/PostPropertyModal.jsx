@@ -1,6 +1,7 @@
 ﻿// realestate-frontend/src/PostPropertyModal.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext.jsx';
+import { BACKEND_BASE_URL } from "./config/config";
 
 function PostPropertyModal({ onClose, onPropertyPosted }) {
     const { user, isAuthenticated } = useAuth();
@@ -57,7 +58,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     const loadAreas = async () => {
         setAreasLoading(true);
         try {
-            const response = await fetch('http://localhost:8080/api/areas?city=Hyderabad');
+            const response = await fetch(`${BACKEND_BASE_URL}/api/areas?city=Hyderabad`);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
             const data = await response.json();
@@ -263,7 +264,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         };
 
         try {
-            const response = await fetch('http://localhost:8080/api/properties', {
+            const response = await fetch(`${BACKEND_BASE_URL}/api/properties`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(propertyData),

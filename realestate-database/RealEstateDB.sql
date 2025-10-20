@@ -37,6 +37,7 @@ drop table users;
 -- Users Table (OTP fields removed, role and status fields added)
 CREATE TABLE users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    address VARCHAR(255),
     mobile_number VARCHAR(20) UNIQUE,
     username VARCHAR(50) UNIQUE,
     password VARCHAR(255),

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../AuthContext';
-import { getPropertyDetails } from '../services/api';
-import DealDetailsPopup from '../components/DealDetailsPopup';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "../AuthContext";
+import { getPropertyDetails } from "../services/api";
+import DealDetailsPopup from "../components/DealDetailsPopup";
+import { BACKEND_BASE_URL } from "../config/config";
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -19,7 +20,7 @@ const PropertyDetails = () => {
   // Create Deal States
   const [creatingDeal, setCreatingDeal] = useState(false);
   const [createError, setCreateError] = useState(null);
-  const [buyerPhone, setBuyerPhone] = useState('');
+  const [buyerPhone, setBuyerPhone] = useState("");
 
   useEffect(() => {
     fetchPropertyDetails();
@@ -37,40 +38,43 @@ const PropertyDetails = () => {
       setProperty(data);
       setLoading(false);
     } catch (err) {
-      console.error('Error fetching property details:', err);
-      setError('Failed to load property details.');
+      console.error("Error fetching property details:", err);
+      setError("Failed to load property details.");
       setLoading(false);
     }
   };
 
   const checkForExistingDeal = async () => {
     if (!user?.id) {
-      console.log('❌ No user ID for checking deals');
+      console.log("❌ No user ID for checking deals");
       return;
     }
 
     setCheckingDeal(true);
     try {
       const propertyId = property?.id || property?.propertyId;
-      console.log('🔍 Checking for deals with propertyId:', propertyId);
-      console.log('👤 User ID:', user.id);
+      console.log("🔍 Checking for deals with propertyId:", propertyId);
+      console.log("👤 User ID:", user.id);
 
       // First, try to fetch deals by property ID
       try {
         const response = await fetch(
-          `http://localhost:8080/api/deals/property/${propertyId}`,
+          `${BACKEND_BASE_URL}/api/deals/property/${propertyId}`,
           {
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-            }
+              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            },
           }
         );
 
-        console.log('📊 Property deals endpoint response status:', response.status);
+        console.log(
+          "📊 Property deals endpoint response status:",
+          response.status
+        );
 
         if (response.ok) {
           const data = await response.json();
-          console.log('📥 Property deals response:', data);
+          console.log("📥 Property deals response:", data);
 
           let deals = [];
           if (Array.isArray(data)) {
@@ -82,33 +86,36 @@ const PropertyDetails = () => {
           }
 
           if (deals.length > 0) {
-            console.log('✅ Deal found via property endpoint:', deals[0]);
+            console.log("✅ Deal found via property endpoint:", deals[0]);
             setExistingDeal(deals[0]);
             setCheckingDeal(false);
             return;
           }
         }
       } catch (err) {
-        console.log('⚠️ Property deals endpoint error:', err.message);
+        console.log("⚠️ Property deals endpoint error:", err.message);
       }
 
       // Fallback: Fetch agent's all deals and filter by property
-      console.log('📄 Trying fallback - fetching agent deals...');
+      console.log("📄 Trying fallback - fetching agent deals...");
       try {
         const response = await fetch(
-          `http://localhost:8080/api/deals/agent/${user.id}`,
+          `${BACKEND_BASE_URL}/api/deals/agent/${user.id}`,
           {
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-            }
+              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            },
           }
         );
 
-        console.log('📊 Agent deals endpoint response status:', response.status);
+        console.log(
+          "📊 Agent deals endpoint response status:",
+          response.status
+        );
 
         if (response.ok) {
           const data = await response.json();
-          console.log('📥 Agent deals response:', data);
+          console.log("📥 Agent deals response:", data);
 
           let deals = [];
           if (Array.isArray(data)) {
@@ -122,30 +129,39 @@ const PropertyDetails = () => {
           console.log(`📋 Total agent deals found: ${deals.length}`);
 
           // Find deal for this specific property
-          const propertyDeal = deals.find(d => {
+          const propertyDeal = deals.find((d) => {
             const dealPropId = d.property?.id || d.propertyId;
-            const matches = dealPropId === propertyId || dealPropId == propertyId;
-            console.log(`Comparing deal property ${dealPropId} with current property ${propertyId}: ${matches}`);
+            const matches =
+              dealPropId === propertyId || dealPropId == propertyId;
+            console.log(
+              `Comparing deal property ${dealPropId} with current property ${propertyId}: ${matches}`
+            );
             return matches;
           });
 
           if (propertyDeal) {
-            console.log('✅ Deal found via agent deals endpoint:', propertyDeal);
+            console.log(
+              "✅ Deal found via agent deals endpoint:",
+              propertyDeal
+            );
             setExistingDeal(propertyDeal);
           } else {
-            console.log('❌ No deal found for this property in agent deals');
+            console.log("❌ No deal found for this property in agent deals");
             setExistingDeal(null);
           }
         } else {
-          console.log('❌ Agent deals endpoint failed with status:', response.status);
+          console.log(
+            "❌ Agent deals endpoint failed with status:",
+            response.status
+          );
           setExistingDeal(null);
         }
       } catch (err) {
-        console.error('❌ Error fetching agent deals:', err);
+        console.error("❌ Error fetching agent deals:", err);
         setExistingDeal(null);
       }
     } catch (err) {
-      console.error('❌ Error in checkForExistingDeal:', err);
+      console.error("❌ Error in checkForExistingDeal:", err);
       setExistingDeal(null);
     } finally {
       setCheckingDeal(false);
@@ -157,27 +173,27 @@ const PropertyDetails = () => {
 
     // Check if buyer phone is provided
     if (!buyerPhone || buyerPhone.length !== 10) {
-      setCreateError('Please enter a valid 10-digit buyer phone number');
+      setCreateError("Please enter a valid 10-digit buyer phone number");
       return;
     }
 
     setCreatingDeal(true);
 
     try {
-      console.log('🔍 Searching for buyer with phone:', buyerPhone);
+      console.log("🔍 Searching for buyer with phone:", buyerPhone);
 
       // Search for buyer by phone
       const searchResponse = await fetch(
-        `http://localhost:8080/api/users/search?phone=${buyerPhone}`,
+        `${BACKEND_BASE_URL}/api/users/search?phone=${buyerPhone}`,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-          }
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
         }
       );
 
       if (!searchResponse.ok) {
-        setCreateError('Error searching for buyer');
+        setCreateError("Error searching for buyer");
         setCreatingDeal(false);
         return;
       }
@@ -185,37 +201,40 @@ const PropertyDetails = () => {
       const searchData = await searchResponse.json();
       const buyer = searchData.success ? searchData.data : searchData;
 
-      console.log('👤 Buyer search result:', buyer);
+      console.log("👤 Buyer search result:", buyer);
 
       if (!buyer || !buyer.id) {
-        setCreateError('Buyer not found. Please check the phone number.');
+        setCreateError("Buyer not found. Please check the phone number.");
         setCreatingDeal(false);
         return;
       }
 
-      console.log('✅ Buyer found:', buyer.id);
+      console.log("✅ Buyer found:", buyer.id);
 
       // Create deal with buyerId and agentId from logged-in user
-      const createResponse = await fetch('http://localhost:8080/api/deals/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify({
-          propertyId: property.id || property.propertyId,
-          buyerId: buyer.id,
-          agentId: user.id
-        })
-      });
+      const createResponse = await fetch(
+        `${BACKEND_BASE_URL}/api/deals/create`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+          body: JSON.stringify({
+            propertyId: property.id || property.propertyId,
+            buyerId: buyer.id,
+            agentId: user.id,
+          }),
+        }
+      );
 
       const createData = await createResponse.json();
-      console.log('📤 Deal creation response:', createData);
+      console.log("📤 Deal creation response:", createData);
 
       if (createData.success || createResponse.ok) {
-        console.log('✅ Deal created successfully');
-        alert('✅ Deal created successfully!');
-        setBuyerPhone('');
+        console.log("✅ Deal created successfully");
+        alert("✅ Deal created successfully!");
+        setBuyerPhone("");
         setCreateError(null);
 
         // Wait a moment then refresh
@@ -223,12 +242,12 @@ const PropertyDetails = () => {
           checkForExistingDeal();
         }, 500);
       } else {
-        console.log('❌ Deal creation failed:', createData);
-        setCreateError(createData.message || 'Failed to create deal');
+        console.log("❌ Deal creation failed:", createData);
+        setCreateError(createData.message || "Failed to create deal");
       }
     } catch (err) {
-      console.error('❌ Error creating deal:', err);
-      setCreateError('Error: ' + err.message);
+      console.error("❌ Error creating deal:", err);
+      setCreateError("Error: " + err.message);
     } finally {
       setCreatingDeal(false);
     }
@@ -240,14 +259,14 @@ const PropertyDetails = () => {
   };
 
   const formatPrice = (price) => {
-    if (!price) return 'Price on request';
-    const numPrice = typeof price === 'number' ? price : parseFloat(price);
+    if (!price) return "Price on request";
+    const numPrice = typeof price === "number" ? price : parseFloat(price);
     if (numPrice >= 10000000) {
       return `₹${(numPrice / 10000000).toFixed(2)} Cr`;
     } else if (numPrice >= 100000) {
       return `₹${(numPrice / 100000).toFixed(2)} Lac`;
     }
-    return `₹${numPrice.toLocaleString('en-IN')}`;
+    return `₹${numPrice.toLocaleString("en-IN")}`;
   };
 
   if (loading) {
@@ -262,8 +281,8 @@ const PropertyDetails = () => {
   if (error || !property) {
     return (
       <div style={styles.error}>
-        <h2>{error || 'Property not found'}</h2>
-        <button onClick={() => navigate('/')} style={styles.backButton}>
+        <h2>{error || "Property not found"}</h2>
+        <button onClick={() => navigate("/")} style={styles.backButton}>
           Go back to home
         </button>
       </div>
@@ -271,10 +290,15 @@ const PropertyDetails = () => {
   }
 
   const images = property.imageUrl ? [property.imageUrl] : [];
-  const amenitiesList = property.amenities ? property.amenities.split(',').map(a => a.trim()) : [];
-  const propertyType = property.propertyType?.typeName || property.type || 'N/A';
-  const ownerName = property.user ? `${property.user.firstName} ${property.user.lastName}` : 'N/A';
-  const isAgent = user && (user.role === 'AGENT' || user.role === 'ADMIN');
+  const amenitiesList = property.amenities
+    ? property.amenities.split(",").map((a) => a.trim())
+    : [];
+  const propertyType =
+    property.propertyType?.typeName || property.type || "N/A";
+  const ownerName = property.user
+    ? `${property.user.firstName} ${property.user.lastName}`
+    : "N/A";
+  const isAgent = user && (user.role === "AGENT" || user.role === "ADMIN");
 
   return (
     <div style={styles.container}>
@@ -287,7 +311,10 @@ const PropertyDetails = () => {
         <div style={styles.imageSection}>
           <div style={styles.mainImage}>
             <img
-              src={images[0] || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800'}
+              src={
+                images[0] ||
+                "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800"
+              }
               alt={property.title}
               style={styles.largeImage}
             />
@@ -300,7 +327,9 @@ const PropertyDetails = () => {
           <div style={styles.priceSection}>
             <div style={styles.price}>
               {formatPrice(property.price || property.expectedPrice)}
-              {property.listingType === 'rent' && <span style={styles.perMonth}>/month</span>}
+              {property.listingType === "rent" && (
+                <span style={styles.perMonth}>/month</span>
+              )}
             </div>
             {property.isFeatured && (
               <span style={styles.featuredBadge}>⭐ Featured</span>
@@ -310,11 +339,13 @@ const PropertyDetails = () => {
           <h1 style={styles.title}>{property.title}</h1>
 
           <div style={styles.typeTag}>
-            {property.listingType?.toLowerCase() === 'sale' ? 'FOR SALE' : 'FOR RENT'}
+            {property.listingType?.toLowerCase() === "sale"
+              ? "FOR SALE"
+              : "FOR RENT"}
           </div>
 
           <div style={styles.location}>
-            📍 {property.areaName || property.city || 'Hyderabad'}
+            📍 {property.areaName || property.city || "Hyderabad"}
             {property.pincode && ` - ${property.pincode}`}
           </div>
 
@@ -324,7 +355,9 @@ const PropertyDetails = () => {
               <span style={styles.detailIcon}>🛏️</span>
               <div>
                 <div style={styles.detailLabel}>Bedrooms</div>
-                <div style={styles.detailValue}>{property.bedrooms || 'N/A'}</div>
+                <div style={styles.detailValue}>
+                  {property.bedrooms || "N/A"}
+                </div>
               </div>
             </div>
 
@@ -332,7 +365,9 @@ const PropertyDetails = () => {
               <span style={styles.detailIcon}>🚿</span>
               <div>
                 <div style={styles.detailLabel}>Bathrooms</div>
-                <div style={styles.detailValue}>{property.bathrooms || 'N/A'}</div>
+                <div style={styles.detailValue}>
+                  {property.bathrooms || "N/A"}
+                </div>
               </div>
             </div>
 
@@ -357,11 +392,11 @@ const PropertyDetails = () => {
 
           {/* Contact Agent Section */}
           <div style={styles.contactSection}>
-                          {property.user && (
-                            <div style={styles.ownerInfo}>
-                              Dear <div style={styles.ownerName}>{ownerName}</div>
-                            </div>
-                          )}
+            {property.user && (
+              <div style={styles.ownerInfo}>
+                Dear <div style={styles.ownerName}>{ownerName}</div>
+              </div>
+            )}
             <h3 style={styles.contactTitle}>Contact Agent</h3>
 
             <div style={styles.contactButtons}>
@@ -383,10 +418,16 @@ const PropertyDetails = () => {
                     </div>
                     <div style={styles.dealStageInfo}>
                       <div style={styles.dealStageBadge}>
-                        Stage: <strong>{existingDeal.stage || existingDeal.currentStage || 'INQUIRY'}</strong>
+                        Stage:{" "}
+                        <strong>
+                          {existingDeal.stage ||
+                            existingDeal.currentStage ||
+                            "INQUIRY"}
+                        </strong>
                       </div>
                       <div style={styles.dealCreatedDate}>
-                        Created: {new Date(existingDeal.createdAt).toLocaleDateString()}
+                        Created:{" "}
+                        {new Date(existingDeal.createdAt).toLocaleDateString()}
                       </div>
                     </div>
                     <button
@@ -407,7 +448,7 @@ const PropertyDetails = () => {
                         placeholder="Enter buyer phone (10 digits)"
                         value={buyerPhone}
                         onChange={(e) => {
-                          const cleaned = e.target.value.replace(/\D/g, '');
+                          const cleaned = e.target.value.replace(/\D/g, "");
                           setBuyerPhone(cleaned.slice(0, 10));
                           setCreateError(null);
                         }}
@@ -420,11 +461,15 @@ const PropertyDetails = () => {
                         disabled={creatingDeal || buyerPhone.length !== 10}
                         style={{
                           ...styles.createDealBtn,
-                          opacity: creatingDeal || buyerPhone.length !== 10 ? 0.6 : 1,
-                          cursor: creatingDeal || buyerPhone.length !== 10 ? 'not-allowed' : 'pointer'
+                          opacity:
+                            creatingDeal || buyerPhone.length !== 10 ? 0.6 : 1,
+                          cursor:
+                            creatingDeal || buyerPhone.length !== 10
+                              ? "not-allowed"
+                              : "pointer",
                         }}
                       >
-                        {creatingDeal ? '⏳ Creating...' : '➕ Create Deal'}
+                        {creatingDeal ? "⏳ Creating..." : "➕ Create Deal"}
                       </button>
                     </div>
                     {createError && (
@@ -483,10 +528,7 @@ const PropertyDetails = () => {
 
       {/* View Deal Modal */}
       {showDealDetails && existingDeal && (
-        <DealDetailsPopup
-          deal={existingDeal}
-          onClose={handleRefreshDeal}
-        />
+        <DealDetailsPopup deal={existingDeal} onClose={handleRefreshDeal} />
       )}
     </div>
   );
@@ -495,79 +537,79 @@ const PropertyDetails = () => {
 const styles = {
   container: {
     maxWidth: 1200,
-    margin: '0 auto',
+    margin: "0 auto",
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   loading: {
-    textAlign: 'center',
-    padding: '4rem 2rem',
+    textAlign: "center",
+    padding: "4rem 2rem",
   },
   spinner: {
-    fontSize: '3rem',
-    marginBottom: '1rem',
+    fontSize: "3rem",
+    marginBottom: "1rem",
   },
   error: {
-    textAlign: 'center',
-    padding: '4rem 2rem',
+    textAlign: "center",
+    padding: "4rem 2rem",
   },
   backButton: {
-    padding: '10px 20px',
+    padding: "10px 20px",
     borderRadius: 8,
-    background: '#6b7280',
-    color: 'white',
-    border: 'none',
-    cursor: 'pointer',
+    background: "#6b7280",
+    color: "white",
+    border: "none",
+    cursor: "pointer",
     marginBottom: 20,
     fontSize: 14,
     fontWeight: 500,
   },
   detailsContainer: {
-    display: 'grid',
-    gridTemplateColumns: '1.5fr 1fr',
+    display: "grid",
+    gridTemplateColumns: "1.5fr 1fr",
     gap: 30,
     marginBottom: 40,
   },
   imageSection: {
-    display: 'flex',
-    flexDirection: 'column',
+    display: "flex",
+    flexDirection: "column",
     gap: 12,
   },
   mainImage: {
-    width: '100%',
+    width: "100%",
     borderRadius: 12,
-    overflow: 'hidden',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+    overflow: "hidden",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
   },
   largeImage: {
-    width: '100%',
+    width: "100%",
     height: 450,
-    objectFit: 'cover',
+    objectFit: "cover",
   },
   infoSection: {
-    display: 'flex',
-    flexDirection: 'column',
+    display: "flex",
+    flexDirection: "column",
     gap: 20,
   },
   priceSection: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   price: {
     fontSize: 32,
     fontWeight: 700,
-    color: '#3b82f6',
+    color: "#3b82f6",
   },
   perMonth: {
     fontSize: 16,
     fontWeight: 500,
-    color: '#6b7280',
+    color: "#6b7280",
   },
   featuredBadge: {
-    backgroundColor: '#f59e0b',
-    color: 'white',
-    padding: '8px 16px',
+    backgroundColor: "#f59e0b",
+    color: "white",
+    padding: "8px 16px",
     borderRadius: 20,
     fontSize: 14,
     fontWeight: 600,
@@ -575,56 +617,56 @@ const styles = {
   title: {
     fontSize: 28,
     fontWeight: 700,
-    color: '#111827',
+    color: "#111827",
     margin: 0,
   },
   typeTag: {
-    display: 'inline-block',
-    padding: '8px 16px',
-    backgroundColor: '#dbeafe',
-    color: '#1e40af',
+    display: "inline-block",
+    padding: "8px 16px",
+    backgroundColor: "#dbeafe",
+    color: "#1e40af",
     borderRadius: 8,
     fontSize: 14,
     fontWeight: 600,
-    width: 'fit-content',
+    width: "fit-content",
   },
   location: {
     fontSize: 16,
-    color: '#6b7280',
+    color: "#6b7280",
   },
   keyDetails: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
     gap: 16,
     marginTop: 10,
   },
   detailCard: {
-    display: 'flex',
-    alignItems: 'center',
+    display: "flex",
+    alignItems: "center",
     gap: 12,
     padding: 16,
-    backgroundColor: '#f9fafb',
+    backgroundColor: "#f9fafb",
     borderRadius: 10,
-    border: '1px solid #e5e7eb',
+    border: "1px solid #e5e7eb",
   },
   detailIcon: {
     fontSize: 28,
   },
   detailLabel: {
     fontSize: 12,
-    color: '#6b7280',
+    color: "#6b7280",
     marginBottom: 4,
   },
   detailValue: {
     fontSize: 18,
     fontWeight: 600,
-    color: '#111827',
+    color: "#111827",
   },
   contactSection: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: "#f9fafb",
     padding: 20,
     borderRadius: 12,
-    border: '1px solid #e5e7eb',
+    border: "1px solid #e5e7eb",
     marginTop: 10,
   },
   contactTitle: {
@@ -642,152 +684,152 @@ const styles = {
     marginBottom: 8,
   },
   contactButtons: {
-    display: 'flex',
+    display: "flex",
     gap: 12,
     marginBottom: 12,
   },
   contactOwnerBtn: {
     flex: 1,
-    padding: '12px',
-    backgroundColor: '#ef4444',
-    color: 'white',
-    border: 'none',
+    padding: "12px",
+    backgroundColor: "#ef4444",
+    color: "white",
+    border: "none",
     borderRadius: 8,
     fontWeight: 600,
-    cursor: 'pointer',
+    cursor: "pointer",
     fontSize: 14,
   },
   getPhoneBtn: {
     flex: 1,
-    padding: '12px',
-    backgroundColor: 'white',
-    color: '#ef4444',
-    border: '2px solid #ef4444',
+    padding: "12px",
+    backgroundColor: "white",
+    color: "#ef4444",
+    border: "2px solid #ef4444",
     borderRadius: 8,
     fontWeight: 600,
-    cursor: 'pointer',
+    cursor: "pointer",
     fontSize: 14,
   },
   dealSection: {
     marginTop: 16,
     paddingTop: 16,
-    borderTop: '2px solid #e5e7eb',
-    backgroundColor: '#fef3c7',
+    borderTop: "2px solid #e5e7eb",
+    backgroundColor: "#fef3c7",
     padding: 16,
     borderRadius: 8,
-    border: '1px solid #fcd34d',
+    border: "1px solid #fcd34d",
   },
   dealSectionTitle: {
     fontSize: 14,
     fontWeight: 700,
-    color: '#92400e',
+    color: "#92400e",
     marginBottom: 12,
     marginTop: 0,
   },
   dealExistsBadge: {
-    padding: '12px',
-    backgroundColor: '#d1fae5',
-    color: '#065f46',
+    padding: "12px",
+    backgroundColor: "#d1fae5",
+    color: "#065f46",
     borderRadius: 6,
     fontSize: 13,
     fontWeight: 600,
     marginBottom: 12,
-    border: '1px solid #6ee7b7',
-    textAlign: 'center',
+    border: "1px solid #6ee7b7",
+    textAlign: "center",
   },
   dealStageInfo: {
     marginBottom: 12,
-    padding: '12px',
-    backgroundColor: '#f3f4f6',
+    padding: "12px",
+    backgroundColor: "#f3f4f6",
     borderRadius: 8,
-    border: '1px solid #e5e7eb',
+    border: "1px solid #e5e7eb",
   },
   dealStageBadge: {
     fontSize: 14,
     fontWeight: 600,
-    color: '#1e40af',
+    color: "#1e40af",
     marginBottom: 8,
   },
   dealCreatedDate: {
     fontSize: 12,
-    color: '#64748b',
-    fontStyle: 'italic',
+    color: "#64748b",
+    fontStyle: "italic",
   },
   noDealInfo: {
-    padding: '12px',
-    backgroundColor: '#fef3c7',
-    color: '#92400e',
+    padding: "12px",
+    backgroundColor: "#fef3c7",
+    color: "#92400e",
     borderRadius: 6,
     fontSize: 13,
     fontWeight: 600,
     marginBottom: 12,
-    border: '1px solid #fcd34d',
-    textAlign: 'center',
+    border: "1px solid #fcd34d",
+    textAlign: "center",
   },
   loadingDeal: {
-    padding: '12px',
-    backgroundColor: '#dbeafe',
-    color: '#1e40af',
+    padding: "12px",
+    backgroundColor: "#dbeafe",
+    color: "#1e40af",
     borderRadius: 6,
     fontSize: 13,
     fontWeight: 600,
-    textAlign: 'center',
+    textAlign: "center",
   },
   errorMessage: {
-    backgroundColor: '#fee2e2',
-    color: '#dc2626',
-    padding: '12px',
+    backgroundColor: "#fee2e2",
+    color: "#dc2626",
+    padding: "12px",
     borderRadius: 6,
     fontSize: 13,
     fontWeight: 600,
     marginTop: 12,
-    border: '1px solid #fecaca',
-    textAlign: 'center',
+    border: "1px solid #fecaca",
+    textAlign: "center",
   },
   buyerInputContainer: {
-    display: 'flex',
+    display: "flex",
     gap: 8,
     marginBottom: 12,
   },
   buyerInput: {
     flex: 1,
-    padding: '10px 12px',
-    border: '2px solid #e2e8f0',
+    padding: "10px 12px",
+    border: "2px solid #e2e8f0",
     borderRadius: 6,
     fontSize: 13,
     fontWeight: 500,
-    boxSizing: 'border-box',
-    transition: 'border-color 0.2s',
+    boxSizing: "border-box",
+    transition: "border-color 0.2s",
   },
   createDealBtn: {
-    padding: '10px 12px',
-    backgroundColor: '#3b82f6',
-    color: 'white',
-    border: 'none',
+    padding: "10px 12px",
+    backgroundColor: "#3b82f6",
+    color: "white",
+    border: "none",
     borderRadius: 6,
     fontWeight: 600,
-    cursor: 'pointer',
+    cursor: "pointer",
     fontSize: 13,
-    transition: 'background 0.2s',
-    whiteSpace: 'nowrap',
+    transition: "background 0.2s",
+    whiteSpace: "nowrap",
   },
   viewDealBtn: {
-    width: '100%',
-    padding: '12px',
-    backgroundColor: '#10b981',
-    color: 'white',
-    border: 'none',
+    width: "100%",
+    padding: "12px",
+    backgroundColor: "#10b981",
+    color: "white",
+    border: "none",
     borderRadius: 8,
     fontWeight: 600,
-    cursor: 'pointer',
+    cursor: "pointer",
     fontSize: 14,
-    transition: 'background 0.2s',
+    transition: "background 0.2s",
   },
   moreDetails: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 30,
     borderRadius: 12,
-    border: '1px solid #e5e7eb',
+    border: "1px solid #e5e7eb",
   },
   sectionTitle: {
     fontSize: 24,
@@ -795,24 +837,24 @@ const styles = {
     marginBottom: 20,
   },
   detailsGrid: {
-    display: 'flex',
-    flexDirection: 'column',
+    display: "flex",
+    flexDirection: "column",
     gap: 16,
   },
   detailRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
+    display: "flex",
+    justifyContent: "space-between",
     paddingBottom: 16,
-    borderBottom: '1px solid #e5e7eb',
+    borderBottom: "1px solid #e5e7eb",
   },
   detailRowLabel: {
     fontSize: 14,
-    color: '#6b7280',
+    color: "#6b7280",
     fontWeight: 500,
   },
   detailRowValue: {
     fontSize: 14,
-    color: '#111827',
+    color: "#111827",
     fontWeight: 600,
   },
   descriptionSection: {
@@ -826,22 +868,22 @@ const styles = {
   description: {
     fontSize: 14,
     lineHeight: 1.8,
-    color: '#374151',
+    color: "#374151",
   },
   amenitiesSection: {
     marginTop: 30,
   },
   amenitiesGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
     gap: 12,
   },
   amenityItem: {
-    padding: '10px 12px',
-    backgroundColor: '#f9fafb',
+    padding: "10px 12px",
+    backgroundColor: "#f9fafb",
     borderRadius: 8,
     fontSize: 14,
-    color: '#374151',
+    color: "#374151",
   },
 };
 

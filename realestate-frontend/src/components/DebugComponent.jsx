@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BACKEND_BASE_URL } from "../config/config";
 
 const DebugComponent = () => {
   const [featuredProps, setFeaturedProps] = useState([]);
@@ -22,7 +23,7 @@ const DebugComponent = () => {
 
     // Test 1: Check backend is running
     try {
-      const response = await fetch('http://localhost:8080/api/properties');
+      const response = await fetch(`${BACKEND_BASE_URL}/api/properties`);
       if (response.ok) {
         const data = await response.json();
         addTestResult('Backend Connection', 'success', `Backend is running! Found ${data.length} properties`, data);
@@ -36,7 +37,7 @@ const DebugComponent = () => {
 
     // Test 2: Check featured properties
     try {
-      const response = await fetch('http://localhost:8080/api/properties/featured');
+      const response = await fetch(`${BACKEND_BASE_URL}/api/properties/featured`);
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.data) {
@@ -54,7 +55,7 @@ const DebugComponent = () => {
 
     // Test 3: Check areas
     try {
-      const response = await fetch('http://localhost:8080/api/areas?city=Hyderabad');
+      const response = await fetch(`${BACKEND_BASE_URL}/api/areas?city=Hyderabad`);
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.data) {
@@ -68,7 +69,7 @@ const DebugComponent = () => {
 
     // Test 4: Check property types
     try {
-      const response = await fetch('http://localhost:8080/api/property-types');
+      const response = await fetch(`${BACKEND_BASE_URL}/api/property-types`);
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.data) {
@@ -82,7 +83,7 @@ const DebugComponent = () => {
 
     // Test 5: Test single property fetch
     try {
-      const response = await fetch('http://localhost:8080/api/properties/1');
+      const response = await fetch(`${BACKEND_BASE_URL}/api/properties/1`);
       if (response.ok) {
         const data = await response.json();
         addTestResult('Single Property (ID 1)', 'success', 'Property ID 1 found', data);
@@ -95,7 +96,7 @@ const DebugComponent = () => {
 
     // Test 6: Test filter endpoint
     try {
-      const response = await fetch('http://localhost:8080/api/properties/filter?type=Apartment&listingType=sale');
+      const response = await fetch(`${BACKEND_BASE_URL}/api/properties/filter?type=Apartment&listingType=sale`);
       if (response.ok) {
         const data = await response.json();
         addTestResult('Filter (Apartments for Sale)', 'success', `Found ${data.length} apartments for sale`, data);
@@ -108,7 +109,7 @@ const DebugComponent = () => {
 
     // Test 7: Test area endpoint
     try {
-      const response = await fetch('http://localhost:8080/api/properties/area/Gachibowli');
+      const response = await fetch(`${BACKEND_BASE_URL}/api/properties/area/Gachibowli`);
       if (response.ok) {
         const data = await response.json();
         addTestResult('Area Filter (Gachibowli)', 'success', `Found ${data.length} properties in Gachibowli`, data);
