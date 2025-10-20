@@ -264,11 +264,7 @@ const AdminAgentsDashboard = () => {
 
 const styles = {
   container: {
-    maxWidth: 1600,
-    margin: '0 auto',
     padding: '24px 32px',
-    minHeight: '100vh',
-    backgroundColor: '#f8fafc',
   },
   title: {
     fontSize: '32px',

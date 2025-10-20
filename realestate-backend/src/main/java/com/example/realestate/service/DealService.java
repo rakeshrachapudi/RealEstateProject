@@ -7,6 +7,7 @@ import com.example.realestate.dto.CreateDealWithPriceRequestDto;
 import com.example.realestate.dto.DealDetailDTO;
 import com.example.realestate.dto.AgentPerformanceDTO;
 import com.example.realestate.dto.AdminDealDashboardDTO;
+import com.example.realestate.dto.AdminUserDashboardDTO; // ⭐ ADDED IMPORT
 import com.example.realestate.repository.DealStatusRepository;
 import com.example.realestate.repository.PropertyRepository;
 import com.example.realestate.repository.UserRepository;
@@ -37,11 +38,8 @@ public class DealService {
     private UserRepository userRepository;
 
     // ==================== CREATE DEAL WITH PRICE ====================
-    /**
-     * ⭐ CORRECTED: Create deal with agreed price
-     * Only AGENT can create deals (enforce in controller)
-     * Agent cannot create deals on properties they own
-     */
+    // ... (createDealWithPrice method is unchanged)
+
     public DealStatus createDealWithPrice(CreateDealWithPriceRequestDto dto, Long agentId) {
         logger.info("Creating deal with price - Property: {}, Buyer: {}, Agent: {}, Price: {}",
                 dto.getPropertyId(), dto.getBuyerId(), agentId, dto.getAgreedPrice());
@@ -116,6 +114,8 @@ public class DealService {
     }
 
     // ==================== ORIGINAL CREATE DEAL ====================
+    // ... (createDeal method is unchanged)
+
     public DealStatus createDeal(Long propertyId, Long buyerId, Long agentId) {
         logger.info("Creating new deal - Property: {}, Buyer: {}, Agent: {}",
                 propertyId, buyerId, agentId);
@@ -156,13 +156,8 @@ public class DealService {
     }
 
     // ==================== ROLE-BASED DEAL FETCHING ⭐ CORRECTED ====================
-    /**
-     * ⭐ CORRECTED: Get deals based on user role
-     * BUYER: Sees deals where they are the buyer
-     * SELLER: Sees deals on their own properties
-     * AGENT: Sees deals they created
-     * ADMIN: Sees all deals
-     */
+    // ... (getDealsByRole method is unchanged)
+
     public List<DealDetailDTO> getDealsByRole(Long userId, String userRole) {
         logger.info("Fetching deals for user: {} with role: {}", userId, userRole);
 
@@ -206,9 +201,9 @@ public class DealService {
                 .collect(Collectors.toList());
     }
 
-    // ==================== ADMIN DASHBOARD ⭐ CORRECTED ====================
+    // ==================== ADMIN DASHBOARD ⭐ UPDATED ====================
     /**
-     * ⭐ CORRECTED: Get admin dashboard with all statistics
+     * ⭐ UPDATED: Get admin dashboard with all statistics including user data.
      */
     public AdminDealDashboardDTO getAdminDashboard() {
         logger.info("📊 Generating admin dashboard");
@@ -216,7 +211,7 @@ public class DealService {
         List<DealStatus> allDeals = dealStatusRepository.findAll();
         AdminDealDashboardDTO dashboard = new AdminDealDashboardDTO();
 
-        // Total counts
+        // 1. Deal Counts (Existing Logic)
         Long totalDeals = (long) allDeals.size();
         Long activeDealCount = allDeals.stream()
                 .filter(d -> d.getStage() != DealStatus.DealStage.COMPLETED)
@@ -229,7 +224,7 @@ public class DealService {
         dashboard.setActiveDealCount(activeDealCount);
         dashboard.setCompletedDealCount(completedDealCount);
 
-        // Deals by stage
+        // 2. Deals by stage (Existing Logic)
         Map<String, Long> dealsByStage = new HashMap<>();
         for (DealStatus.DealStage stage : DealStatus.DealStage.values()) {
             long count = allDeals.stream()
@@ -239,18 +234,59 @@ public class DealService {
         }
         dashboard.setDealsByStage(dealsByStage);
 
-        // Agent performance
+        // 3. Agent performance (Existing Logic)
         List<AgentPerformanceDTO> agentPerformance = getAgentPerformanceMetrics();
         dashboard.setAgentPerformance(agentPerformance);
 
-        logger.info("✅ Admin dashboard generated - Total deals: {}", totalDeals);
+        // ⭐ 4. NEW: User Metrics
+        AdminUserDashboardDTO userMetrics = this.getUserMetrics();
+        dashboard.setUserMetrics(userMetrics); // Assuming AdminDealDashboardDTO has setUserMetrics(AdminUserDashboardDTO)
+
+        logger.info("✅ Admin dashboard generated - Total deals: {}, Total users: {}",
+                totalDeals, userMetrics.getTotalUsers());
         return dashboard;
     }
 
-    // ==================== AGENT PERFORMANCE METRICS ====================
+    // ==================== USER PERFORMANCE METRICS ⭐ NEW METHOD ====================
     /**
-     * Get performance metrics for all agents
+     * Get user statistics for the admin dashboard
      */
+    private AdminUserDashboardDTO getUserMetrics() {
+        logger.info("👥 Calculating user metrics");
+
+        List<User> allUsers = userRepository.findAll();
+        AdminUserDashboardDTO userMetrics = new AdminUserDashboardDTO();
+
+        // Total count
+        userMetrics.setTotalUsers((long) allUsers.size());
+
+        // Count by role (User.UserRole to Long)
+        Map<User.UserRole, Long> usersByRoleEnum = allUsers.stream()
+                .filter(user -> user.getRole() != null)
+                .collect(Collectors.groupingBy(User::getRole, Collectors.counting()));
+
+        // Convert the map keys from Enum to String for the DTO
+        Map<String, Long> usersByRoleString = usersByRoleEnum.entrySet().stream()
+                .collect(Collectors.toMap(
+                        entry -> entry.getKey().name(), // Convert Enum key to String
+                        Map.Entry::getValue
+                ));
+
+        userMetrics.setUsersByRole(usersByRoleString);
+
+        // Set specific counts using the String map
+        userMetrics.setTotalAdmins(usersByRoleString.getOrDefault(User.UserRole.ADMIN.name(), 0L));
+        userMetrics.setTotalAgents(usersByRoleString.getOrDefault(User.UserRole.AGENT.name(), 0L));
+        userMetrics.setTotalBuyers(usersByRoleString.getOrDefault(User.UserRole.BUYER.name(), 0L));
+        userMetrics.setTotalSellers(usersByRoleString.getOrDefault(User.UserRole.SELLER.name(), 0L));
+
+        logger.info("✅ User metrics calculated - Total users: {}", allUsers.size());
+        return userMetrics;
+    }
+
+    // ==================== AGENT PERFORMANCE METRICS ====================
+    // ... (getAgentPerformanceMetrics method is unchanged)
+
     public List<AgentPerformanceDTO> getAgentPerformanceMetrics() {
         logger.info("📈 Calculating agent performance metrics");
 
@@ -318,9 +354,8 @@ public class DealService {
     }
 
     // ==================== GET DEALS BY AGENT (FOR ADMIN) ====================
-    /**
-     * Get all deals for a specific agent (admin view)
-     */
+    // ... (getDealsByAgentForAdmin method is unchanged)
+
     public List<DealDetailDTO> getDealsByAgentForAdmin(Long agentId) {
         logger.info("👤 Fetching all deals for agent {} (Admin view)", agentId);
 
@@ -333,10 +368,7 @@ public class DealService {
     }
 
     // ==================== CONVERT TO DETAIL DTO ====================
-    /**
-     * Convert DealStatus to DealDetailDTO with all mobile numbers
-     */
-    // Replace the convertToDealDetailDTO() method in DealService.java with this:
+    // ... (convertToDealDetailDTO method is unchanged)
 
     private DealDetailDTO convertToDealDetailDTO(DealStatus deal) {
         DealDetailDTO dto = new DealDetailDTO();
@@ -398,7 +430,7 @@ public class DealService {
         return dto;
     }
     // ==================== EXISTING METHODS (KEPT FOR COMPATIBILITY) ====================
-
+    // ... (All other existing methods are unchanged)
 
     public DealStatus updateDealStage(Long dealId, DealStatus.DealStage newStage,
                                       String notes, String updatedBy) {

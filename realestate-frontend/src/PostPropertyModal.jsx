@@ -1,5 +1,4 @@
-﻿// realestate-frontend/src/PostPropertyModal.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext.jsx';
 
 function PostPropertyModal({ onClose, onPropertyPosted }) {
@@ -204,6 +203,16 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         setLoading(true);
         setError(null);
 
+        // Retrieve the JWT token from local storage
+        const token = localStorage.getItem('authToken');
+
+        if (!token) {
+            setError('Authentication required to post property. Please log in again.');
+            setLoading(false);
+            return;
+        }
+
+
         if (!formData.title || !formData.areaId || !formData.imageUrl ||
             !formData.bedrooms || !formData.bathrooms || !formData.price ||
             !formData.description) {
@@ -265,12 +274,20 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         try {
             const response = await fetch('http://localhost:8080/api/properties', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    // ⭐ FIX: Include Authorization header with JWT token ⭐
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify(propertyData),
             });
 
             if (!response.ok) {
                 const errorText = await response.text();
+                // Check for common error status codes to provide better feedback
+                if (response.status === 403) {
+                    throw new Error('You do not have permission (Role must be SELLER or ADMIN).');
+                }
                 throw new Error('Failed to post property: ' + errorText);
             }
 

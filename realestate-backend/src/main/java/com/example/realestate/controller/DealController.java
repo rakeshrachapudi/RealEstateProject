@@ -3,7 +3,7 @@ package com.example.realestate.controller;
 import com.example.realestate.model.DealStatus;
 import com.example.realestate.model.User;
 import com.example.realestate.service.DealService;
-import com.example.realestate.dto.*;
+import com.example.realestate.dto.*; // This imports CreateDealRequestDto
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors; // Ensure Collectors is imported
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/deals")
@@ -28,7 +28,7 @@ public class DealController {
     private DealService dealService;
 
     @Autowired
-    private com.example.realestate.repository.UserRepository userRepository; // Assuming PropertyRepository might be needed too if checking property existence
+    private com.example.realestate.repository.UserRepository userRepository;
 
     // ==================== GET DEALS BY USER AND ROLE ====================
     @GetMapping("/user/{userId}/role/{userRole}")
@@ -179,7 +179,6 @@ public class DealController {
     }
 
     // ⭐ ==================== GET DEALS FOR A SPECIFIC PROPERTY ==================== ⭐
-    // ⭐ This is the newly added method to handle GET /api/deals/property/{propertyId} ⭐
     @GetMapping("/property/{propertyId}")
     public ResponseEntity<?> getDealsForProperty(@PathVariable Long propertyId, Authentication authentication) {
         // Log who is making the request (optional but helpful)
@@ -189,12 +188,8 @@ public class DealController {
         logger.info("Fetching deals for property ID: {} requested by user: {}", propertyId, username);
 
         // Security check passed implicitly by SecurityConfig (.authenticated())
-        // But we ensure user is actually authenticated for logging purposes
         if ("anonymous/unauthenticated".equals(username)) {
-            // This case might occur if SecurityConfig allows anonymous but then controller logic needs auth
             logger.warn("Unauthenticated access attempt to /property/{}", propertyId);
-            // Depending on requirements, could return 401, or proceed if some deals are public
-            // Assuming authentication is required based on SecurityConfig:
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Authentication required"));
         }
 
@@ -311,9 +306,9 @@ public class DealController {
         }
     }
 
-    // ==================== CREATE DEAL (Simple version, Agent might use create-with-price) ====================
+    // ==================== CREATE DEAL (Simple version) ====================
     @PostMapping("/create")
-    public ResponseEntity<?> createDeal(@RequestBody CreateDealRequest request, Authentication authentication) {
+    public ResponseEntity<?> createDeal(@RequestBody CreateDealRequestDto request, Authentication authentication) {
         logger.info("Creating new deal via /create endpoint");
 
         // Get authenticated user (could be buyer, agent, admin)
@@ -326,18 +321,19 @@ public class DealController {
 
 
         try {
-            if (request.propertyId == null || request.buyerId == null) {
+            // ⭐ ERROR FIX: Use DTO fields directly. If DTO uses public fields, this is fine.
+            // Since the DTO you provided uses private fields with getters, we should use getters here.
+            if (request.getPropertyId() == null || request.getBuyerId() == null) {
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error("Property ID and Buyer ID are required"));
             }
 
-            // Determine agentId - if the creator is an agent, use their ID, otherwise null? Or passed in request?
-            // This endpoint might need clarification on who the agent is. Assuming passed in request for now.
-            Long agentId = request.agentId; // Use agentId from request body
+            // Determine agentId - use agentId from request body
+            Long agentId = request.getAgentId();
 
             DealStatus deal = dealService.createDeal(
-                    request.propertyId,
-                    request.buyerId,
+                    request.getPropertyId(),
+                    request.getBuyerId(),
                     agentId // Pass agentId to service
             );
 
@@ -651,7 +647,6 @@ public class DealController {
     }
 
     // Converts DealStatus entity to simpler DTO (used by older /create endpoint)
-    // Consider deprecating or aligning DTOs if possible
     private DealDTO convertToDTO(DealStatus deal) {
         if (deal == null) return null;
 
@@ -659,72 +654,10 @@ public class DealController {
         dto.setId(deal.getId());
         dto.setDealId(deal.getId());
         dto.setStage(deal.getStage() != null ? deal.getStage().name() : null);
-        dto.setCurrentStage(deal.getStage() != null ? deal.getStage().name() : null);
-        dto.setNotes(deal.getNotes());
-        dto.setCreatedAt(deal.getCreatedAt());
-        dto.setUpdatedAt(deal.getUpdatedAt());
-        dto.setLastUpdatedBy(deal.getLastUpdatedBy());
-
-        if (deal.getProperty() != null) {
-            dto.setPropertyId(deal.getProperty().getId());
-            // Create nested PropertyInfo DTO
-            dto.setProperty(new DealDTO.PropertyInfo(
-                    deal.getProperty().getId(),
-                    deal.getProperty().getTitle(),
-                    deal.getProperty().getCity(),
-                    deal.getProperty().getPrice() != null ? deal.getProperty().getPrice().doubleValue() : null, // Handle null price
-                    deal.getProperty().getBedrooms(),
-                    deal.getProperty().getImageUrl()
-            ));
-        }
-
-        if (deal.getBuyer() != null) {
-            dto.setBuyerId(deal.getBuyer().getId());
-            // Create nested UserInfo DTO
-            dto.setBuyer(new DealDTO.UserInfo(
-                    deal.getBuyer().getId(),
-                    deal.getBuyer().getFirstName(),
-                    deal.getBuyer().getLastName(),
-                    deal.getBuyer().getEmail(),
-                    deal.getBuyer().getMobileNumber()
-            ));
-        }
-
-        if (deal.getAgent() != null) {
-            dto.setAgentId(deal.getAgent().getId());
-            // Create nested UserInfo DTO
-            dto.setAgent(new DealDTO.UserInfo(
-                    deal.getAgent().getId(),
-                    deal.getAgent().getFirstName(),
-                    deal.getAgent().getLastName(),
-                    deal.getAgent().getEmail(),
-                    deal.getAgent().getMobileNumber()
-            ));
-        }
-
+        dto.setPropertyId(deal.getProperty() != null ? deal.getProperty().getId() : null);
+        dto.setBuyerId(deal.getBuyer() != null ? deal.getBuyer().getId() : null);
+        dto.setAgentId(deal.getAgent() != null ? deal.getAgent().getId() : null);
+        dto.setAgreedPrice(deal.getAgreedPrice());
         return dto;
-    }
-
-    // ==================== INNER DTOs (Request Classes) ====================
-    // Keep these simple static inner classes for request bodies
-
-    static class CreateDealRequest {
-        public Long propertyId;
-        public Long buyerId;
-        public Long agentId; // Agent ID might be optional depending on creation context
-
-        // Getters might be useful for frameworks or testing
-        public Long getPropertyId() { return propertyId; }
-        public Long getBuyerId() { return buyerId; }
-        public Long getAgentId() { return agentId; }
-    }
-
-    static class UpdateDealStageRequest {
-        public String stage; // Should match DealStage enum values (e.g., "NEGOTIATION")
-        public String notes;
-
-        // Getters
-        public String getStage() { return stage; }
-        public String getNotes() { return notes; }
     }
 }

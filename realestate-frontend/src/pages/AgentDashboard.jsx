@@ -62,9 +62,9 @@ const AgentDashboard = () => {
 
             // Fetch deals assigned to the agent
             const dealsRes = await fetch(`http://localhost:8080/api/deals/agent/${user.id}`, { headers });
+            let dealsList = [];
             if (dealsRes.ok) {
                 const responseData = await safeParseJson(dealsRes);
-                let dealsList = [];
                 // Handle different possible response structures
                 if (responseData) {
                     if (Array.isArray(responseData)) {
@@ -84,34 +84,24 @@ const AgentDashboard = () => {
             }
 
             // Fetch properties managed by the agent (assuming endpoint exists)
-            // Using a generic endpoint for now, adjust if needed
+            let agentProperties = [];
             const propsRes = await fetch(`http://localhost:8080/api/properties/user/${user.id}`, { headers }).catch(() => ({ ok: false }));
             if (propsRes.ok) {
                 const data = await safeParseJson(propsRes);
                 // Filter properties where the current user is the owner/lister
-                const agentProperties = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+                agentProperties = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
                 setProperties(agentProperties.filter(p => p.user?.id === user.id));
-                console.log('✅ Agent Properties loaded:', properties.length);
+                console.log('✅ Agent Properties loaded:', agentProperties.length);
             } else {
                 console.error('❌ Properties response not ok:', propsRes.status);
                 setProperties([]);
             }
 
-            // Fetch agent stats (assuming endpoint exists)
-            // Placeholder endpoint, adjust if needed
-            // const statsRes = await fetch(`http://localhost:8080/api/agents/${user.id}/stats`, { headers }).catch(() => ({ ok: false }));
-            // if (statsRes.ok) {
-            //     const data = await safeParseJson(statsRes);
-            //     setStats(data?.success ? data.data : {});
-            // } else {
-            //     console.error('❌ Stats response not ok:', statsRes.status);
-            //     setStats({});
-            // }
             // Using calculated stats for now:
              setStats({
-                 activeDeals: deals.filter(d => d.stage !== 'COMPLETED').length,
-                 completedDeals: deals.filter(d => d.stage === 'COMPLETED').length,
-                 propertiesManaged: properties.length
+                 activeDeals: dealsList.filter(d => d.stage !== 'COMPLETED').length,
+                 completedDeals: dealsList.filter(d => d.stage === 'COMPLETED').length,
+                 propertiesManaged: agentProperties.length
              });
 
 
@@ -119,7 +109,7 @@ const AgentDashboard = () => {
             const requestsRes = await fetch(`http://localhost:8080/api/price-requests/pending`, { headers });
             if (requestsRes.ok) {
                 const reqData = await safeParseJson(requestsRes);
-                const pendingList = Array.isArray(reqData) ? reqData : []; // Ensure it's an array
+                const pendingList = Array.isArray(reqData?.data) ? reqData.data : (Array.isArray(reqData) ? reqData : []); // Ensure it's an array
                 console.log('✅ Pending Requests loaded:', pendingList.length);
                 setPendingRequests(pendingList);
             } else {
@@ -417,12 +407,12 @@ const AgentDashboard = () => {
                                     <div style={{...styles.stageBadge, backgroundColor: getStageColor(deal.stage)}}>
                                         {deal.stage || 'N/A'}
                                     </div>
-                                    <h3 style={styles.dealTitle} onClick={() => navigate(`/property/${deal.property?.id}`)} title={deal.property?.title || `Property ID: ${deal.propertyId}`}>
-                                        {deal.property?.title || `Property ID: ${deal.propertyId}`}
+                                    <h3 style={styles.dealTitle} onClick={() => navigate(`/property/${deal.propertyId}`)} title={deal.propertyTitle || `Property ID: ${deal.propertyId}`}>
+                                        {deal.propertyTitle || `Property ID: ${deal.propertyId}`}
                                     </h3>
                                     <div style={styles.dealMeta}>
-                                       <p style={styles.metaItem}><strong>Buyer:</strong> {deal.buyer?.firstName || 'N/A'} {deal.buyer?.lastName || ''}</p>
-                                       <p style={styles.metaItem}><strong>Prop. Price:</strong> ₹{deal.property?.price?.toLocaleString('en-IN') || 'N/A'}</p>
+                                       <p style={styles.metaItem}><strong>Buyer:</strong> {deal.buyerName || 'N/A'}</p>
+                                       <p style={styles.metaItem}><strong>Prop. Price:</strong> ₹{deal.propertyPrice?.toLocaleString('en-IN') || 'N/A'}</p>
                                        {deal.agreedPrice && <p style={styles.metaItem}><strong>Agreed:</strong> ₹{deal.agreedPrice?.toLocaleString('en-IN')}</p>}
                                        <p style={styles.metaItem}><strong>Created:</strong> {new Date(deal.createdAt).toLocaleDateString()}</p>
                                     </div>
@@ -700,78 +690,75 @@ const styles = {
         fontSize: '17px',
         fontWeight: '600',
         color: '#1e293b',
-        margin: '0 0 14px 0',
-        lineHeight: '1.4',
-        cursor: 'pointer' // Indicate title is clickable
+        marginBottom: '12px',
+        cursor: 'pointer',
+        textDecoration: 'none',
+        overflow: 'hidden',
+        whiteSpace: 'nowrap',
+        textOverflow: 'ellipsis'
     },
     dealMeta: {
-        fontSize: '14px',
-        color: '#475569',
-        marginBottom: '16px',
-        flexGrow: 1 // Push button to bottom
+        borderTop: '1px solid #f1f5f9',
+        paddingTop: '12px',
+        marginBottom: '16px'
     },
     metaItem: {
-        margin: '6px 0',
-        lineHeight: '1.5',
-        wordBreak: 'break-word' // Prevent long text overflow
+        fontSize: '14px',
+        color: '#475569',
+        margin: '4px 0'
     },
     progressBar: {
-        width: '100%',
         height: '8px',
-        backgroundColor: '#e2e8f0',
+        backgroundColor: '#e5e7eb',
         borderRadius: '4px',
-        overflow: 'hidden',
         marginBottom: '16px'
     },
     progressFill: {
         height: '100%',
-        transition: 'width 0.4s ease-out',
-        borderRadius: '4px'
+        borderRadius: '4px',
+        transition: 'width 0.5s ease-out'
     },
     viewDealBtn: {
-        width: '100%',
-        padding: '12px',
-        backgroundColor: '#10b981', // Emerald green
+        padding: '10px 16px',
+        backgroundColor: '#3b82f6',
         color: 'white',
         border: 'none',
         borderRadius: '8px',
         cursor: 'pointer',
         fontWeight: '600',
         fontSize: '14px',
-        transition: 'background 0.2s',
-        marginTop: 'auto' // Ensure button is at the bottom
-    },
-    loading: {
-        textAlign: 'center',
-        padding: '80px 20px',
-        color: '#475569',
-        fontSize: '16px'
-    },
-    emptyState: {
-        textAlign: 'center',
-        padding: '60px 20px',
-        color: '#64748b',
-        backgroundColor: '#f8fafc',
-        borderRadius: '12px',
-        border: '1px dashed #cbd5e1',
-        fontSize: '15px'
+        marginTop: 'auto', // Push button to bottom
+        transition: 'background 0.2s'
     },
     propertyCard: {
         backgroundColor: '#ffffff',
         borderRadius: '12px',
         border: '1px solid #e2e8f0',
+        cursor: 'pointer',
         overflow: 'hidden',
-        transition: 'all 0.2s ease-in-out',
         boxShadow: '0 3px 6px rgba(0,0,0,0.07)',
-        cursor: 'pointer'
-        // Hover effect requires CSS
+        transition: 'transform 0.2s'
     },
     propertyImage: {
         width: '100%',
         height: '180px',
-        objectFit: 'cover',
-        display: 'block',
-        borderBottom: '1px solid #e2e8f0' // Add border below image
+        objectFit: 'cover'
+    },
+    emptyState: {
+        padding: '40px',
+        textAlign: 'center',
+        backgroundColor: '#f1f5f9',
+        borderRadius: '8px',
+        color: '#64748b',
+        fontSize: '16px',
+        fontWeight: '500'
+    },
+    loading: {
+        textAlign: 'center',
+        padding: '100px',
+        fontSize: '18px',
+        color: '#475569',
+        fontWeight: '600'
     }
 };
 

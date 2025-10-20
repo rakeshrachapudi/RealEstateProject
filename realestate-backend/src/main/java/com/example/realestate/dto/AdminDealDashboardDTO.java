@@ -11,20 +11,26 @@ public class AdminDealDashboardDTO {
     private List<AgentPerformanceDTO> agentPerformance;
     private Map<String, Long> dealsTrendByMonth; // Optional: for charts
 
+    // ⭐ NEW FIELD for User Data
+    private AdminUserDashboardDTO userMetrics;
+
     // Constructors
     public AdminDealDashboardDTO() {}
 
     public AdminDealDashboardDTO(Long totalDeals, Long activeDealCount, Long completedDealCount,
                                  Map<String, Long> dealsByStage,
-                                 List<AgentPerformanceDTO> agentPerformance) {
+                                 List<AgentPerformanceDTO> agentPerformance,
+                                 // ⭐ NEW Constructor parameter
+                                 AdminUserDashboardDTO userMetrics) {
         this.totalDeals = totalDeals;
         this.activeDealCount = activeDealCount;
         this.completedDealCount = completedDealCount;
         this.dealsByStage = dealsByStage;
         this.agentPerformance = agentPerformance;
+        this.userMetrics = userMetrics; // ⭐ Set new field
     }
 
-    // Getters and Setters
+    // Getters and Setters (Existing)
     public Long getTotalDeals() { return totalDeals; }
     public void setTotalDeals(Long totalDeals) { this.totalDeals = totalDeals; }
 
@@ -46,4 +52,8 @@ public class AdminDealDashboardDTO {
     public void setDealsTrendByMonth(Map<String, Long> dealsTrendByMonth) {
         this.dealsTrendByMonth = dealsTrendByMonth;
     }
+
+    // ⭐ NEW Getter and Setter
+    public AdminUserDashboardDTO getUserMetrics() { return userMetrics; }
+    public void setUserMetrics(AdminUserDashboardDTO userMetrics) { this.userMetrics = userMetrics; }
 }

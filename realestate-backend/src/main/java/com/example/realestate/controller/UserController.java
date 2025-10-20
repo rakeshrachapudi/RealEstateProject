@@ -7,15 +7,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/users")
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
 public class UserController {
+
     @Autowired
     private UserRepository userRepository;
 
+    // ==================== SEARCH USER ====================
     @GetMapping("/search")
     public ResponseEntity<?> searchUser(
             @RequestParam(required = false) String email,
@@ -39,4 +42,15 @@ public class UserController {
                 .body(ApiResponse.error("User not found"));
     }
 
+    // ==================== GET ALL USERS (ADMIN ONLY) ====================
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllUsers() {
+        try {
+            List<User> users = userRepository.findAll();
+            return ResponseEntity.ok(ApiResponse.success(users));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(ApiResponse.error("Failed to fetch users"));
+        }
+    }
 }

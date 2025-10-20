@@ -36,7 +36,11 @@ public class User {
     private LocalDateTime updatedAt;
 
     public enum UserRole {
-        USER, AGENT, ADMIN
+        USER,
+        BUYER,
+        SELLER, // ⭐ ADDED TO FIX COMPILATION ERROR IN DealService ⭐
+        AGENT,
+        ADMIN
     }
 
     @PrePersist

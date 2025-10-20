@@ -1,6 +1,7 @@
 package com.example.realestate.dto;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal; // ⭐ REQUIRED IMPORT ADDED ⭐
 
 public class DealDTO {
     private Long id;
@@ -11,6 +12,9 @@ public class DealDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String lastUpdatedBy;
+
+    // ⭐ AGREED PRICE FIELD ADDED ⭐
+    private BigDecimal agreedPrice;
 
     // Property Information
     private Long propertyId;
@@ -60,6 +64,10 @@ public class DealDTO {
 
     public String getLastUpdatedBy() { return lastUpdatedBy; }
     public void setLastUpdatedBy(String lastUpdatedBy) { this.lastUpdatedBy = lastUpdatedBy; }
+
+    // ⭐ AGREED PRICE GETTER/SETTER ADDED to fix compilation error in DealController ⭐
+    public BigDecimal getAgreedPrice() { return agreedPrice; }
+    public void setAgreedPrice(BigDecimal agreedPrice) { this.agreedPrice = agreedPrice; }
 
     public Long getPropertyId() { return propertyId; }
     public void setPropertyId(Long propertyId) { this.propertyId = propertyId; }
@@ -167,6 +175,7 @@ public class DealDTO {
         return "DealDTO{" +
                 "dealId=" + dealId +
                 ", stage='" + stage + '\'' +
+                ", agreedPrice=" + agreedPrice +
                 ", propertyId=" + propertyId +
                 ", buyerId=" + buyerId +
                 ", agentId=" + agentId +
