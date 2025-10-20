@@ -1,6 +1,7 @@
 // src/components/CreateDealModal.jsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
+import { BACKEND_BASE_URL } from "../config/config";
 
 const CreateDealModal = ({ propertyId, propertyTitle, onClose, onSuccess }) => {
   const { user } = useAuth();
@@ -28,7 +29,7 @@ const CreateDealModal = ({ propertyId, propertyTitle, onClose, onSuccess }) => {
 
   const fetchPropertyDetails = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/properties/${propertyId}`);
+      const response = await fetch(`${BACKEND_BASE_URL}/api/properties/${propertyId}`);
       if (response.ok) {
         const data = await response.json();
         setProperty(data);
@@ -47,7 +48,7 @@ const CreateDealModal = ({ propertyId, propertyTitle, onClose, onSuccess }) => {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8080/api/users/search?phone=${phone}`, {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/users/search?phone=${phone}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
@@ -97,7 +98,7 @@ const CreateDealModal = ({ propertyId, propertyTitle, onClose, onSuccess }) => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8080/api/deals/create', {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/deals/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

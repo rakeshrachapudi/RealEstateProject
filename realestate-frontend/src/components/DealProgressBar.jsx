@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BACKEND_BASE_URL } from "../config/config";
 
 const DealProgressBar = ({ deal, onStageChange, isEditable = false }) => {
   const stages = [
@@ -31,7 +32,7 @@ const DealProgressBar = ({ deal, onStageChange, isEditable = false }) => {
 
     setUpdating(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/deals/${deal.id || deal.dealId}/stage`, {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/deals/${deal.id || deal.dealId}/stage`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

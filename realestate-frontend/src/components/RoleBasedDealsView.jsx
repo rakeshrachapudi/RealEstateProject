@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
 import DealDetailModal from '../DealDetailModal';
+import { BACKEND_BASE_URL } from "../config/config";
 
 const RoleBasedDealsView = () => {
   const { user } = useAuth();
@@ -23,7 +24,7 @@ const RoleBasedDealsView = () => {
 
   const fetchAgents = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/deals/admin/agents-performance', {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/deals/admin/agents-performance`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
       });
 
@@ -46,21 +47,21 @@ const RoleBasedDealsView = () => {
 
       // Determine endpoint based on role
       if (user.role === 'BUYER') {
-        endpoint = `http://localhost:8080/api/deals/buyer/${user.id}`;
+        endpoint = `${BACKEND_BASE_URL}/api/deals/buyer/${user.id}`;
       } else if (user.role === 'SELLER') {
-        endpoint = 'http://localhost:8080/api/deals/my-deals?userRole=SELLER';
+        endpoint = `${BACKEND_BASE_URL}/api/deals/my-deals?userRole=SELLER`;
       } else if (user.role === 'AGENT') {
-        endpoint = `http://localhost:8080/api/deals/agent/${user.id}`;
+        endpoint = `${BACKEND_BASE_URL}/api/deals/agent/${user.id}`;
       } else if (user.role === 'ADMIN') {
         if (selectedAgent) {
-          endpoint = `http://localhost:8080/api/deals/admin/agent/${selectedAgent}`;
+          endpoint = `${BACKEND_BASE_URL}/api/deals/admin/agent/${selectedAgent}`;
         } else {
           // Fetch all deals for admin
           const stages = ['INQUIRY', 'SHORTLIST', 'NEGOTIATION', 'AGREEMENT', 'REGISTRATION', 'PAYMENT', 'COMPLETED'];
           const allDeals = [];
 
           for (const stage of stages) {
-            const res = await fetch(`http://localhost:8080/api/deals/stage/${stage}`, { headers });
+            const res = await fetch(`${BACKEND_BASE_URL}/api/deals/stage/${stage}`, { headers });
             if (res.ok) {
               const stageData = await res.json();
               if (stageData.success && stageData.data) {

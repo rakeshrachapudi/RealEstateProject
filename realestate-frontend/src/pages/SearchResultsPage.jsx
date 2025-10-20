@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import PropertyList from '../components/PropertyList';
 import { styles } from '../styles.js';
+import { BACKEND_BASE_URL } from "../config/config";
 
 function SearchResultsPage() {
     const [properties, setProperties] = useState([]);
@@ -41,7 +42,7 @@ function SearchResultsPage() {
             size: 50
         };
 
-            const response = await fetch('http://localhost:8080/api/properties/search', {
+            const response = await fetch(`${BACKEND_BASE_URL}/api/properties/search`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody)

@@ -1,6 +1,7 @@
 // rakeshrachapudi/realestateproject/RealEstateProject-43fb79bfe93ea0f3ae6d185115e6fa16af369e3c/realestate-frontend/src/pages/CreateDealModal.jsx
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
+import { BACKEND_BASE_URL } from "../config/config";
 
 const CreateDealModal = ({ propertyId, propertyTitle, onClose, onSuccess }) => {
   const { user } = useAuth();
@@ -24,7 +25,7 @@ const CreateDealModal = ({ propertyId, propertyTitle, onClose, onSuccess }) => {
     setBuyerFound(false);
 
     try {
-      const response = await fetch(`http://localhost:8080/api/users/search?phone=${phone}`);
+      const response = await fetch(`${BACKEND_BASE_URL}/api/users/search?phone=${phone}`);
       const data = await response.json();
       if (data.success && data.data) {
         setBuyerId(data.data.id);
@@ -73,7 +74,7 @@ const CreateDealModal = ({ propertyId, propertyTitle, onClose, onSuccess }) => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8080/api/deals/create', {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/deals/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

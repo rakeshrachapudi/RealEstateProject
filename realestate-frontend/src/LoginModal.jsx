@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from './AuthContext';
+import { BACKEND_BASE_URL } from "./config/config";
 
 function LoginModal({ onClose }) {
     const [loginMethod, setLoginMethod] = useState('credentials'); // 'credentials' or 'register'
@@ -38,7 +39,7 @@ function LoginModal({ onClose }) {
         setError(null);
 
         try {
-            const response = await fetch('http://localhost:8080/api/auth/login', {
+            const response = await fetch(`${BACKEND_BASE_URL}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
@@ -72,7 +73,7 @@ function LoginModal({ onClose }) {
         setError(null);
 
         try {
-            const response = await fetch('http://localhost:8080/api/auth/register', {
+            const response = await fetch(`${BACKEND_BASE_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(registerData),

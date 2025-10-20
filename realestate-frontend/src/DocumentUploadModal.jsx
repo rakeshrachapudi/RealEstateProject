@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BACKEND_BASE_URL } from "./config/config";
 
 const DocumentUploadModal = ({ dealId, onClose, onSuccess }) => {
     const [file, setFile] = useState(null);
@@ -30,7 +31,7 @@ const DocumentUploadModal = ({ dealId, onClose, onSuccess }) => {
             // Simulate upload to S3/storage
             const docUrl = `https://s3.amazonaws.com/deals/doc_${dealId}_${Date.now()}.pdf`;
 
-            const response = await fetch(`http://localhost:8080/api/deals/${dealId}/upload-document`, {
+            const response = await fetch(`${BACKEND_BASE_URL}/api/deals/${dealId}/upload-document`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

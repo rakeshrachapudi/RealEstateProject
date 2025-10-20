@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './AdvancedSearchBar.css';
+import { BACKEND_BASE_URL } from "./config/config";
 
 const AdvancedSearchBar = () => {
   const [location, setLocation] = useState('Hyderabad');
@@ -47,7 +48,7 @@ const AdvancedSearchBar = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:8080/api/properties/search', {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/properties/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

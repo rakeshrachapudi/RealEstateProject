@@ -7,6 +7,7 @@ import { getFeaturedProperties } from '../services/api';
 import { styles } from '../styles.js';
 import BrowsePropertiesForDeal from '../pages/BrowsePropertiesForDeal';
 import DealDetailModal from '../DealDetailModal.jsx';
+import { BACKEND_BASE_URL } from "../config/config";
 
 function HomePage() {
     const { isAuthenticated, user } = useAuth();
@@ -73,7 +74,7 @@ function HomePage() {
         }
 
         try {
-            const response = await fetch(`http://localhost:8080/api/properties/user/${user.id}`, {
+            const response = await fetch(`${BACKEND_BASE_URL}/api/properties/user/${user.id}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
             });
 
@@ -122,7 +123,7 @@ function HomePage() {
             try {
                 console.log(`Fetching deals for role: ${user.role}, userId: ${user.id}`);
                 const roleResponse = await fetch(
-                    `http://localhost:8080/api/deals/my-deals?userRole=${user.role}&userId=${user.id}`,
+                    `${BACKEND_BASE_URL}{BACKEND_BASE_URL}/api/deals/my-deals?userRole=${user.role}&userId=${user.id}`,
                     { headers: { 'Authorization': `Bearer ${token}` } }
                 );
                 if (roleResponse.ok) {
@@ -141,7 +142,7 @@ function HomePage() {
                 try {
                     console.log('Fetching deals as BUYER');
                     const buyerResponse = await fetch(
-                        `http://localhost:8080/api/deals/my-deals?userRole=BUYER&userId=${user.id}`,
+                        `${BACKEND_BASE_URL}/api/deals/my-deals?userRole=BUYER&userId=${user.id}`,
                         { headers: { 'Authorization': `Bearer ${token}` } }
                     );
                     if (buyerResponse.ok) {
@@ -159,7 +160,7 @@ function HomePage() {
                 try {
                     console.log('Fetching deals as SELLER');
                     const sellerResponse = await fetch(
-                        `http://localhost:8080/api/deals/my-deals?userRole=SELLER&userId=${user.id}`,
+                        `${BACKEND_BASE_URL}/api/deals/my-deals?userRole=SELLER&userId=${user.id}`,
                         { headers: { 'Authorization': `Bearer ${token}` } }
                     );
                     if (sellerResponse.ok) {
@@ -190,7 +191,7 @@ function HomePage() {
         }
 
         try {
-            const userPropsResponse = await fetch(`http://localhost:8080/api/properties/user/${user.id}`, {
+            const userPropsResponse = await fetch(`${BACKEND_BASE_URL}/api/properties/user/${user.id}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
             });
 
@@ -215,7 +216,7 @@ function HomePage() {
 
             if (user.role === 'AGENT' || user.role === 'ADMIN') {
                 try {
-                    const agentResponse = await fetch(`http://localhost:8080/api/deals/agent/${user.id}`, {
+                    const agentResponse = await fetch(`${BACKEND_BASE_URL}/api/deals/agent/${user.id}`, {
                         headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
                     });
                     if (agentResponse.ok) {
@@ -374,6 +375,7 @@ function HomePage() {
             justifyContent: 'space-between',
             gap: '80px',
             boxShadow: '0 8px 24px rgba(102, 126, 234, 0.15)',
+            borderRadius:10
         },
         bannerContent: {
             flex: 1,
