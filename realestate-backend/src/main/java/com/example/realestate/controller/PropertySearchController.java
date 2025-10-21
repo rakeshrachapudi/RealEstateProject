@@ -12,7 +12,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/properties")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
 public class PropertySearchController {
 
     private static final Logger logger = LoggerFactory.getLogger(PropertySearchController.class);

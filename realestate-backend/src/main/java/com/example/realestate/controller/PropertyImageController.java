@@ -13,7 +13,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/property-images")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
 public class PropertyImageController {
 
     private static final Logger logger = LoggerFactory.getLogger(PropertyImageController.class);
