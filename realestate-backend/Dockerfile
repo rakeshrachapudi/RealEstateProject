@@ -1,44 +1,33 @@
-#
+# =========================================
 # STAGE 1: Build the application using Maven
-#
-# Use a Maven image that includes the JDK to build the application
+# =========================================
 FROM maven:3.8.5-openjdk-17 AS build
 
-# Copy source code
+# Set working directory
+WORKDIR /app
+
+# Copy pom.xml first (to leverage Docker cache for dependencies)
+COPY pom.xml .
+
+# Copy the source code
 COPY src ./src
 
-# Build the JAR (skip tests for faster builds)
+# Build the JAR (skip tests to speed up build)
 RUN mvn clean package -DskipTests
 
-# Stage 2: Create the runtime image
-FROM eclipse-temurin:17-jdk
-WORKDIR /app
-
-# Copy the pom.xml file to download dependencies first, leveraging Docker's layer caching
-COPY pom.xml .
-RUN mvn dependency:go-offline
-
-# Copy the rest of your application's source code
-COPY src ./src
-
-# Build the application, creating the .jar file.
-# The -DskipTests flag is optional but can speed up the build.
-RUN mvn package -DskipTests
-
-#
-# STAGE 2: Create the final, lightweight production image
-#
-# Use a slim JRE (Java Runtime Environment) image, which is smaller than a full JDK
+# =========================================
+# STAGE 2: Create a lightweight runtime image
+# =========================================
 FROM openjdk:17-slim
 
-# Set the working directory
+# Set working directory
 WORKDIR /app
 
-# Copy the .jar file from the 'build' stage into this new image
+# Copy the JAR from the build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Expose the port your application runs on (e.g., 8080 for Spring Boot)
+# Expose the port your Spring Boot app runs on
 EXPOSE 8080
 
-# The command to run your application when the container starts
+# Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]

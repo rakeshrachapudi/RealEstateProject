@@ -18,7 +18,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/deals")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
 public class DealController {
 
     private static final Logger logger = LoggerFactory.getLogger(DealController.class);
