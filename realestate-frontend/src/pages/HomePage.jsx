@@ -123,7 +123,7 @@ function HomePage() {
             try {
                 console.log(`Fetching deals for role: ${user.role}, userId: ${user.id}`);
                 const roleResponse = await fetch(
-                    `${BACKEND_BASE_URL}{BACKEND_BASE_URL}/api/deals/my-deals?userRole=${user.role}&userId=${user.id}`,
+                    `${BACKEND_BASE_URL}/api/deals/my-deals?userRole=${user.role}&userId=${user.id}`,
                     { headers: { 'Authorization': `Bearer ${token}` } }
                 );
                 if (roleResponse.ok) {
