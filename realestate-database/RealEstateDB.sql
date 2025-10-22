@@ -11,8 +11,8 @@
 -- ============================================
 --  STEP 1: DATABASE CREATION
 -- ============================================
-CREATE DATABASE IF NOT EXISTS realestate_db;
-USE realestate_db;
+CREATE DATABASE IF NOT EXISTS defaultdb;
+USE defaultdb;
 
 -- ============================================
 --  STEP 2: SAFELY DROP ALL EXISTING TABLES
@@ -86,6 +86,17 @@ CREATE TABLE property_types (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+INSERT INTO property_types (property_type_id, type_name, description) VALUES
+(1, 'Apartment', 'A self-contained residential unit within a building.'),
+(2, 'Villa', 'A luxurious standalone residence, often with a garden or pool.'),
+(3, 'House', 'A single-family dwelling typically detached or semi-detached.'),
+(4, 'Plot', 'A piece of land available for building or investment purposes.'),
+(5, 'Commercial', 'Property intended for business use such as offices or shops.'),
+(6, 'Penthouse', 'A premium apartment located on the top floor of a building.'),
+(7, 'Studio', 'A small single-room apartment combining living and sleeping spaces.'),
+(8, 'Duplex', 'A two-level house or apartment connected by an internal staircase.');
+
 
 -- Property Table (Consolidated with all new columns)
 CREATE TABLE property (
@@ -245,3 +256,5 @@ VALUES
 ('agent1',"2222222222", '$2a$12$oolzoLw6dMMN8ouCCXHDjeJldCOu2pi8HU1NyacUFBjYYKeb7oQTe', 'agent1@realestate.com', 'agent', '1', 'AGENT'),
 ('seller1',"3333333333", '$2a$12$oolzoLw6dMMN8ouCCXHDjeJldCOu2pi8HU1NyacUFBjYYKeb7oQTe', 'seller1@realestate.com', 'seller', '1', 'USER'),
 ('buyer1',"4444444444", '$2a$12$oolzoLw6dMMN8ouCCXHDjeJldCOu2pi8HU1NyacUFBjYYKeb7oQTe', 'buyer1@realestate.com', 'buyer', '1', 'USER');
+
+UPDATE users SET role = 'AGENT' WHERE username='agent1';

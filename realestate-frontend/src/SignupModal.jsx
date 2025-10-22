@@ -8,7 +8,8 @@ const modalStyle = {
   left: 0,
   right: 0,
   bottom: 0,
-  backgroundColor: "rgba(0, 0, 0, 0.5)",
+  background: "rgba(0, 0, 0, 0.4)",
+  backdropFilter: "blur(10px)",
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
@@ -16,34 +17,43 @@ const modalStyle = {
 };
 
 const contentStyle = {
-  backgroundColor: "white",
-  padding: "30px",
-  borderRadius: "12px",
-  width: "450px",
-  boxShadow: "0 5px 15px rgba(0, 0, 0, 0.3)",
+  background: "rgba(100, 60, 200, 0.25)",
+  backdropFilter: "blur(18px)",
+  border: "1px solid rgba(255, 255, 255, 0.15)",
+  borderRadius: "20px",
+  width: "400px",
+  padding: "40px 35px",
+  color: "#f5f0ff",
+  boxShadow: "0 8px 30px rgba(80, 40, 120, 0.4)",
   position: "relative",
+  transition: "transform 0.3s ease, box-shadow 0.3s ease",
 };
 
 const inputStyle = {
   width: "100%",
-  padding: "10px",
-  marginBottom: "15px",
-  border: "1px solid #ccc",
-  borderRadius: "6px",
-  boxSizing: "border-box",
+  padding: "12px 15px",
+  marginBottom: "18px",
+  border: "1px solid rgba(255, 255, 255, 0.2)",
+  borderRadius: "10px",
+  background: "rgba(255, 255, 255, 0.1)",
+  color: "#fff",
+  fontSize: "15px",
+  outline: "none",
+  transition: "border 0.3s, background 0.3s",
 };
 
 const buttonStyle = (color) => ({
   width: "100%",
   padding: "12px",
-  background: color,
+  background: "linear-gradient(135deg, #9b5de5 0%, #845ec2 50%, #5c4b99 100%)",
   color: "white",
   border: "none",
-  borderRadius: "6px",
+  borderRadius: "10px",
   cursor: "pointer",
   fontSize: "16px",
-  fontWeight: "bold",
-  transition: "background 0.3s",
+  fontWeight: "600",
+  transition: "all 0.3s ease",
+  boxShadow: "0 4px 12px rgba(155, 93, 229, 0.4)",
 });
 
 // Password Strength Logic
@@ -149,7 +159,16 @@ const SignupModal = ({ onClose, onSignupSuccess }) => {
         </button>
 
         <h2
-          style={{ fontSize: "24px", marginBottom: "20px", color: "#3498db" }}
+          style={{
+            fontSize: "26px",
+            marginBottom: "25px",
+            background: "linear-gradient(90deg, #b57aff, #845ec2, #9b5de5)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            textAlign: "center",
+            letterSpacing: "1px",
+            fontWeight: "700",
+          }}
         >
           ✨ CREATE ACCOUNT
         </h2>
@@ -212,6 +231,18 @@ const SignupModal = ({ onClose, onSignupSuccess }) => {
           />
 
           <input
+            type="tel"
+            name="mobileNumber"
+            placeholder="Mobile Number (10 digits)"
+            value={formData.mobileNumber}
+            onChange={handleChange}
+            style={inputStyle}
+            required
+            maxLength="10"
+            pattern="[0-9]{10}"
+          />
+
+          <input
             type="password"
             name="password"
             placeholder="Password"
@@ -229,18 +260,6 @@ const SignupModal = ({ onClose, onSignupSuccess }) => {
               </span>
             </div>
           )}
-
-          <input
-            type="tel"
-            name="mobileNumber"
-            placeholder="Mobile Number (10 digits)"
-            value={formData.mobileNumber}
-            onChange={handleChange}
-            style={inputStyle}
-            required
-            maxLength="10"
-            pattern="[0-9]{10}"
-          />
 
           <button
             type="submit"
