@@ -540,12 +540,13 @@ function HomePage() {
     },
     bannerIllustration: {
       flex: 1,
-      fontSize: "120px",
+      fontSize: "200px",
       textAlign: "center",
       opacity: 0.85,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
+      animation: "logoFloat .5s ease-in-out infinite",
     },
   };
 

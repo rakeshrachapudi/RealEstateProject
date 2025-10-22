@@ -97,16 +97,16 @@ export const styles = {
 
   header: {
     position: "fixed",
-    top: 15,
-    left: 15,
-    right: 15,
+    top: 0,
+    left: 0,
+    right: 0,
     width: "100%",
     zIndex: 1000,
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     color: "white",
     backdropFilter: "blur(10px)",
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    borderRadius: "25px",
+    // borderRadius: "25px",
     boxShadow: "0 4px 20px rgba(0,0,0,1)",
   },
 
@@ -135,7 +135,6 @@ export const styles = {
 
   logoIcon: {
     fontSize: "clamp(24px, 4vw, 32px)",
-    animation: "rotate 20s linear infinite",
   },
 
   nav: {
@@ -313,7 +312,7 @@ export const styles = {
     padding: "clamp(16px, 3vw, 24px) clamp(16px, 3vw, 32px)",
     minHeight: "80vh",
     animation: "fadeIn 0.6s ease-out",
-    marginTop: "130px",
+    marginTop: "140px",
   },
 
   heroSection: {
