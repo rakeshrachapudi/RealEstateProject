@@ -87,7 +87,7 @@ function MyPropertiesPage({ onPostPropertyClick }) {
     return (
       <div style={styles.container}>
         <div style={styles.errorContainer}>
-          <h2>❌ Error Loading Properties</h2>
+          <h2>❌ No Properties Posted Yet</h2>
           <p>{error}</p>
           <button onClick={fetchMyProperties} style={styles.retryBtn}>
             Try Again
