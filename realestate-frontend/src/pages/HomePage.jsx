@@ -157,21 +157,94 @@ function HomePage() {
 
       if (user.role !== "AGENT" && user.role !== "ADMIN") {
         try {
-          console.log("Fetching deals as BUYER");
-          const buyerResponse = await fetch(
-            `${BACKEND_BASE_URL}/api/deals/my-deals?userRole=BUYER&userId=${user.id}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          if (buyerResponse.ok) {
-            const buyerData = await buyerResponse.json();
-            console.log("Buyer response:", buyerData);
-            const buyerDeals = extractDealsFromResponse(buyerData);
-            addDeals(buyerDeals, "BUYER");
-          } else {
-            console.error("Failed to fetch BUYER deals:", buyerResponse.status);
-          }
-        } catch (err) {
-          console.error("Error fetching buyer deals:", err);
+            console.log('Starting fetchMyDeals for user:', user.id, 'Role:', user.role);
+            const allDeals = [];
+            const seenDealIds = new Set();
+            const token = localStorage.getItem('authToken');
+
+            const addDeals = (deals, source) => {
+                if (!Array.isArray(deals)) {
+                    console.log(`No deals from ${source} (not an array)`);
+                    return;
+                }
+                console.log(`Adding ${deals.length} deals from ${source}`);
+                deals.forEach(deal => {
+                    const dealId = deal.dealId || deal.id;
+                    if (dealId && !seenDealIds.has(dealId)) {
+                        allDeals.push(deal);
+                        seenDealIds.add(dealId);
+                    }
+                });
+            };
+
+            try {
+                console.log(`Fetching deals for role: ${user.role}, userId: ${user.id}`);
+                const roleResponse = await fetch(
+                    `${BACKEND_BASE_URL}/api/deals/my-deals?userRole=${user.role}&userId=${user.id}`,
+                    { headers: { 'Authorization': `Bearer ${token}` } }
+                );
+                if (roleResponse.ok) {
+                    const roleData = await roleResponse.json();
+                    console.log(`Role response for ${user.role}:`, roleData);
+                    const roleDeals = extractDealsFromResponse(roleData);
+                    addDeals(roleDeals, `role ${user.role}`);
+                } else {
+                    console.error(`Failed to fetch ${user.role} deals:`, roleResponse.status);
+                }
+            } catch (err) {
+                console.error('Error fetching role-based deals:', err);
+            }
+
+            if (user.role !== 'AGENT' && user.role !== 'ADMIN') {
+                try {
+                    console.log('Fetching deals as BUYER');
+                    const buyerResponse = await fetch(
+                        `${BACKEND_BASE_URL}/api/deals/my-deals?userRole=BUYER&userId=${user.id}`,
+                        { headers: { 'Authorization': `Bearer ${token}` } }
+                    );
+                    if (buyerResponse.ok) {
+                        const buyerData = await buyerResponse.json();
+                        console.log('Buyer response:', buyerData);
+                        const buyerDeals = extractDealsFromResponse(buyerData);
+                        addDeals(buyerDeals, 'BUYER');
+                    } else {
+                        console.error('Failed to fetch BUYER deals:', buyerResponse.status);
+                    }
+                } catch (err) {
+                    console.error('Error fetching buyer deals:', err);
+                }
+
+                try {
+                    console.log('Fetching deals as SELLER');
+                    const sellerResponse = await fetch(
+                        `${BACKEND_BASE_URL}/api/deals/my-deals?userRole=SELLER&userId=${user.id}`,
+                        { headers: { 'Authorization': `Bearer ${token}` } }
+                    );
+                    if (sellerResponse.ok) {
+                        const sellerData = await sellerResponse.json();
+                        console.log('Seller response:', sellerData);
+                        const sellerDeals = extractDealsFromResponse(sellerData);
+                        addDeals(sellerDeals, 'SELLER');
+                    } else {
+                        console.error('Failed to fetch SELLER deals:', sellerResponse.status);
+                    }
+                } catch (err) {
+                    console.error('Error fetching seller deals:', err);
+                }
+            }
+
+            console.log(`Total deals after all fetches: ${allDeals.length}`);
+            setMyDeals(allDeals);
+        } catch (error) {
+            console.error('Error loading deals:', error);
+            setMyDeals([]);
+        }
+    };
+
+    const fetchMyDealsProperties = async () => {
+        if (!isAuthenticated || !user?.id) {
+            setMyDealsProperties([]);
+            return;
         }
 
         try {
