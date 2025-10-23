@@ -31,6 +31,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/areas/**").permitAll()
                         .requestMatchers("/api/users/**").permitAll()
                         .requestMatchers("/api/deals/**").permitAll()
+                        .requestMatchers("/api/upload/image/**").permitAll()
                         .requestMatchers("/api/property-types/**").permitAll()
 
                         // ==================== ADMIN ONLY ENDPOINTS ====================
