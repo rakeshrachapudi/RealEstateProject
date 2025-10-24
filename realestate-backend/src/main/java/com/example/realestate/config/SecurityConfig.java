@@ -8,6 +8,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
@@ -19,10 +22,29 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // ⭐ ADD THIS NEW BEAN ⭐
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(java.util.Arrays.asList(
+                "http://localhost:3000",
+                "http://43.204.232.145:3000",
+                "http://43.204.232.145:8080"
+        ));
+        configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(java.util.Arrays.asList("*"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(withDefaults())
+                .cors(withDefaults())  // Now this will use the bean above
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
                         // ==================== PUBLIC ENDPOINTS ====================
@@ -35,8 +57,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/property-types/**").permitAll()
 
                         // ==================== ADMIN ONLY ENDPOINTS ====================
-                        // ⭐ CRITICAL: Use hasAuthority() NOT hasRole()
-                        // hasRole() adds "ROLE_" prefix, but our DB stores just "ADMIN"
                         .requestMatchers("/api/deals/admin/**").hasAuthority("ADMIN")
                         .requestMatchers("/api/deals/stage/**").hasAuthority("ADMIN")
 
@@ -44,10 +64,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/agents/**").authenticated()
 
                         // ==================== AUTHENTICATED DEAL ENDPOINTS ====================
-                        // All other /api/deals/** endpoints require authentication
                         .requestMatchers("/api/deals/**").authenticated()
 
-                        // ==================== DEFAULT: Everything else requires authentication ====================
+                        // ==================== DEFAULT ====================
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
