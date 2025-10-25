@@ -2,6 +2,7 @@ package com.example.realestate.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -11,6 +12,10 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
+
 import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
@@ -22,30 +27,25 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // ✅ Official Spring Security CORS Configuration Source (not just CorsFilter)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(java.util.Arrays.asList(
-                "http://localhost:3000",
-                "http://localhost:8080",
-                "http://localhost",
-                "http://3.6.158.206",
-                "http://3.6.158.206:3000",
-                "http://3.6.158.206:8080",
-                "http://propertydealz.in",
-                "http://www.propertydealz.in",
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of(
                 "https://propertydealz.in",
                 "https://www.propertydealz.in",
-                "https://3.6.158.206"
+                "http://propertydealz.in",
+                "http://www.propertydealz.in",
+                "http://localhost:3000"
         ));
-        configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(java.util.Arrays.asList("*"));
-        configuration.setExposedHeaders(java.util.Arrays.asList("Authorization", "Content-Type"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization", "Content-Type"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 
@@ -55,7 +55,9 @@ public class SecurityConfig {
                 .cors(withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/login/**").permitAll()
                         .requestMatchers("/api/properties/**").permitAll()
                         .requestMatchers("/api/areas/**").permitAll()
                         .requestMatchers("/api/users/**").permitAll()
@@ -67,7 +69,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/agents/**").authenticated()
                         .anyRequest().authenticated()
                 )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
     }
