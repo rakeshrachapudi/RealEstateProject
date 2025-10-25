@@ -29,7 +29,9 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(java.util.Arrays.asList(
                 "http://localhost:3000",
                 "http://43.204.232.145:3000",
-                "http://43.204.232.145:8080"
+                "http://43.204.232.145:8080",
+                "http://3.6.158.206:3000",
+                "http://3.6.158.206:8080"
         ));
         configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(java.util.Arrays.asList("*"));
