@@ -21,17 +21,19 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
-    // ⭐ ADD THIS NEW BEAN ⭐
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(java.util.Arrays.asList(
                 "http://localhost:3000",
-                "http://43.204.232.145:3000",
-                "http://43.204.232.145:8080",
+                "http://localhost:8080",
+                "http://3.6.158.206",
                 "http://3.6.158.206:3000",
-                "http://3.6.158.206:8080"
+                "http://3.6.158.206:8080",
+                "http://propertydealz.in",
+                "http://www.propertydealz.in",
+                "https://propertydealz.in",
+                "https://www.propertydealz.in"
         ));
         configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(java.util.Arrays.asList("*"));
@@ -42,7 +44,6 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
