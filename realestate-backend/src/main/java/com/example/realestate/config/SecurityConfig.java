@@ -21,22 +21,26 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(java.util.Arrays.asList(
                 "http://localhost:3000",
                 "http://localhost:8080",
+                "http://localhost",
                 "http://3.6.158.206",
                 "http://3.6.158.206:3000",
                 "http://3.6.158.206:8080",
                 "http://propertydealz.in",
                 "http://www.propertydealz.in",
                 "https://propertydealz.in",
-                "https://www.propertydealz.in"
+                "https://www.propertydealz.in",
+                "https://3.6.158.206"
         ));
-        configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(java.util.Arrays.asList("*"));
+        configuration.setExposedHeaders(java.util.Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
@@ -44,13 +48,13 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(withDefaults())  // Now this will use the bean above
+                .cors(withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
-                        // ==================== PUBLIC ENDPOINTS ====================
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/properties/**").permitAll()
                         .requestMatchers("/api/areas/**").permitAll()
@@ -58,18 +62,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/deals/**").permitAll()
                         .requestMatchers("/api/upload/image/**").permitAll()
                         .requestMatchers("/api/property-types/**").permitAll()
-
-                        // ==================== ADMIN ONLY ENDPOINTS ====================
                         .requestMatchers("/api/deals/admin/**").hasAuthority("ADMIN")
                         .requestMatchers("/api/deals/stage/**").hasAuthority("ADMIN")
-
-                        // ==================== AGENT ENDPOINTS ====================
                         .requestMatchers("/api/agents/**").authenticated()
-
-                        // ==================== AUTHENTICATED DEAL ENDPOINTS ====================
-                        .requestMatchers("/api/deals/**").authenticated()
-
-                        // ==================== DEFAULT ====================
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
