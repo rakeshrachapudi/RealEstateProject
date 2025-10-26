@@ -4,3 +4,5 @@
 /realestate-frontend/node_modules
 
 /realestate-frontend/.env
+
+/realestate-backend/.env

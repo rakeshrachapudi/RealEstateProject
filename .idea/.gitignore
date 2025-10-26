@@ -15,6 +15,7 @@ yarn-error.log
 # Dependencies
 /realestate-frontend/node_modules
 /realestate-frontend/.env
+/realestate-backend/.env
 
 # Build output
 dist/
