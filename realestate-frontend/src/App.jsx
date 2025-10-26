@@ -19,6 +19,7 @@ import AdminDealPanel from "./AdminDealPanel.jsx";
 import AdminUsersPage from "./pages/AdminUsersPage";
 
 import Header from "./components/Header.jsx";
+import SubHeader from "./components/SubHeader.jsx";
 import PropertyDetails from "./components/PropertyDetails.jsx";
 import PropertyTypePage from "./components/PropertyTypePage.jsx";
 
@@ -59,12 +60,32 @@ function AppContent() {
 
   return (
     <div style={styles.app}>
-      <Header
-        onLoginClick={() => setIsLoginModalOpen(true)}
-        onSignupClick={() => setIsSignupModalOpen(true)}
-        onPostPropertyClick={handlePostPropertyClick}
-        onProfileClick={() => setIsUserProfileModalOpen(true)}
-      />
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 1000,
+          // A background color is good practice for sticky elements
+          backgroundColor: "#fff",
+        }}
+      >
+        <Header
+          onLoginClick={() => setIsLoginModalOpen(true)}
+          onSignupClick={() => setIsSignupModalOpen(true)}
+          onPostPropertyClick={handlePostPropertyClick}
+          onProfileClick={() => setIsUserProfileModalOpen(true)}
+        />
+      </div>
+      <div
+        style={{
+          position: "sticky",
+          top: "20px",
+          zIndex: 1000,
+          // A background color is good practice for sticky elements
+          backgroundColor: "#fff",
+        }}
+      ></div>
+      <SubHeader />
       <Routes>
         {/* Main Pages */}
         <Route path="/" element={<HomePage />} />

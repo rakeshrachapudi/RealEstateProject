@@ -454,12 +454,12 @@ const getProgressPercentage = (stage) => {
 
 const styles = {
   container: {
-    maxWidth: 1400,
+    maxWidth: 1700,
     margin: "0 auto",
     padding: "24px 32px",
     minHeight: "80vh",
     backgroundColor: "#f9fafb",
-    marginTop: "160px",
+    marginTop: "10px",
   },
   header: {
     marginBottom: "32px",

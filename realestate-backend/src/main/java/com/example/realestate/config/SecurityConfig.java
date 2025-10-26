@@ -19,6 +19,31 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+<<<<<<< Updated upstream
+=======
+    // ⭐ ADD THIS NEW BEAN ⭐
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(java.util.Arrays.asList(
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "http://43.204.232.145:3000",
+                "http://43.204.232.145:8080",
+                "http://3.6.158.206:3000",
+                "http://3.6.158.206:8080"
+        ));
+        configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(java.util.Arrays.asList("*"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+>>>>>>> Stashed changes
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
