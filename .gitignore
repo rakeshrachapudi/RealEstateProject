@@ -6,3 +6,5 @@
 /realestate-frontend/.env
 
 /realestate-backend/.env
+
+/realestate-backend/src/main/resources/application.properties
