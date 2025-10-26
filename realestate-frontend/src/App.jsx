@@ -17,6 +17,7 @@ import PropertyEditModal from "./PropertyEditModal.jsx";
 import AdminDealPanel from "./AdminDealPanel.jsx";
 
 import AdminUsersPage from "./pages/AdminUsersPage";
+import CreateSaleAgreementPage from './pages/CreateSaleAgreementPage';
 
 import Header from "./components/Header.jsx";
 import SubHeader from "./components/SubHeader.jsx";
@@ -128,6 +129,9 @@ function AppContent() {
         {/* Agreement Pages */}
         <Route path="/rental-agreement" element={<RentalAgreementPage />} />
         <Route path="/my-agreements" element={<MyAgreementsPage />} />
+
+        {/* ⭐️ ADDED: Sale Agreement Creation Route ⭐️ */}
+        <Route path="/sale-agreement" element={<CreateSaleAgreementPage />} />
 
         {/* Placeholder Pages */}
         <Route
