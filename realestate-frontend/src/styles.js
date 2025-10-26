@@ -91,12 +91,12 @@ export const styles = {
     fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
     minHeight: "100vh",
     backgroundColor: "#f8fafc",
-    overflow: "hidden",
+    // overflow: "hidden",
     position: "relative",
   },
 
   header: {
-    position: "fixed",
+    position: "sticky",
     top: 0,
     left: 0,
     right: 0,
@@ -107,11 +107,11 @@ export const styles = {
     backdropFilter: "blur(10px)",
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     // borderRadius: "25px",
-    boxShadow: "0 4px 20px rgba(0,0,0,1)",
+    // boxShadow: "0 4px 20px rgba(0,0,0,1)",
   },
 
   headerContent: {
-    maxWidth: "1400px",
+    maxWidth: "1700px",
     margin: "0 auto",
     padding: "clamp(12px, 2vw, 16px) clamp(16px, 3vw, 32px)",
     display: "flex",
@@ -211,7 +211,7 @@ export const styles = {
 
   authSection: {
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "row",
     alignItems: "end",
     gap: "clamp(8px, 1.5vw, 16px)",
     flexWrap: "wrap",
@@ -237,7 +237,7 @@ export const styles = {
 
   userIcon: {
     fontSize: "clamp(16px, 2vw, 18px)",
-    animation: "bounce 2s ease-in-out infinite",
+    // animation: "bounce 2s ease-in-out infinite",
   },
 
   userName: {
@@ -307,12 +307,12 @@ export const styles = {
   },
 
   container: {
-    maxWidth: "1400px",
+    maxWidth: "1700px",
     margin: "0 auto",
     padding: "clamp(16px, 3vw, 24px) clamp(16px, 3vw, 32px)",
     minHeight: "80vh",
     animation: "fadeIn 0.6s ease-out",
-    marginTop: "140px",
+    // marginTop: "120px",
   },
 
   heroSection: {
