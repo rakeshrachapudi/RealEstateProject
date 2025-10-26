@@ -136,6 +136,9 @@ export const styles = {
   logoIcon: {
     fontSize: "clamp(24px, 4vw, 32px)",
   },
+  logoIconImg:{
+  height: "60px"
+  },
 
   nav: {
     display: "flex",

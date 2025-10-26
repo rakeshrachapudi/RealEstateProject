@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
 import { styles } from "../styles.js";
-
+import logo from "../assets/logo.png"
 function Header({
   onLoginClick,
   onSignupClick,
@@ -38,7 +38,7 @@ function Header({
       <div style={styles.headerContent}>
         <div onClick={() => navigate("/")} style={styles.logo}>
           {" "}
-          <span style={styles.logoIcon}>🏡</span>
+          <span style={styles.logoIcon}><img style={styles.logoIconImg} src={logo} alt="PropertyDeals Logo" /></span>
           PropertyDeals{" "}
         </div>
         <nav style={styles.nav}>
