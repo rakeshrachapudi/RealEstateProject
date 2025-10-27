@@ -154,31 +154,8 @@ function SubHeader() {
               onClick={() => navigate("/")}
               className="subheader-dropdown-btn"
             >
-              Home ▾
+              Home
             </button>
-            {activeDropdown === "home" && (
-              <div
-                className="subheader-dropdown"
-                onMouseEnter={handleDropdownEnter}
-                onMouseLeave={handleMouseLeave}
-              >
-                <div className="dropdown-item" onClick={() => navigate("/")}>
-                  Home Page
-                </div>
-                <div
-                  className="dropdown-item"
-                  onClick={() => navigate("/about")}
-                >
-                  About Us
-                </div>
-                <div
-                  className="dropdown-item"
-                  onClick={() => navigate("/contact")}
-                >
-                  Contact
-                </div>
-              </div>
-            )}
           </div>
 
           {/* BUY */}
