@@ -140,10 +140,10 @@ const AdminDealPanel = () => {
   };
 
   const containerStyle = {
-    maxWidth: "1600px",
+    maxWidth: "1700px",
     margin: "0 auto",
     padding: "24px",
-    marginTop: "160px",
+    marginTop: "140px",
   };
 
   const titleStyle = {

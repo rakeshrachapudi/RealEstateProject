@@ -700,12 +700,12 @@ const AdminAgentsPage = () => {
 
 const styles = {
   container: {
-    maxWidth: 1800,
+    maxWidth: 1700,
     margin: "0 auto",
     padding: "24px 32px",
     minHeight: "100vh",
     backgroundColor: "#f8fafc",
-    marginTop: "160px",
+    marginTop: "140px",
   },
   header: {
     marginBottom: "32px",

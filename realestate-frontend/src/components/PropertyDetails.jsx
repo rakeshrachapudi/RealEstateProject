@@ -5,6 +5,28 @@ import { getPropertyDetails } from "../services/api";
 import DealDetailsPopup from "../components/DealDetailsPopup";
 import { BACKEND_BASE_URL } from "../config/config";
 
+// --- Utility for Safe JSON Parsing ---
+// This function will attempt to parse the response body as JSON.
+// If it fails (due to empty body, connection end, or non-JSON content),
+// it reads the body as text instead and returns null, preventing the crash.
+const safeJsonParse = async (response) => {
+  try {
+    const contentType = response.headers.get("content-type");
+    // Only attempt .json() if the header indicates JSON
+    if (contentType && contentType.includes("application/json")) {
+      return await response.json();
+    }
+    // If not JSON, read as text to clear the stream, then return null.
+    await response.text();
+    return null;
+  } catch (err) {
+    // This catches the 'Unexpected end of JSON input' error
+    console.warn("⚠️ Failed to parse response as JSON, reading as text error likely:", err.message);
+    return null;
+  }
+};
+// ------------------------------------
+
 const PropertyDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -79,9 +101,9 @@ const PropertyDetails = () => {
           let deals = [];
           if (Array.isArray(data)) {
             deals = data;
-          } else if (data.success && Array.isArray(data.data)) {
+          } else if (data && data.success && Array.isArray(data.data)) {
             deals = data.data;
-          } else if (data.data && Array.isArray(data.data)) {
+          } else if (data && data.data && Array.isArray(data.data)) {
             deals = data.data;
           }
 
@@ -120,9 +142,9 @@ const PropertyDetails = () => {
           let deals = [];
           if (Array.isArray(data)) {
             deals = data;
-          } else if (data.success && Array.isArray(data.data)) {
+          } else if (data && data.success && Array.isArray(data.data)) {
             deals = data.data;
-          } else if (data.data && Array.isArray(data.data)) {
+          } else if (data && data.data && Array.isArray(data.data)) {
             deals = data.data;
           }
 
@@ -180,9 +202,8 @@ const PropertyDetails = () => {
     setCreatingDeal(true);
 
     try {
+      // --- 1. Search for Buyer ---
       console.log("🔍 Searching for buyer with phone:", buyerPhone);
-
-      // Search for buyer by phone
       const searchResponse = await fetch(
         `${BACKEND_BASE_URL}/api/users/search?phone=${buyerPhone}`,
         {
@@ -192,13 +213,25 @@ const PropertyDetails = () => {
         }
       );
 
+      // Handle non-OK status (e.g., 404, 500)
       if (!searchResponse.ok) {
-        setCreateError("Error searching for buyer");
+        const errorText = await searchResponse.text();
+        setCreateError(`Error searching for buyer: ${searchResponse.status}. Details: ${errorText.slice(0, 100)}`);
         setCreatingDeal(false);
         return;
       }
 
-      const searchData = await searchResponse.json();
+      // ----------------------------------------------------------------------
+      // FIX IMPLEMENTED HERE: Safely parse JSON to avoid 'Unexpected end of JSON input'
+      // ----------------------------------------------------------------------
+      const searchData = await safeJsonParse(searchResponse);
+
+      if (!searchData) {
+        setCreateError("Buyer search returned an invalid or empty response.");
+        setCreatingDeal(false);
+        return;
+      }
+
       const buyer = searchData.success ? searchData.data : searchData;
 
       console.log("👤 Buyer search result:", buyer);
@@ -211,7 +244,7 @@ const PropertyDetails = () => {
 
       console.log("✅ Buyer found:", buyer.id);
 
-      // Create deal with buyerId and agentId from logged-in user
+      // --- 2. Create Deal ---
       const createResponse = await fetch(
         `${BACKEND_BASE_URL}/api/deals/create`,
         {
@@ -228,8 +261,18 @@ const PropertyDetails = () => {
         }
       );
 
-      const createData = await createResponse.json();
-      console.log("📤 Deal creation response:", createData);
+      // ----------------------------------------------------------------------
+      // FIX IMPLEMENTED HERE: Safely parse JSON for the create deal response
+      // ----------------------------------------------------------------------
+      const createData = await safeJsonParse(createResponse);
+      console.log("📤 Deal creation response:", null);
+
+      if (!createData) {
+        setCreateError(`Deal API returned an invalid or empty response. Status: ${createResponse.status}`);
+        setCreatingDeal(false);
+        return;
+      }
+
 
       if (createData.success || createResponse.ok) {
         console.log("✅ Deal created successfully");
@@ -247,6 +290,7 @@ const PropertyDetails = () => {
       }
     } catch (err) {
       console.error("❌ Error creating deal:", err);
+      // Display the caught error message (which might be the original SyntaxError's message)
       setCreateError("Error: " + err.message);
     } finally {
       setCreatingDeal(false);

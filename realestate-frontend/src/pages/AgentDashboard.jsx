@@ -113,6 +113,13 @@ const AgentDashboard = () => {
     setShowCreateDeal(true);
   };
 
+  // ⭐️ ADDED: Handler for Create Sale Agreement ⭐️
+  const handleCreateAgreementClick = () => {
+    console.log("📝 Navigating to create sale agreement page");
+    navigate("/sale-agreement");
+  };
+  // ⭐️ END ADDED CODE ⭐️
+
   // Calculate counts
   const activeDealCount = deals.filter((d) => d.stage !== "COMPLETED").length;
   const completedDealCount = deals.filter(
@@ -197,27 +204,41 @@ const AgentDashboard = () => {
         </div>
       </div>
 
-      {/* Create Deal Section */}
-      <div style={styles.createDealSection}>
-        <div>
-          <div
-            style={{
-              fontSize: "14px",
-              fontWeight: "600",
-              color: "#1e40af",
-              marginBottom: "4px",
-            }}
-          >
-            ➕ Create New Deal
+      {/* ⭐️ REPLACED Create Deal Section with actionSectionGrid ⭐️ */}
+      <div style={styles.actionSectionGrid}>
+
+          {/* COLUMN 1: Create New Deal */}
+          <div style={{...styles.actionCard, borderColor: '#bfdbfe'}}>
+              <div>
+                  <div style={styles.actionTitlePrimary}>
+                      ➕ Create New Deal
+                  </div>
+                  <div style={styles.actionSubtitle}>
+                      Start a new sales process by linking a buyer to a property.
+                  </div>
+              </div>
+              <button onClick={handleCreateDealClick} style={styles.newDealBtn}>
+                  + New Deal
+              </button>
           </div>
-          <div style={{ fontSize: "12px", color: "#64748b" }}>
-            Create a deal for a buyer interested in a property
+
+          {/* COLUMN 2: Create Sale Agreement */}
+          <div style={{...styles.actionCard, borderColor: '#fbcfe8'}}>
+              <div>
+                  <div style={styles.actionTitleSecondary}>
+                      📝 Create Sale Agreement
+                  </div>
+                  <div style={styles.actionSubtitle}>
+                      Draft the formal legal agreement for a property sale.
+                  </div>
+              </div>
+              <button onClick={handleCreateAgreementClick} style={styles.createAgreementBtn}>
+                  Sale Agreement
+              </button>
           </div>
-        </div>
-        <button onClick={handleCreateDealClick} style={styles.newDealBtn}>
-          + New Deal
-        </button>
+
       </div>
+      {/* ⭐️ END REPLACED CODE ⭐️ */}
 
       {/* Deals Section with Tabs */}
       <div style={styles.section}>
@@ -454,12 +475,12 @@ const getProgressPercentage = (stage) => {
 
 const styles = {
   container: {
-    maxWidth: 1400,
+    maxWidth: 1700,
     margin: "0 auto",
     padding: "24px 32px",
     minHeight: "80vh",
     backgroundColor: "#f9fafb",
-    marginTop: "160px",
+    marginTop: "10px",
   },
   header: {
     marginBottom: "32px",
@@ -517,7 +538,9 @@ const styles = {
     fontWeight: "700",
     color: "#1e293b",
   },
-  createDealSection: {
+
+  // ⭐️ REMOVED createDealSection styles (replaced by actionSectionGrid) ⭐️
+  /* createDealSection: {
     padding: "16px",
     backgroundColor: "#f0f9ff",
     borderRadius: "12px",
@@ -526,7 +549,8 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-  },
+  }, */
+
   newDealBtn: {
     padding: "10px 20px",
     backgroundColor: "#3b82f6",
@@ -540,6 +564,55 @@ const styles = {
     transition: "background 0.2s, transform 0.2s",
     boxShadow: "0 2px 8px rgba(59, 130, 246, 0.2)",
   },
+
+  // ⭐️ ADDED: New Styles for Two-Column Action Section ⭐️
+  actionSectionGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gap: '20px',
+    marginBottom: '32px',
+  },
+  actionCard: {
+    padding: "20px",
+    backgroundColor: "white",
+    borderRadius: "12px",
+    border: "2px solid",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    transition: "all 0.2s",
+  },
+  actionTitlePrimary: {
+    fontSize: "16px",
+    fontWeight: "700",
+    color: "#1e40af",
+    marginBottom: "4px",
+  },
+  actionTitleSecondary: {
+    fontSize: "16px",
+    fontWeight: "700",
+    color: "#be185d",
+    marginBottom: "4px",
+  },
+  actionSubtitle: {
+    fontSize: "12px",
+    color: "#64748b"
+  },
+  createAgreementBtn: {
+    padding: "10px 20px",
+    backgroundColor: "#ec4899", // Pink/Red
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "600",
+    whiteSpace: "nowrap",
+    marginLeft: "12px",
+    transition: "background 0.2s",
+    boxShadow: "0 2px 8px rgba(236, 72, 153, 0.3)",
+  },
+  // ⭐️ END ADDED CODE ⭐️
+
   section: {
     backgroundColor: "white",
     padding: "24px",

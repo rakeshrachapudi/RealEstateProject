@@ -85,7 +85,7 @@ const AdminDashboard = () => {
   };
 
   const containerStyle = {
-    maxWidth: "1400px",
+    maxWidth: "1700px",
     margin: "0 auto",
     padding: "24px 32px",
     backgroundColor: "#f9fafb",
