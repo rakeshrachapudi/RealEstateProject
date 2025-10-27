@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
 import { styles } from "../styles.js";
@@ -12,6 +12,19 @@ function Header({
   const { isAuthenticated, user, logout } = useAuth();
   const [isProfileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const navigate = useNavigate();
+
+  const leaveTimeout = useRef(null);
+
+  const handleMouseEnter = () => {
+    clearTimeout(leaveTimeout.current);
+    setProfileDropdownOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    leaveTimeout.current = setTimeout(() => {
+      setProfileDropdownOpen(false);
+    }, 300); // You can adjust this delay (in milliseconds)
+  };
 
   const handleMyAgreementsClick = () => {
     navigate("/my-agreements");
@@ -59,8 +72,8 @@ function Header({
 
               <div
                 style={{ position: "relative" }}
-                onMouseEnter={() => setProfileDropdownOpen(true)}
-                onMouseLeave={() => setProfileDropdownOpen(false)}
+                onMouseEnter={handleMouseEnter} // <-- CHANGED
+                onMouseLeave={handleMouseLeave}
               >
                 <div style={styles.userSection}>
                   <span style={styles.userIcon}>👤</span>
