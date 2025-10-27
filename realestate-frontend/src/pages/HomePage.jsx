@@ -573,7 +573,7 @@ function HomePage() {
       <div style={styles.container}>
         <section style={bannerStyles.banner}>
           <div style={bannerStyles.bannerContent}>
-            <h2 style={bannerStyles.bannerTitle}>How PropertyDealz Works</h2>
+            <h2 style={bannerStyles.bannerTitle}>How PropertyDeals Works</h2>
             <p style={bannerStyles.bannerSubtitle}>
               Simple, transparent, and hassle-free property deals
             </p>
