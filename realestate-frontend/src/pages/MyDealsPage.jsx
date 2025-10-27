@@ -1,562 +1,150 @@
+// src/pages/MyDealsPage.jsx (Corrected - Uses User Endpoint)
 import React, { useEffect, useState } from "react";
-import { useAuth } from "../AuthContext"; // Go up one directory
-import DealDetailModal from "../DealDetailModal"; // Go up one directory
+import { useAuth } from "../AuthContext.jsx";
+import DealStatusCard from "../DealStatusCard"; // Assuming DealStatusCard is in src/
+import DealDetailModal from "../DealDetailModal.jsx";
 import { BACKEND_BASE_URL } from "../config/config";
+import { styles } from "../styles.js"; // Import shared styles if needed
 
-const AdminDealPanel = () => {
-  const { user } = useAuth();
-  const [dealsByAgent, setDealsByAgent] = useState({});
-  const [allDeals, setAllDeals] = useState([]);
-  const [selectedDeal, setSelectedDeal] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("all");
-  const [error, setError] = useState(null);
+// --- Utility for Safe JSON Parsing ---
+const safeJsonParse = async (response) => {
+  try {
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return await response.json();
+    }
+    await response.text(); return null;
+  } catch (err) {
+    console.error("⚠️ Failed to parse response as JSON:", err); return null;
+  }
+};
+// ------------------------------------
+
+function MyDealsPage() {
+  const { isAuthenticated, user } = useAuth();
+  const [myDeals, setMyDeals] = useState([]);
+  const [loadingMyDeals, setLoadingMyDeals] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
+  const [selectedDealForModal, setSelectedDealForModal] = useState(null);
 
   useEffect(() => {
-    if (user?.id) {
-      fetchDeals();
+    // Only fetch if authenticated and user info is available
+    if (isAuthenticated && user?.id && user?.role) {
+      fetchMyDeals();
+    } else if (!isAuthenticated) {
+      // Handle not logged in - show message or redirect
+      setLoadingMyDeals(false);
+      setMyDeals([]);
+      setFetchError("Please log in to view your deals.");
+      // Optional: navigate('/login');
+    } else {
+        // Still loading user info perhaps?
+        setLoadingMyDeals(true);
     }
-  }, [user?.id]);
+  }, [isAuthenticated, user?.id, user?.role]); // Re-run when auth changes
 
-  const fetchDeals = async () => {
+  const fetchMyDeals = async () => {
+    setLoadingMyDeals(true); setFetchError(null); setMyDeals([]);
+    // Double check user info exists before making the call
+    if (!user || !user.id || !user.role) {
+        setLoadingMyDeals(false);
+        setFetchError("User information not available.");
+        return;
+    }
+
+    const actualUserRole = user.role.toUpperCase(); // USER, AGENT, or ADMIN
+    const userId = user.id;
+    // ⭐ Use the CORRECT endpoint for the user's role
+    const endpoint = `${BACKEND_BASE_URL}/api/deals/user/${userId}/role/${actualUserRole}`;
+    const token = localStorage.getItem("authToken");
+
     try {
-      setError(null);
-      const headers = {
-        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-      };
+      console.log(`MyDealsPage: Fetching deals from ${endpoint}`);
+      const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${token}` } });
 
-      console.log("🔍 Fetching admin deals for user:", user?.id);
-
-      const allDealsFlat = [];
-      const agentDealsMap = {};
-      const stages = [
-        "INQUIRY",
-        "SHORTLIST",
-        "NEGOTIATION",
-        "AGREEMENT",
-        "REGISTRATION",
-        "PAYMENT",
-      ];
-
-      // Fetch deals by stage
-      for (const stage of stages) {
-        try {
-          console.log(`📥 Fetching stage: ${stage}`);
-
-          const res = await fetch(
-            `${BACKEND_BASE_URL}/api/deals/stage/${stage}?userId=${user.id}`,
-            { headers }
-          );
-
-          console.log(`Stage ${stage} response status:`, res.status);
-
-          if (!res.ok) {
-            console.warn(`⚠️ Stage ${stage} failed with status ${res.status}`);
-            continue;
-          }
-
-          const stageData = await res.json();
-          console.log(`Stage ${stage} response:`, stageData);
-
-          let dealsArray = [];
-
-          // Handle different response formats
-          if (Array.isArray(stageData)) {
-            dealsArray = stageData;
-          } else if (stageData.success && Array.isArray(stageData.data)) {
-            dealsArray = stageData.data;
-          } else if (stageData.data && Array.isArray(stageData.data)) {
-            dealsArray = stageData.data;
-          }
-
-          if (dealsArray.length > 0) {
-            console.log(`✅ Found ${dealsArray.length} deals in ${stage}`);
-            allDealsFlat.push(...dealsArray);
-
-            // ✅ NEW: Organize deals by agent
-            dealsArray.forEach((deal) => {
-              const agent = deal.agent;
-              if (agent) {
-                const agentKey = `${agent.id}-${agent.firstName} ${agent.lastName}`;
-
-                if (!agentDealsMap[agentKey]) {
-                  agentDealsMap[agentKey] = {
-                    agentId: agent.id,
-                    agentName: `${agent.firstName} ${agent.lastName}`,
-                    agentEmail: agent.email,
-                    agentMobile: agent.mobileNumber,
-                    deals: [],
-                  };
-                }
-                agentDealsMap[agentKey].deals.push(deal);
-              }
-            });
-          }
-        } catch (stageError) {
-          console.error(`❌ Error fetching stage ${stage}:`, stageError);
-        }
+      console.log(`MyDealsPage: API response status: ${response.status}`);
+      if (!response.ok) {
+        // Provide more context in error
+        const errorText = await response.text().catch(() => `Status ${response.status}`);
+        throw new Error(`Failed to fetch deals: ${errorText.slice(0, 150)}`);
       }
 
-      console.log(`✅ Total deals loaded: ${allDealsFlat.length}`);
-      console.log("Deals by agent:", agentDealsMap);
+      const responseData = await safeJsonParse(response);
+      console.log(`MyDealsPage: Raw deals response:`, responseData);
 
-      setAllDeals(allDealsFlat);
-      setDealsByAgent(agentDealsMap);
+      let dealsArray = [];
+      if (responseData?.success && Array.isArray(responseData.data)) {
+        dealsArray = responseData.data;
+      } else if (Array.isArray(responseData)) {
+        dealsArray = responseData;
+      } else {
+         console.warn(`MyDealsPage: Unexpected data format received:`, responseData);
+      }
+
+      console.log(`MyDealsPage: Successfully fetched ${dealsArray.length} deals`);
+      setMyDeals(dealsArray);
     } catch (error) {
-      console.error("❌ Error fetching deals:", error);
-      setError(`Error loading deals: ${error.message}`);
+      console.error(`Error loading My Deals page:`, error);
+      setFetchError(`Could not load your deals. ${error.message}`);
+      setMyDeals([]);
     } finally {
-      setLoading(false);
+      setLoadingMyDeals(false);
     }
   };
 
-  const getFilteredDealsByAgent = () => {
-    const filtered = {};
-    Object.keys(dealsByAgent).forEach((agentKey) => {
-      const agentData = dealsByAgent[agentKey];
-      let deals = agentData.deals;
-
-      if (activeTab !== "all") {
-        deals = deals.filter((d) => d.stage === activeTab);
-      }
-
-      if (deals.length > 0) {
-        filtered[agentKey] = {
-          ...agentData,
-          deals: deals,
-        };
-      }
-    });
-    return filtered;
-  };
-
-  const containerStyle = {
-    maxWidth: "1700px",
-    margin: "0 auto",
-    padding: "24px",
-  };
-
-  const titleStyle = {
-    fontSize: "32px",
-    fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: "8px",
-  };
-
-  const subtitleStyle = {
-    fontSize: "16px",
-    color: "#64748b",
-    marginBottom: "24px",
-  };
-
-  const tabsStyle = {
-    display: "flex",
-    gap: "12px",
-    marginBottom: "24px",
-    borderBottom: "2px solid #e2e8f0",
-    paddingBottom: "12px",
-    overflowX: "auto",
-  };
-
-  const tabStyle = (isActive) => ({
-    padding: "10px 20px",
-    backgroundColor: isActive ? "#3b82f6" : "#f8fafc",
-    color: isActive ? "white" : "#64748b",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "14px",
-    whiteSpace: "nowrap",
-  });
-
-  const agentSectionStyle = {
-    backgroundColor: "#f9fafb",
-    borderRadius: "12px",
-    padding: "24px",
-    marginBottom: "24px",
-    border: "2px solid #e2e8f0",
-  };
-
-  const agentHeaderStyle = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: "20px",
-    paddingBottom: "16px",
-    borderBottom: "2px solid #e2e8f0",
-  };
-
-  const agentNameStyle = {
-    fontSize: "22px",
-    fontWeight: "700",
-    color: "#1e293b",
-    margin: "0 0 12px 0",
-  };
-
-  const agentMetaStyle = {
-    display: "flex",
-    gap: "16px",
-    flexWrap: "wrap",
-    fontSize: "13px",
-    color: "#64748b",
-  };
-
-  const agentStatsStyle = {
-    display: "flex",
-    gap: "12px",
-  };
-
-  const statBoxStyle = {
-    backgroundColor: "white",
-    padding: "10px 14px",
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
-    textAlign: "center",
-  };
-
-  const statLabelStyle = {
-    fontSize: "11px",
-    color: "#64748b",
-    fontWeight: "600",
-    marginBottom: "4px",
-  };
-
-  const statValueStyle = {
-    fontSize: "18px",
-    fontWeight: "700",
-    color: "#3b82f6",
-  };
-
-  const gridStyle = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-    gap: "16px",
-  };
-
-  const cardStyle = {
-    padding: "16px",
-    backgroundColor: "#fef3c7",
-    borderRadius: "12px",
-    border: "1px solid #fcd34d",
-    cursor: "pointer",
-    transition: "all 0.2s",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-  };
-
-  const stageBadgeStyle = {
-    display: "inline-block",
-    padding: "4px 8px",
-    backgroundColor: "#f59e0b",
-    color: "white",
-    borderRadius: "4px",
-    fontSize: "11px",
-    fontWeight: "600",
-    marginBottom: "8px",
-  };
-
-  const titleSmallStyle = {
-    margin: "0 0 12px 0",
-    color: "#1e293b",
-    fontWeight: "600",
-    fontSize: "14px",
-  };
-
-  const buttonStyle = {
-    width: "100%",
-    padding: "8px 12px",
-    backgroundColor: "#3b82f6",
-    color: "white",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "12px",
-  };
-
-  if (loading) {
-    return (
-      <div style={containerStyle}>
-        <h2>⏳ Loading deals...</h2>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div style={containerStyle}>
-        <h2>❌ Please log in to view deals</h2>
-      </div>
-    );
-  }
-
-  const stages = [
-    "INQUIRY",
-    "SHORTLIST",
-    "NEGOTIATION",
-    "AGREEMENT",
-    "REGISTRATION",
-    "PAYMENT",
-  ];
-  const stageCounts = {};
-  stages.forEach((stage) => {
-    stageCounts[stage] = allDeals.filter((d) => d.stage === stage).length;
-  });
-
-  const filteredDealsByAgent = getFilteredDealsByAgent();
-  const totalAgents = Object.keys(dealsByAgent).length;
+  const handleViewDealDetails = (deal) => { setSelectedDealForModal(deal); };
+  const handleCloseDealModal = () => { setSelectedDealForModal(null); };
+  const handleDealUpdatedInModal = () => { setSelectedDealForModal(null); fetchMyDeals(); }; // Refresh deals on update
 
   return (
-    <div style={containerStyle}>
-      <h1 style={titleStyle}>⚙️ Admin Dashboard - Deal Management</h1>
-      <p style={subtitleStyle}>
-        {totalAgents} Agent{totalAgents !== 1 ? "s" : ""} • {allDeals.length}{" "}
-        Total Deals
-      </p>
+    <div style={styles.container}> {/* Use a standard container style */}
+      <h1 style={styles.pageTitle}>My Deals</h1> {/* Add a page title style */}
 
-      {error && (
-        <div
-          style={{
-            padding: "12px 16px",
-            backgroundColor: "#fee2e2",
-            color: "#dc2626",
-            borderRadius: "8px",
-            marginBottom: "16px",
-            border: "1px solid #fecaca",
-          }}
-        >
-          ❌ {error}
+      {fetchError && ( <div style={styles.fetchError}>⚠️ {fetchError}</div> )}
+
+      {loadingMyDeals ? (
+        <div style={styles.loadingState}>⏳ Loading your deals...</div>
+      ) : myDeals.length === 0 && !fetchError ? ( // Only show "No Deals" if no error occurred
+        <div style={styles.emptyState}>
+          <div style={styles.emptyIcon}>🔭</div>
+          <h3 style={styles.emptyTitle}>No Deals Yet</h3>
+          <p style={styles.emptyText}>You are not currently involved in any deals.</p>
         </div>
-      )}
-
-      {/* Filter Tabs */}
-      <div style={tabsStyle}>
-        <button
-          style={tabStyle(activeTab === "all")}
-          onClick={() => setActiveTab("all")}
-        >
-          All Deals ({allDeals.length})
-        </button>
-        {stages.map((stage) => (
-          <button
-            key={stage}
-            style={tabStyle(activeTab === stage)}
-            onClick={() => setActiveTab(stage)}
-          >
-            {stage} ({stageCounts[stage]})
-          </button>
-        ))}
-      </div>
-
-      {/* ✅ NEW: Deals grouped by agent */}
-      {Object.keys(filteredDealsByAgent).length === 0 ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "60px 20px",
-            color: "#64748b",
-            backgroundColor: "#f8fafc",
-            borderRadius: "12px",
-          }}
-        >
-          <div style={{ fontSize: "48px", marginBottom: "12px" }}>🔍</div>
-          <p style={{ margin: 0, fontSize: "16px", fontWeight: "600" }}>
-            No deals found
-          </p>
-        </div>
-      ) : (
-        <div>
-          {Object.entries(filteredDealsByAgent).map(([agentKey, agentData]) => (
-            <div key={agentKey} style={agentSectionStyle}>
-              {/* Agent Header */}
-              <div style={agentHeaderStyle}>
-                <div>
-                  <h2 style={agentNameStyle}>📊 {agentData.agentName}</h2>
-                  <div style={agentMetaStyle}>
-                    <span>
-                      <strong>🆔 ID:</strong> {agentData.agentId}
-                    </span>
-                    <span>
-                      <strong>📧 Email:</strong> {agentData.agentEmail || "N/A"}
-                    </span>
-                    <span>
-                      <strong>📞 Phone:</strong>{" "}
-                      {agentData.agentMobile || "N/A"}
-                    </span>
-                  </div>
-                </div>
-                <div style={agentStatsStyle}>
-                  <div style={statBoxStyle}>
-                    <div style={statLabelStyle}>Total Deals</div>
-                    <div style={statValueStyle}>{agentData.deals.length}</div>
-                  </div>
-                  <div style={statBoxStyle}>
-                    <div style={statLabelStyle}>Active</div>
-                    <div style={statValueStyle}>
-                      {
-                        agentData.deals.filter((d) => d.stage !== "COMPLETED")
-                          .length
-                      }
-                    </div>
-                  </div>
-                  <div style={statBoxStyle}>
-                    <div style={statLabelStyle}>Completed</div>
-                    <div style={statValueStyle}>
-                      {
-                        agentData.deals.filter((d) => d.stage === "COMPLETED")
-                          .length
-                      }
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Agent's Deals Grid */}
-              <div style={gridStyle}>
-                {agentData.deals.map((deal) => {
-                  const buyer = deal.buyer;
-                  const seller = deal.property?.user;
-
-                  return (
-                    <div
-                      key={deal.id}
-                      style={cardStyle}
-                      onClick={() => setSelectedDeal(deal)}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.boxShadow =
-                          "0 8px 16px rgba(0,0,0,0.15)";
-                        e.currentTarget.style.transform = "translateY(-2px)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.boxShadow =
-                          "0 2px 4px rgba(0,0,0,0.05)";
-                        e.currentTarget.style.transform = "translateY(0)";
-                      }}
-                    >
-                      {/* Stage Badge */}
-                      <div style={stageBadgeStyle}>{deal.stage}</div>
-
-                      {/* Property Title */}
-                      <h4 style={titleSmallStyle}>
-                        🏠 {deal.propertyTitle || deal.property?.title}
-                      </h4>
-
-                      {/* Agreed Price */}
-                      {deal.agreedPrice && (
-                        <div
-                          style={{
-                            padding: "8px",
-                            backgroundColor: "#dcfce7",
-                            borderRadius: "6px",
-                            marginBottom: "10px",
-                            fontSize: "14px",
-                            fontWeight: "700",
-                            color: "#065f46",
-                          }}
-                        >
-                          💰 ₹{deal.agreedPrice.toLocaleString("en-IN")}
-                        </div>
-                      )}
-
-                      {/* Buyer Details */}
-                      {buyer && (
-                        <div
-                          style={{
-                            padding: "8px",
-                            backgroundColor: "rgba(255,255,255,0.6)",
-                            borderRadius: "6px",
-                            marginBottom: "8px",
-                            fontSize: "12px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontWeight: "600",
-                              color: "#1e293b",
-                              marginBottom: "2px",
-                            }}
-                          >
-                            👤 Buyer: {buyer?.firstName} {buyer?.lastName}
-                          </div>
-                          {buyer?.mobileNumber && (
-                            <div style={{ color: "#64748b", fontSize: "11px" }}>
-                              📞 {buyer.mobileNumber}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Seller Details */}
-                      {seller && (
-                        <div
-                          style={{
-                            padding: "8px",
-                            backgroundColor: "rgba(255,255,255,0.6)",
-                            borderRadius: "6px",
-                            marginBottom: "8px",
-                            fontSize: "12px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontWeight: "600",
-                              color: "#1e293b",
-                              marginBottom: "2px",
-                            }}
-                          >
-                            🏢 Seller: {seller.firstName} {seller.lastName}
-                          </div>
-                          {seller.mobileNumber && (
-                            <div style={{ color: "#64748b", fontSize: "11px" }}>
-                              📞 {seller.mobileNumber}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Date */}
-                      <p
-                        style={{
-                          margin: "8px 0 12px 0",
-                          fontSize: "11px",
-                          color: "#64748b",
-                        }}
-                      >
-                        📅 {new Date(deal.createdAt).toLocaleDateString()}
-                      </p>
-
-                      {/* View Button */}
-                      <button
-                        style={buttonStyle}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedDeal(deal);
-                        }}
-                      >
-                        View & Manage Deal
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+      ) : ( // Render deals if not loading and deals array is not empty (even if fetchError exists, show deals fetched before error)
+        <div style={styles.dealsGrid}> {/* Reuse the grid style */}
+          {myDeals.map((deal) => (
+            <DealStatusCard
+              key={deal.dealId || deal.id}
+              deal={deal}
+              onViewDetails={handleViewDealDetails}
+            />
           ))}
         </div>
       )}
 
-      {selectedDeal && (
+      {/* Deal Detail Modal */}
+      {selectedDealForModal && (
         <DealDetailModal
-          deal={selectedDeal}
-          onClose={() => setSelectedDeal(null)}
-          onUpdate={() => {
-            setSelectedDeal(null);
-            fetchDeals();
-          }}
-          userRole="ADMIN"
+          deal={selectedDealForModal}
+          onClose={handleCloseDealModal}
+          onUpdate={handleDealUpdatedInModal}
+          userRole={user?.role}
         />
       )}
     </div>
   );
-};
+}
 
-export default AdminDealPanel;
+// Add necessary styles to styles.js or define inline
+// Example styles (adapt from HomePage or create new ones)
+styles.pageTitle = styles.pageTitle || { fontSize: '2rem', fontWeight: '700', marginBottom: '1.5rem', color: '#1e293b', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem' };
+styles.fetchError = styles.fetchError || { padding: '15px', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '8px', border: '1px solid #fecaca', marginBottom: '20px', textAlign: 'center', fontWeight: '500' };
+styles.loadingState = styles.loadingState || { textAlign: 'center', padding: '60px 20px', color: '#6b7280', fontSize: '1.2rem' };
+styles.emptyState = styles.emptyState || { textAlign: 'center', padding: '60px 20px', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #e2e8f0' };
+styles.emptyIcon = styles.emptyIcon || { fontSize: '48px', marginBottom: '16px', display: 'block' };
+styles.emptyTitle = styles.emptyTitle || { margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: '600', color: '#334155' };
+styles.emptyText = styles.emptyText || { margin: 0, fontSize: '1rem' };
+styles.dealsGrid = styles.dealsGrid || { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' };
+styles.container = styles.container || { maxWidth: '1400px', margin: '2rem auto', padding: '0 24px' };
+
+export default MyDealsPage;

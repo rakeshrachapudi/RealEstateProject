@@ -1,109 +1,67 @@
-// realestate-frontend/src/components/PropertyList.jsx
-import React from 'react';
-import PropertyCard from './PropertyCard';
+// src/components/PropertyList.jsx (Complete File - Passes dealInfo Down)
+import React from "react";
+import PropertyCard from "./PropertyCard"; // Assuming PropertyCard is in the same folder
+import { styles } from "../styles.js"; // Assuming shared styles
 
-const PropertyList = ({ properties, loading, onPropertyUpdated, onPropertyDeleted }) => {
+const PropertyList = ({
+  properties, // This array now contains objects like { ...propertyData, dealInfo: dealObject | null }
+  loading,
+  onPropertyUpdated,
+  onPropertyDeleted,
+  onViewDealDetails // ⭐ Receive the handler from HomePage
+}) => {
+
+  // Debug log to check the props received by PropertyList
+  // console.log("[PropertyList Render] Received properties (with potential dealInfo):", properties);
+  // console.log("[PropertyList Render] Loading:", loading);
+
   if (loading) {
     return (
-      <div style={styles.loading}>
-        <div style={styles.spinner}>🔍</div>
-        <h3 style={styles.loadingText}>Finding Amazing Properties...</h3>
-        <p style={styles.loadingSubtext}>Please wait while we search the best matches</p>
+      <div style={styles.loadingState || { textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+        ⏳ Loading properties...
       </div>
     );
   }
 
   if (!properties || properties.length === 0) {
     return (
-      <div style={styles.empty}>
-        <div style={styles.emptyIcon}>🏚️</div>
-        <h3 style={styles.emptyTitle}>No properties found</h3>
-        <p style={styles.emptySubtitle}>Try adjusting your search criteria or browse different areas</p>
+      <div style={styles.emptyState || { textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+        <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>🏝️</span>
+        No properties found matching your criteria.
       </div>
     );
   }
 
   return (
-    <div style={styles.grid}>
-      {properties.map(property => (
-        <PropertyCard
-          key={property.propertyId || property.id}
-          property={property}
-          onPropertyUpdated={onPropertyUpdated}
-          onPropertyDeleted={onPropertyDeleted}
-        />
-      ))}
+    <div style={styles.propertyGrid || { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+      {properties.map((propertyItem, index) => { // Use index as fallback key only if needed
+        // ⭐ CRITICAL FIX: Extract dealInfo from the property item passed down from HomePage
+        const { dealInfo, ...propertyData } = propertyItem; // Separates dealInfo from the rest of the property data
+
+        // Use a reliable unique key - propertyData.id or propertyData.propertyId should exist
+        const propertyId = propertyData.id || propertyData.propertyId || `prop-${index}`;
+
+         // Debug log for each property being mapped
+        // console.log(`[PropertyList Map] Rendering Card for Prop ID: ${propertyId}, Has dealInfo:`, !!dealInfo);
+
+        return (
+          <PropertyCard
+            key={propertyId} // Use property's actual ID
+            property={propertyData} // Pass the property data WITHOUT dealInfo inside it
+            dealInfo={dealInfo}    // ⭐ Pass dealInfo explicitly as its own prop
+            onPropertyUpdated={onPropertyUpdated}
+            onPropertyDeleted={onPropertyDeleted}
+            onViewDealDetails={onViewDealDetails} // ⭐ Pass the handler down
+          />
+        );
+      })}
     </div>
   );
 };
 
-const styles = {
-  loading: {
-    textAlign: 'center',
-    padding: '5rem 2rem',
-    color: '#64748b',
-    background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-    borderRadius: '20px',
-    margin: '2rem 0',
-  },
-  spinner: {
-    fontSize: '4rem',
-    marginBottom: '1.5rem',
-    animation: 'pulse 2s infinite',
-  },
-  loadingText: {
-    fontSize: '1.5rem',
-    fontWeight: '700',
-    marginBottom: '0.5rem',
-    color: '#1e293b',
-  },
-  loadingSubtext: {
-    fontSize: '1rem',
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  empty: {
-    textAlign: 'center',
-    padding: '4rem 2rem',
-    color: '#64748b',
-    background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-    borderRadius: '20px',
-    margin: '2rem 0',
-  },
-  emptyIcon: {
-    fontSize: '5rem',
-    marginBottom: '1.5rem',
-    opacity: '0.7',
-  },
-  emptyTitle: {
-    fontSize: '1.75rem',
-    fontWeight: '700',
-    marginBottom: '0.5rem',
-    color: '#1e293b',
-  },
-  emptySubtitle: {
-    fontSize: '1.1rem',
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-    gap: '2rem',
-    marginTop: '1rem',
-  },
-};
-
-// Add pulse animation
-if (typeof window !== 'undefined') {
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.7; transform: scale(1.1); }
-    }
-  `;
-  document.head.appendChild(style);
-}
+// Define default styles if not imported
+styles.propertyGrid = styles.propertyGrid || { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' };
+styles.loadingState = styles.loadingState || { textAlign: 'center', padding: '40px', color: '#6b7280', fontSize: '1.1rem' };
+styles.emptyState = styles.emptyState || { textAlign: 'center', padding: '60px 20px', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #e2e8f0' };
 
 export default PropertyList;

@@ -49,4 +49,7 @@ public interface DealStatusRepository extends JpaRepository<DealStatus, Long> {
 
     // Check if deal exists
     boolean existsByPropertyIdAndBuyerId(Long propertyId, Long buyerId);
+
+    // ⭐ ADD THIS NEW METHOD ⭐
+    List<DealStatus> findByPropertyIdIn(List<Long> propertyIds);
 }
