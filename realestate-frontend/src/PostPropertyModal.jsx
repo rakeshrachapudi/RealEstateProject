@@ -374,10 +374,24 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       user: { id: user.id },
     };
 
+    // --- START OF FIX: Fetch token and add Authorization header ---
+    const token = localStorage.getItem("authToken");
+
+    if (!token) {
+      setError("Authentication failed. Please log in again.");
+      setLoading(false);
+      return;
+    }
+    // --- END OF FIX ---
+
+
     try {
       const response = await fetch(`${BACKEND_BASE_URL}/api/properties`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}` // ⭐ FIX APPLIED HERE
+        },
         body: JSON.stringify(propertyData),
       });
 

@@ -1,488 +1,488 @@
+// src/pages/CreateSaleAgreementPage.jsx
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { styles } from '../styles.js'; // Adjust path if needed
 
-// --- Modern Styling Definitions ---
-const baseColor = '#3b82f6'; // Tailwind blue-500
-const baseInput = {
-    padding: '12px',
-    border: '1px solid #d1d5db', // Grey-300
-    borderRadius: '8px',
-    fontSize: '16px',
-    backgroundColor: '#ffffff',
-    transition: 'border-color 0.2s',
+// --- Template for a person (Seller, Buyer) ---
+const personTemplate = {
+    name: '',
+    so_wo: 'S/o', // S/o or W/o
+    relationName: '', // Father/Husband Name
+    age: '',
+    occupation: '',
+    address: '',
+    phone: '',
+    idType: 'Aadhaar',
+    idNumber: '',
 };
 
-const styles = {
-    container: { maxWidth: '1100px', margin: '40px auto', padding: '0 20px', fontFamily: 'Inter, sans-serif' },
-    pageHeader: { marginBottom: '40px', borderBottom: `2px solid ${baseColor}`, paddingBottom: '15px' },
-    pageTitle: { fontSize: '38px', color: '#1e293b', fontWeight: '800' },
-    pageSubtitle: { fontSize: '16px', color: '#64748b', marginTop: '5px' },
-    form: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '30px',
-        padding: '40px',
-        borderRadius: '16px',
-        backgroundColor: '#f8fafc', // Light grey background
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)'
-    },
-    sectionTitle: {
-        gridColumn: 'span 3',
-        fontSize: '24px',
-        color: baseColor,
-        fontWeight: '700',
-        paddingTop: '20px',
-        borderTop: '1px solid #e5e7eb',
-        marginBottom: '10px'
-    },
-    formGroup: { display: 'flex', flexDirection: 'column' },
-    fullWidth: { gridColumn: 'span 3' },
-    label: { marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: '#334155' },
-
-    // Applying focus styles via JS in a real environment is complex with inline styles.
-    // For this context, we just use the baseInput style.
-    input: baseInput,
-    textarea: { ...baseInput, minHeight: '100px', resize: 'vertical' },
-
-    errorText: { marginTop: '4px', fontSize: '12px', color: '#ef4444', height: '18px' },
-
-    buttonGroup: { gridColumn: 'span 3', display: 'flex', justifyContent: 'flex-end', gap: '15px', marginTop: '20px' },
-    primaryButton: {
-        cursor: 'pointer', border: 'none', borderRadius: '8px', backgroundColor: baseColor, color: 'white',
-        padding: '12px 30px', fontSize: '16px', fontWeight: '600', transition: 'background-color 0.2s, box-shadow 0.2s',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    },
-    secondaryButton: {
-        cursor: 'pointer', border: '1px solid #9ca3af', borderRadius: '8px', backgroundColor: 'white', color: '#475569',
-        padding: '12px 30px', fontSize: '16px', fontWeight: '600', transition: 'background-color 0.2s',
-    },
-    warningBox: {
-        gridColumn: 'span 3',
-        padding: '15px',
-        backgroundColor: '#fef2f2',
-        color: '#b91c1c',
-        borderRadius: '8px',
-        fontWeight: '500',
-        border: '1px solid #fca5a5'
-    },
-    readOnlyInput: {
-        ...baseInput,
-        backgroundColor: '#f3f4f6', // Light gray background for calculated field
-        color: '#4b5563',
-    }
-};
-
-// --- Initial State Definition ---
+// --- UPDATED: Initial State for a Person-to-Person Sale Agreement ---
 const initialFormData = {
-    // 1. Agreement Details
-    agreementDate: new Date().toISOString().split('T')[0],
+    // --- Execution ---
+    executionCity: '',
+    startDate: '', // Execution Date
 
-    // 2. Seller Details
-    sellerFullName: '', sellerFathersName: '', sellerAge: '', sellerAddress: '', sellerAadhar: '', sellerPan: '',
+    // --- Parties ---
+    sellers: [{ ...personTemplate }], // Array of sellers
+    buyers: [{ ...personTemplate }], // Array of buyers
 
-    // 3. Purchaser Details
-    purchaserFullName: '', purchaserFathersName: '', purchaserAge: '', purchaserAddress: '', purchaserAadhar: '', purchaserPan: '',
+    // --- Property & Consideration ---
+    propertyAddress: '', // Full address of the property being sold
+    propertyType: 'Residential House', // e.g., House, Apartment
+    acquisitionMethod: '', // How seller got the property
+    totalConsideration: '',
 
-    // 4. Property Details
-    propertyDescription: '', previousOwnerName: '', previousDeedDate: '', previousDeedNumber: '',
+    // --- Schedule 'A' (Property Details) ---
+    landSurveyNos: '',
+    landVillage: '',
+    landMandal: '',
+    landDistrict: '',
+    landTotalArea: '', // e.g., 200 Sq. Yds.
 
-    // 5. Payment Details
-    totalSalePrice: '', advancePaid: '', advanceMode: 'Cash', advanceNumber: '',
-    balanceAmount: '0', // Calculated field
-    balancePaymentDate: '', registrationCompletionDate: '',
+    // --- Schedule 'B' (Boundaries) ---
+    scheduleBoundsNorth: '',
+    scheduleBoundsSouth: '',
+    scheduleBoundsEast: '',
+    scheduleBoundsWest: '',
 
-    // 6. Spouse Consent
-    spouseConsent: 'No',
-
-    // 7. Witnesses
-    witness1Name: '', witness2Name: '',
+    // --- Metadata ---
+    agreementType: 'Sale Agreement',
+    status: 'DRAFT',
 };
 
+// --- Main Page Component ---
 function CreateSaleAgreementPage() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState(initialFormData);
-    const [validationErrors, setValidationErrors] = useState({});
-    const [globalError, setGlobalError] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // --- Validation Logic ---
-    const validateForm = (data) => {
-        const errors = {};
-        let isValid = true;
-
-        const requiredFields = [
-            'agreementDate', 'sellerFullName', 'sellerFathersName', 'sellerAge', 'sellerAddress', 'sellerAadhar', 'sellerPan',
-            'purchaserFullName', 'purchaserFathersName', 'purchaserAge', 'purchaserAddress', 'purchaserAadhar', 'purchaserPan',
-            'propertyDescription', 'previousOwnerName', 'previousDeedDate', 'previousDeedNumber',
-            'totalSalePrice', 'advancePaid', 'advanceMode', 'balancePaymentDate', 'registrationCompletionDate',
-            'witness1Name', 'witness2Name'
-        ];
-
-        // 1. Check for empty fields
-        requiredFields.forEach(field => {
-            if (!data[field] || String(data[field]).trim() === '') {
-                errors[field] = 'Required.';
-                isValid = false;
-            }
-        });
-
-        // 2. Numeric and Positive Validation (Ages and Prices)
-        const numericFields = ['sellerAge', 'purchaserAge', 'totalSalePrice', 'advancePaid'];
-        numericFields.forEach(field => {
-            const value = Number(data[field]);
-            if (data[field] && (isNaN(value) || value <= 0)) {
-                errors[field] = 'Must be a positive number.';
-                isValid = false;
-            }
-        });
-
-        // 3. Calculation Integrity Check: Advance Paid cannot exceed Total Sale Price
-        const total = parseFloat(data.totalSalePrice) || 0;
-        const advance = parseFloat(data.advancePaid) || 0;
-
-        if (total > 0 && advance > total) {
-            errors['advancePaid'] = 'Advance cannot exceed Total Price.';
-            isValid = false;
-        }
-
-        // 4. Aadhar Validation (12 digits, numeric only)
-        const aadharRegex = /^\d{12}$/;
-        ['sellerAadhar', 'purchaserAadhar'].forEach(field => {
-            if (data[field] && !aadharRegex.test(data[field])) {
-                errors[field] = 'Must be exactly 12 numeric digits.';
-                isValid = false;
-            }
-        });
-
-        // 5. PAN Validation (ABCDE1234F format)
-        const panRegex = /^[A-Z]{5}\d{4}[A-Z]{1}$/;
-        ['sellerPan', 'purchaserPan'].forEach(field => {
-            if (data[field] && !panRegex.test(data[field].toUpperCase())) {
-                errors[field] = 'Format: 5 Letters, 4 Digits, 1 Letter (e.g., ABCDE1234F).';
-                isValid = false;
-            }
-        });
-
-        setValidationErrors(errors);
-        return isValid;
-    };
-
-    // --- Change Handler with Live Balance Calculation ---
+    // Generic handler for top-level fields
     const handleChange = (e) => {
-        const { name, value, type, checked } = e.target;
-
-        const newValue = (name === 'sellerPan' || name === 'purchaserPan') ? value.toUpperCase() : value;
-
-        setFormData(prevData => {
-            let newData = {
-                ...prevData,
-                [name]: type === 'checkbox' ? (checked ? 'Yes' : 'No') : newValue
-            };
-
-            // Live Balance Calculation Logic
-            if (name === 'totalSalePrice' || name === 'advancePaid') {
-                const total = parseFloat(newData.totalSalePrice) || 0;
-                const advance = parseFloat(newData.advancePaid) || 0;
-
-                if (!isNaN(total) && !isNaN(advance) && total >= advance) {
-                    // Update balanceAmount to the calculated value
-                    newData.balanceAmount = String(total - advance);
-                } else if (!total && !advance) {
-                    newData.balanceAmount = '0';
-                }
-            }
-            return newData;
-        });
-
-        // Clear specific error on change
-        if (validationErrors[name]) {
-            setValidationErrors(prevErrors => ({ ...prevErrors, [name]: '' }));
-        }
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    // --- Submission Handler (FIXED to save to 'myAgreements' key) ---
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        setGlobalError('');
-        setIsSubmitting(true);
+    // Generic handler for array fields (sellers, buyers)
+    const handleArrayChange = (section, index, e) => {
+        const { name, value } = e.target;
+        const updatedArray = [...formData[section]];
+        updatedArray[index] = { ...updatedArray[index], [name]: value };
+        setFormData(prev => ({ ...prev, [section]: updatedArray }));
+    };
 
-        if (!validateForm(formData)) {
-            setGlobalError('Please correct the validation errors before saving the draft.');
-            setIsSubmitting(false);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            return;
-        }
+    // Generic add item to array
+    const handleAddItem = (section) => {
+        setFormData(prev => ({
+            ...prev,
+            [section]: [...prev[section], { ...personTemplate }]
+        }));
+    };
+
+    // Generic remove item from array
+    const handleRemoveItem = (section, index) => {
+        const updatedArray = [...formData[section]];
+        updatedArray.splice(index, 1);
+        setFormData(prev => ({ ...prev, [section]: updatedArray }));
+    };
+
+
+    const handleSave = (e) => {
+        e.preventDefault();
+
+        const agreementId = `AGMT-${Date.now()}`;
+
+        const newAgreement = {
+            ...formData,
+            agreementId,
+            createdAt: new Date().toISOString(),
+            // --- Keys for MyAgreementsPage card ---
+            saleAmount: formData.totalConsideration,
+            vendorName: formData.sellers[0]?.name || 'N/A', // Use first seller's name
+            buyerName: formData.buyers[0]?.name || 'N/A', // Use first buyer's name
+            propertyAddressShort: formData.propertyAddress.split(',')[0].trim() || 'Untitled Property',
+        };
 
         try {
-            // Use 'agreementId' and 'agreementType' to match MyAgreementsPage structure
-            const agreementId = `sale-${Date.now()}`;
-            const draftDate = new Date().toISOString().split('T')[0];
-
-            // Structure the data to include top-level fields for the listing page
-            const newAgreement = {
-                agreementId: agreementId,
-                agreementType: 'Sale Agreement',
-                status: 'DRAFT',
-                startDate: draftDate,
-
-                // Key summary fields for listing view
-                vendorName: formData.sellerFullName,
-                buyerName: formData.purchaserFullName,
-                propertyAddress: formData.propertyDescription.substring(0, 50) + '...', // Short snippet
-                saleAmount: formData.totalSalePrice,
-
-                // Store ALL detailed form data
-                details: formData,
-            };
-
-            // 🎯 CORRECTED KEY: Use 'myAgreements' to make the draft appear in the list
-            const storedAgreementsRaw = localStorage.getItem('myAgreements');
-            const existingAgreements = storedAgreementsRaw ? JSON.parse(storedAgreementsRaw) : [];
-
-            const updatedAgreements = [...existingAgreements, newAgreement];
+            const agreementsRaw = localStorage.getItem('myAgreements');
+            const existingAgreements = agreementsRaw ? JSON.parse(agreementsRaw) : [];
+            const updatedAgreements = [newAgreement, ...existingAgreements];
             localStorage.setItem('myAgreements', JSON.stringify(updatedAgreements));
-
-            console.log("Draft saved successfully to myAgreements:", newAgreement);
-            alert("Draft Saved Successfully! Redirecting to Agreements List.");
-
-            // Navigate to the list page
+            console.log("Sale Agreement draft saved successfully:", newAgreement);
             navigate('/my-agreements');
 
-        } catch (err) {
-            console.error("Error saving draft:", err);
-            setGlobalError("Failed to save draft locally. Please check your browser settings.");
-        } finally {
-            setIsSubmitting(false);
+        } catch (error) {
+            console.error("Failed to save agreement to localStorage:", error);
+            alert("Error: Could not save agreement. Please try again.");
+        }
+    };
+
+    // --- Styles ---
+    const formStyles = {
+        label: {
+            display: 'block',
+            marginBottom: '5px',
+            fontWeight: 600,
+            color: '#1e293b',
+            fontSize: '14px',
+        },
+        input: {
+            width: '100%',
+            padding: '12px',
+            border: '1px solid #cbd5e1',
+            borderRadius: '8px',
+            fontSize: '15px',
+            marginBottom: '20px',
+            boxSizing: 'border-box',
+        },
+        grid: {
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '0 20px',
+        },
+        grid3: {
+             display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '0 20px',
+        },
+        sectionTitle: {
+            fontSize: '20px',
+            fontWeight: 700,
+            color: '#b91c1c',
+            borderBottom: '2px solid #fde2e2',
+            paddingBottom: '8px',
+            marginTop: '25px',
+            marginBottom: '20px',
+        },
+        itemContainer: {
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            padding: '20px',
+            backgroundColor: '#f8fafc',
+            position: 'relative',
+            marginBottom: '20px',
+        },
+        removeButton: {
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            backgroundColor: '#fee2e2',
+            color: '#b91c1c',
+            border: 'none',
+            borderRadius: '50%',
+            width: '28px',
+            height: '28px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontSize: '16px',
+            lineHeight: '28px',
+            textAlign: 'center',
+        },
+        addButton: {
+            ...styles.secondaryBtn, // Assuming styles.secondaryBtn exists
+            backgroundColor: '#f1f5f9',
+            color: '#0f172a',
+            border: '1px solid #cbd5e1',
+            width: '100%',
+            marginTop: '0px',
+            marginBottom: '20px'
         }
     };
 
     return (
         <div style={styles.container}>
-
+            {/* Page Header */}
             <div style={styles.pageHeader}>
-                <h1 style={styles.pageTitle}>Create Sale Agreement</h1>
-                <p style={styles.pageSubtitle}>Enter all details. Fields marked with * are mandatory for saving the draft.</p>
+                <button onClick={() => navigate(-1)} style={{ ...styles.secondaryBtn, marginBottom: '20px' }}>
+                    ← Back to Agreements
+                </button>
+                <h1 style={styles.pageTitle}>Create New Sale Agreement</h1>
+                <p style={styles.pageSubtitle}>Draft a new person-to-person property sale agreement.</p>
             </div>
 
-            {/* Global Error Message */}
-            {globalError && (
-                <div style={{...styles.warningBox, marginBottom: '20px'}}>
-                    🚨 {globalError}
-                </div>
-            )}
+            <div style={{ padding: '30px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                <form onSubmit={handleSave}>
 
-            <form style={styles.form} onSubmit={handleSubmit}>
-
-                {/* --------------------- 1. AGREEMENT DETAILS --------------------- */}
-                <h2 style={{ ...styles.sectionTitle, borderTop: 'none', paddingTop: '0', color: '#10b981' }}>1. Agreement Details</h2>
-
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="agreementDate">Date of Agreement *</label>
-                    <input style={styles.input} type="date" name="agreementDate" value={formData.agreementDate} onChange={handleChange} required />
-                    <p style={styles.errorText}>{validationErrors.agreementDate}</p>
-                </div>
-                {/* Spacers */}
-                <div style={styles.formGroup}></div>
-                <div style={styles.formGroup}></div>
-
-                {/* --------------------- 2. SELLER DETAILS --------------------- */}
-                <h2 style={styles.sectionTitle}>2. Seller (Vendor) Details</h2>
-
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="sellerFullName">Full Name *</label>
-                    <input style={styles.input} type="text" name="sellerFullName" value={formData.sellerFullName} onChange={handleChange} placeholder="Full Legal Name" required />
-                    <p style={styles.errorText}>{validationErrors.sellerFullName}</p>
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="sellerFathersName">Father's Name *</label>
-                    <input style={styles.input} type="text" name="sellerFathersName" value={formData.sellerFathersName} onChange={handleChange} placeholder="Father's/Husband's Name" required />
-                    <p style={styles.errorText}>{validationErrors.sellerFathersName}</p>
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="sellerAge">Age *</label>
-                    <input style={styles.input} type="number" name="sellerAge" value={formData.sellerAge} onChange={handleChange} placeholder="Years (Positive Numeric)" min="1" required />
-                    <p style={styles.errorText}>{validationErrors.sellerAge}</p>
-                </div>
-
-                <div style={{ ...styles.formGroup, gridColumn: 'span 2' }}>
-                    <label style={styles.label} htmlFor="sellerAadhar">Aadhar Number *</label>
-                    <input style={styles.input} type="text" name="sellerAadhar" value={formData.sellerAadhar} onChange={handleChange} placeholder="12 numeric digits (Strict Validation)" maxLength="12" required />
-                    <p style={styles.errorText}>{validationErrors.sellerAadhar}</p>
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="sellerPan">PAN Number *</label>
-                    <input style={styles.input} type="text" name="sellerPan" value={formData.sellerPan} onChange={handleChange} placeholder="Format: ABCDE1234F (Strict Validation)" maxLength="10" required />
-                    <p style={styles.errorText}>{validationErrors.sellerPan}</p>
-                </div>
-
-                <div style={{ ...styles.formGroup, ...styles.fullWidth }}>
-                    <label style={styles.label} htmlFor="sellerAddress">Address *</label>
-                    <textarea style={styles.textarea} name="sellerAddress" value={formData.sellerAddress} onChange={handleChange} placeholder="Full Residential Address" required />
-                    <p style={styles.errorText}>{validationErrors.sellerAddress}</p>
-                </div>
-
-
-                {/* --------------------- 3. PURCHASER DETAILS --------------------- */}
-                <h2 style={styles.sectionTitle}>3. Purchaser (Buyer) Details</h2>
-
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="purchaserFullName">Full Name *</label>
-                    <input style={styles.input} type="text" name="purchaserFullName" value={formData.purchaserFullName} onChange={handleChange} placeholder="Full Legal Name" required />
-                    <p style={styles.errorText}>{validationErrors.purchaserFullName}</p>
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="purchaserFathersName">Father's Name *</label>
-                    <input style={styles.input} type="text" name="purchaserFathersName" value={formData.purchaserFathersName} onChange={handleChange} placeholder="Father's/Husband's Name" required />
-                    <p style={styles.errorText}>{validationErrors.purchaserFathersName}</p>
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="purchaserAge">Age *</label>
-                    <input style={styles.input} type="number" name="purchaserAge" value={formData.purchaserAge} onChange={handleChange} placeholder="Years (Positive Numeric)" min="1" required />
-                    <p style={styles.errorText}>{validationErrors.purchaserAge}</p>
-                </div>
-
-                <div style={{ ...styles.formGroup, gridColumn: 'span 2' }}>
-                    <label style={styles.label} htmlFor="purchaserAadhar">Aadhar Number *</label>
-                    <input style={styles.input} type="text" name="purchaserAadhar" value={formData.purchaserAadhar} onChange={handleChange} placeholder="12 numeric digits (Strict Validation)" maxLength="12" required />
-                    <p style={styles.errorText}>{validationErrors.purchaserAadhar}</p>
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="purchaserPan">PAN Number *</label>
-                    <input style={styles.input} type="text" name="purchaserPan" value={formData.purchaserPan} onChange={handleChange} placeholder="Format: ABCDE1234F (Strict Validation)" maxLength="10" required />
-                    <p style={styles.errorText}>{validationErrors.purchaserPan}</p>
-                </div>
-
-                <div style={{ ...styles.formGroup, ...styles.fullWidth }}>
-                    <label style={styles.label} htmlFor="purchaserAddress">Address *</label>
-                    <textarea style={styles.textarea} name="purchaserAddress" value={formData.purchaserAddress} onChange={handleChange} placeholder="Full Residential Address" required />
-                    <p style={styles.errorText}>{validationErrors.purchaserAddress}</p>
-                </div>
-
-                {/* --------------------- 4. PROPERTY DETAILS --------------------- */}
-                <h2 style={styles.sectionTitle}>4. Property Details</h2>
-
-                <div style={{ ...styles.formGroup, ...styles.fullWidth }}>
-                    <label style={styles.label} htmlFor="propertyDescription">Property Description (Schedule Property) *</label>
-                    <textarea style={{ ...styles.textarea, minHeight: '120px' }} name="propertyDescription" value={formData.propertyDescription} onChange={handleChange} placeholder="Detailed description including boundaries, survey numbers, and total area." required />
-                    <p style={styles.errorText}>{validationErrors.propertyDescription}</p>
-                </div>
-
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="previousOwnerName">Previous Owner Name *</label>
-                    <input style={styles.input} type="text" name="previousOwnerName" value={formData.previousOwnerName} onChange={handleChange} placeholder="Name from whom the Seller acquired the property" required />
-                    <p style={styles.errorText}>{validationErrors.previousOwnerName}</p>
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="previousDeedDate">Previous Deed Date *</label>
-                    <input style={styles.input} type="date" name="previousDeedDate" value={formData.previousDeedDate} onChange={handleChange} required />
-                    <p style={styles.errorText}>{validationErrors.previousDeedDate}</p>
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="previousDeedNumber">Previous Deed Number *</label>
-                    <input style={styles.input} type="text" name="previousDeedNumber" value={formData.previousDeedNumber} onChange={handleChange} placeholder="Document/Registration Number" required />
-                    <p style={styles.errorText}>{validationErrors.previousDeedNumber}</p>
-                </div>
-
-                {/* --------------------- 5. PAYMENT DETAILS --------------------- */}
-                <h2 style={styles.sectionTitle}>5. Payment and Timeline</h2>
-
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="totalSalePrice">Total Sale Price (Rs) *</label>
-                    <input style={styles.input} type="number" name="totalSalePrice" value={formData.totalSalePrice} onChange={handleChange} placeholder="Total agreed price" min="1" required />
-                    <p style={styles.errorText}>{validationErrors.totalSalePrice}</p>
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="advancePaid">Advance Paid (Rs) *</label>
-                    <input style={styles.input} type="number" name="advancePaid" value={formData.advancePaid} onChange={handleChange} placeholder="Amount paid as advance" min="0" required />
-                    <p style={styles.errorText}>{validationErrors.advancePaid}</p>
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="balanceAmount">Balance Amount (Rs) *</label>
-                    <input
-                        style={styles.readOnlyInput}
-                        type="text"
-                        name="balanceAmount"
-                        value={formData.balanceAmount}
-                        readOnly
-                        placeholder="Calculated automatically"
-                    />
-                    <p style={styles.errorText}>Calculated field (Total Price - Advance Paid)</p>
-                </div>
-
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="advanceMode">Advance Mode *</label>
-                    <select style={styles.input} name="advanceMode" value={formData.advanceMode} onChange={handleChange} required>
-                        <option value="Cash">Cash</option>
-                        <option value="Cheque">Cheque</option>
-                        <option value="DD">Demand Draft (DD)</option>
-                    </select>
-                    <p style={styles.errorText}>{validationErrors.advanceMode}</p>
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="advanceNumber">Cheque/DD Number (If applicable)</label>
-                    <input style={styles.input} type="text" name="advanceNumber" value={formData.advanceNumber} onChange={handleChange} placeholder="Cheque or DD number" />
-                    <p style={styles.errorText}>{validationErrors.advanceNumber}</p>
-                </div>
-                <div style={styles.formGroup}></div> {/* Spacer */}
-
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="balancePaymentDate">Balance Payment Date *</label>
-                    <input style={styles.input} type="date" name="balancePaymentDate" value={formData.balancePaymentDate} onChange={handleChange} required />
-                    <p style={styles.errorText}>{validationErrors.balancePaymentDate}</p>
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="registrationCompletionDate">Registration Completion Date *</label>
-                    <input style={styles.input} type="date" name="registrationCompletionDate" value={formData.registrationCompletionDate} onChange={handleChange} required />
-                    <p style={styles.errorText}>{validationErrors.registrationCompletionDate}</p>
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="spouseConsent">6. Spouse Consent (If Applicable)</label>
-                    <div style={{display: 'flex', alignItems: 'center', marginTop: '15px'}}>
-                        <input
-                            type="checkbox"
-                            name="spouseConsent"
-                            checked={formData.spouseConsent === 'Yes'}
-                            onChange={handleChange}
-                            style={{width: '20px', height: '20px', marginRight: '10px'}}
-                        />
-                        <span style={{fontSize: '15px', color: '#475569', fontWeight: '500'}}>Spouse Consent is **required**</span>
+                    {/* --- EXECUTION --- */}
+                    <h2 style={formStyles.sectionTitle}>1. Execution Details</h2>
+                    <div style={formStyles.grid}>
+                        <div>
+                            <label style={formStyles.label} htmlFor="startDate">Execution Date (Signing Date)</label>
+                            <input style={formStyles.input} type="date" id="startDate" name="startDate" value={formData.startDate} onChange={handleChange} required />
+                        </div>
+                        <div>
+                            <label style={formStyles.label} htmlFor="executionCity">Execution City</label>
+                            <input style={formStyles.input} type="text" id="executionCity" name="executionCity" value={formData.executionCity} onChange={handleChange} />
+                        </div>
                     </div>
-                </div>
 
-                {/* --------------------- 7. WITNESS DETAILS --------------------- */}
-                <h2 style={styles.sectionTitle}>7. Witness Details</h2>
-
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="witness1Name">Witness 1 Full Name *</label>
-                    <input style={styles.input} type="text" name="witness1Name" value={formData.witness1Name} onChange={handleChange} placeholder="Full Name of Witness 1" required />
-                    <p style={styles.errorText}>{validationErrors.witness1Name}</p>
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label} htmlFor="witness2Name">Witness 2 Full Name *</label>
-                    <input style={styles.input} type="text" name="witness2Name" value={formData.witness2Name} onChange={handleChange} placeholder="Full Name of Witness 2" required />
-                    <p style={styles.errorText}>{validationErrors.witness2Name}</p>
-                </div>
-                <div style={styles.formGroup}></div>
-
-                {/* Action Buttons */}
-                <div style={styles.buttonGroup}>
-                    <button
-                        type="button"
-                        style={styles.secondaryButton}
-                        onClick={() => setFormData(initialFormData)}
-                        disabled={isSubmitting}
-                    >
-                        Reset Form
+                    {/* --- SELLER(S) --- */}
+                    <h2 style={formStyles.sectionTitle}>2. Seller(s) Details</h2>
+                    {formData.sellers.map((seller, index) => (
+                        <div key={index} style={formStyles.itemContainer}>
+                            {formData.sellers.length > 1 && (
+                                <button type="button" style={formStyles.removeButton} onClick={() => handleRemoveItem('sellers', index)}>×</button>
+                            )}
+                            <p style={{fontWeight: 600, marginTop: 0, color: '#334155'}}>Seller {index + 1}</p>
+                            <div style={formStyles.grid3}>
+                                <div>
+                                    <label style={formStyles.label}>Full Name</label>
+                                    <input style={formStyles.input} type="text" name="name" value={seller.name} onChange={(e) => handleArrayChange('sellers', index, e)} required />
+                                </div>
+                                <div>
+                                    <label style={formStyles.label}>S/o or W/o</label>
+                                    <select style={formStyles.input} name="so_wo" value={seller.so_wo} onChange={(e) => handleArrayChange('sellers', index, e)}>
+                                        <option value="S/o">S/o (Son of)</option>
+                                        <option value="W/o">W/o (Wife of)</option>
+                                        <option value="D/o">D/o (Daughter of)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={formStyles.label}>Father/Husband Name</label>
+                                    <input style={formStyles.input} type="text" name="relationName" value={seller.relationName} onChange={(e) => handleArrayChange('sellers', index, e)} />
+                                </div>
+                                <div>
+                                    <label style={formStyles.label}>Age</label>
+                                    <input style={formStyles.input} type="number" name="age" value={seller.age} onChange={(e) => handleArrayChange('sellers', index, e)} />
+                                </div>
+                                <div>
+                                    <label style={formStyles.label}>Occupation</label>
+                                    <input style={formStyles.input} type="text" name="occupation" value={seller.occupation} onChange={(e) => handleArrayChange('sellers', index, e)} />
+                                </div>
+                                 <div>
+                                    <label style={formStyles.label}>Phone Number</label>
+                                    <input style={formStyles.input} type="tel" name="phone" value={seller.phone} onChange={(e) => handleArrayChange('sellers', index, e)} />
+                                </div>
+                            </div>
+                            <label style={formStyles.label}>Address</label>
+                            <textarea style={{ ...formStyles.input, minHeight: '80px' }} name="address" value={seller.address} onChange={(e) => handleArrayChange('sellers', index, e)} />
+                            <div style={formStyles.grid3}>
+                                <div>
+                                    <label style={formStyles.label}>Govt. ID Type</label>
+                                    <select style={formStyles.input} name="idType" value={seller.idType} onChange={(e) => handleArrayChange('sellers', index, e)}>
+                                        <option value="Aadhaar">Aadhaar</option>
+                                        <option value="PAN">PAN</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={formStyles.label}>ID Number</label>
+                                    <input style={formStyles.input} type="text" name="idNumber" value={seller.idNumber} onChange={(e) => handleArrayChange('sellers', index, e)} />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    <button type="button" style={formStyles.addButton} onClick={() => handleAddItem('sellers')}>
+                        + Add Another Seller
                     </button>
+
+
+                    {/* --- BUYER(S) --- */}
+                    <h2 style={formStyles.sectionTitle}>3. Buyer(s) Details</h2>
+                    {formData.buyers.map((buyer, index) => (
+                        <div key={index} style={formStyles.itemContainer}>
+                            {formData.buyers.length > 1 && (
+                                <button type="button" style={formStyles.removeButton} onClick={() => handleRemoveItem('buyers', index)}>×</button>
+                            )}
+                            <p style={{fontWeight: 600, marginTop: 0, color: '#334155'}}>Buyer {index + 1}</p>
+                            <div style={formStyles.grid3}>
+                                <div>
+                                    <label style={formStyles.label}>Full Name</label>
+                                    <input style={formStyles.input} type="text" name="name" value={buyer.name} onChange={(e) => handleArrayChange('buyers', index, e)} required />
+                                </div>
+                                <div>
+                                    <label style={formStyles.label}>S/o or W/o</label>
+                                    <select style={formStyles.input} name="so_wo" value={buyer.so_wo} onChange={(e) => handleArrayChange('buyers', index, e)}>
+                                        <option value="S/o">S/o (Son of)</option>
+                                        <option value="W/o">W/o (Wife of)</option>
+                                        <option value="D/o">D/o (Daughter of)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={formStyles.label}>Father/Husband Name</label>
+                                    <input style={formStyles.input} type="text" name="relationName" value={buyer.relationName} onChange={(e) => handleArrayChange('buyers', index, e)} />
+                                </div>
+                                <div>
+                                    <label style={formStyles.label}>Age</label>
+                                    <input style={formStyles.input} type="number" name="age" value={buyer.age} onChange={(e) => handleArrayChange('buyers', index, e)} />
+                                </div>
+                                <div>
+                                    <label style={formStyles.label}>Occupation</label>
+                                    <input style={formStyles.input} type="text" name="occupation" value={buyer.occupation} onChange={(e) => handleArrayChange('buyers', index, e)} />
+                                </div>
+                                 <div>
+                                    <label style={formStyles.label}>Phone Number</label>
+                                    <input style={formStyles.input} type="tel" name="phone" value={buyer.phone} onChange={(e) => handleArrayChange('buyers', index, e)} />
+                                </div>
+                            </div>
+                            <label style={formStyles.label}>Address</label>
+                            <textarea style={{ ...formStyles.input, minHeight: '80px' }} name="address" value={buyer.address} onChange={(e) => handleArrayChange('buyers', index, e)} />
+                            <div style={formStyles.grid3}>
+                                <div>
+                                    <label style={formStyles.label}>Govt. ID Type</label>
+                                    <select style={formStyles.input} name="idType" value={buyer.idType} onChange={(e) => handleArrayChange('buyers', index, e)}>
+                                        <option value="Aadhaar">Aadhaar</option>
+                                        <option value="PAN">PAN</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={formStyles.label}>ID Number</label>
+                                    <input style={formStyles.input} type="text" name="idNumber" value={buyer.idNumber} onChange={(e) => handleArrayChange('buyers', index, e)} />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    <button type="button" style={formStyles.addButton} onClick={() => handleAddItem('buyers')}>
+                        + Add Another Buyer
+                    </button>
+
+                    {/* --- PROPERTY & SALE DETAILS --- */}
+                    <h2 style={formStyles.sectionTitle}>4. Property & Sale Details</h2>
+                    <div>
+                        <label style={formStyles.label} htmlFor="totalConsideration">Total Consideration (INR)</label>
+                        <input style={formStyles.input} type="number" id="totalConsideration" name="totalConsideration" value={formData.totalConsideration} onChange={handleChange} min="1" required />
+                    </div>
+                    <label style={formStyles.label} htmlFor="propertyAddress">Full Property Address</label>
+                    <textarea style={{ ...formStyles.input, minHeight: '80px' }} id="propertyAddress" name="propertyAddress" value={formData.propertyAddress} onChange={handleChange} required />
+                    <div style={formStyles.grid}>
+                        <div>
+                            <label style={formStyles.label} htmlFor="propertyType">Property Type</label>
+                            <input style={formStyles.input} type="text" id="propertyType" name="propertyType" value={formData.propertyType} onChange={handleChange} />
+                        </div>
+                        <div>
+                            <label style={formStyles.label} htmlFor="acquisitionMethod">How Seller Acquired Property</label>
+                            <input style={formStyles.input} type="text" id="acquisitionMethod" name="acquisitionMethod" value={formData.acquisitionMethod} onChange={handleChange} />
+                        </div>
+                    </div>
+
+
+                    {/* --- SCHEDULES --- */}
+                    <h2 style={formStyles.sectionTitle}>5. Schedule of Property (Land Details & Boundaries)</h2>
+                    <div style={formStyles.grid3}>
+                        <div>
+                            <label style={formStyles.label} htmlFor="landSurveyNos">Survey Nos.</label>
+                            <input style={formStyles.input} type="text" id="landSurveyNos" name="landSurveyNos" value={formData.landSurveyNos} onChange={handleChange} />
+                        </div>
+                        <div>
+                            <label style={formStyles.label} htmlFor="landVillage">Village</label>
+                            <input style={formStyles.input} type="text" id="landVillage" name="landVillage" value={formData.landVillage} onChange={handleChange} />
+                        </div>
+                        <div>
+                            <label style={formStyles.label} htmlFor="landMandal">Mandal</label>
+                            <input style={formStyles.input} type="text" id="landMandal" name="landMandal" value={formData.landMandal} onChange={handleChange} />
+                        </div>
+                         <div>
+                            <label style={formStyles.label} htmlFor="landDistrict">District</label>
+                            <input style={formStyles.input} type="text" id="landDistrict" name="landDistrict" value={formData.landDistrict} onChange={handleChange} />
+                        </div>
+                         <div>
+                            <label style={formStyles.label} htmlFor="landTotalArea">Total Land Area</label>
+                            <input style={formStyles.input} type="text" id="landTotalArea" name="landTotalArea" onChange={handleChange} />
+                        </div>
+                    </div>
+
+                    <h3 style={{...formStyles.sectionTitle, fontSize: '16px', color: '#1e293b', border: 'none', marginTop: '15px'}}>Property Boundaries</h3>
+                    <div style={formStyles.grid}>
+                        <div>
+                            <label style={formStyles.label} htmlFor="scheduleBoundsNorth">North</label>
+                            <input style={formStyles.input} type="text" id="scheduleBoundsNorth" name="scheduleBoundsNorth" value={formData.scheduleBoundsNorth} onChange={handleChange} />
+                        </div>
+                        <div>
+                            <label style={formStyles.label} htmlFor="scheduleBoundsSouth">South</label>
+                            <input style={formStyles.input} type="text" id="scheduleBoundsSouth" name="scheduleBoundsSouth" value={formData.scheduleBoundsSouth} onChange={handleChange} />
+                        </div>
+                        <div>
+                            <label style={formStyles.label} htmlFor="scheduleBoundsEast">East</label>
+                            <input style={formStyles.input} type="text" id="scheduleBoundsEast" name="scheduleBoundsEast" value={formData.scheduleBoundsEast} onChange={handleChange} />
+                        </div>
+                        <div>
+                            <label style={formStyles.label} htmlFor="scheduleBoundsWest">West</label>
+                            <input style={formStyles.input} type="text" id="scheduleBoundsWest" name="scheduleBoundsWest" value={formData.scheduleBoundsWest} onChange={handleChange} />
+                        </div>
+                    </div>
+
+
+                    {/* Submit Button */}
+                    <button type="submit" style={{ ...styles.postBtn, width: '100%', marginTop: '30px', backgroundColor: '#b91c1c', fontSize: '18px', padding: '15px' }}>
+                        Save Sale Agreement Draft
+                    </button>
+                </form>
+            </div>
+
+            {/* ====================== DRAFT MANAGEMENT SECTION ====================== */}
+            <div style={{ marginTop: '40px', backgroundColor: '#fff7ed', padding: '20px', borderRadius: '12px' }}>
+                <h2 style={{ color: '#b91c1c', marginBottom: '15px' }}>🗂️ My Sale Agreement Drafts</h2>
+                <DraftList />
+            </div>
+        </div>
+    );
+}
+
+
+// ====================== DRAFT LIST COMPONENT ======================
+function DraftList() {
+    const [drafts, setDrafts] = useState([]);
+
+    useEffect(() => {
+        const stored = localStorage.getItem('myAgreements');
+        if (stored) {
+            const allAgreements = JSON.parse(stored);
+            const saleDrafts = allAgreements.filter(ag => ag.agreementType === 'Sale Agreement');
+            setDrafts(saleDrafts);
+        }
+    }, []);
+
+    const handleDelete = (agreementId) => {
+        if (window.confirm("Are you sure you want to delete this draft?")) {
+            const stored = localStorage.getItem('myAgreements');
+            const allAgreements = stored ? JSON.parse(stored) : [];
+            const updatedAgreements = allAgreements.filter(d => d.agreementId !== agreementId);
+            localStorage.setItem('myAgreements', JSON.stringify(updatedAgreements));
+            setDrafts(prevDrafts => prevDrafts.filter(d => d.agreementId !== agreementId));
+        }
+    };
+
+    if (drafts.length === 0) {
+        return <p style={{ color: '#475569' }}>No sale agreement drafts saved yet.</p>;
+    }
+
+    return (
+        <div>
+            {drafts.map((draft) => (
+                <div key={draft.agreementId} style={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '15px',
+                    marginBottom: '10px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}>
+                    <div>
+                        <strong style={{color: '#b91c1c'}}>{draft.propertyAddressShort || 'Untitled Property'}</strong>
+                        <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+                            Seller: {draft.sellers && draft.sellers[0] ? draft.sellers[0].name : 'N/A'} | Buyer: {draft.buyers && draft.buyers[0] ? draft.buyers[0].name : 'N/A'}
+                        </p>
+                        <p style={{ margin: 0, color: '#94a3b8', fontSize: '13px' }}>
+                            Saved: {new Date(draft.createdAt).toLocaleString()}
+                        </p>
+                    </div>
                     <button
-                        type="submit"
-                        style={styles.primaryButton}
-                        disabled={isSubmitting}
+                        onClick={() => handleDelete(draft.agreementId)}
+                        style={{
+                            backgroundColor: '#dc2626',
+                            color: 'white',
+                            border: 'none',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '14px'
+                        }}
                     >
-                        {isSubmitting ? 'Saving Draft...' : 'Save Draft'}
+                        🗑️ Delete
                     </button>
                 </div>
-            </form>
+            ))}
         </div>
     );
 }

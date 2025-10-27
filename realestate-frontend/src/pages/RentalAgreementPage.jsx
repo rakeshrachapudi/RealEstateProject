@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // Added
 import { styles } from '../styles'; // Make sure this path is correct
 
 // --- New Styles for the Form & Preview ---
@@ -98,7 +99,7 @@ const formStyles = {
     flex: 1,
   },
   successMessage: {
-    ...styles.noPropertiesContainer,
+    ...styles.noPropertiesContainer, // Use your existing style
     border: '2px solid #10b981',
     backgroundColor: '#f0fdf4',
     color: '#065f46',
@@ -453,7 +454,7 @@ function RentalAgreementPage() {
   const [formData, setFormData] = useState(initialFormData);
   const [formErrors, setFormErrors] = useState({});
   const [touched, setTouched] = useState({}); // To track blurred fields
-
+  const navigate = useNavigate();
   const agreementPreviewRef = useRef();
 
   // --- Validation Functions ---
@@ -582,8 +583,7 @@ function RentalAgreementPage() {
   };
 
 
-  // --- HandleChange with Corrected PAN Sanitization ---
-  // (Note: This is the version YOU provided, not the stricter one I suggested later)
+  // --- HandleChange (using your new logic for agreementType) ---
   const handleChange = (e) => {
     let { name, value } = e.target;
 
@@ -614,17 +614,20 @@ function RentalAgreementPage() {
       }
     }
 
-    if (name === 'rentAmount' || name === 'depositAmount') {
+    if (name === 'rentAmount' || name === 'depositAmount' || name === 'incrementPercentage') {
         value = value.replace(/\D/g, '');
     }
 
     // --- Update Form Data State ---
     const newData = { ...formData, [name]: value };
 
+    // --- YOUR NEW LOGIC ---
     if (name === 'duration') {
       const durationMonths = parseInt(value, 10);
+      // Use 11 months as the cutoff for Rental vs Lease
       newData.agreementType = durationMonths <= 11 ? 'Rental Agreement' : 'Lease Agreement';
     }
+    // --- END YOUR NEW LOGIC ---
 
     if (name === 'ownerIdType') {
       newData.ownerIdNumber = '';
@@ -674,10 +677,50 @@ function RentalAgreementPage() {
     window.print();
   };
 
+  // 3. THIS FUNCTION IS NOW UPDATED
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Final Agreement Data:", formData);
-    setStep(5); // Show success message
+
+    // Create a complete agreement object to save
+    const agreementId = `AGR-${Date.now()}-${Math.floor(Math.random() * 999)}`;
+    const newAgreement = {
+      ...formData,
+      agreementId: agreementId,
+      createdAt: new Date().toISOString(),
+      status: 'ACTIVE', // Mark as active
+      propertyAddressShort: formData.propertyAddress.split(',')[0].trim(),
+      // Add durationMonths for compatibility with MyAgreementsPage
+      durationMonths: formData.duration,
+    };
+
+    try {
+      // Get existing agreements from localStorage
+      const agreementsRaw = localStorage.getItem('myAgreements');
+      const existingAgreements = agreementsRaw ? JSON.parse(agreementsRaw) : [];
+
+      // Add the new agreement to the list
+      const updatedAgreements = [newAgreement, ...existingAgreements];
+
+      // Save the updated list back to localStorage
+      localStorage.setItem('myAgreements', JSON.stringify(updatedAgreements));
+
+      console.log("Final Agreement Data Saved to localStorage:", newAgreement);
+
+      // Move to success step
+      setStep(5);
+
+    } catch (error) {
+      console.error("Failed to save agreement to localStorage:", error);
+      alert("Error: Could not save the agreement. Please check console for details.");
+    }
+  };
+
+  // This function is for the "Create Another" button
+  const handleStartOver = () => {
+    setStep(1);
+    setFormData(initialFormData);
+    setFormErrors({});
+    setTouched({});
   };
 
   const step2ButtonDisabled = !isStep2Valid();
@@ -810,7 +853,7 @@ function RentalAgreementPage() {
             </div>
           </div>
 
-          {/* Button Group */}
+          {/* Button Group (using your new layout) */}
           <div style={formStyles.buttonGroup}>
             <button type="button" style={{...formStyles.secondaryButton, flex: '0 1 auto'}} onClick={() => setStep(1)}>Back</button>
             <button
@@ -825,7 +868,7 @@ function RentalAgreementPage() {
         </div>
       )}
 
-      {/* Step 3: Property & Terms */}
+      {/* Step 3: Property & Terms (using your new layout) */}
       {step === 3 && (
         <div style={formStyles.formContainer} className="no-print">
              <h2 style={{ ...styles.sectionTitle, fontSize: '22px', marginTop: 0 }}>Step 2: Property & Terms</h2>
@@ -874,9 +917,11 @@ function RentalAgreementPage() {
             <div style={formStyles.formGroup}>
                 <label style={formStyles.label} htmlFor="duration">Agreement Duration</label>
                 <select style={formStyles.select} id="duration" name="duration" value={formData.duration} onChange={handleChange} onBlur={handleBlur}>
+                  {/* Create a dropdown for 1 to 60 months */}
                   {Array.from({ length: 60 }, (_, i) => i + 1).map(month => (
                     <option key={month} value={month}>
                       {month} {month === 1 ? 'Month' : 'Months'}
+                      {month === 11 && ' (Recommended)'}
                       {month === 12 && ' (1 Year)'}
                       {month === 24 && ' (2 Years)'}
                       {month === 36 && ' (3 Years)'}
@@ -929,7 +974,7 @@ function RentalAgreementPage() {
         </div>
       )}
 
-      {/* Step 4: Review & Print */}
+      {/* Step 4: Review & Print (using your layout) */}
       {step === 4 && (
            <form onSubmit={handleSubmit}>
              <h2 style={{ ...styles.sectionTitle, fontSize: '22px', marginTop: 0 }} className="no-print">Step 3: Review & Print Agreement</h2>
@@ -951,39 +996,49 @@ function RentalAgreementPage() {
            </form>
       )}
 
-      {/* Step 5: Success Message */}
+      {/* Step 5: Success Message (MODIFIED) */}
       {step === 5 && (
             <div>
               <div style={formStyles.successMessage} className="no-print">
                 <div style={{fontSize: '48px', marginBottom: '16px'}}>🎉</div>
-                <h2 style={{ ...styles.emptyTitle, color: 'inherit' }}>Agreement Submitted!</h2>
+                <h2 style={{ ...styles.emptyTitle, color: 'inherit' }}>Agreement Saved!</h2>
                 <p style={{ ...styles.emptyText, color: 'inherit', maxWidth: '550px', margin: '0 auto 24px auto' }}>
                   The {formData.agreementType} between
                   <strong style={{color: '#047857'}}> {formData.ownerName} </strong>
                   (Owner) and
                   <strong style={{color: '#047857'}}> {formData.tenantName} </strong>
-                  (Tenant) has been successfully created.
-                  Thank you for using <strong>Zero Brokerage Platform</strong>!
+                  (Tenant) has been successfully saved.
                 </p>
-                <div style={{...formStyles.buttonGroup, maxWidth: '500px', margin: '0 auto'}}>
+                {/* --- MODIFIED BUTTON GROUP --- */}
+                <div style={{...formStyles.buttonGroup, maxWidth: '600px', margin: '0 auto', gap: '15px'}}>
                   <button
-                    style={formStyles.secondaryButton}
-                    onClick={handlePrint} // Maybe change this to download a saved copy later?
+                    type="button"
+                    style={{...formStyles.secondaryButton, flex: 1}}
+                    onClick={handleStartOver} // Use a dedicated function to reset
+                  >
+                    Create Another
+                  </button>
+                  <button
+                    type="button"
+                    style={{...formStyles.secondaryButton, ...styles.postBtn, flex: 1}}
+                    onClick={handlePrint}
                   >
                     Download Duplicate
                   </button>
                   <button
-                    style={{ ...formStyles.primaryButton, backgroundColor: '#059669' }}
-                    onClick={() => { setStep(1); setFormData(initialFormData); setFormErrors({}); setTouched({}); }}
+                    type="button"
+                    style={{ ...formStyles.primaryButton, backgroundColor: '#059669', flex: 1 }}
+                    onClick={() => navigate('/my-agreements')} // Navigate to My Agreements
                   >
-                    Create Another Agreement
+                    View All Agreements
                   </button>
                 </div>
+                {/* --- END MODIFIED BUTTON GROUP --- */}
               </div>
 
               {/* Include printable agreement here too for the "Download Duplicate" button */}
               <div style={{ display: 'none' }}>
-                <div id="printable-agreement-duplicate"> {/* Use different ID if needed */}
+                <div id="printable-agreement-duplicate">
                   <AgreementPreview formData={formData} ref={agreementPreviewRef} />
                 </div>
               </div>
