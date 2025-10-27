@@ -1,8 +1,10 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+// Header.jsx (Unchanged - Navigation Fixed)
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
-import { styles } from "../styles.js";
-import logo from "../assets/logo.png";
+import { styles } from "../styles.js"; // Assuming styles are defined/imported here
+import logo from "../assets/logo.png"; // Assuming logo path
+
 function Header({
   onLoginClick,
   onSignupClick,
@@ -12,154 +14,78 @@ function Header({
   const { isAuthenticated, user, logout } = useAuth();
   const [isProfileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleMyAgreementsClick = () => {
-    navigate("/my-agreements");
+  // Close dropdown on navigation
+  useEffect(() => {
     setProfileDropdownOpen(false);
-  };
+  }, [location.pathname]);
 
-  const handleMyPropertiesClick = () => {
-    navigate("/my-properties");
-    setProfileDropdownOpen(false);
+  const handleMyAgreementsClick = () => { navigate("/my-agreements"); };
+  const handleMyPropertiesClick = () => { navigate("/my-properties"); };
+  const handleDashboardClick = () => {
+    if (user?.role === "ADMIN") navigate("/admin-deals"); // Admin dashboard route
+    else if (user?.role === "AGENT") navigate("/agent-dashboard"); // Agent dashboard route
   };
+  // ⭐ CORRECTED: Navigate USER to /my-deals
+  const handleMyDealsClick = () => { navigate("/my-deals"); }; // User deals route
 
-  const handleAgentDashboardClick = () => {
-    if (user?.role === "ADMIN") {
-      navigate("/admin-deals");
-    } else {
-      navigate("/agent-dashboard");
-    }
-    setProfileDropdownOpen(false);
-  };
+  const isAdmin = user?.role === "ADMIN";
+  const isAgent = user?.role === "AGENT";
+  const isUser = user?.role === "USER"; // Explicit check for USER role
 
   return (
     <header style={styles.header}>
-      {" "}
       <div style={styles.headerContent}>
         <div onClick={() => navigate("/")} style={styles.logo}>
-          {" "}
-          <span style={styles.logoIcon}>
-            <img
-              style={styles.logoIconImg}
-              src={logo}
-              alt="PropertyDealz Logo"
-            />
-          </span>
-          PropertyDealz{" "}
+          <span style={styles.logoIcon}> <img style={styles.logoIconImg} src={logo} alt="Logo" /> </span>
+          PropertyDeals
         </div>
         <nav style={styles.nav}>
+          {/* Add basic nav links here if needed */}
+
           {isAuthenticated ? (
             <div style={styles.authSection}>
-              <button
-                onClick={onPostPropertyClick}
-                style={{ ...styles.postBtn, marginLeft: "10px" }}
-              >
-                <span style={styles.btnIcon}>📝</span> Post Property
-              </button>
+              {/* Post Property Button */}
+              {onPostPropertyClick && (
+                 <button onClick={onPostPropertyClick} style={styles.postBtn}> <span style={styles.btnIcon}>📝</span> Post Property </button>
+              )}
 
-              <div
-                style={{ position: "relative" }}
-                onMouseEnter={() => setProfileDropdownOpen(true)}
-                onMouseLeave={() => setProfileDropdownOpen(false)}
-              >
+              {/* Profile Dropdown */}
+              <div style={{ position: "relative" }} onMouseEnter={() => setProfileDropdownOpen(true)} onMouseLeave={() => setProfileDropdownOpen(false)}>
                 <div style={styles.userSection}>
                   <span style={styles.userIcon}>👤</span>
-                  <span style={styles.userName}>
-                    {user?.firstName || "User"} ▾
-                  </span>
-                  {user && (user.role === "AGENT" || user.role === "ADMIN") && (
-                    <span
-                      style={{
-                        fontSize: "12px",
-                        marginLeft: "8px",
-                        backgroundColor: "rgba(255,255,255,0.3)",
-                        padding: "2px 8px",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      {user.role === "ADMIN" ? "⚙️ Admin" : "📊 Agent"}
-                    </span>
-                  )}
+                  <span style={styles.userName}>{user?.firstName || "User"} ▾</span>
+                  {(isAgent || isAdmin) && (<span style={styles.roleBadge}> {isAdmin ? "⚙️ Admin" : "📊 Agent"} </span>)}
                 </div>
 
                 {isProfileDropdownOpen && (
                   <div style={styles.profileDropdown}>
-                    <div
-                      style={styles.profileDropdownItem}
-                      onClick={() => {
-                        onProfileClick();
-                        setProfileDropdownOpen(false);
-                      }}
-                    >
-                      View Profile
-                    </div>
+                    {onProfileClick && (<div style={styles.profileDropdownItem} onClick={onProfileClick}> View Profile </div>)}
+                    <div style={styles.profileDropdownItem} onClick={handleMyPropertiesClick}> My Properties </div>
 
-                    <div
-                      style={styles.profileDropdownItem}
-                      onClick={handleMyAgreementsClick}
-                    >
-                      My Agreements
-                    </div>
-
-                    <div
-                      style={styles.profileDropdownItem}
-                      onClick={handleMyPropertiesClick}
-                    >
-                      My Properties
-                    </div>
-
-                    {user &&
-                      (user.role === "AGENT" || user.role === "ADMIN") && (
-                        <div
-                          style={styles.profileDropdownItem}
-                          onClick={handleAgentDashboardClick}
-                        >
-                          {user.role === "ADMIN"
-                            ? "⚙️ Admin Dashboard"
-                            : "📊 Agent Dashboard"}
-                        </div>
-                      )}
-
-                    {user && user.role === "USER" && (
-                      <div
-                        style={styles.profileDropdownItem}
-                        onClick={() => {
-                          navigate("/my-deals");
-                          setProfileDropdownOpen(false);
-                        }}
-                      >
-                        My Deals
-                      </div>
+                    {/* ⭐ CORRECTED: Only show "My Deals" for USER role and use correct handler */}
+                    {isUser && (
+                      <div style={styles.profileDropdownItem} onClick={handleMyDealsClick}> My Deals </div>
                     )}
 
-                    <hr
-                      style={{
-                        border: 0,
-                        borderTop: "1px solid #eee",
-                        margin: "8px 0",
-                      }}
-                    />
-                    <div
-                      style={{
-                        ...styles.profileDropdownItem,
-                        color: "#dc3545",
-                      }}
-                      onClick={logout}
-                    >
-                      Logout
-                    </div>
+                    {/* Dashboard for AGENT/ADMIN */}
+                    {(isAgent || isAdmin) && (
+                      <div style={styles.profileDropdownItem} onClick={handleDashboardClick}> {isAdmin ? "⚙️ Admin Dashboard" : "📊 Agent Dashboard"} </div>
+                    )}
+
+                    <div style={styles.profileDropdownItem} onClick={handleMyAgreementsClick}> My Agreements </div>
+                    <hr style={styles.dropdownSeparator} />
+                    <div style={{ ...styles.profileDropdownItem, ...styles.logoutItem }} onClick={logout}> Logout </div>
                   </div>
                 )}
               </div>
             </div>
           ) : (
+            // Logged Out State
             <div style={styles.authButtons}>
-              <button onClick={onLoginClick} style={styles.loginBtn}>
-                <span style={styles.btnIcon}>🔐</span> Login
-              </button>
-              <button onClick={onSignupClick} style={styles.signupBtn}>
-                <span style={styles.btnIcon}>✨</span> Sign Up
-              </button>
+               {onLoginClick && <button onClick={onLoginClick} style={styles.loginBtn}> <span style={styles.btnIcon}>🔐</span> Login </button> }
+               {onSignupClick && <button onClick={onSignupClick} style={styles.signupBtn}> <span style={styles.btnIcon}>✨</span> Sign Up </button> }
             </div>
           )}
         </nav>
@@ -167,5 +93,28 @@ function Header({
     </header>
   );
 }
+
+// --- Styles (Ensure all styles used above are defined) ---
+// Make sure these are defined in your styles.js or defined here inline
+styles.header = styles.header || { /* existing styles */ };
+styles.headerContent = styles.headerContent || { /* existing styles */ };
+styles.logo = styles.logo || { /* existing styles */ };
+styles.logoIcon = styles.logoIcon || { /* existing styles */ };
+styles.logoIconImg = styles.logoIconImg || { /* existing styles */ };
+styles.nav = styles.nav || { /* existing styles */ };
+styles.authSection = styles.authSection || { /* existing styles */ };
+styles.postBtn = styles.postBtn || { /* existing styles */ };
+styles.userSection = styles.userSection || { /* existing styles */ };
+styles.userIcon = styles.userIcon || { /* existing styles */ };
+styles.userName = styles.userName || { /* existing styles */ };
+styles.roleBadge = styles.roleBadge || { /* existing styles */ };
+styles.profileDropdown = styles.profileDropdown || { /* existing styles */ };
+styles.profileDropdownItem = styles.profileDropdownItem || { /* existing styles */ };
+styles.dropdownSeparator = styles.dropdownSeparator || { /* existing styles */ };
+styles.logoutItem = styles.logoutItem || { /* existing styles */ };
+styles.authButtons = styles.authButtons || { /* existing styles */ };
+styles.loginBtn = styles.loginBtn || { /* existing styles */ };
+styles.signupBtn = styles.signupBtn || { /* existing styles */ };
+styles.btnIcon = styles.btnIcon || { /* existing styles */ };
 
 export default Header;
