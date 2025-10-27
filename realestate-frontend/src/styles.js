@@ -113,7 +113,7 @@ export const styles = {
   headerContent: {
     maxWidth: "1700px",
     margin: "0 auto",
-    padding: "clamp(12px, 2vw, 16px) clamp(16px, 3vw, 32px)",
+    padding: " clamp(4px, 0.8vw, 8px) clamp(6px, 1.5vw, 12px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -130,14 +130,13 @@ export const styles = {
     fontWeight: 800,
     cursor: "pointer",
     transition: "transform 0.3s ease",
-    animation: "logoFloat 3s ease-in-out infinite",
   },
 
   logoIcon: {
     fontSize: "clamp(24px, 4vw, 32px)",
   },
-  logoIconImg:{
-  height: "60px"
+  logoIconImg: {
+    height: "60px",
   },
 
   nav: {
