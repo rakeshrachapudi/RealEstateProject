@@ -515,25 +515,6 @@ public class DealController {
         }
     }
 
-    // ==================== HELPER METHODS ====================
-
-    /**
-     * @deprecated This method validates against non-existent roles "BUYER", "SELLER".
-     * Use actual DB roles ('USER', 'AGENT', 'ADMIN') for validation if needed elsewhere.
-     */
-    @Deprecated
-    private boolean isValidRole(String role) {
-        // This method is likely not needed anymore as we use the actual role from the User object.
-        // Keeping it temporarily to avoid breaking existing calls, but marking as deprecated.
-        logger.warn("⚠️ isValidRole method called with role: '{}'. This method may be deprecated.", role);
-        return role != null &&
-                (role.equalsIgnoreCase("BUYER") || // Invalid role
-                        role.equalsIgnoreCase("SELLER") || // Invalid role
-                        role.equalsIgnoreCase("AGENT") || // Valid role
-                        role.equalsIgnoreCase("ADMIN")); // Valid role
-    }
-
-
     /**
      * Converts DealStatus entity to DealDetailDTO.
      * Moved from DealService to be a private helper here for encapsulation if preferred,
