@@ -145,6 +145,7 @@ const DealDetailModal = ({
 
   const updateLocalAndParent = (updatedDeal) => {
     setDeal(updatedDeal);
+    z;
     if (typeof onUpdate === "function") onUpdate(updatedDeal);
   };
 
@@ -661,18 +662,18 @@ const DealDetailModal = ({
         </div>
       </div>
 
-       {/* Document Upload Modal */}
-        {showDocUpload && (
-          <DocumentUploadModal
-            dealId={dealId}  // ✅ Correct
-            propertyId={deal.propertyId || deal.property?.id}  // ✅ Added
-            onClose={() => setShowDocUpload(false)}
-            onSuccess={(url) => {
-              console.log('✅ Document uploaded:', url);
-              // Optionally refresh the deal data here
-            }}
-          />
-        )}
+      {/* Document Upload Modal */}
+      {showDocUpload && (
+        <DocumentUploadModal
+          dealId={dealId}
+          propertyId={deal.propertyId || deal.property?.id}
+          onClose={() => setShowDocUpload(false)}
+          onSuccess={(url) => {
+            console.log('✅ Document uploaded:', url);
+            // Optionally refresh the deal data here
+          }}
+        />
+      )}
     </div>
   );
 };
