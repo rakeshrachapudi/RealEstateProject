@@ -9,6 +9,14 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
@@ -19,45 +27,48 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // CORS is handled by nginx - no need for Spring CORS configuration
+    // ✅ Official Spring Security CORS Configuration Source (not just CorsFilter)
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of(
+                "https://propertydealz.in",
+                "https://www.propertydealz.in",
+                "http://propertydealz.in",
+                "http://www.propertydealz.in",
+                "http://localhost:3000"
+        ));
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization", "Content-Type"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // CORS disabled - handled by nginx
                 .cors(cors -> cors.disable())
-
-                // CSRF disabled for stateless REST API
                 .csrf(csrf -> csrf.disable())
-
                 .authorizeHttpRequests(authz -> authz
-                        // Allow all OPTIONS requests (preflight)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // Public endpoints
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/login/**").permitAll()
                         .requestMatchers("/api/properties/**").permitAll()
                         .requestMatchers("/api/areas/**").permitAll()
                         .requestMatchers("/api/users/**").permitAll()
+                        .requestMatchers("/api/deals/**").permitAll()
                         .requestMatchers("/api/upload/image/**").permitAll()
                         .requestMatchers("/api/property-types/**").permitAll()
-
-                        // ⚠️ IMPORTANT: Specific rules MUST come BEFORE general rules
-                        // Admin-only deal endpoints
                         .requestMatchers("/api/deals/admin/**").hasAuthority("ADMIN")
                         .requestMatchers("/api/deals/stage/**").hasAuthority("ADMIN")
-
-                        // General deals endpoints (must come AFTER specific admin rules)
-                        .requestMatchers("/api/deals/**").permitAll()
-
-                        // Agent endpoints require authentication
                         .requestMatchers("/api/agents/**").authenticated()
-
-                        // All other requests require authentication
                         .anyRequest().authenticated()
                 )
-
-                // Stateless session management for REST API
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
