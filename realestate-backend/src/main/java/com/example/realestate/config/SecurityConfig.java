@@ -64,8 +64,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/deals/**").permitAll()
                         .requestMatchers("/api/upload/image/**").permitAll()
                         .requestMatchers("/api/property-types/**").permitAll()
-                        .requestMatchers("/api/deals/admin/**").hasAuthority("ADMIN")
-                        .requestMatchers("/api/deals/stage/**").hasAuthority("ADMIN")
+
                         .requestMatchers("/api/agents/**").authenticated()
                         .anyRequest().authenticated()
                 )
