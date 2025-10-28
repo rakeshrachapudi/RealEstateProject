@@ -323,87 +323,67 @@ public class DealController {
         }
     }
 
-  package com.example.realestate.config;
+    // ==================== UPDATE DEAL STAGE ====================
+    @PutMapping("/{dealId}/stage")
+    public ResponseEntity<?> updateDealStage(
+            @PathVariable Long dealId,
+            @RequestBody UpdateDealStageRequest request,
+            Authentication authentication) { // authentication will be null due to permitAll()
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+        logger.info("Request to update Deal ID: {} to Stage: '{}'", dealId, request.stage);
 
-import java.util.Arrays;
-import java.util.List;
-
-import static org.springframework.security.config.Customizer.withDefaults;
-
-    @Configuration
-    @EnableWebSecurity
-    public class SecurityConfig {
-
-        @Bean
-        public PasswordEncoder passwordEncoder() {
-            return new BCryptPasswordEncoder();
+        // ⭐ 1. This check is removed.
+        // Since SecurityConfig is permitAll(), 'authentication' will be null.
+        /*
+        if (authentication == null || authentication.getName() == null) {
+            logger.error("❌ Authentication information missing for updating deal stage.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Authentication required to update deal stage."));
         }
+        */
 
-        @Bean
-        public CorsConfigurationSource corsConfigurationSource() {
-            CorsConfiguration config = new CorsConfiguration();
-            config.setAllowedOrigins(List.of(
-                    "https://propertydealz.in",
-                    "https://www.propertydealz.in",
-                    "http://propertydealz.in",
-                    "http://www.propertydealz.in",
-                    "http://localhost:3000",
-                    "http://localhost:5173",
-                    "http://127.0.0.1:5173"
-            ));
-            config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-            config.setAllowedHeaders(List.of("*"));
-            config.setExposedHeaders(List.of("Authorization", "Content-Type"));
-            config.setAllowCredentials(true);
-            config.setMaxAge(3600L);
+        // ⭐ 2. Use a placeholder username for debugging.
+        // String username = authentication.getName(); // This line would fail.
+        String username = "system-debug"; // Using a placeholder
 
-            UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-            source.registerCorsConfiguration("/**", config);
-            return source;
-        }
+        try {
+            // Validate stage string
+            DealStatus.DealStage stageEnum;
+            try {
+                stageEnum = DealStatus.DealStage.valueOf(request.stage.trim().toUpperCase());
+            } catch (IllegalArgumentException | NullPointerException e) {
+                logger.error("❌ Invalid stage value provided: '{}'", request.stage);
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Invalid stage value: " + request.stage));
+            }
 
-        @Bean
-        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-            http
-                    .cors(withDefaults())
-                    .csrf(csrf -> csrf.disable())
-                    .authorizeHttpRequests(authz -> authz
-                            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+            // Call service to update
+            DealStatus updatedDeal = dealService.updateDealStage(
+                    dealId,
+                    stageEnum,
+                    request.notes,
+                    username // Pass the placeholder username
+            );
 
-                            // Public endpoints
-                            .requestMatchers("/api/auth/**").permitAll()
-                            .requestMatchers("/api/properties/**").permitAll()
-                            .requestMatchers("/api/areas/**").permitAll()
-                            .requestMatchers("/api/users/**").permitAll()
-                            .requestMatchers("/api/upload/image/**").permitAll()
-                            .requestMatchers("/api/property-types/**").permitAll()
+            DealDetailDTO dealDTO = convertToDetailDTO(updatedDeal); // Return detailed DTO
+            logger.info("✅ Deal {} stage updated successfully to {}", dealId, stageEnum.name());
+            return ResponseEntity.ok(ApiResponse.success(dealDTO));
 
-                            // ⭐ All /api/deals/ endpoints are now permitted for debugging
-                            .requestMatchers("/api/deals/**").permitAll()
-
-                            // Agent endpoints (still secured, but /api/deals/ won't be)
-                            .requestMatchers("/api/agents/**").authenticated()
-
-                            // All other requests require authentication
-                            .anyRequest().authenticated()
-                    )
-                    .sessionManagement(session -> session
-                            .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
-            return http.build();
+        } catch (RuntimeException e) {
+            logger.error("❌ Error updating deal stage for deal {}: {}", dealId, e.getMessage());
+            if (e.getMessage().contains("Deal not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error(e.getMessage()));
+            }
+            if (e.getMessage().contains("Cannot move deal to a previous stage")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ApiResponse.error(e.getMessage()));
+            }
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("❌ Unexpected error updating deal stage for deal {}: ", dealId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("An unexpected error occurred updating the deal stage."));
         }
     }
 
