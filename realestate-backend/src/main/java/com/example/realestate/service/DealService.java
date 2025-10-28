@@ -155,8 +155,10 @@ public class DealService {
 
         List<DealStatus> deals = new ArrayList<>();
         // Normalize the role string: convert to uppercase and handle null
-        String normalizedRole = (userRole != null) ? userRole.trim().toUpperCase() : "UNKNOWN";
+        logger.info("Before Normalized role for processing:");
+        String normalizedRole = (userRole != null) ? userRole : "UNKNOWN";
         logger.info("Normalized role for processing: '{}'", normalizedRole);
+
 
 
         switch (normalizedRole) {
