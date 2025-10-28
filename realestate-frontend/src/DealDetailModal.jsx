@@ -661,13 +661,18 @@ const DealDetailModal = ({
         </div>
       </div>
 
-      {/* Document Upload Modal */}
-      {showDocUpload && (
-        <DocumentUploadModal
-          deal={deal}
-          onClose={() => setShowDocUpload(false)}
-        />
-      )}
+       {/* Document Upload Modal */}
+        {showDocUpload && (
+          <DocumentUploadModal
+            dealId={dealId}  // ✅ Correct
+            propertyId={deal.propertyId || deal.property?.id}  // ✅ Added
+            onClose={() => setShowDocUpload(false)}
+            onSuccess={(url) => {
+              console.log('✅ Document uploaded:', url);
+              // Optionally refresh the deal data here
+            }}
+          />
+        )}
     </div>
   );
 };
