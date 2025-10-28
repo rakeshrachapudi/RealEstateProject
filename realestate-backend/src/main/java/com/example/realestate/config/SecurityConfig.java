@@ -63,6 +63,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/**").permitAll()
                         .requestMatchers("/api/deals/**").permitAll()
                         .requestMatchers("/api/upload/image/**").permitAll()
+                        .requestMatchers("/api/upload/property-image/**").permitAll()
                         .requestMatchers("/api/upload/document/**").permitAll() // ✅ NEW
                         .requestMatchers("/api/upload/deal-document/**").permitAll() // ✅ NEW
                         .requestMatchers("/api/property-types/**").permitAll()
