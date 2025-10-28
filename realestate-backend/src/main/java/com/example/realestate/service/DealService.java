@@ -151,6 +151,7 @@ public class DealService {
      */
     public List<DealDetailDTO> getDealsByRole(Long userId, String userRole) {
         // Log the exact input received from the controller
+        logger.info("Fetching deals ::::  getDealsByRole");
         logger.info("Fetching deals for user ID: {} with provided role: '{}'", userId, userRole);
 
         List<DealStatus> deals = new ArrayList<>();
