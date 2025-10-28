@@ -42,7 +42,7 @@ public class DealController {
             @PathVariable Long userId,
             @PathVariable String userRole, // This path variable is now ignored
             Authentication authentication) {
-
+        logger.info("Deal Controller started");
         // Log the received path variable, but note that it won't be used for logic
         logger.info("Received request to fetch deals for user {} (Path role: '{}' - will be ignored)", userId, userRole);
 
