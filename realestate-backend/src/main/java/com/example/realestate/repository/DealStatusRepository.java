@@ -47,6 +47,37 @@ public interface DealStatusRepository extends JpaRepository<DealStatus, Long> {
     @Query("SELECT d FROM DealStatus d WHERE d.agent.id = :agentId AND d.stage = :stage")
     List<DealStatus> findByAgentIdAndStage(@Param("agentId") Long agentId, @Param("stage") DealStatus.DealStage stage);
 
+    // Fetch a deal and all its relationships by ID
+    @Query("""
+       SELECT d FROM DealStatus d
+       LEFT JOIN FETCH d.property p
+       LEFT JOIN FETCH d.buyer b
+       LEFT JOIN FETCH d.agent a
+       WHERE d.id = :dealId
+       """)
+    Optional<DealStatus> findDealWithRelations(@Param("dealId") Long dealId);
+
+    // Fetch all deals for a buyer with related entities
+    @Query("""
+       SELECT DISTINCT d FROM DealStatus d
+       LEFT JOIN FETCH d.property p
+       LEFT JOIN FETCH d.buyer b
+       LEFT JOIN FETCH d.agent a
+       WHERE d.buyer.id = :buyerId
+       """)
+    List<DealStatus> findDealsWithRelationsByBuyerId(@Param("buyerId") Long buyerId);
+
+    // Fetch all deals for an agent with related entities
+    @Query("""
+       SELECT DISTINCT d FROM DealStatus d
+       LEFT JOIN FETCH d.property p
+       LEFT JOIN FETCH d.buyer b
+       LEFT JOIN FETCH d.agent a
+       WHERE d.agent.id = :agentId
+       """)
+    List<DealStatus> findDealsWithRelationsByAgentId(@Param("agentId") Long agentId);
+
+
     // Check if deal exists
     boolean existsByPropertyIdAndBuyerId(Long propertyId, Long buyerId);
 

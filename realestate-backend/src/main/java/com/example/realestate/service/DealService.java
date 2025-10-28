@@ -419,8 +419,9 @@ public class DealService {
                                       String notes, String updatedByUsername) {
         logger.info("Attempting to update deal {} to stage {} by user {}", dealId, newStage, updatedByUsername);
 
-        DealStatus deal = dealStatusRepository.findById(dealId)
-                .orElseThrow(() -> new RuntimeException("Deal not found with ID: " + dealId));
+        DealStatus deal = dealStatusRepository.findDealWithRelations(dealId)
+                .orElseThrow(() -> new RuntimeException("Deal not found"));
+
 
         // Prevent moving to a previous stage (based on enum order)
         if (deal.getStage() != null && newStage.getOrder() < deal.getStage().getOrder()) {
