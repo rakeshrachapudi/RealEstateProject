@@ -1,5 +1,5 @@
 // Header.jsx (Unchanged - Navigation Fixed)
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
 import { styles } from "../styles.js"; // Assuming styles are defined/imported here
@@ -16,19 +16,39 @@ function Header({
   const navigate = useNavigate();
   const location = useLocation();
 
+  const leaveTimeout = useRef(null);
+
   // Close dropdown on navigation
   useEffect(() => {
     setProfileDropdownOpen(false);
   }, [location.pathname]);
 
-  const handleMyAgreementsClick = () => { navigate("/my-agreements"); };
-  const handleMyPropertiesClick = () => { navigate("/my-properties"); };
+  const handleMouseEnter = () => {
+    clearTimeout(leaveTimeout.current);
+    setProfileDropdownOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    leaveTimeout.current = setTimeout(() => {
+      setProfileDropdownOpen(false);
+    }, 300); // You can adjust this delay (in milliseconds)
+  };
+
+  const handleMyAgreementsClick = () => {
+    navigate("/my-agreements");
+  };
+  const handleMyPropertiesClick = () => {
+    navigate("/my-properties");
+  };
   const handleDashboardClick = () => {
-    if (user?.role === "ADMIN") navigate("/admin-deals"); // Admin dashboard route
+    if (user?.role === "ADMIN")
+      navigate("/admin-deals"); // Admin dashboard route
     else if (user?.role === "AGENT") navigate("/agent-dashboard"); // Agent dashboard route
   };
   // ⭐ CORRECTED: Navigate USER to /my-deals
-  const handleMyDealsClick = () => { navigate("/my-deals"); }; // User deals route
+  const handleMyDealsClick = () => {
+    navigate("/my-deals");
+  }; // User deals route
 
   const isAdmin = user?.role === "ADMIN";
   const isAgent = user?.role === "AGENT";
@@ -38,8 +58,11 @@ function Header({
     <header style={styles.header}>
       <div style={styles.headerContent}>
         <div onClick={() => navigate("/")} style={styles.logo}>
-          <span style={styles.logoIcon}> <img style={styles.logoIconImg} src={logo} alt="Logo" /> </span>
-          PropertyDeals
+          <span style={styles.logoIcon}>
+            {" "}
+            <img style={styles.logoIconImg} src={logo} alt="Logo" />{" "}
+          </span>
+          PropertyDealz
         </div>
         <nav style={styles.nav}>
           {/* Add basic nav links here if needed */}
@@ -48,35 +71,92 @@ function Header({
             <div style={styles.authSection}>
               {/* Post Property Button */}
               {onPostPropertyClick && (
-                 <button onClick={onPostPropertyClick} style={styles.postBtn}> <span style={styles.btnIcon}>📝</span> Post Property </button>
+                <button onClick={onPostPropertyClick} style={styles.postBtn}>
+                  {" "}
+                  <span style={styles.btnIcon}>📝</span> Post Property{" "}
+                </button>
               )}
 
               {/* Profile Dropdown */}
-              <div style={{ position: "relative" }} onMouseEnter={() => setProfileDropdownOpen(true)} onMouseLeave={() => setProfileDropdownOpen(false)}>
+              <div
+                style={{ position: "relative" }}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+              >
                 <div style={styles.userSection}>
                   <span style={styles.userIcon}>👤</span>
-                  <span style={styles.userName}>{user?.firstName || "User"} ▾</span>
-                  {(isAgent || isAdmin) && (<span style={styles.roleBadge}> {isAdmin ? "⚙️ Admin" : "📊 Agent"} </span>)}
+                  <span style={styles.userName}>
+                    {user?.firstName || "User"} ▾
+                  </span>
+                  {(isAgent || isAdmin) && (
+                    <span style={styles.roleBadge}>
+                      {" "}
+                      {isAdmin ? "⚙️ Admin" : "📊 Agent"}{" "}
+                    </span>
+                  )}
                 </div>
 
                 {isProfileDropdownOpen && (
                   <div style={styles.profileDropdown}>
-                    {onProfileClick && (<div style={styles.profileDropdownItem} onClick={onProfileClick}> View Profile </div>)}
-                    <div style={styles.profileDropdownItem} onClick={handleMyPropertiesClick}> My Properties </div>
+                    {onProfileClick && (
+                      <div
+                        style={styles.profileDropdownItem}
+                        onClick={onProfileClick}
+                      >
+                        {" "}
+                        View Profile{" "}
+                      </div>
+                    )}
+                    <div
+                      style={styles.profileDropdownItem}
+                      onClick={handleMyPropertiesClick}
+                    >
+                      {" "}
+                      My Properties{" "}
+                    </div>
 
                     {/* ⭐ CORRECTED: Only show "My Deals" for USER role and use correct handler */}
                     {isUser && (
-                      <div style={styles.profileDropdownItem} onClick={handleMyDealsClick}> My Deals </div>
+                      <div
+                        style={styles.profileDropdownItem}
+                        onClick={handleMyDealsClick}
+                      >
+                        {" "}
+                        My Deals{" "}
+                      </div>
                     )}
 
                     {/* Dashboard for AGENT/ADMIN */}
                     {(isAgent || isAdmin) && (
-                      <div style={styles.profileDropdownItem} onClick={handleDashboardClick}> {isAdmin ? "⚙️ Admin Dashboard" : "📊 Agent Dashboard"} </div>
+                      <div
+                        style={styles.profileDropdownItem}
+                        onClick={handleDashboardClick}
+                      >
+                        {" "}
+                        {isAdmin
+                          ? "⚙️ Admin Dashboard"
+                          : "📊 Agent Dashboard"}{" "}
+                      </div>
                     )}
 
-                    <div style={styles.profileDropdownItem} onClick={handleMyAgreementsClick}> My Agreements </div>
+                    <div
+                      style={styles.profileDropdownItem}
+                      onClick={handleMyAgreementsClick}
+                    >
+                      {" "}
+                      My Agreements{" "}
+                    </div>
                     <hr style={styles.dropdownSeparator} />
-                    <div style={{ ...styles.profileDropdownItem, ...styles.logoutItem }} onClick={logout}> Logout </div>
+                    <div
+                      style={{
+                        ...styles.profileDropdownItem,
+                        ...styles.logoutItem,
+                      }}
+                      onClick={logout}
+                    >
+                      {" "}
+                      Logout{" "}
+                    </div>
                   </div>
                 )}
               </div>
@@ -84,8 +164,18 @@ function Header({
           ) : (
             // Logged Out State
             <div style={styles.authButtons}>
-               {onLoginClick && <button onClick={onLoginClick} style={styles.loginBtn}> <span style={styles.btnIcon}>🔐</span> Login </button> }
-               {onSignupClick && <button onClick={onSignupClick} style={styles.signupBtn}> <span style={styles.btnIcon}>✨</span> Sign Up </button> }
+              {onLoginClick && (
+                <button onClick={onLoginClick} style={styles.loginBtn}>
+                  {" "}
+                  <span style={styles.btnIcon}>🔐</span> Login{" "}
+                </button>
+              )}
+              {onSignupClick && (
+                <button onClick={onSignupClick} style={styles.signupBtn}>
+                  {" "}
+                  <span style={styles.btnIcon}>✨</span> Sign Up{" "}
+                </button>
+              )}
             </div>
           )}
         </nav>
@@ -96,25 +186,105 @@ function Header({
 
 // --- Styles (Ensure all styles used above are defined) ---
 // Make sure these are defined in your styles.js or defined here inline
-styles.header = styles.header || { /* existing styles */ };
-styles.headerContent = styles.headerContent || { /* existing styles */ };
-styles.logo = styles.logo || { /* existing styles */ };
-styles.logoIcon = styles.logoIcon || { /* existing styles */ };
-styles.logoIconImg = styles.logoIconImg || { /* existing styles */ };
-styles.nav = styles.nav || { /* existing styles */ };
-styles.authSection = styles.authSection || { /* existing styles */ };
-styles.postBtn = styles.postBtn || { /* existing styles */ };
-styles.userSection = styles.userSection || { /* existing styles */ };
-styles.userIcon = styles.userIcon || { /* existing styles */ };
-styles.userName = styles.userName || { /* existing styles */ };
-styles.roleBadge = styles.roleBadge || { /* existing styles */ };
-styles.profileDropdown = styles.profileDropdown || { /* existing styles */ };
-styles.profileDropdownItem = styles.profileDropdownItem || { /* existing styles */ };
-styles.dropdownSeparator = styles.dropdownSeparator || { /* existing styles */ };
-styles.logoutItem = styles.logoutItem || { /* existing styles */ };
-styles.authButtons = styles.authButtons || { /* existing styles */ };
-styles.loginBtn = styles.loginBtn || { /* existing styles */ };
-styles.signupBtn = styles.signupBtn || { /* existing styles */ };
-styles.btnIcon = styles.btnIcon || { /* existing styles */ };
+styles.header =
+  styles.header ||
+  {
+    /* existing styles */
+  };
+styles.headerContent =
+  styles.headerContent ||
+  {
+    /* existing styles */
+  };
+styles.logo =
+  styles.logo ||
+  {
+    /* existing styles */
+  };
+styles.logoIcon =
+  styles.logoIcon ||
+  {
+    /* existing styles */
+  };
+styles.logoIconImg =
+  styles.logoIconImg ||
+  {
+    /* existing styles */
+  };
+styles.nav =
+  styles.nav ||
+  {
+    /* existing styles */
+  };
+styles.authSection =
+  styles.authSection ||
+  {
+    /* existing styles */
+  };
+styles.postBtn =
+  styles.postBtn ||
+  {
+    /* existing styles */
+  };
+styles.userSection =
+  styles.userSection ||
+  {
+    /* existing styles */
+  };
+styles.userIcon =
+  styles.userIcon ||
+  {
+    /* existing styles */
+  };
+styles.userName =
+  styles.userName ||
+  {
+    /* existing styles */
+  };
+styles.roleBadge =
+  styles.roleBadge ||
+  {
+    /* existing styles */
+  };
+styles.profileDropdown =
+  styles.profileDropdown ||
+  {
+    /* existing styles */
+  };
+styles.profileDropdownItem =
+  styles.profileDropdownItem ||
+  {
+    /* existing styles */
+  };
+styles.dropdownSeparator =
+  styles.dropdownSeparator ||
+  {
+    /* existing styles */
+  };
+styles.logoutItem =
+  styles.logoutItem ||
+  {
+    /* existing styles */
+  };
+styles.authButtons =
+  styles.authButtons ||
+  {
+    /* existing styles */
+  };
+styles.loginBtn =
+  styles.loginBtn ||
+  {
+    /* existing styles */
+  };
+styles.signupBtn =
+  styles.signupBtn ||
+  {
+    /* existing styles */
+  };
+styles.btnIcon =
+  styles.btnIcon ||
+  {
+    /* existing styles */
+  };
 
 export default Header;

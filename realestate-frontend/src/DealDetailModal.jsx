@@ -145,7 +145,6 @@ const DealDetailModal = ({
 
   const updateLocalAndParent = (updatedDeal) => {
     setDeal(updatedDeal);
-    z;
     if (typeof onUpdate === "function") onUpdate(updatedDeal);
   };
 
