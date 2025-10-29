@@ -1,4 +1,4 @@
-// PropertyDetails.jsx (Complete File with Debug Log & Simplified Render Logic)
+// PropertyDetails.jsx (Complete File with Role Check for Buyer)
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
@@ -161,6 +161,7 @@ const PropertyDetails = () => {
 
   // --- Create Deal Handler ---
   const handleCreateDeal = async () => {
+    // 1. Check if the creator is an Agent/Admin
     if (!user || (user.role !== "AGENT" && user.role !== "ADMIN")) {
       setCreateError("Only agents/admins can create deals.");
       return;
@@ -173,6 +174,8 @@ const PropertyDetails = () => {
     setCreatingDeal(true);
     try {
       console.log("🔍 Searching buyer:", buyerPhone);
+
+      // 2. Search for the user (Buyer) by phone number
       const searchRes = await fetch(
         `${BACKEND_BASE_URL}/api/users/search?phone=${buyerPhone}`,
         {
@@ -191,9 +194,18 @@ const PropertyDetails = () => {
       if (!searchData?.success || !searchData.data?.id) {
         throw new Error("Buyer not found or invalid search response.");
       }
-      const buyer = searchData.data;
-      console.log("✅ Buyer found:", buyer.id);
 
+      const buyer = searchData.data;
+
+      // ⭐ 3. CRUCIAL ROLE CHECK: Ensure the found user is a 'USER' (Buyer) ⭐
+      if (buyer.role.toUpperCase() !== "USER") {
+        console.warn(`Attempted to create deal with non-buyer role: ${buyer.role}`);
+        throw new Error(`The user with this phone number is a ${buyer.role}. Only a 'USER' (Buyer) can be the buyer in a deal.`);
+      }
+
+      console.log("✅ Buyer found and validated (Role: USER):", buyer.id);
+
+      // 4. Create the deal
       const createRes = await fetch(`${BACKEND_BASE_URL}/api/deals/create`, {
         method: "POST",
         headers: {
