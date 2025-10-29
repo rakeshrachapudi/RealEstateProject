@@ -333,10 +333,11 @@ public class DealService {
                 .collect(Collectors.toList());
     }
 
-    // ==================== CONVERT TO DETAIL DTO ====================
+    // ==================== CONVERT TO DETAIL DTO (CORRECTED) ====================
     /**
      * Private helper method to convert a DealStatus entity to a DealDetailDTO.
      * Includes details of property, buyer, seller, and agent.
+     * ⭐ CORRECTED: Now includes document upload flags.
      */
     private DealDetailDTO convertToDealDetailDTO(DealStatus deal) {
         if (deal == null) {
@@ -354,6 +355,10 @@ public class DealService {
         dto.setCreatedAt(deal.getCreatedAt());
         dto.setUpdatedAt(deal.getUpdatedAt());
         dto.setLastUpdatedBy(deal.getLastUpdatedBy());
+
+        // ✅ ADDED: Document upload flags
+        dto.setAgreementUploaded(deal.isAgreementUploaded());
+        dto.setRegistrationUploaded(deal.isRegistrationUploaded());
 
         // Property & Seller Info
         Property property = deal.getProperty();
@@ -409,11 +414,20 @@ public class DealService {
         return dto;
     }
 
+    // ... inside DealService.java ...
+
+    // ... inside DealService.java ...
+
+    /**
+     * Updates the stage of a specific deal.
+     * ✅ CORRECTED: Enforces document upload rules ONLY for specific stages.
+     */
+// In: realestate-backend/src/main/java/com/example/realestate/service/DealService.java
+
     // ==================== UPDATE DEAL STAGE ====================
     /**
      * Updates the stage of a specific deal.
-     * Sets the timestamp for the new stage if not already set.
-     * Appends notes with user and timestamp.
+     * ✅ CORRECTED: Enforces document upload rules ONLY for specific stages.
      */
     public DealStatus updateDealStage(Long dealId, DealStatus.DealStage newStage,
                                       String notes, String updatedByUsername) {
@@ -422,6 +436,11 @@ public class DealService {
         DealStatus deal = dealStatusRepository.findDealWithRelations(dealId)
                 .orElseThrow(() -> new RuntimeException("Deal not found"));
 
+        // If stage is the same and no notes are added, do nothing
+        if (newStage == deal.getStage() && (notes == null || notes.trim().isEmpty())) {
+            logger.warn("ℹ️ No update needed: Deal {} is already in stage {}. No new notes provided.", dealId, newStage);
+            return deal; // Return existing deal without saving
+        }
 
         // Prevent moving to a previous stage (based on enum order)
         if (deal.getStage() != null && newStage.getOrder() < deal.getStage().getOrder()) {
@@ -429,17 +448,28 @@ public class DealService {
             throw new RuntimeException("Cannot move deal to a previous stage");
         }
 
-        // If stage is the same and no notes are added, do nothing
-        if (newStage == deal.getStage() && (notes == null || notes.trim().isEmpty())) {
-            logger.warn("ℹ️ No update needed: Deal {} is already in stage {}. No new notes provided.", dealId, newStage);
-            return deal; // Return existing deal without saving
+        // ==================== ✅ NEW BUSINESS LOGIC (Corrected) ====================
+        // We put the checks here, right before setting the new stage.
+
+        // RULE 1: Must upload Agreement before moving to REGISTRATION
+        if (newStage == DealStatus.DealStage.REGISTRATION && !deal.isAgreementUploaded()) {
+            logger.warn("❌ Failed update: Deal {} cannot move to REGISTRATION. Agreement is not uploaded.", dealId);
+            throw new RuntimeException("Agreement document must be uploaded to move to Registration stage.");
         }
 
+        // RULE 2: Must upload Registration before moving to PAYMENT
+        if (newStage == DealStatus.DealStage.PAYMENT && !deal.isRegistrationUploaded()) {
+            logger.warn("❌ Failed update: Deal {} cannot move to PAYMENT. Registration document is not uploaded.", dealId);
+            throw new RuntimeException("Registration document must be uploaded to move to Payment stage.");
+        }
+        // =========================================================================
+
+        // If the checks pass (or don't apply), we proceed to update the stage.
         DealStatus.DealStage oldStage = deal.getStage();
         deal.setStage(newStage);
         LocalDateTime now = LocalDateTime.now();
 
-        // Set the corresponding stage date field, but only if it's null (first time reaching this stage)
+        // Set the corresponding stage date field
         switch (newStage) {
             case INQUIRY: if (deal.getInquiryDate() == null) deal.setInquiryDate(now); break;
             case SHORTLIST: if (deal.getShortlistDate() == null) deal.setShortlistDate(now); break;
@@ -453,7 +483,6 @@ public class DealService {
         // Append notes if provided
         if (notes != null && !notes.trim().isEmpty()) {
             String existingNotes = deal.getNotes() != null ? deal.getNotes() : "";
-            // Add newline only if existing notes are present
             String separator = existingNotes.isEmpty() ? "" : "\n";
             String timestamp = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
             String newNotesEntry = "[" + timestamp + " - " + updatedByUsername + "] " + notes.trim();
@@ -462,14 +491,14 @@ public class DealService {
 
         // Update metadata
         deal.setLastUpdatedBy(updatedByUsername);
-        // Note: `updated_at` should be handled automatically by your JPA entity or DB trigger
-        // If not, uncomment the line below:
-        // deal.setUpdatedAt(LocalDateTime.now());
+        deal.setUpdatedAt(LocalDateTime.now()); // Explicitly set update time
 
         DealStatus updatedDeal = dealStatusRepository.save(deal);
         logger.info("✅ Deal {} updated successfully from {} to {}", dealId, oldStage, newStage);
         return updatedDeal;
     }
+
+// ... rest of your DealService.java file ...
 
     // ==================== OTHER DEAL METHODS ====================
 
@@ -592,4 +621,33 @@ public class DealService {
             return createDeal(propertyId, buyerId, agentId);
         }
     }
+
+    /**
+     * ✅ Sets document upload flag for a deal
+     */
+    @Transactional
+    public void setDocumentFlag(Long dealId, String docType) {
+        logger.info("Setting document flag - Deal ID: {}, DocType: {}", dealId, docType);
+
+        DealStatus deal = dealStatusRepository.findById(dealId)
+                .orElseThrow(() -> new RuntimeException("Deal not found with id: " + dealId));
+
+        if ("AGREEMENT".equalsIgnoreCase(docType)) {
+            deal.setAgreementUploaded(true);
+            logger.info("✅ Agreement document flag set to TRUE for Deal ID: {}", dealId);
+        } else if ("REGISTRATION".equalsIgnoreCase(docType)) {
+            deal.setRegistrationUploaded(true);
+            logger.info("✅ Registration document flag set to TRUE for Deal ID: {}", dealId);
+        } else {
+            logger.warn("⚠️ Invalid document type: {}", docType);
+            throw new IllegalArgumentException("Invalid document type: " + docType + ". Must be AGREEMENT or REGISTRATION");
+        }
+
+        deal.setUpdatedAt(LocalDateTime.now());
+        dealStatusRepository.save(deal);
+    }
+
+    // ==================== DUPLICATE METHODS REMOVED ====================
+    // The duplicate convertToDealDetailDTO and getDealsByRole methods
+    // that were here have been removed to fix the ambiguity error.
 }

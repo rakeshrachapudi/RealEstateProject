@@ -11,9 +11,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+// import org.springframework.web.multipart.MultipartFile; // Removed if not used
+// import java.io.IOException; // Removed if not used
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -322,7 +322,6 @@ public class DealController {
                     .body(ApiResponse.error("An unexpected error occurred fetching the deal."));
         }
     }
-
     // ==================== UPDATE DEAL STAGE ====================
     @PutMapping("/{dealId}/stage")
     public ResponseEntity<?> updateDealStage(
@@ -386,6 +385,8 @@ public class DealController {
                     .body(ApiResponse.error("An unexpected error occurred updating the deal stage."));
         }
     }
+
+
 
     // ==================== GET DEALS BY AGENT (for the agent themselves) ====================
     @GetMapping("/agent/{agentId}")
@@ -459,9 +460,9 @@ public class DealController {
         logger.info("Admin fetching deal stats by stage...");
         try {
             Map<String, Long> statsByStage = new HashMap<>();
-            for (DealStatus.DealStage stage : DealStatus.DealStage.values()) {
-                Long count = dealService.getCountByStage(stage);
-                statsByStage.put(stage.name(), count != null ? count : 0L); // Ensure count is not null
+            for (DealStatus.DealStage stageEnum : DealStatus.DealStage.values()) {
+                Long count = dealService.getCountByStage(stageEnum);
+                statsByStage.put(stageEnum.name(), count != null ? count : 0L); // Ensure count is not null
             }
 
             logger.info("✅ Stats by stage calculated");
@@ -524,8 +525,8 @@ public class DealController {
 
     /**
      * Converts DealStatus entity to DealDetailDTO.
-     * Moved from DealService to be a private helper here for encapsulation if preferred,
-     * or could remain public in DealService.
+     * ⭐ CORRECTED: Now includes document upload flags.
+     * This is a private helper for the CONTROLLER. The SERVICE has its own.
      */
     private DealDetailDTO convertToDetailDTO(DealStatus deal) {
         if (deal == null) return null;
@@ -539,6 +540,12 @@ public class DealController {
         dto.setCreatedAt(deal.getCreatedAt());
         dto.setUpdatedAt(deal.getUpdatedAt());
         dto.setLastUpdatedBy(deal.getLastUpdatedBy());
+
+        // ✅ ADDED: Document upload flags
+        dto.setAgreementUploaded(deal.isAgreementUploaded());
+        dto.setRegistrationUploaded(deal.isRegistrationUploaded());
+
+        // Stage Timestamps
         dto.setInquiryDate(deal.getInquiryDate());
         dto.setShortlistDate(deal.getShortlistDate());
         dto.setNegotiationDate(deal.getNegotiationDate());
@@ -572,6 +579,7 @@ public class DealController {
 
         if (deal.getAgent() != null) {
             dto.setAgentId(deal.getAgent().getId());
+            // Small correction: Use agent's last name, not buyer's
             dto.setAgentName(deal.getAgent().getFirstName() + " " + deal.getAgent().getLastName());
             dto.setAgentEmail(deal.getAgent().getEmail());
             dto.setAgentMobile(deal.getAgent().getMobileNumber());
@@ -650,12 +658,21 @@ public class DealController {
         public Long getAgentId() { return agentId; }
     }
 
+    // --- MODIFIED INNER DTO ---
     // Request body for updating deal stage
     static class UpdateDealStageRequest {
-        public String stage; // Should correspond to DealStage enum names (e.g., "NEGOTIATION")
-        public String notes;
+        private String stage; // Should correspond to DealStage enum names
+        private String notes;
+        private String username; // ✅ ADDED: Field to accept username
 
+        // Getters are needed for Jackson/Spring to deserialize
         public String getStage() { return stage; }
         public String getNotes() { return notes; }
+        public String getUsername() { return username; } // ✅ ADDED: Getter for username
+
+        // Setters might also be needed depending on framework usage
+        public void setStage(String stage) { this.stage = stage; }
+        public void setNotes(String notes) { this.notes = notes; }
+        public void setUsername(String username) { this.username = username; } // ✅ ADDED: Setter for username
     }
 }
