@@ -66,11 +66,23 @@ public class DealStatus {
     @Column
     private LocalDateTime completedDate;
 
+    // ==================== ✅ CORRECTED: DOCUMENT FLAGS ====================
+
+    // ⭐ FIX: Field name should NOT start with "is"
+    // ⭐ FIX: Column name updated
+    @Column(name = "agreement_uploaded", nullable = false, columnDefinition = "BIT DEFAULT 0")
+    private boolean agreementUploaded = false;
+
+    // ⭐ FIX: Field name should NOT start with "is"
+    // ⭐ FIX: Column name updated
+    @Column(name = "registration_uploaded", nullable = false, columnDefinition = "BIT DEFAULT 0")
+    private boolean registrationUploaded = false;
+
     // ==================== STAGE ENUM ====================
     public enum DealStage {
         INQUIRY(1),
         SHORTLIST(2),
-        NEGOTIATION(3),
+        NEGOTIATION(3), // Note: You may have a typo here, should it be NEGOTIATION?
         AGREEMENT(4),
         REGISTRATION(5),
         PAYMENT(6),
@@ -94,6 +106,29 @@ public class DealStatus {
     }
 
     // ==================== GETTERS & SETTERS ====================
+
+    // ⭐ FIX: Getters/Setters for corrected boolean fields
+
+    // The getter name IS correct (starts with "is")
+    public boolean isAgreementUploaded() {
+        return agreementUploaded;
+    }
+
+    public void setAgreementUploaded(boolean agreementUploaded) {
+        this.agreementUploaded = agreementUploaded;
+    }
+
+    // The getter name IS correct (starts with "is")
+    public boolean isRegistrationUploaded() {
+        return registrationUploaded;
+    }
+
+    public void setRegistrationUploaded(boolean registrationUploaded) {
+        this.registrationUploaded = registrationUploaded;
+    }
+
+
+    // --- Other Getters & Setters ---
     public Long getId() {
         return id;
     }
@@ -174,7 +209,6 @@ public class DealStatus {
         this.updatedAt = updatedAt;
     }
 
-    // Stage Date Getters & Setters
     public LocalDateTime getInquiryDate() {
         return inquiryDate;
     }

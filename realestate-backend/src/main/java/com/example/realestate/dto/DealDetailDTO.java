@@ -37,7 +37,7 @@ public class DealDetailDTO {
     private String agentEmail;
     private String agentMobile;
 
-    // ==================== NEW: STAGE DATE FIELDS ====================
+    // Stage Date Fields
     private LocalDateTime inquiryDate;
     private LocalDateTime shortlistDate;
     private LocalDateTime negotiationDate;
@@ -45,6 +45,10 @@ public class DealDetailDTO {
     private LocalDateTime registrationDate;
     private LocalDateTime paymentDate;
     private LocalDateTime completedDate;
+
+    // ✅ NEW: Document Upload Flags
+    private boolean agreementUploaded;
+    private boolean registrationUploaded;
 
     // Constructors
     public DealDetailDTO() {}
@@ -122,7 +126,7 @@ public class DealDetailDTO {
     public String getAgentMobile() { return agentMobile; }
     public void setAgentMobile(String agentMobile) { this.agentMobile = agentMobile; }
 
-    // Stage Date Getters and Setters (NEW)
+    // Stage Date Getters and Setters
     public LocalDateTime getInquiryDate() { return inquiryDate; }
     public void setInquiryDate(LocalDateTime inquiryDate) { this.inquiryDate = inquiryDate; }
 
@@ -143,4 +147,21 @@ public class DealDetailDTO {
 
     public LocalDateTime getCompletedDate() { return completedDate; }
     public void setCompletedDate(LocalDateTime completedDate) { this.completedDate = completedDate; }
+
+    // ✅ NEW: Document Upload Flag Getters and Setters
+    public boolean isAgreementUploaded() {
+        return agreementUploaded;
+    }
+
+    public void setAgreementUploaded(boolean agreementUploaded) {
+        this.agreementUploaded = agreementUploaded;
+    }
+
+    public boolean isRegistrationUploaded() {
+        return registrationUploaded;
+    }
+
+    public void setRegistrationUploaded(boolean registrationUploaded) {
+        this.registrationUploaded = registrationUploaded;
+    }
 }

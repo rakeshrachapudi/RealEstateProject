@@ -328,23 +328,16 @@ public class DealController {
     public ResponseEntity<?> updateDealStage(
             @PathVariable Long dealId,
             @RequestBody UpdateDealStageRequest request,
-            Authentication authentication) { // authentication will be null due to permitAll()
+            Authentication authentication) {
 
         logger.info("Request to update Deal ID: {} to Stage: '{}'", dealId, request.stage);
 
-        // ⭐ 1. This check is removed.
-        // Since SecurityConfig is permitAll(), 'authentication' will be null.
-        /*
         if (authentication == null || authentication.getName() == null) {
             logger.error("❌ Authentication information missing for updating deal stage.");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Authentication required to update deal stage."));
         }
-        */
-
-        // ⭐ 2. Use a placeholder username for debugging.
-        // String username = authentication.getName(); // This line would fail.
-        String username = "system-debug"; // Using a placeholder
+        String username = authentication.getName(); // Get username of logged-in user
 
         try {
             // Validate stage string
@@ -362,7 +355,7 @@ public class DealController {
                     dealId,
                     stageEnum,
                     request.notes,
-                    username // Pass the placeholder username
+                    username // Pass the username of the user making the change
             );
 
             DealDetailDTO dealDTO = convertToDetailDTO(updatedDeal); // Return detailed DTO
@@ -524,8 +517,8 @@ public class DealController {
 
     /**
      * Converts DealStatus entity to DealDetailDTO.
-     * Moved from DealService to be a private helper here for encapsulation if preferred,
-     * or could remain public in DealService.
+     * ⭐ CORRECTED: Now includes document upload flags.
+     * This is a private helper for the CONTROLLER. The SERVICE has its own.
      */
     private DealDetailDTO convertToDetailDTO(DealStatus deal) {
         if (deal == null) return null;
@@ -539,6 +532,12 @@ public class DealController {
         dto.setCreatedAt(deal.getCreatedAt());
         dto.setUpdatedAt(deal.getUpdatedAt());
         dto.setLastUpdatedBy(deal.getLastUpdatedBy());
+
+        // ✅ ADDED: Document upload flags
+        dto.setAgreementUploaded(deal.isAgreementUploaded());
+        dto.setRegistrationUploaded(deal.isRegistrationUploaded());
+
+        // Stage Timestamps
         dto.setInquiryDate(deal.getInquiryDate());
         dto.setShortlistDate(deal.getShortlistDate());
         dto.setNegotiationDate(deal.getNegotiationDate());
@@ -572,7 +571,7 @@ public class DealController {
 
         if (deal.getAgent() != null) {
             dto.setAgentId(deal.getAgent().getId());
-            dto.setAgentName(deal.getAgent().getFirstName() + " " + deal.getAgent().getLastName());
+            dto.setAgentName(deal.getAgent().getFirstName() + " " + deal.getBuyer().getLastName());
             dto.setAgentEmail(deal.getAgent().getEmail());
             dto.setAgentMobile(deal.getAgent().getMobileNumber());
         }

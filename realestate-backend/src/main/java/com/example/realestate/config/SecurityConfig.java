@@ -36,7 +36,9 @@ public class SecurityConfig {
                 "https://www.propertydealz.in",
                 "http://propertydealz.in",
                 "http://www.propertydealz.in",
-                "http://localhost:3000"
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "http://127.0.0.1:5173"
         ));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
@@ -52,7 +54,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.disable())
+                .cors(withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -63,7 +65,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/**").permitAll()
                         .requestMatchers("/api/deals/**").permitAll()
                         .requestMatchers("/api/upload/image/**").permitAll()
-                        .requestMatchers("/api/upload/property-image/**").permitAll()
+                        .requestMatchers("/api/upload/property-image/**").permitAll() // ✅ NEW
                         .requestMatchers("/api/upload/document/**").permitAll() // ✅ NEW
                         .requestMatchers("/api/upload/deal-document/**").permitAll() // ✅ NEW
                         .requestMatchers("/api/property-types/**").permitAll()

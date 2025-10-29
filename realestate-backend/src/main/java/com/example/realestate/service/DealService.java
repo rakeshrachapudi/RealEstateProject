@@ -333,10 +333,11 @@ public class DealService {
                 .collect(Collectors.toList());
     }
 
-    // ==================== CONVERT TO DETAIL DTO ====================
+    // ==================== CONVERT TO DETAIL DTO (CORRECTED) ====================
     /**
      * Private helper method to convert a DealStatus entity to a DealDetailDTO.
      * Includes details of property, buyer, seller, and agent.
+     * ⭐ CORRECTED: Now includes document upload flags.
      */
     private DealDetailDTO convertToDealDetailDTO(DealStatus deal) {
         if (deal == null) {
@@ -354,6 +355,10 @@ public class DealService {
         dto.setCreatedAt(deal.getCreatedAt());
         dto.setUpdatedAt(deal.getUpdatedAt());
         dto.setLastUpdatedBy(deal.getLastUpdatedBy());
+
+        // ✅ ADDED: Document upload flags
+        dto.setAgreementUploaded(deal.isAgreementUploaded());
+        dto.setRegistrationUploaded(deal.isRegistrationUploaded());
 
         // Property & Seller Info
         Property property = deal.getProperty();
@@ -592,4 +597,33 @@ public class DealService {
             return createDeal(propertyId, buyerId, agentId);
         }
     }
+
+    /**
+     * ✅ Sets document upload flag for a deal
+     */
+    @Transactional
+    public void setDocumentFlag(Long dealId, String docType) {
+        logger.info("Setting document flag - Deal ID: {}, DocType: {}", dealId, docType);
+
+        DealStatus deal = dealStatusRepository.findById(dealId)
+                .orElseThrow(() -> new RuntimeException("Deal not found with id: " + dealId));
+
+        if ("AGREEMENT".equalsIgnoreCase(docType)) {
+            deal.setAgreementUploaded(true);
+            logger.info("✅ Agreement document flag set to TRUE for Deal ID: {}", dealId);
+        } else if ("REGISTRATION".equalsIgnoreCase(docType)) {
+            deal.setRegistrationUploaded(true);
+            logger.info("✅ Registration document flag set to TRUE for Deal ID: {}", dealId);
+        } else {
+            logger.warn("⚠️ Invalid document type: {}", docType);
+            throw new IllegalArgumentException("Invalid document type: " + docType + ". Must be AGREEMENT or REGISTRATION");
+        }
+
+        deal.setUpdatedAt(LocalDateTime.now());
+        dealStatusRepository.save(deal);
+    }
+
+    // ==================== DUPLICATE METHODS REMOVED ====================
+    // The duplicate convertToDealDetailDTO and getDealsByRole methods
+    // that were here have been removed to fix the ambiguity error.
 }
