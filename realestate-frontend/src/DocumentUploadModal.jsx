@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
 import { BACKEND_BASE_URL } from "./config/config";
 
-const DocumentUploadModal = ({ dealId, propertyId, onClose, onSuccess }) => {
+const DocumentUploadModal = ({ dealId, propertyId, onClose, onSuccess, docType = null }) => {
     const [file, setFile] = useState(null);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState(null);
+
+    // Get document type label
+    const getDocTypeLabel = () => {
+        if (!docType) return 'Document';
+        if (docType === 'AGREEMENT') return 'Agreement Document';
+        if (docType === 'REGISTRATION') return 'Registration Document';
+        return 'Document';
+    };
 
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
@@ -43,39 +51,50 @@ const DocumentUploadModal = ({ dealId, propertyId, onClose, onSuccess }) => {
             return;
         }
 
+        // If docType is provided, dealId is required
+        if (docType && !dealId) {
+            setError('Deal ID is required for stage-specific documents');
+            return;
+        }
+
         setUploading(true);
         setError(null);
 
         try {
-            // ✅ ACTUAL FILE UPLOAD using FormData
             const formData = new FormData();
             formData.append('file', file);
 
-            // Use the new backend endpoint
-            const uploadEndpoint = dealId
-                ? `${BACKEND_BASE_URL}/api/upload/deal-document?dealId=${dealId}&propertyId=${propertyId}`
-                : `${BACKEND_BASE_URL}/api/upload/document?propertyId=${propertyId}`;
+            // Determine endpoint based on whether this is a deal document
+            let uploadEndpoint;
+
+            if (docType && dealId) {
+                // Stage-specific deal document (AGREEMENT or REGISTRATION)
+                uploadEndpoint = `${BACKEND_BASE_URL}/api/upload/deal-document?dealId=${dealId}&propertyId=${propertyId}&docType=${docType}`;
+            } else if (dealId) {
+                // General deal document (no specific type)
+                uploadEndpoint = `${BACKEND_BASE_URL}/api/upload/deal-document?dealId=${dealId}&propertyId=${propertyId}`;
+            } else {
+                // Property document (no deal)
+                uploadEndpoint = `${BACKEND_BASE_URL}/api/upload/document?propertyId=${propertyId}`;
+            }
 
             console.log('📤 Uploading to:', uploadEndpoint);
+            console.log('📄 Document type:', docType || 'General');
 
             const response = await fetch(uploadEndpoint, {
                 method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+                },
                 body: formData,
-                // ⚠️ DO NOT set Content-Type header - browser sets it automatically with boundary
             });
 
             const data = await response.json();
 
             if (data.success) {
                 console.log('✅ Document uploaded to:', data.url);
-
-                // Optional: If you need to save the document URL to the deal in database
-                if (dealId && data.url) {
-                    await saveDealDocumentUrl(dealId, data.url);
-                }
-
-                alert('✅ Document uploaded successfully');
-                onSuccess(data.url); // Pass the URL back to parent
+                alert(`✅ ${getDocTypeLabel()} uploaded successfully!`);
+                onSuccess(data.url, docType);
                 onClose();
             } else {
                 setError(data.message || 'Upload failed');
@@ -85,23 +104,6 @@ const DocumentUploadModal = ({ dealId, propertyId, onClose, onSuccess }) => {
             setError('Error uploading document: ' + err.message);
         } finally {
             setUploading(false);
-        }
-    };
-
-    // Optional: Save document URL to deal record in database
-    const saveDealDocumentUrl = async (dealId, docUrl) => {
-        try {
-            // If you have an endpoint to update deal with document URL
-            await fetch(`${BACKEND_BASE_URL}/api/deals/${dealId}/add-document`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ documentUrl: docUrl }),
-            });
-        } catch (err) {
-            console.error('Error saving document URL to deal:', err);
-            // Not critical - file is already uploaded to S3
         }
     };
 
@@ -129,7 +131,22 @@ const DocumentUploadModal = ({ dealId, propertyId, onClose, onSuccess }) => {
     return (
         <div style={modalStyle} onClick={onClose}>
             <div style={contentStyle} onClick={e => e.stopPropagation()}>
-                <h2 style={{ marginTop: 0 }}>📄 Upload Document</h2>
+                <h2 style={{ marginTop: 0 }}>
+                    📄 Upload {getDocTypeLabel()}
+                </h2>
+
+                {docType && (
+                    <div style={{
+                        backgroundColor: '#dbeafe',
+                        color: '#1e40af',
+                        padding: '12px',
+                        borderRadius: '6px',
+                        marginBottom: '15px',
+                        fontSize: '14px',
+                    }}>
+                        ℹ️ This document is required to proceed to the next stage
+                    </div>
+                )}
 
                 {error && (
                     <div style={{
@@ -162,7 +179,7 @@ const DocumentUploadModal = ({ dealId, propertyId, onClose, onSuccess }) => {
                     <label htmlFor="fileInput" style={{ cursor: 'pointer' }}>
                         <div style={{ fontSize: '32px', marginBottom: '8px' }}>📁</div>
                         <div style={{ fontWeight: '600', color: '#1e40af' }}>
-                            {file ? file.name : 'Click to upload document'}
+                            {file ? file.name : `Click to upload ${getDocTypeLabel()}`}
                         </div>
                         <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
                             PDF, DOC, DOCX (Max 10MB)
