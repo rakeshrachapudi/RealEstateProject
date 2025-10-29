@@ -322,61 +322,60 @@ public class DealController {
                     .body(ApiResponse.error("An unexpected error occurred fetching the deal."));
         }
     }
-
     // ==================== UPDATE DEAL STAGE ====================
     @PutMapping("/{dealId}/stage")
     public ResponseEntity<?> updateDealStage(
             @PathVariable Long dealId,
-            @RequestBody UpdateDealStageRequest request /* Authentication authentication REMOVED */ ) {
+            @RequestBody UpdateDealStageRequest request,
+            Authentication authentication) { // authentication will be null due to permitAll()
 
-        // Log the received username for debugging
-        logger.info("Request to update Deal ID: {} to Stage: '{}' by User: '{}'",
-                dealId, request.getStage(), request.getUsername());
+        logger.info("Request to update Deal ID: {} to Stage: '{}'", dealId, request.stage);
 
-        // --- REMOVED AUTHENTICATION CHECK ---
-
-        // --- Get username from request ---
-        String username = request.getUsername(); // Get username from the request body
-        if (username == null || username.trim().isEmpty()) {
-            logger.error("❌ Username missing in the request body for updating deal stage.");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST) // Use 400 Bad Request
-                    .body(ApiResponse.error("Username is required in the request to update deal stage."));
+        // ⭐ 1. This check is removed.
+        // Since SecurityConfig is permitAll(), 'authentication' will be null.
+        /*
+        if (authentication == null || authentication.getName() == null) {
+            logger.error("❌ Authentication information missing for updating deal stage.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Authentication required to update deal stage."));
         }
+        */
 
+        // ⭐ 2. Use a placeholder username for debugging.
+        // String username = authentication.getName(); // This line would fail.
+        String username = "system-debug"; // Using a placeholder
 
         try {
             // Validate stage string
             DealStatus.DealStage stageEnum;
             try {
-                // Use getStage() method from the DTO
-                stageEnum = DealStatus.DealStage.valueOf(request.getStage().trim().toUpperCase());
+                stageEnum = DealStatus.DealStage.valueOf(request.stage.trim().toUpperCase());
             } catch (IllegalArgumentException | NullPointerException e) {
-                logger.error("❌ Invalid stage value provided: '{}'", request.getStage());
+                logger.error("❌ Invalid stage value provided: '{}'", request.stage);
                 return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Invalid stage value: " + request.getStage()));
+                        .body(ApiResponse.error("Invalid stage value: " + request.stage));
             }
 
-            // Call service to update, passing username from request
+            // Call service to update
             DealStatus updatedDeal = dealService.updateDealStage(
                     dealId,
                     stageEnum,
-                    request.getNotes(), // Pass notes from request using getter
-                    username // Pass username from request
+                    request.notes,
+                    username // Pass the placeholder username
             );
 
             DealDetailDTO dealDTO = convertToDetailDTO(updatedDeal); // Return detailed DTO
-            logger.info("✅ Deal {} stage updated successfully to {} by {}", dealId, stageEnum.name(), username);
+            logger.info("✅ Deal {} stage updated successfully to {}", dealId, stageEnum.name());
             return ResponseEntity.ok(ApiResponse.success(dealDTO));
 
         } catch (RuntimeException e) {
             logger.error("❌ Error updating deal stage for deal {}: {}", dealId, e.getMessage());
-            if (e.getMessage().contains("must be uploaded") ||
-                    e.getMessage().contains("Cannot move deal to a previous stage")) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(ApiResponse.error(e.getMessage()));
-            }
             if (e.getMessage().contains("Deal not found")) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error(e.getMessage()));
+            }
+            if (e.getMessage().contains("Cannot move deal to a previous stage")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(ApiResponse.error(e.getMessage()));
             }
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
@@ -387,8 +386,6 @@ public class DealController {
         }
     }
 
-
-    // ⬇️⬇️⬇️ DUPLICATE METHOD REMOVED FROM HERE ⬇️⬇️⬇️
 
 
     // ==================== GET DEALS BY AGENT (for the agent themselves) ====================
