@@ -16,6 +16,8 @@ const AdminAgentsPage = () => {
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [editingAgent, setEditingAgent] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  // NEW STATE: To hold the calculated success rate
+  const [agentSuccessRate, setAgentSuccessRate] = useState(null);
 
   useEffect(() => {
     if (user?.role !== "ADMIN") {
@@ -75,16 +77,36 @@ const AdminAgentsPage = () => {
           ? data
           : [];
         setAgentDeals(deals);
+
+        // NEW: Calculate success rate immediately after fetching deals
+        calculateSuccessRate(deals);
       } else {
         console.error("Failed to fetch deals:", response.status);
         setAgentDeals([]);
+        setAgentSuccessRate(null); // Clear rate on failure
       }
     } catch (error) {
       console.error("Error fetching deals:", error);
       setAgentDeals([]);
+      setAgentSuccessRate(null); // Clear rate on failure
     } finally {
       setDealsLoading(false);
     }
+  };
+
+  // NEW FUNCTION: Logic to calculate the success rate
+  const calculateSuccessRate = (deals) => {
+    if (!deals || deals.length === 0) {
+      setAgentSuccessRate(0);
+      return;
+    }
+
+    const completedDeals = deals.filter(
+      (deal) => (deal.stage || deal.currentStage) === "COMPLETED"
+    ).length;
+
+    const rate = ((completedDeals / deals.length) * 100).toFixed(0);
+    setAgentSuccessRate(rate);
   };
 
   const filterAgents = (agentList, search) => {
@@ -135,13 +157,11 @@ const AdminAgentsPage = () => {
       if (response.ok) {
         const updated = await response.json();
         const updatedAgent = updated.data || editingAgent;
-        setAgents(
-          agents.map((a) => (a.id === editingAgent.id ? updatedAgent : a))
+        const newAgents = agents.map((a) =>
+          a.id === editingAgent.id ? updatedAgent : a
         );
-        filterAgents(
-          agents.map((a) => (a.id === editingAgent.id ? updatedAgent : a)),
-          searchTerm
-        );
+        setAgents(newAgents);
+        filterAgents(newAgents, searchTerm);
         setSelectedAgent(updatedAgent);
         setShowEditModal(false);
         setEditingAgent(null);
@@ -169,13 +189,12 @@ const AdminAgentsPage = () => {
         );
 
         if (response.ok) {
-          setAgents(agents.filter((a) => a.id !== agentId));
-          filterAgents(
-            agents.filter((a) => a.id !== agentId),
-            searchTerm
-          );
+          const newAgents = agents.filter((a) => a.id !== agentId);
+          setAgents(newAgents);
+          filterAgents(newAgents, searchTerm);
           setSelectedAgent(null);
           setAgentDeals([]);
+          setAgentSuccessRate(null); // Clear rate on deletion
           alert("Agent deleted successfully!");
         } else {
           alert("Failed to delete agent");
@@ -249,8 +268,11 @@ const AdminAgentsPage = () => {
                     ...styles.agentCard,
                     backgroundColor:
                       selectedAgent?.id === agent.id ? "#dbeafe" : "white",
+                    // Use explicit border properties to avoid React style warning
                     borderColor:
                       selectedAgent?.id === agent.id ? "#3b82f6" : "#e2e8f0",
+                    borderStyle: "solid",
+                    borderWidth: "1px",
                   }}
                   onClick={() => handleSelectAgent(agent)}
                 >
@@ -309,6 +331,26 @@ const AdminAgentsPage = () => {
                       {new Date(selectedAgent.createdAt).toLocaleDateString()}
                     </p>
                   </div>
+                  {/* NEW DISPLAY: Agent Success Rate */}
+                  <div>
+                    <p style={styles.label}>Success Rate</p>
+                    <p
+                      style={{
+                        ...styles.value,
+                        color:
+                          agentSuccessRate > 50
+                            ? "#10b981"
+                            : agentSuccessRate > 0
+                            ? "#f59e0b"
+                            : "#ef4444",
+                      }}
+                    >
+                      {agentSuccessRate !== null
+                        ? `${agentSuccessRate}%`
+                        : "N/A"}
+                    </p>
+                  </div>
+                  {/* END NEW DISPLAY */}
                 </div>
 
                 {selectedAgent.address && (
@@ -698,6 +740,7 @@ const AdminAgentsPage = () => {
   );
 };
 
+// Styles object (cleaned up agentCard border properties)
 const styles = {
   container: {
     maxWidth: 1700,
@@ -766,7 +809,8 @@ const styles = {
   agentCard: {
     padding: "12px",
     borderRadius: "8px",
-    border: "1px solid",
+    // Fix for style warning: Use explicit properties
+    border: "1px solid #e2e8f0",
     cursor: "pointer",
     transition: "all 0.2s",
   },
@@ -1042,6 +1086,7 @@ const styles = {
     fontSize: "14px",
     boxSizing: "border-box",
     fontFamily: "inherit",
+    marginTop: "4px",
   },
   textarea: {
     width: "100%",
@@ -1052,6 +1097,7 @@ const styles = {
     boxSizing: "border-box",
     minHeight: "100px",
     fontFamily: "inherit",
+    marginTop: "4px",
   },
   modalButtons: {
     display: "flex",

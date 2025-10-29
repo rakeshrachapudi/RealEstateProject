@@ -10,7 +10,7 @@ function MyPropertiesPage({ onPostPropertyClick }) {
   const { user } = useAuth();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(null); // Used for critical fetch errors (e.g., network down)
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,10 +37,21 @@ function MyPropertiesPage({ onPostPropertyClick }) {
 
     try {
       const response = await fetch(
-        `${BACKEND_BASE_URL}/api/properties/user/${user.id}`
+        `${BACKEND_BASE_URL}/api/properties/user/${user.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
       );
 
       console.log("Response status:", response.status);
+
+      if (response.status === 404 || response.status === 204) {
+        // Handle common "No content" or "Not found" response for empty list gracefully
+        setProperties([]);
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -53,9 +64,11 @@ function MyPropertiesPage({ onPostPropertyClick }) {
 
       console.log(`✅ Found ${propertiesArray.length} properties for user`);
       setProperties(propertiesArray);
+
     } catch (err) {
-      console.error("❌ No properties posted yet!:", err);
-      setError(err.message);
+      // Only set error for non-recoverable issues like network problems
+      console.error("❌ Error fetching properties:", err);
+      setError("Failed to load properties. Please check your connection.");
       setProperties([]);
     } finally {
       setLoading(false);
@@ -83,11 +96,12 @@ function MyPropertiesPage({ onPostPropertyClick }) {
     );
   }
 
+  // Display a critical error screen only for network/server failures
   if (error) {
     return (
       <div style={styles.container}>
         <div style={styles.errorContainer}>
-          <h2>❌ No Properties Posted Yet</h2>
+          <h2>❌ Loading Failed</h2>
           <p>{error}</p>
           <button onClick={fetchMyProperties} style={styles.retryBtn}>
             Try Again
@@ -97,6 +111,7 @@ function MyPropertiesPage({ onPostPropertyClick }) {
     );
   }
 
+  // --- Main Render Logic ---
   return (
     <div style={styles.container}>
       <div style={styles.pageHeader}>
@@ -145,6 +160,7 @@ function MyPropertiesPage({ onPostPropertyClick }) {
           </div>
         </>
       ) : (
+        // Simplified Empty State
         <div style={styles.emptyState}>
           <div style={styles.emptyIcon}>📭</div>
           <h3 style={styles.emptyTitle}>No Properties Posted Yet</h3>
@@ -152,7 +168,7 @@ function MyPropertiesPage({ onPostPropertyClick }) {
             Start by posting your first property to see it here
           </p>
           <button onClick={onPostPropertyClick} style={styles.postBtn}>
-            <span style={styles.btnIcon}>📝</span> Post Your First Property
+            <span style={styles.btnIcon}>📝</span> Post Your Property
           </button>
         </div>
       )}
