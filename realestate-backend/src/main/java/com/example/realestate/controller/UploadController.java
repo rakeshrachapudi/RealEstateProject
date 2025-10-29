@@ -9,15 +9,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/upload")
+@CrossOrigin(origins = "*")
 public class UploadController {
 
     private static final Logger logger = LoggerFactory.getLogger(UploadController.class);
@@ -25,225 +26,298 @@ public class UploadController {
     @Autowired
     private S3Service s3Service;
 
-    // Allowed image types
-    private static final List<String> ALLOWED_IMAGE_TYPES = Arrays.asList(
-            "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"
-    );
+    /**
+     * ⭐ NEW ENDPOINT - Upload image with propertyId (for editing existing properties)
+     * Images go to: properties/{propertyId}/images/{filename}
+     * This is the RECOMMENDED endpoint to use
+     */
+    @PostMapping("/property-image")
+    public ResponseEntity<Map<String, Object>> uploadPropertyImage(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "propertyId", required = true) Long propertyId) {
 
-    // Allowed document types
-    private static final List<String> ALLOWED_DOCUMENT_TYPES = Arrays.asList(
-            "application/pdf",
-            "application/msword", // .doc
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document" // .docx
-    );
+        logger.info("🔥 PROPERTY IMAGE UPLOAD REQUEST RECEIVED");
+        logger.info("📸 Property ID: {}", propertyId);
+        logger.info("📸 File: {}", file.getOriginalFilename());
+        logger.info("📸 File Size: {} bytes", file.getSize());
+        logger.info("📸 Content Type: {}", file.getContentType());
 
-    // Maximum file sizes
-    private static final long MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-    private static final long MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            // Validate propertyId
+            if (propertyId == null || propertyId <= 0) {
+                logger.error("❌ Invalid propertyId: {}", propertyId);
+                response.put("success", false);
+                response.put("message", "Valid property ID is required");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            // Validate file
+            if (file.isEmpty()) {
+                logger.error("❌ File is empty");
+                response.put("success", false);
+                response.put("message", "File is empty");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            // Validate file type
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                logger.error("❌ Invalid file type: {}", contentType);
+                response.put("success", false);
+                response.put("message", "Only image files are allowed");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            // Validate file size (10MB)
+            if (file.getSize() > 10 * 1024 * 1024) {
+                logger.error("❌ File too large: {} bytes", file.getSize());
+                response.put("success", false);
+                response.put("message", "File size must be less than 10MB");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            // Save to temp file
+            logger.info("💾 Creating temporary file...");
+            Path tempFile = Files.createTempFile("upload-", "-" + file.getOriginalFilename());
+            Files.copy(file.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
+            logger.info("✅ Temporary file created: {}", tempFile);
+
+            // Upload to S3 in property folder structure
+            logger.info("🚀 Uploading to S3: properties/{}/images/...", propertyId);
+            String fileUrl = s3Service.uploadPropertyImage(propertyId, tempFile,
+                    file.getOriginalFilename(), contentType);
+
+            // Clean up temp file
+            Files.deleteIfExists(tempFile);
+            logger.info("🗑️ Temporary file deleted");
+
+            logger.info("✅ ✅ ✅ PROPERTY IMAGE UPLOADED SUCCESSFULLY: {}", fileUrl);
+
+            response.put("success", true);
+            response.put("url", fileUrl);
+            response.put("message", "Property image uploaded successfully");
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("❌ ❌ ❌ ERROR UPLOADING PROPERTY IMAGE: ", e);
+            response.put("success", false);
+            response.put("message", "Upload failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
 
     /**
-     * Upload property image
-     * Endpoint: POST /api/upload/image?propertyId={propertyId}
+     * ⭐ LEGACY ENDPOINT - Upload image without propertyId (for new properties)
+     * Used during property creation when propertyId doesn't exist yet
+     * Images go to: temp/images/{filename}
      */
     @PostMapping("/image")
-    public ResponseEntity<?> uploadImage(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "propertyId", required = false) Long propertyId) {
+    public ResponseEntity<Map<String, Object>> uploadImage(@RequestParam("file") MultipartFile file) {
+        logger.info("📸 Legacy image upload endpoint called - File: {}", file.getOriginalFilename());
 
-        logger.info("📸 Image upload request - File: {}, Size: {} bytes, PropertyId: {}",
-                file.getOriginalFilename(), file.getSize(), propertyId);
+        Map<String, Object> response = new HashMap<>();
 
         try {
             // Validate file
             if (file.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("No file uploaded"));
+                response.put("success", false);
+                response.put("message", "File is empty");
+                return ResponseEntity.badRequest().body(response);
             }
 
-            if (file.getSize() > MAX_IMAGE_SIZE) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("File size exceeds 10MB limit"));
+            // Validate file type
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                response.put("success", false);
+                response.put("message", "Only image files are allowed");
+                return ResponseEntity.badRequest().body(response);
             }
 
-            if (!ALLOWED_IMAGE_TYPES.contains(file.getContentType())) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("Invalid file type. Only JPG, PNG, GIF, WebP allowed"));
+            // Validate file size (10MB)
+            if (file.getSize() > 10 * 1024 * 1024) {
+                response.put("success", false);
+                response.put("message", "File size must be less than 10MB");
+                return ResponseEntity.badRequest().body(response);
             }
 
-            // Create temp file
-            Path tempFile = Files.createTempFile("upload-", file.getOriginalFilename());
-            file.transferTo(tempFile.toFile());
+            // Save to temp file
+            Path tempFile = Files.createTempFile("upload-", "-" + file.getOriginalFilename());
+            Files.copy(file.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
 
-            String fileUrl;
+            // Upload to S3 in temp folder (will be moved later when property is created)
+            String key = "temp/images/" + System.currentTimeMillis() + "_" + file.getOriginalFilename();
+            String fileUrl = s3Service.uploadFile(key, tempFile, contentType);
 
-            if (propertyId != null && propertyId > 0) {
-                // Upload to property-specific folder
-                fileUrl = s3Service.uploadPropertyImage(
-                        propertyId,
-                        tempFile,
-                        file.getOriginalFilename(),
-                        file.getContentType()
-                );
-            } else {
-                // Upload to general properties folder
-                String s3Key = "properties/" + file.getOriginalFilename();
-                fileUrl = s3Service.uploadFile(s3Key, tempFile, file.getContentType());
-            }
-
-            // Delete temp file
+            // Clean up temp file
             Files.deleteIfExists(tempFile);
 
-            logger.info("✅ Image uploaded successfully: {}", fileUrl);
-            return ResponseEntity.ok(createSuccessResponse(fileUrl, "Image uploaded successfully"));
+            logger.info("✅ Image uploaded to temp location: {}", fileUrl);
 
-        } catch (Exception e) {
-            logger.error("❌ Image upload error: ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Failed to upload image: " + e.getMessage()));
+            response.put("success", true);
+            response.put("url", fileUrl);
+            response.put("message", "Image uploaded successfully");
+            return ResponseEntity.ok(response);
+
+        } catch (IOException e) {
+            logger.error("❌ Error uploading image: ", e);
+            response.put("success", false);
+            response.put("message", "Upload failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
     /**
-     * Upload property document (PDF, DOC, DOCX)
-     * Endpoint: POST /api/upload/document?propertyId={propertyId}
+     * ⭐ Upload property document (non-deal related documents)
+     * Documents go to: properties/{propertyId}/documents/{filename}
      */
     @PostMapping("/document")
-    public ResponseEntity<?> uploadDocument(
+    public ResponseEntity<Map<String, Object>> uploadPropertyDocument(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("propertyId") Long propertyId) {
+            @RequestParam(value = "propertyId", required = true) Long propertyId) {
 
-        logger.info("📄 Document upload request - File: {}, Size: {} bytes, PropertyId: {}",
-                file.getOriginalFilename(), file.getSize(), propertyId);
+        logger.info("📄 Property document upload - Property ID: {}, File: {}",
+                propertyId, file.getOriginalFilename());
+
+        Map<String, Object> response = new HashMap<>();
 
         try {
+            // Validate propertyId
+            if (propertyId == null || propertyId <= 0) {
+                response.put("success", false);
+                response.put("message", "Valid property ID is required");
+                return ResponseEntity.badRequest().body(response);
+            }
+
             // Validate file
             if (file.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("No file uploaded"));
+                response.put("success", false);
+                response.put("message", "File is empty");
+                return ResponseEntity.badRequest().body(response);
             }
 
-            if (propertyId == null || propertyId <= 0) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("Property ID is required"));
+            // Validate file type (documents only)
+            String contentType = file.getContentType();
+            if (contentType == null ||
+                    (!contentType.equals("application/pdf") &&
+                            !contentType.equals("application/msword") &&
+                            !contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))) {
+                response.put("success", false);
+                response.put("message", "Only PDF, DOC, and DOCX files are allowed");
+                return ResponseEntity.badRequest().body(response);
             }
 
-            if (file.getSize() > MAX_DOCUMENT_SIZE) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("File size exceeds 10MB limit"));
+            // Validate file size (10MB)
+            if (file.getSize() > 10 * 1024 * 1024) {
+                response.put("success", false);
+                response.put("message", "File size must be less than 10MB");
+                return ResponseEntity.badRequest().body(response);
             }
 
-            if (!ALLOWED_DOCUMENT_TYPES.contains(file.getContentType())) {
-                logger.warn("Invalid document type attempted: {}", file.getContentType());
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("Invalid file type. Only PDF, DOC, DOCX allowed"));
-            }
+            // Save to temp file
+            Path tempFile = Files.createTempFile("upload-", "-" + file.getOriginalFilename());
+            Files.copy(file.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
 
-            // Create temp file
-            Path tempFile = Files.createTempFile("upload-doc-", file.getOriginalFilename());
-            file.transferTo(tempFile.toFile());
+            // Upload to S3 in property documents folder
+            String fileUrl = s3Service.uploadPropertyDocument(propertyId, tempFile,
+                    file.getOriginalFilename(), contentType);
 
-            // Upload to S3 in property-specific folder
-            String fileUrl = s3Service.uploadPropertyDocument(
-                    propertyId,
-                    tempFile,
-                    file.getOriginalFilename(),
-                    file.getContentType()
-            );
-
-            // Delete temp file
+            // Clean up temp file
             Files.deleteIfExists(tempFile);
 
-            logger.info("✅ Document uploaded successfully: {}", fileUrl);
-            return ResponseEntity.ok(createSuccessResponse(fileUrl, "Document uploaded successfully"));
+            logger.info("✅ Property document uploaded: {}", fileUrl);
 
-        } catch (Exception e) {
-            logger.error("❌ Document upload error: ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Failed to upload document: " + e.getMessage()));
+            response.put("success", true);
+            response.put("url", fileUrl);
+            response.put("message", "Document uploaded successfully");
+            return ResponseEntity.ok(response);
+
+        } catch (IOException e) {
+            logger.error("❌ Error uploading property document: ", e);
+            response.put("success", false);
+            response.put("message", "Upload failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
     /**
-     * Upload deal document (for registration documents, agreements, etc.)
-     * Endpoint: POST /api/upload/deal-document?dealId={dealId}&propertyId={propertyId}
+     * ⭐ Upload deal document (deal-specific documents)
+     * Documents go to: properties/{propertyId}/deals/{dealId}/documents/{filename}
      */
     @PostMapping("/deal-document")
-    public ResponseEntity<?> uploadDealDocument(
+    public ResponseEntity<Map<String, Object>> uploadDealDocument(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("dealId") Long dealId,
-            @RequestParam("propertyId") Long propertyId) {
+            @RequestParam(value = "dealId", required = true) Long dealId,
+            @RequestParam(value = "propertyId", required = true) Long propertyId) {
 
-        logger.info("📑 Deal document upload request - File: {}, DealId: {}, PropertyId: {}",
-                file.getOriginalFilename(), dealId, propertyId);
+        logger.info("🔐 Deal document upload - Deal ID: {}, Property ID: {}, File: {}",
+                dealId, propertyId, file.getOriginalFilename());
+
+        Map<String, Object> response = new HashMap<>();
 
         try {
-            // Validate file
-            if (file.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("No file uploaded"));
-            }
-
+            // Validate IDs
             if (dealId == null || dealId <= 0) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("Deal ID is required"));
+                response.put("success", false);
+                response.put("message", "Valid deal ID is required");
+                return ResponseEntity.badRequest().body(response);
             }
 
             if (propertyId == null || propertyId <= 0) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("Property ID is required"));
+                response.put("success", false);
+                response.put("message", "Valid property ID is required");
+                return ResponseEntity.badRequest().body(response);
             }
 
-            if (file.getSize() > MAX_DOCUMENT_SIZE) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("File size exceeds 10MB limit"));
+            // Validate file
+            if (file.isEmpty()) {
+                response.put("success", false);
+                response.put("message", "File is empty");
+                return ResponseEntity.badRequest().body(response);
             }
 
-            if (!ALLOWED_DOCUMENT_TYPES.contains(file.getContentType())) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("Invalid file type. Only PDF, DOC, DOCX allowed"));
+            // Validate file type (documents only)
+            String contentType = file.getContentType();
+            if (contentType == null ||
+                    (!contentType.equals("application/pdf") &&
+                            !contentType.equals("application/msword") &&
+                            !contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))) {
+                response.put("success", false);
+                response.put("message", "Only PDF, DOC, and DOCX files are allowed");
+                return ResponseEntity.badRequest().body(response);
             }
 
-            // Create temp file
-            Path tempFile = Files.createTempFile("upload-deal-", file.getOriginalFilename());
-            file.transferTo(tempFile.toFile());
+            // Validate file size (10MB)
+            if (file.getSize() > 10 * 1024 * 1024) {
+                response.put("success", false);
+                response.put("message", "File size must be less than 10MB");
+                return ResponseEntity.badRequest().body(response);
+            }
 
-            // Upload to S3 in deal-specific folder
-            String fileUrl = s3Service.uploadDealDocument(
-                    dealId,
-                    propertyId,
-                    tempFile,
-                    file.getOriginalFilename(),
-                    file.getContentType()
-            );
+            // Save to temp file
+            Path tempFile = Files.createTempFile("upload-", "-" + file.getOriginalFilename());
+            Files.copy(file.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
 
-            // Delete temp file
+            // Upload to S3 in deal documents folder
+            String fileUrl = s3Service.uploadDealDocument(dealId, propertyId, tempFile,
+                    file.getOriginalFilename(), contentType);
+
+            // Clean up temp file
             Files.deleteIfExists(tempFile);
 
-            logger.info("✅ Deal document uploaded successfully: {}", fileUrl);
-            return ResponseEntity.ok(createSuccessResponse(fileUrl, "Deal document uploaded successfully"));
+            logger.info("✅ Deal document uploaded: {}", fileUrl);
 
-        } catch (Exception e) {
-            logger.error("❌ Deal document upload error: ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Failed to upload deal document: " + e.getMessage()));
+            response.put("success", true);
+            response.put("url", fileUrl);
+            response.put("message", "Deal document uploaded successfully");
+            return ResponseEntity.ok(response);
+
+        } catch (IOException e) {
+            logger.error("❌ Error uploading deal document: ", e);
+            response.put("success", false);
+            response.put("message", "Upload failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
-    }
-
-    // ==================== HELPER METHODS ====================
-
-    private Map<String, Object> createSuccessResponse(String url, String message) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", message);
-        response.put("url", url);
-        return response;
-    }
-
-    private Map<String, Object> createErrorResponse(String message) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
-        response.put("message", message);
-        response.put("url", null);
-        return response;
     }
 }
