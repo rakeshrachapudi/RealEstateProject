@@ -47,7 +47,11 @@ public class S3Service {
      * Upload file to S3 with custom key
      */
     public String uploadFile(String key, Path filePath, String contentType) throws IOException {
-        logger.info("Uploading file to S3 - Key: {}, ContentType: {}", key, contentType);
+        logger.info("📤 Uploading file to S3");
+        logger.info("   Bucket: {}", bucketName);
+        logger.info("   Key: {}", key);
+        logger.info("   ContentType: {}", contentType);
+        logger.info("   FilePath: {}", filePath);
 
         PutObjectRequest putRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
@@ -59,7 +63,10 @@ public class S3Service {
         PutObjectResponse response = s3Client.putObject(putRequest, filePath);
         String fileUrl = String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, awsRegion.id(), key);
 
-        logger.info("✅ File uploaded successfully to: {}", fileUrl);
+        logger.info("✅ File uploaded successfully!");
+        logger.info("   URL: {}", fileUrl);
+        logger.info("   ETag: {}", response.eTag());
+
         return fileUrl;
     }
 
@@ -67,6 +74,10 @@ public class S3Service {
      * Upload property image to S3 (organized by property ID)
      */
     public String uploadPropertyImage(Long propertyId, Path filePath, String originalFilename, String contentType) throws IOException {
+        logger.info("🏠 UPLOADING PROPERTY IMAGE");
+        logger.info("   Property ID: {}", propertyId);
+        logger.info("   Original Filename: {}", originalFilename);
+
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         String uniqueId = UUID.randomUUID().toString().substring(0, 8);
         String sanitizedFilename = sanitizeFilename(originalFilename);
@@ -75,15 +86,24 @@ public class S3Service {
         String key = String.format("properties/%d/images/%s_%s_%s",
                 propertyId, timestamp, uniqueId, sanitizedFilename);
 
-        logger.info("📸 Uploading property image - Property ID: {}, Key: {}", propertyId, key);
-        return uploadFile(key, filePath, contentType);
+        logger.info("   Generated S3 Key: {}", key);
+        logger.info("   This will create folder structure: properties/{}/images/", propertyId);
+
+        String result = uploadFile(key, filePath, contentType);
+
+        logger.info("✅ ✅ ✅ PROPERTY IMAGE UPLOADED SUCCESSFULLY");
+        logger.info("   Check S3 bucket '{}' under path: properties/{}/images/", bucketName, propertyId);
+
+        return result;
     }
 
     /**
      * Upload property document to S3 (organized by property ID)
-     * This is what's needed for the deal document uploads!
      */
     public String uploadPropertyDocument(Long propertyId, Path filePath, String originalFilename, String contentType) throws IOException {
+        logger.info("📄 UPLOADING PROPERTY DOCUMENT");
+        logger.info("   Property ID: {}", propertyId);
+
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         String uniqueId = UUID.randomUUID().toString().substring(0, 8);
         String sanitizedFilename = sanitizeFilename(originalFilename);
@@ -92,14 +112,19 @@ public class S3Service {
         String key = String.format("properties/%d/documents/%s_%s_%s",
                 propertyId, timestamp, uniqueId, sanitizedFilename);
 
-        logger.info("📄 Uploading property document - Property ID: {}, Key: {}", propertyId, key);
+        logger.info("   Generated S3 Key: {}", key);
+
         return uploadFile(key, filePath, contentType);
     }
 
     /**
-     * Upload deal document to S3 (organized by deal ID)
+     * Upload deal document to S3 (organized by deal ID and property ID)
      */
     public String uploadDealDocument(Long dealId, Long propertyId, Path filePath, String originalFilename, String contentType) throws IOException {
+        logger.info("🔐 UPLOADING DEAL DOCUMENT");
+        logger.info("   Deal ID: {}", dealId);
+        logger.info("   Property ID: {}", propertyId);
+
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         String uniqueId = UUID.randomUUID().toString().substring(0, 8);
         String sanitizedFilename = sanitizeFilename(originalFilename);
@@ -108,7 +133,8 @@ public class S3Service {
         String key = String.format("properties/%d/deals/%d/documents/%s_%s_%s",
                 propertyId, dealId, timestamp, uniqueId, sanitizedFilename);
 
-        logger.info("📑 Uploading deal document - Deal ID: {}, Property ID: {}, Key: {}", dealId, propertyId, key);
+        logger.info("   Generated S3 Key: {}", key);
+
         return uploadFile(key, filePath, contentType);
     }
 
@@ -118,6 +144,8 @@ public class S3Service {
     private String sanitizeFilename(String filename) {
         if (filename == null) return "file";
         // Remove special characters but keep extension
-        return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
+        String sanitized = filename.replaceAll("[^a-zA-Z0-9._-]", "_");
+        logger.debug("   Sanitized filename: {} -> {}", filename, sanitized);
+        return sanitized;
     }
 }

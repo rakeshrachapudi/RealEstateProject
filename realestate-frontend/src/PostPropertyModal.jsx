@@ -23,6 +23,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     areaId: "",
     address: "",
     imageUrl: "",
+    imageFile: null, // <-- ⭐ FIX 1: Add imageFile to state
     bedrooms: "",
     bathrooms: "",
     balconies: "",
@@ -34,7 +35,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     isReadyToMove: false,
   });
 
-  // UPDATED: Expanded List of common amenities
+  // ... (commonAmenities, hooks, loadAreas, convertToIndianWords, auth check, etc. are unchanged) ...
   const commonAmenities = [
     "Parking",
     "Gym",
@@ -278,9 +279,11 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       return;
     }
 
-    // Create preview URL (will upload after property creation)
+    // Create preview URL
     const previewUrl = URL.createObjectURL(file);
-    setFormData((p) => ({ ...p, imageUrl: previewUrl }));
+
+    // ⭐ FIX 2: Store BOTH the preview URL and the File object
+    setFormData((p) => ({ ...p, imageUrl: previewUrl, imageFile: file }));
     setFileName(file.name);
 
     console.log("📸 Image selected:", file.name, "- will upload after property creation");
@@ -291,7 +294,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     setLoading(true);
     setError(null);
 
-    // Validate required fields (except image - we'll upload it after property creation)
+    // ... (Required field validation is unchanged) ...
     if (
       !formData.title ||
       !formData.areaId ||
@@ -305,21 +308,31 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       return;
     }
 
-    // Check if image is selected (but not uploaded yet)
-    const imageFile = document.getElementById('imageInput')?.files[0];
+    // ⭐ FIX 3: Get the file from state, NOT from getElementById
+    const imageFile = formData.imageFile;
+
+    // This validation logic is now correct
     if (!imageFile && !formData.imageUrl) {
       setError("Please select a property image");
       setLoading(false);
       return;
     }
 
+    // This check is also correct, but now handles the case where
+    // a user might be editing and the imageUrl is already an S3 link
+    if (!imageFile && !formData.imageUrl.startsWith("http")) {
+       setError("Please select a property image");
+       setLoading(false);
+       return;
+    }
+
+    // ... (Numeric parsing and server-side validation unchanged) ...
     const numericPrice = parseFloat(formData.price);
     const beds = parseInt(formData.bedrooms);
     const baths = parseInt(formData.bathrooms);
     const balcs = formData.balconies ? parseInt(formData.balconies) : 0;
     const areaSqft = formData.areaSqft ? parseFloat(formData.areaSqft) : 0;
 
-    // --- SERVER-SIDE VALIDATION CODE ---
     const MAX_PRICE = 1000000000;
     const MAX_ROOMS = 10;
     const MAX_AREA = 9999;
@@ -343,7 +356,6 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       setLoading(false);
       return;
     }
-    // --- END SERVER-SIDE VALIDATION CODE ---
 
     let priceDisplay;
     if (numericPrice >= 10000000) {
@@ -353,6 +365,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     } else {
       priceDisplay = `₹${numericPrice.toLocaleString("en-IN")}`;
     }
+
 
     try {
       // STEP 1: Create property WITHOUT image first (using placeholder)
@@ -391,7 +404,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
       if (!createResponse.ok) {
         const errorText = await createResponse.text();
-        throw new Error("Failed to create property: " + errorText);
+        throw new Error("Failed to create property: "+"Error in create property " + errorText);
       }
 
       const createdProperty = await createResponse.json();
@@ -404,14 +417,17 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       console.log("✅ Property created with ID:", propertyId);
 
       // STEP 2: Upload image to proper folder with propertyId
-      let imageUrl = formData.imageUrl; // Use existing if already uploaded
 
+      // Use the imageUrl from formData (which might be a blob or an existing http link)
+      let imageUrl = formData.imageUrl;
+
+      // ⭐ FIX 4: This block will now execute correctly
       if (imageFile) {
         console.log("📤 Step 2: Uploading image to properties/" + propertyId + "/images/...");
         setImageUploading(true);
 
         const imageFormData = new FormData();
-        imageFormData.append("file", imageFile);
+        imageFormData.append("file", imageFile); // Use the file from state
 
         const uploadResponse = await fetch(
           `${BACKEND_BASE_URL}/api/upload/property-image?propertyId=${propertyId}`,
@@ -428,7 +444,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
           throw new Error(uploadData.message || "Image upload failed");
         }
 
-        imageUrl = uploadData.url;
+        imageUrl = uploadData.url; // Get the REAL S3 URL
         console.log("✅ Image uploaded:", imageUrl);
         setImageUploading(false);
       }
@@ -442,7 +458,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...propertyData,
-            imageUrl: imageUrl,
+            imageUrl: imageUrl, // This will now be the real S3 URL
           }),
         }
       );
@@ -478,6 +494,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         {error && <div style={styles.error}>❌ {error}</div>}
 
         <form onSubmit={handleSubmit} style={styles.form}>
+          {/* ... (All form fields are unchanged) ... */}
           <div style={styles.field}>
             <label style={styles.label}>Property Title *</label>
             <input
@@ -615,6 +632,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
             />
           </div>
 
+          {/* This JSX logic is now safe because the File is in state */}
           <div
             style={{
               ...styles.imageSection,
@@ -685,7 +703,14 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                 />
                 <button
                   type="button"
-                  onClick={() => setFormData((p) => ({ ...p, imageUrl: "" }))}
+                  // ⭐ FIX 5: Clear both the URL and the File object
+                  onClick={() =>
+                    setFormData((p) => ({
+                      ...p,
+                      imageUrl: "",
+                      imageFile: null,
+                    }))
+                  }
                   style={{
                     marginTop: "12px",
                     padding: "10px 20px",
@@ -695,6 +720,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                     borderRadius: "8px",
                     cursor: "pointer",
                     fontWeight: "600",
+
                     display: "inline-block",
                   }}
                 >
@@ -704,6 +730,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
             )}
           </div>
 
+          {/* ... (Rest of the form is unchanged) ... */}
           <div style={styles.field}>
             <label style={styles.label}>Description *</label>
             <textarea
@@ -795,7 +822,6 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
             </div>
           </div>
 
-          {/* Amenities Selection Block */}
           <div style={styles.field}>
             <label style={styles.label}>✨ Amenities</label>
             <div style={styles.amenitiesGrid}>
@@ -816,6 +842,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                       color: isSelected ? "white" : "#475569",
                       borderColor: isSelected ? "#059669" : "#e2e8f0",
                     }}
+
                   >
                     {amenity}
                   </button>
@@ -823,7 +850,6 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
               })}
             </div>
           </div>
-          {/* END Amenities Selection Block */}
 
           <button
             type="submit"
@@ -857,6 +883,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
   );
 }
 
+// ... (styles object is unchanged) ...
 const styles = {
   backdrop: {
     position: "fixed",
