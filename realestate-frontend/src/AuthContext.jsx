@@ -13,6 +13,11 @@ export const AuthProvider = ({ children }) => {
 
         if (storedToken && storedUser) {
             try {
+                const parsedUser = JSON.parse(storedUser);
+                                // ✅ Ensure username exists
+                                if (!parsedUser.username && parsedUser.email) {
+                                    parsedUser.username = parsedUser.email;
+                                }
                 setUser(JSON.parse(storedUser));
                 setIsAuthenticated(true);
             } catch (error) {
@@ -24,7 +29,12 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
+
+
     const login = (userData, token) => {
+        if (!userData.username && userData.email) {
+                    userData.username = userData.email;
+                }
         localStorage.setItem('authToken', token);
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);

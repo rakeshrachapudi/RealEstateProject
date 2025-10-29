@@ -28,9 +28,42 @@ const DealProgressBar = ({ deal, onStageChange, isEditable = false }) => {
   };
 
   const currentIndex = getCurrentStageIndex();
+  const currentStage = deal.stage || deal.currentStage;
+
+  // ✅ NEW: Validation function to check if stage change is allowed
+  const canMoveToStage = (targetStage) => {
+    // Moving to REGISTRATION requires AGREEMENT document
+    if (targetStage === "REGISTRATION") {
+      if (!deal.isAgreementUploaded && !deal.agreementUploaded) {
+        return {
+          allowed: false,
+          message: "⚠️ Please upload Agreement document before moving to Registration stage"
+        };
+      }
+    }
+
+    // Moving to PAYMENT requires REGISTRATION document
+    if (targetStage === "PAYMENT") {
+      if (!deal.isRegistrationUploaded && !deal.registrationUploaded) {
+        return {
+          allowed: false,
+          message: "⚠️ Please upload Registration document before moving to Payment stage"
+        };
+      }
+    }
+
+    return { allowed: true };
+  };
 
   const handleStageClick = async (newStage) => {
     if (!isEditable) return;
+
+    // ✅ NEW: Validate before allowing stage change
+    const validation = canMoveToStage(newStage);
+    if (!validation.allowed) {
+      alert(validation.message);
+      return;
+    }
 
     setUpdating(true);
     try {
@@ -56,7 +89,8 @@ const DealProgressBar = ({ deal, onStageChange, isEditable = false }) => {
         setSelectedNotes("");
         alert("✅ Deal stage updated");
       } else {
-        alert("❌ Failed to update stage");
+        const errorData = await response.json();
+        alert("❌ Failed to update stage: " + (errorData.message || "Unknown error"));
       }
     } catch (error) {
       console.error("Error updating stage:", error);
@@ -64,6 +98,21 @@ const DealProgressBar = ({ deal, onStageChange, isEditable = false }) => {
     } finally {
       setUpdating(false);
     }
+  };
+
+  // ✅ NEW: Function to check if a stage button should be disabled
+  const isStageDisabled = (targetStage) => {
+    const validation = canMoveToStage(targetStage);
+    return !validation.allowed;
+  };
+
+  // ✅ NEW: Function to get tooltip for disabled stages
+  const getStageTooltip = (targetStage) => {
+    const validation = canMoveToStage(targetStage);
+    if (!validation.allowed) {
+      return validation.message;
+    }
+    return isEditable ? "Click to move to this stage" : "";
   };
 
   const containerStyle = {
@@ -151,6 +200,36 @@ const DealProgressBar = ({ deal, onStageChange, isEditable = false }) => {
         📊 Deal Progress: {stages[currentIndex]?.label}
       </h3>
 
+      {/* ✅ NEW: Document Status Indicators */}
+      <div style={{
+        display: "flex",
+        gap: "12px",
+        marginBottom: "16px",
+        padding: "12px",
+        backgroundColor: "#f1f5f9",
+        borderRadius: "8px",
+        fontSize: "13px",
+      }}>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          color: deal.isAgreementUploaded || deal.agreementUploaded ? "#10b981" : "#6b7280"
+        }}>
+          {deal.isAgreementUploaded || deal.agreementUploaded ? "✅" : "⏳"}
+          <span style={{ fontWeight: "600" }}>Agreement Doc</span>
+        </div>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          color: deal.isRegistrationUploaded || deal.registrationUploaded ? "#10b981" : "#6b7280"
+        }}>
+          {deal.isRegistrationUploaded || deal.registrationUploaded ? "✅" : "⏳"}
+          <span style={{ fontWeight: "600" }}>Registration Doc</span>
+        </div>
+      </div>
+
       <div style={progressBarStyle}>
         <div style={progressLineStyle}></div>
         <div style={progressLineFilledStyle}></div>
@@ -160,7 +239,7 @@ const DealProgressBar = ({ deal, onStageChange, isEditable = false }) => {
             key={stageObj.stage}
             style={stageItemStyle}
             onClick={() => isEditable && handleStageClick(stageObj.stage)}
-            title={isEditable ? "Click to move to this stage" : ""}
+            title={getStageTooltip(stageObj.stage)}
           >
             <div style={stageBadgeStyle(index)}>{index + 1}</div>
             <div style={stageLabelStyle}>{stageObj.label}</div>
@@ -215,26 +294,50 @@ const DealProgressBar = ({ deal, onStageChange, isEditable = false }) => {
                   boxSizing: "border-box",
                 }}
               />
-              {stages.map((stage) => (
-                <button
-                  key={stage.stage}
-                  onClick={() => handleStageClick(stage.stage)}
-                  disabled={updating}
-                  style={{
-                    padding: "10px 16px",
-                    backgroundColor:
-                      stage.stage === deal.stage ? "#e0f2fe" : "white",
-                    color: stage.stage === deal.stage ? "#0369a1" : "#475569",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    fontWeight: "600",
-                    fontSize: "14px",
-                  }}
-                >
-                  {stage.label} {stage.stage === deal.stage && "✓"}
-                </button>
-              ))}
+              {stages.map((stage) => {
+                const disabled = isStageDisabled(stage.stage);
+                const validation = canMoveToStage(stage.stage);
+
+                return (
+                  <div key={stage.stage}>
+                    <button
+                      onClick={() => !disabled && handleStageClick(stage.stage)}
+                      disabled={updating || disabled}
+                      title={!validation.allowed ? validation.message : ""}
+                      style={{
+                        width: "100%",
+                        padding: "10px 16px",
+                        backgroundColor:
+                          stage.stage === currentStage ? "#e0f2fe" :
+                          disabled ? "#f3f4f6" : "white",
+                        color:
+                          disabled ? "#9ca3af" :
+                          stage.stage === currentStage ? "#0369a1" : "#475569",
+                        border: disabled ? "1px solid #e5e7eb" : "1px solid #e2e8f0",
+                        borderRadius: "6px",
+                        cursor: disabled ? "not-allowed" : "pointer",
+                        fontWeight: "600",
+                        fontSize: "14px",
+                        opacity: disabled ? 0.6 : 1,
+                      }}
+                    >
+                      {stage.label} {stage.stage === currentStage && "✓"}
+                      {disabled && " 🔒"}
+                    </button>
+                    {/* ✅ NEW: Show warning message under disabled buttons */}
+                    {disabled && !validation.allowed && (
+                      <div style={{
+                        fontSize: "11px",
+                        color: "#dc2626",
+                        marginTop: "4px",
+                        marginLeft: "8px",
+                      }}>
+                        {validation.message}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
