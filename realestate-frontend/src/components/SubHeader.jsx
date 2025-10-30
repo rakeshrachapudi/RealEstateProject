@@ -10,9 +10,15 @@ function SubHeader() {
   const [lastScrollY, setLastScrollY] = useState(0);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const dropdownTimerRef = useRef(null);
+
+  // ⭐ ADDED: State to resolve the ReferenceError (Fix 2) ⭐
+  // Although the profile dropdown UI isn't visible, the setter must be defined.
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+
   const handleMyPropertiesClick = () => {
     navigate("/my-properties");
     setActiveDropdown(null);
+    // ⭐ FIXED: setProfileDropdownOpen is now in scope ⭐
     setProfileDropdownOpen(false);
   };
 
