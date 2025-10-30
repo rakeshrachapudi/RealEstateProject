@@ -10,13 +10,15 @@ const AgentDashboard = () => {
   const navigate = useNavigate();
 
   const [deals, setDeals] = useState([]);
+  const [filteredDeals, setFilteredDeals] = useState([]);
   const [properties, setProperties] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreateDeal, setShowCreateDeal] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState(null);
-  const [filterTab, setFilterTab] = useState("active"); // 'active', 'completed', 'properties', 'total'
+  const [filterTab, setFilterTab] = useState("active");
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     if (
@@ -32,6 +34,45 @@ const AgentDashboard = () => {
     console.log("User Role:", user.role);
     fetchAgentData();
   }, [user, isAuthenticated, navigate]);
+
+  // ✅ ADDED: Filter deals based on search and tab
+  useEffect(() => {
+    let tabFiltered = [];
+
+    switch (filterTab) {
+      case "active":
+        tabFiltered = deals.filter((d) => d.stage !== "COMPLETED");
+        break;
+      case "completed":
+        tabFiltered = deals.filter((d) => d.stage === "COMPLETED");
+        break;
+      case "total":
+        tabFiltered = deals;
+        break;
+      default:
+        tabFiltered = deals;
+    }
+
+    if (!searchTerm.trim()) {
+      setFilteredDeals(tabFiltered);
+    } else {
+      const term = searchTerm.toLowerCase();
+      const searched = tabFiltered.filter((deal) => {
+        const dealId = ((deal.dealId || deal.id) || '').toString();
+        const propertyTitle = (deal.property?.title || '').toLowerCase();
+        const buyerName = `${deal.buyer?.firstName || ''} ${deal.buyer?.lastName || ''}`.toLowerCase();
+        const stage = (deal.stage || deal.currentStage || '').toLowerCase();
+
+        return (
+          dealId.includes(term) ||
+          propertyTitle.includes(term) ||
+          buyerName.includes(term) ||
+          stage.includes(term)
+        );
+      });
+      setFilteredDeals(searched);
+    }
+  }, [searchTerm, filterTab, deals]);
 
   const fetchAgentData = async () => {
     setLoading(true);
@@ -113,12 +154,10 @@ const AgentDashboard = () => {
     setShowCreateDeal(true);
   };
 
-  // ⭐️ ADDED: Handler for Create Sale Agreement ⭐️
   const handleCreateAgreementClick = () => {
     console.log("📝 Navigating to create sale agreement page");
     navigate("/sale-agreement");
   };
-  // ⭐️ END ADDED CODE ⭐️
 
   // Calculate counts
   const activeDealCount = deals.filter((d) => d.stage !== "COMPLETED").length;
@@ -126,27 +165,25 @@ const AgentDashboard = () => {
     (d) => d.stage === "COMPLETED"
   ).length;
 
-  // Filter deals based on active tab
-  const displayedDeals =
-    filterTab === "active"
-      ? deals.filter((d) => d.stage !== "COMPLETED")
-      : filterTab === "completed"
-      ? deals.filter((d) => d.stage === "COMPLETED")
-      : filterTab === "total"
-      ? deals
-      : [];
-
   // Get section title
   const getSectionTitle = () => {
+    const count = filteredDeals.length;
+    const totalCount = filterTab === "active" ? activeDealCount :
+                       filterTab === "completed" ? completedDealCount :
+                       filterTab === "properties" ? properties.length :
+                       deals.length;
+
+    const searchSuffix = searchTerm ? ` (${count} of ${totalCount})` : ` (${count})`;
+
     switch (filterTab) {
       case "active":
-        return `📈 Active Deals (${activeDealCount})`;
+        return `📈 Active Deals${searchSuffix}`;
       case "completed":
-        return `✅ Completed Deals (${completedDealCount})`;
+        return `✅ Completed Deals${searchSuffix}`;
       case "properties":
         return `🏠 Properties Managed (${properties.length})`;
       case "total":
-        return `📊 Total Deals (${deals.length})`;
+        return `📊 Total Deals${searchSuffix}`;
       default:
         return "Deals";
     }
@@ -204,48 +241,43 @@ const AgentDashboard = () => {
         </div>
       </div>
 
-      {/* ⭐️ REPLACED Create Deal Section with actionSectionGrid ⭐️ */}
+      {/* Action Section Grid */}
       <div style={styles.actionSectionGrid}>
-
-          {/* COLUMN 1: Create New Deal */}
-          <div style={{...styles.actionCard, borderColor: '#bfdbfe'}}>
-              <div>
-                  <div style={styles.actionTitlePrimary}>
-                      ➕ Create New Deal
-                  </div>
-                  <div style={styles.actionSubtitle}>
-                      Start a new sales process by linking a buyer to a property.
-                  </div>
-              </div>
-              <button onClick={handleCreateDealClick} style={styles.newDealBtn}>
-                  + New Deal
-              </button>
+        <div style={{...styles.actionCard, borderColor: '#bfdbfe'}}>
+          <div>
+            <div style={styles.actionTitlePrimary}>
+              ➕ Create New Deal
+            </div>
+            <div style={styles.actionSubtitle}>
+              Start a new sales process by linking a buyer to a property.
+            </div>
           </div>
+          <button onClick={handleCreateDealClick} style={styles.newDealBtn}>
+            + New Deal
+          </button>
+        </div>
 
-          {/* COLUMN 2: Create Sale Agreement */}
-          <div style={{...styles.actionCard, borderColor: '#fbcfe8'}}>
-              <div>
-                  <div style={styles.actionTitleSecondary}>
-                      📝 Create Sale Agreement
-                  </div>
-                  <div style={styles.actionSubtitle}>
-                      Draft the formal legal agreement for a property sale.
-                  </div>
-              </div>
-              <button onClick={handleCreateAgreementClick} style={styles.createAgreementBtn}>
-                  Sale Agreement
-              </button>
+        <div style={{...styles.actionCard, borderColor: '#fbcfe8'}}>
+          <div>
+            <div style={styles.actionTitleSecondary}>
+              📝 Create Sale Agreement
+            </div>
+            <div style={styles.actionSubtitle}>
+              Draft the formal legal agreement for a property sale.
+            </div>
           </div>
-
+          <button onClick={handleCreateAgreementClick} style={styles.createAgreementBtn}>
+            Sale Agreement
+          </button>
+        </div>
       </div>
-      {/* ⭐️ END REPLACED CODE ⭐️ */}
 
       {/* Deals Section with Tabs */}
       <div style={styles.section}>
         {/* Tab Navigation */}
         <div style={styles.tabContainer}>
           <button
-            onClick={() => setFilterTab("active")}
+            onClick={() => { setFilterTab("active"); setSearchTerm(""); }}
             style={{
               ...styles.tab,
               ...(filterTab === "active" ? styles.activeTab : {}),
@@ -254,7 +286,7 @@ const AgentDashboard = () => {
             📈 Active Deals ({activeDealCount})
           </button>
           <button
-            onClick={() => setFilterTab("completed")}
+            onClick={() => { setFilterTab("completed"); setSearchTerm(""); }}
             style={{
               ...styles.tab,
               ...(filterTab === "completed" ? styles.activeTab : {}),
@@ -263,7 +295,7 @@ const AgentDashboard = () => {
             ✅ Completed Deals ({completedDealCount})
           </button>
           <button
-            onClick={() => setFilterTab("properties")}
+            onClick={() => { setFilterTab("properties"); setSearchTerm(""); }}
             style={{
               ...styles.tab,
               ...(filterTab === "properties" ? styles.activeTab : {}),
@@ -272,7 +304,7 @@ const AgentDashboard = () => {
             🏠 Managed Properties ({properties.length})
           </button>
           <button
-            onClick={() => setFilterTab("total")}
+            onClick={() => { setFilterTab("total"); setSearchTerm(""); }}
             style={{
               ...styles.tab,
               ...(filterTab === "total" ? styles.activeTab : {}),
@@ -282,134 +314,139 @@ const AgentDashboard = () => {
           </button>
         </div>
 
+        {/* ✅ ADDED: Search Box for Deals */}
+        {filterTab !== "properties" && deals.length > 0 && (
+          <div style={styles.searchBox}>
+            <input
+              type="text"
+              placeholder="🔍 Search by Deal ID, Property, Buyer, or Stage..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={styles.searchInput}
+            />
+          </div>
+        )}
+
         <h2 style={styles.sectionTitle}>{getSectionTitle()}</h2>
 
-        {/* Active, Completed, or Total Deals View */}
-        {filterTab !== "properties" ? (
-          displayedDeals.length > 0 ? (
+        {filterTab === "properties" ? (
+          properties.length > 0 ? (
             <div style={styles.dealsGrid}>
-              {displayedDeals.map((deal) => (
-                <div key={deal.id || deal.dealId} style={styles.dealCard}>
-                  {/* Stage Badge */}
-                  <div
-                    style={{
-                      ...styles.stageBadge,
-                      backgroundColor: getStageColor(deal.stage),
-                    }}
-                  >
-                    {deal.stage}
-                  </div>
-
-                  {/* Deal Info */}
-                  <h3 style={styles.dealTitle}>
-                    {deal.property?.title || "Property"}
-                  </h3>
-
-                  <div style={styles.dealMeta}>
-                    <p style={styles.metaItem}>
-                      📍 {deal.property?.city || "Location"}
-                    </p>
-                    <p style={styles.metaItem}>
-                      👤 Buyer: {deal.buyer?.firstName || "N/A"}{" "}
-                      {deal.buyer?.lastName || ""}
-                    </p>
-                    {deal.agreedPrice && (
-                      <p style={styles.metaItem}>
-                        💰 ₹{deal.agreedPrice.toLocaleString("en-IN")}
-                      </p>
-                    )}
-                    <p style={styles.metaItem}>
-                      📅 {new Date(deal.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div style={styles.progressBar}>
-                    <div
-                      style={{
-                        ...styles.progressFill,
-                        width: `${getProgressPercentage(deal.stage)}%`,
-                        backgroundColor: getStageColor(deal.stage),
-                      }}
+              {properties.map((property) => (
+                <div key={property.id} style={styles.propertyCard}>
+                  {property.imageUrl && (
+                    <img
+                      src={property.imageUrl}
+                      alt={property.title}
+                      style={styles.propertyImage}
                     />
+                  )}
+                  <div style={{ padding: "16px" }}>
+                    <h3 style={styles.dealTitle}>{property.title}</h3>
+                    <div style={styles.dealMeta}>
+                      <div style={styles.metaItem}>📍 {property.city}</div>
+                      <div style={styles.metaItem}>
+                        💰 ₹{property.price?.toLocaleString("en-IN")}
+                      </div>
+                      <div style={styles.metaItem}>🛏️ {property.bedrooms} BHK</div>
+                    </div>
                   </div>
-
-                  {/* Action Button */}
-                  <button
-                    onClick={() => setSelectedDeal(deal)}
-                    style={styles.viewDealBtn}
-                  >
-                    📋 View & Manage Deal
-                  </button>
                 </div>
               ))}
             </div>
           ) : (
             <div style={styles.emptyState}>
-              <p>
-                {filterTab === "active"
-                  ? "📭 No active deals yet. Create one to get started!"
-                  : filterTab === "completed"
-                  ? "📭 No completed deals yet."
-                  : "📭 No deals found."}
-              </p>
+              <div style={{ fontSize: "48px", marginBottom: "16px" }}>🏠</div>
+              <p>No properties managed yet</p>
             </div>
           )
-        ) : /* Properties View */
-        properties.length > 0 ? (
+        ) : filteredDeals.length > 0 ? (
           <div style={styles.dealsGrid}>
-            {properties.map((prop) => (
-              <div key={prop.id || prop.propertyId} style={styles.propertyCard}>
-                <img
-                  src={
-                    prop.imageUrl ||
-                    "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop"
-                  }
-                  alt={prop.title}
-                  style={{ ...styles.propertyImage, cursor: "pointer" }}
-                  onClick={() =>
-                    navigate(`/property/${prop.id || prop.propertyId}`)
-                  }
-                />
-                <h3
+            {filteredDeals.map((deal) => (
+              <div key={deal.id} style={styles.dealCard}>
+                {/* ✅ ADDED: Deal ID Badge */}
+                <div style={{
+                  position: "absolute",
+                  top: "12px",
+                  right: "12px",
+                  backgroundColor: "#1e293b",
+                  color: "white",
+                  padding: "4px 10px",
+                  borderRadius: "12px",
+                  fontSize: "10px",
+                  fontWeight: "700",
+                  zIndex: 1,
+                }}>
+                  ID: {deal.dealId || deal.id}
+                </div>
+
+                <span
                   style={{
-                    ...styles.dealTitle,
-                    padding: "12px 16px 0 16px",
-                    marginBottom: "12px",
+                    ...styles.stageBadge,
+                    backgroundColor: getStageColor(deal.stage || deal.currentStage),
                   }}
                 >
-                  {prop.title}
+                  {deal.stage || deal.currentStage}
+                </span>
+
+                <h3 style={styles.dealTitle}>
+                  {deal.property?.title || "Property"}
                 </h3>
-                <div style={{ ...styles.dealMeta, padding: "0 16px" }}>
-                  <p style={styles.metaItem}>
-                    💰 ₹{(prop.price || 0).toLocaleString("en-IN")}
-                  </p>
-                  <p style={styles.metaItem}>
-                    🛏️ {prop.bedrooms} Bed | 🚿 {prop.bathrooms} Bath
-                  </p>
-                  <p style={styles.metaItem}>
-                    📐 {prop.areaSqft || "N/A"} sqft
-                  </p>
-                  <p style={styles.metaItem}>📍 {prop.areaName || prop.city}</p>
+
+                <div style={styles.dealMeta}>
+                  <div style={styles.metaItem}>
+                    👤 {deal.buyer?.firstName} {deal.buyer?.lastName}
+                  </div>
+                  <div style={styles.metaItem}>
+                    💰 ₹{deal.agreedPrice?.toLocaleString("en-IN") || "N/A"}
+                  </div>
+                  <div style={styles.metaItem}>
+                    📍 {deal.property?.city || "Location"}
+                  </div>
                 </div>
-                {prop.isFeatured && (
+
+                <div style={styles.progressBar}>
                   <div
                     style={{
-                      ...styles.stageBadge,
-                      backgroundColor: "#f59e0b",
-                      marginTop: "12px",
-                      marginLeft: "16px",
+                      ...styles.progressFill,
+                      width: `${getProgressPercentage(deal.stage || deal.currentStage)}%`,
+                      backgroundColor: getStageColor(deal.stage || deal.currentStage),
                     }}
-                  >
-                    ⭐ Featured
-                  </div>
-                )}
+                  ></div>
+                </div>
+
+                <button
+                  onClick={() => setSelectedDeal(deal)}
+                  style={styles.viewDealBtn}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = "#059669"}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = "#10b981"}
+                >
+                  👁️ View Deal Details
+                </button>
               </div>
             ))}
           </div>
         ) : (
           <div style={styles.emptyState}>
-            <p>📭 No properties managed yet.</p>
+            <div style={{ fontSize: "48px", marginBottom: "16px" }}>📭</div>
+            <p>{searchTerm ? "No deals match your search" : "No deals found"}</p>
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                style={{
+                  marginTop: "12px",
+                  padding: "8px 16px",
+                  backgroundColor: "#3b82f6",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontWeight: "600",
+                }}
+              >
+                Clear Search
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -417,27 +454,18 @@ const AgentDashboard = () => {
       {/* Create Deal Modal */}
       {showCreateDeal && (
         <BrowsePropertiesForDeal
-          onClose={() => {
-            console.log("Closing modal");
-            setShowCreateDeal(false);
-          }}
-          onDealCreated={() => {
-            console.log("Deal created");
-            setShowCreateDeal(false);
-            fetchAgentData();
-          }}
+          agentId={user.id}
+          onClose={() => setShowCreateDeal(false)}
+          onDealCreated={fetchAgentData}
         />
       )}
 
-      {/* View Deal Modal */}
+      {/* Deal Detail Modal */}
       {selectedDeal && (
         <DealDetailModal
           deal={selectedDeal}
           onClose={() => setSelectedDeal(null)}
-          onUpdate={() => {
-            setSelectedDeal(null);
-            fetchAgentData();
-          }}
+          onUpdate={fetchAgentData}
           userRole={user.role}
         />
       )}
@@ -445,7 +473,6 @@ const AgentDashboard = () => {
   );
 };
 
-// Helper functions
 const getStageColor = (stage) => {
   const colors = {
     INQUIRY: "#3b82f6",
@@ -538,19 +565,6 @@ const styles = {
     fontWeight: "700",
     color: "#1e293b",
   },
-
-  // ⭐️ REMOVED createDealSection styles (replaced by actionSectionGrid) ⭐️
-  /* createDealSection: {
-    padding: "16px",
-    backgroundColor: "#f0f9ff",
-    borderRadius: "12px",
-    border: "1px solid #bfdbfe",
-    marginBottom: "24px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  }, */
-
   newDealBtn: {
     padding: "10px 20px",
     backgroundColor: "#3b82f6",
@@ -564,8 +578,6 @@ const styles = {
     transition: "background 0.2s, transform 0.2s",
     boxShadow: "0 2px 8px rgba(59, 130, 246, 0.2)",
   },
-
-  // ⭐️ ADDED: New Styles for Two-Column Action Section ⭐️
   actionSectionGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
@@ -600,7 +612,7 @@ const styles = {
   },
   createAgreementBtn: {
     padding: "10px 20px",
-    backgroundColor: "#ec4899", // Pink/Red
+    backgroundColor: "#ec4899",
     color: "white",
     border: "none",
     borderRadius: "8px",
@@ -611,8 +623,6 @@ const styles = {
     transition: "background 0.2s",
     boxShadow: "0 2px 8px rgba(236, 72, 153, 0.3)",
   },
-  // ⭐️ END ADDED CODE ⭐️
-
   section: {
     backgroundColor: "white",
     padding: "24px",
@@ -642,6 +652,23 @@ const styles = {
     backgroundColor: "#3b82f6",
     color: "white",
   },
+  // ✅ ADDED: Search box styles
+  searchBox: {
+    marginBottom: "16px",
+    padding: "12px",
+    backgroundColor: "#f8fafc",
+    borderRadius: "8px",
+    border: "1px solid #e2e8f0",
+  },
+  searchInput: {
+    width: "100%",
+    padding: "10px 16px",
+    fontSize: "14px",
+    border: "1px solid #cbd5e1",
+    borderRadius: "6px",
+    outline: "none",
+    boxSizing: "border-box",
+  },
   sectionTitle: {
     fontSize: "20px",
     fontWeight: "700",
@@ -661,6 +688,7 @@ const styles = {
     borderRadius: "12px",
     border: "1px solid #e2e8f0",
     transition: "all 0.2s",
+    position: "relative", // ✅ ADDED for positioning badge
   },
   stageBadge: {
     display: "inline-block",

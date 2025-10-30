@@ -8,13 +8,14 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -148,4 +149,149 @@ public class S3Service {
         logger.debug("   Sanitized filename: {} -> {}", filename, sanitized);
         return sanitized;
     }
+
+    /**
+     * Delete a single file from S3 using its URL
+     */
+    public boolean deleteFile(String fileUrl) {
+        try {
+            String key = extractKeyFromUrl(fileUrl);
+            if (key == null) {
+                logger.warn("⚠️ Could not extract S3 key from URL: {}", fileUrl);
+                return false;
+            }
+
+            logger.info("🗑️ Deleting file from S3");
+            logger.info("   URL: {}", fileUrl);
+            logger.info("   Key: {}", key);
+
+            DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build();
+
+            s3Client.deleteObject(deleteRequest);
+            logger.info("✅ File deleted successfully: {}", key);
+            return true;
+
+        } catch (Exception e) {
+            logger.error("❌ Error deleting file from S3: {}", fileUrl, e);
+            return false;
+        }
+    }
+
+    /**
+     * Delete all files under a specific prefix (folder path)
+     * Useful for deleting all property files or all deal documents
+     */
+    public int deleteByPrefix(String prefix) {
+        int deletedCount = 0;
+        try {
+            logger.info("🗑️ Deleting all objects with prefix: {}", prefix);
+
+            // List all objects with the given prefix
+            ListObjectsV2Request listRequest = ListObjectsV2Request.builder()
+                    .bucket(bucketName)
+                    .prefix(prefix)
+                    .build();
+
+            ListObjectsV2Response listResponse;
+            do {
+                listResponse = s3Client.listObjectsV2(listRequest);
+                List<S3Object> objects = listResponse.contents();
+
+                if (objects.isEmpty()) {
+                    logger.info("ℹ️ No objects found with prefix: {}", prefix);
+                    break;
+                }
+
+                // Delete objects in batch (up to 1000 at a time)
+                List<ObjectIdentifier> keysToDelete = new ArrayList<>();
+                for (S3Object object : objects) {
+                    keysToDelete.add(ObjectIdentifier.builder().key(object.key()).build());
+                }
+
+                if (!keysToDelete.isEmpty()) {
+                    Delete delete = Delete.builder().objects(keysToDelete).build();
+                    DeleteObjectsRequest deleteRequest = DeleteObjectsRequest.builder()
+                            .bucket(bucketName)
+                            .delete(delete)
+                            .build();
+
+                    DeleteObjectsResponse deleteResponse = s3Client.deleteObjects(deleteRequest);
+                    deletedCount += deleteResponse.deleted().size();
+                    logger.info("✅ Deleted {} objects", deleteResponse.deleted().size());
+                }
+
+                // Check if there are more objects to list
+                listRequest = listRequest.toBuilder()
+                        .continuationToken(listResponse.nextContinuationToken())
+                        .build();
+
+            } while (listResponse.isTruncated());
+
+            logger.info("✅ Total deleted: {} objects with prefix: {}", deletedCount, prefix);
+
+        } catch (Exception e) {
+            logger.error("❌ Error deleting objects with prefix: {}", prefix, e);
+        }
+        return deletedCount;
+    }
+
+    /**
+     * Delete all files associated with a property
+     * This includes images, documents, and all deal documents
+     */
+    public int deletePropertyFiles(Long propertyId) {
+        logger.info("🗑️ Deleting all files for Property ID: {}", propertyId);
+        String prefix = String.format("properties/%d/", propertyId);
+        return deleteByPrefix(prefix);
+    }
+
+    /**
+     * Delete all documents associated with a specific deal
+     */
+    public int deleteDealDocuments(Long propertyId, Long dealId) {
+        logger.info("🗑️ Deleting all deal documents for Deal ID: {} (Property ID: {})", dealId, propertyId);
+        String prefix = String.format("properties/%d/deals/%d/", propertyId, dealId);
+        return deleteByPrefix(prefix);
+    }
+
+    /**
+     * Delete a specific property image
+     */
+    public boolean deletePropertyImage(Long propertyId, String imageUrl) {
+        logger.info("🗑️ Deleting property image for Property ID: {}", propertyId);
+        return deleteFile(imageUrl);
+    }
+
+    /**
+     * Extract S3 key from full URL
+     * Example: https://bucket-name.s3.region.amazonaws.com/path/to/file.jpg -> path/to/file.jpg
+     */
+    private String extractKeyFromUrl(String fileUrl) {
+        try {
+            if (fileUrl == null || fileUrl.isEmpty()) {
+                return null;
+            }
+
+            // Handle different S3 URL formats
+            // Format 1: https://bucket.s3.region.amazonaws.com/key
+            // Format 2: https://s3.region.amazonaws.com/bucket/key
+
+            String[] parts = fileUrl.split(".amazonaws.com/");
+            if (parts.length == 2) {
+                return parts[1]; // Return the key part
+            }
+
+            logger.warn("⚠️ Unrecognized S3 URL format: {}", fileUrl);
+            return null;
+
+        } catch (Exception e) {
+            logger.error("❌ Error extracting key from URL: {}", fileUrl, e);
+            return null;
+        }
+    }
+
+
 }

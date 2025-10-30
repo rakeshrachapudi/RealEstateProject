@@ -1,9 +1,10 @@
 package com.example.realestate.controller;
 
+import com.example.realestate.dto.ApiResponse;
 import com.example.realestate.model.DealStatus;
 import com.example.realestate.model.User;
+import com.example.realestate.repository.UserRepository;
 import com.example.realestate.service.DealService;
-import com.example.realestate.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,14 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-// import org.springframework.web.multipart.MultipartFile; // Removed if not used
-// import java.io.IOException; // Removed if not used
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors; // Added missing import
 
 @RestController
 @RequestMapping("/api/deals")
@@ -30,649 +25,241 @@ public class DealController {
     private DealService dealService;
 
     @Autowired
-    private com.example.realestate.repository.UserRepository userRepository;
+    private UserRepository userRepository;
 
-    // ==================== GET DEALS BY USER AND ROLE (CORRECTED) ====================
+    // ==================== DELETE DEAL (AGENT/ADMIN) ====================
     /**
-     * ⭐ CORRECTED: Fetches deals relevant to the specified user based on their ACTUAL system role.
-     * It IGNORES the {userRole} path variable and uses the role fetched from the database.
+     * Delete a deal and all associated S3 documents
+     * Only accessible by agents and admins
      */
-    @GetMapping("/user/{userId}/role/{userRole}") // Keep path for compatibility, but ignore {userRole}
-    public ResponseEntity<?> getDealsByUserAndRole(
-            @PathVariable Long userId,
-            @PathVariable String userRole, // This path variable is now ignored
-            Authentication authentication) {
-        logger.info("Deal Controller started");
-        // Log the received path variable, but note that it won't be used for logic
-        logger.info("Received request to fetch deals for user {} (Path role: '{}' - will be ignored)", userId, userRole);
-
-        try {
-            // Validate userId
-            if (userId == null || userId <= 0) {
-                logger.warn("Invalid user ID provided: {}", userId);
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Valid user ID is required"));
-            }
-
-            // Fetch user by ID to get their ACTUAL role
-            User currentUser = userRepository.findById(userId)
-                    .orElseThrow(() -> {
-                        logger.error("❌ User not found with ID: {}", userId);
-                        // Use ResponseStatusException for cleaner error handling if preferred
-                        return new RuntimeException("User not found with ID: " + userId);
-                    });
-
-            // ⭐ FIX: Get the ACTUAL role from the fetched user object
-            String actualUserRole = currentUser.getRole().name(); // e.g., "USER", "AGENT", "ADMIN"
-            logger.info("Fetched user {} has actual role: {}", userId, actualUserRole);
-
-
-            // ⭐ FIX: Pass the ACTUAL role to the service method
-            List<DealDetailDTO> deals = dealService.getDealsByRole(userId, actualUserRole);
-
-            // Log using the actual role
-            logger.info("✅ Found {} deals for user {} with actual role {}", deals.size(), userId, actualUserRole);
-            return ResponseEntity.ok(ApiResponse.success(deals));
-
-        } catch (RuntimeException e) { // Catch specific exceptions if needed
-            logger.error("❌ Error fetching deals for user {}: ", userId, e);
-            // Return appropriate error status based on exception type
-            if (e.getMessage().startsWith("User not found")) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(ApiResponse.error(e.getMessage()));
-            }
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(e.getMessage()));
-        } catch (Exception e) {
-            logger.error("❌ Unexpected error fetching deals for user {}: ", userId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("An unexpected error occurred"));
-        }
-    }
-
-
-    // ==================== CREATE DEAL WITH PRICE ====================
-    @PostMapping("/create-with-price")
-    public ResponseEntity<?> createDealWithPrice(
-            @RequestBody CreateDealWithPriceRequestDto request,
-            Authentication authentication) { // Assumes JWT/authentication provides the agent's ID/details
-
-        // Get authenticated agent's ID safely
-        // You'll need a way to extract the user details from the Authentication object
-        // Example (assuming UserDetails implementation):
-        // UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        // String username = userDetails.getUsername();
-        // User agent = userRepository.findByUsername(username).orElseThrow(...);
-        // Long agentId = agent.getId();
-
-        // TEMPORARY: Using agentId from request until Authentication is fully integrated
-        Long agentId = request.getAgentId();
-        logger.info("Creating deal with agreed price by Agent ID: {}", agentId);
-
-
-        try {
-            if (agentId == null || agentId <= 0) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Valid agent ID is required (from auth or request)"));
-            }
-            // Fetch Agent User to verify role (redundant if fetched from Auth)
-            User agentUser = userRepository.findById(agentId)
-                    .orElseThrow(() -> new RuntimeException("Agent user not found with ID: " + agentId));
-
-            // Verify only AGENT or ADMIN can create deals
-            if (!agentUser.getRole().equals(User.UserRole.AGENT) &&
-                    !agentUser.getRole().equals(User.UserRole.ADMIN)) {
-                logger.warn("❌ User {} (Role: {}) attempted to create deal but is not an agent/admin.",
-                        agentId, agentUser.getRole());
-                return new ResponseEntity<>(
-                        ApiResponse.error("Only agents or admins can create deals"),
-                        HttpStatus.FORBIDDEN
-                );
-            }
-
-            // Call service to create the deal
-            DealStatus deal = dealService.createDealWithPrice(request, agentId);
-
-            // Convert result to DTO for response
-            DealDetailDTO dealDTO = convertToDetailDTO(deal); // Use the controller's helper
-
-            return ResponseEntity
-                    .status(HttpStatus.CREATED)
-                    .body(ApiResponse.success(dealDTO));
-
-        } catch (RuntimeException e) {
-            logger.error("❌ Error creating deal with price: {}", e.getMessage());
-            // Provide more specific feedback based on the exception type if possible
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(e.getMessage()));
-        } catch (Exception e) {
-            logger.error("❌ Unexpected error during deal creation: ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("An unexpected error occurred during deal creation."));
-        }
-    }
-
-    // ==================== GET MY DEALS (using Request Params - potentially redundant) ====================
-    // This endpoint seems redundant given getDealsByUserAndRole. Consider removing or securing it.
-    @GetMapping("/my-deals")
-    public ResponseEntity<?> getMyDeals(
-            @RequestParam String userRole, // Still problematic if FE sends "BUYER"/"SELLER"
-            @RequestParam Long userId,
-            Authentication authentication) {
-
-        logger.warn("⚠️ Endpoint /my-deals called for user {} with role param '{}'. This might be deprecated. Consider using /user/{userId}/role/{actualRole}", userId, userRole);
-
-        try {
-            if (userId == null || userId <= 0) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("Valid user ID is required"));
-            }
-            User currentUser = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
-
-            // ⭐ FIX: Use the ACTUAL role from the fetched user, ignore userRole param
-            String actualUserRole = currentUser.getRole().name();
-            logger.info("Fetching deals for user {} using actual role: {}", userId, actualUserRole);
-
-            List<DealDetailDTO> deals = dealService.getDealsByRole(currentUser.getId(), actualUserRole);
-
-            logger.info("✅ Found {} deals for user {} (Role: {}) via /my-deals", deals.size(), userId, actualUserRole);
-            return ResponseEntity.ok(ApiResponse.success(deals));
-
-        } catch (RuntimeException e) {
-            logger.error("❌ Error fetching /my-deals for user {}: {}", userId, e.getMessage());
-            if (e.getMessage().startsWith("User not found")) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(ApiResponse.error(e.getMessage()));
-            }
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-        catch (Exception e) {
-            logger.error("❌ Unexpected error fetching /my-deals: ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("An unexpected error occurred."));
-        }
-    }
-
-
-    // ==================== ADMIN DASHBOARD ====================
-    @GetMapping("/admin/dashboard")
-    public ResponseEntity<?> getAdminDashboard(Authentication authentication) { // Use Authentication
-        // Extract user details from authentication
-        // Example: String username = authentication.getName(); User adminUser = userRepository.findByUsername...
-        // Verify adminUser.getRole() == User.UserRole.ADMIN
-
-        // For now, assuming security config handles authorization
-        logger.info("Fetching admin dashboard...");
-        try {
-            // No need to fetch user if security config enforces ADMIN role for this path
-            AdminDealDashboardDTO dashboard = dealService.getAdminDashboard();
-            logger.info("✅ Admin dashboard generated");
-            return ResponseEntity.ok(ApiResponse.success(dashboard));
-
-        } catch (Exception e) {
-            logger.error("❌ Error fetching admin dashboard: ", e);
-            // Don't expose internal errors directly
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to generate admin dashboard."));
-        }
-    }
-
-    // ==================== AGENT PERFORMANCE METRICS (ADMIN ONLY) ====================
-    @GetMapping("/admin/agents-performance")
-    public ResponseEntity<?> getAgentPerformance(Authentication authentication) { // Use Authentication
-        // Verify user from authentication is ADMIN
-        logger.info("Fetching agent performance metrics...");
-        try {
-            List<AgentPerformanceDTO> performance = dealService.getAgentPerformanceMetrics();
-            logger.info("✅ Agent performance metrics fetched for {} agents", performance.size());
-            return ResponseEntity.ok(ApiResponse.success(performance));
-
-        } catch (Exception e) {
-            logger.error("❌ Error fetching performance metrics: ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to fetch agent performance metrics."));
-        }
-    }
-
-    // ==================== GET DEALS BY SPECIFIC AGENT (ADMIN ONLY) ====================
-    @GetMapping("/admin/agent/{agentId}")
-    public ResponseEntity<?> getDealsByAgent(
-            @PathVariable Long agentId,
-            Authentication authentication) { // Use Authentication
-
-        // Verify user from authentication is ADMIN
-        logger.info("Admin fetching deals for agent ID: {}", agentId);
-        try {
-            if (agentId == null || agentId <= 0) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("Valid Agent ID required."));
-            }
-            // Optional: Check if agentId actually exists and is an AGENT
-            // userRepository.findById(agentId).filter(u -> u.getRole() == User.UserRole.AGENT)...
-
-            List<DealDetailDTO> deals = dealService.getDealsByAgentForAdmin(agentId);
-            logger.info("✅ Found {} deals for agent {}", deals.size(), agentId);
-            return ResponseEntity.ok(ApiResponse.success(deals));
-
-        } catch (Exception e) {
-            logger.error("❌ Error fetching agent deals for agent {}: ", agentId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to fetch deals for the specified agent."));
-        }
-    }
-
-    // ==================== CREATE BASIC DEAL ====================
-    @PostMapping("/create")
-    public ResponseEntity<?> createDeal(@RequestBody CreateDealRequest request, Authentication authentication) {
-        logger.info("Creating new basic deal request: Prop={}, Buyer={}, Agent={}",
-                request.propertyId, request.buyerId, request.agentId);
-
-        try {
-            if (request.propertyId == null || request.buyerId == null) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Property ID and Buyer ID are required"));
-            }
-            // Agent ID is optional in this basic creation endpoint
-
-            DealStatus deal = dealService.createDeal(
-                    request.propertyId,
-                    request.buyerId,
-                    request.agentId // Pass agentId if provided
-            );
-
-            DealDTO dealDTO = convertToDTO(deal); // Use controller's helper
-            return ResponseEntity
-                    .status(HttpStatus.CREATED)
-                    .body(ApiResponse.success(dealDTO));
-
-        } catch (RuntimeException e) {
-            logger.error("❌ Error creating basic deal: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-        catch (Exception e) {
-            logger.error("❌ Unexpected error creating basic deal: ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("An unexpected error occurred creating the deal."));
-        }
-    }
-
-    // ==================== GET DEAL BY ID ====================
-    @GetMapping("/{dealId}")
-    public ResponseEntity<?> getDeal(@PathVariable Long dealId) {
-        logger.info("Fetching deal details for Deal ID: {}", dealId);
-        try {
-            DealStatus deal = dealService.getDealById(dealId);
-            DealDetailDTO dealDTO = convertToDetailDTO(deal); // Use detailed DTO
-            if (dealDTO == null) { // Handle conversion issues
-                logger.error("❌ Failed to convert Deal {} to DTO.", dealId);
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(ApiResponse.error("Error retrieving deal details."));
-            }
-            return ResponseEntity.ok(ApiResponse.success(dealDTO));
-        } catch (RuntimeException e) {
-            logger.error("❌ Error fetching deal {}: {}", dealId, e.getMessage());
-            // If the service throws "Deal not found", return 404
-            if (e.getMessage().contains("Deal not found")) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(ApiResponse.error("Deal not found with ID: " + dealId));
-            }
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        } catch (Exception e) {
-            logger.error("❌ Unexpected error fetching deal {}: ", dealId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("An unexpected error occurred fetching the deal."));
-        }
-    }
-    // ==================== UPDATE DEAL STAGE ====================
-    @PutMapping("/{dealId}/stage")
-    public ResponseEntity<?> updateDealStage(
+    @DeleteMapping("/{dealId}")
+    public ResponseEntity<?> deleteDeal(
             @PathVariable Long dealId,
-            @RequestBody UpdateDealStageRequest request,
-            Authentication authentication) { // authentication will be null due to permitAll()
+            Authentication authentication) {
 
-        logger.info("Request to update Deal ID: {} to Stage: '{}'", dealId, request.stage);
-
-        // ⭐ 1. This check is removed.
-        // Since SecurityConfig is permitAll(), 'authentication' will be null.
-        /*
-        if (authentication == null || authentication.getName() == null) {
-            logger.error("❌ Authentication information missing for updating deal stage.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error("Authentication required to update deal stage."));
-        }
-        */
-
-        // ⭐ 2. Use a placeholder username for debugging.
-        // String username = authentication.getName(); // This line would fail.
-        String username = "system-debug"; // Using a placeholder
+        logger.info("🗑️ DELETE request received for Deal ID: {}", dealId);
 
         try {
-            // Validate stage string
-            DealStatus.DealStage stageEnum;
-            try {
-                stageEnum = DealStatus.DealStage.valueOf(request.stage.trim().toUpperCase());
-            } catch (IllegalArgumentException | NullPointerException e) {
-                logger.error("❌ Invalid stage value provided: '{}'", request.stage);
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Invalid stage value: " + request.stage));
+            // Verify authentication
+            if (authentication == null || !authentication.isAuthenticated()) {
+                logger.warn("❌ Unauthorized delete attempt for Deal ID: {}", dealId);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Authentication required"));
             }
 
-            // Call service to update
-            DealStatus updatedDeal = dealService.updateDealStage(
-                    dealId,
-                    stageEnum,
-                    request.notes,
-                    username // Pass the placeholder username
-            );
+            // Get the authenticated user
+            String username = authentication.getName();
+            User currentUser = userRepository.findByEmail(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-            DealDetailDTO dealDTO = convertToDetailDTO(updatedDeal); // Return detailed DTO
-            logger.info("✅ Deal {} stage updated successfully to {}", dealId, stageEnum.name());
-            return ResponseEntity.ok(ApiResponse.success(dealDTO));
+            // Verify user is AGENT or ADMIN
+            if (!currentUser.getRole().equals(User.UserRole.AGENT) &&
+                    !currentUser.getRole().equals(User.UserRole.ADMIN)) {
+                logger.warn("❌ Non-agent/admin user {} attempted to delete Deal ID: {}", username, dealId);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Only agents and admins can delete deals"));
+            }
 
-        } catch (RuntimeException e) {
-            logger.error("❌ Error updating deal stage for deal {}: {}", dealId, e.getMessage());
-            if (e.getMessage().contains("Deal not found")) {
+            // Call service to delete deal with S3 cleanup
+            Map<String, Object> deletionResult = dealService.deleteDealCascade(dealId);
+
+            if ((Boolean) deletionResult.get("success")) {
+                logger.info("✅ Deal {} deleted successfully by user: {}", dealId, username);
+                return ResponseEntity.ok(ApiResponse.success(
+                        "Deal deleted successfully",
+                        deletionResult
+                ));
+            } else {
+                logger.warn("⚠️ Deal {} not found", dealId);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(ApiResponse.error(e.getMessage()));
+                        .body(ApiResponse.error("Deal not found"));
             }
-            if (e.getMessage().contains("Cannot move deal to a previous stage")) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(ApiResponse.error(e.getMessage()));
-            }
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+
         } catch (Exception e) {
-            logger.error("❌ Unexpected error updating deal stage for deal {}: ", dealId, e);
+            logger.error("❌ Error deleting deal {}: ", dealId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("An unexpected error occurred updating the deal stage."));
+                    .body(ApiResponse.error("Failed to delete deal: " + e.getMessage()));
         }
     }
 
+    // ==================== UPDATE BUYER (AGENT/ADMIN) ====================
+    /**
+     * Update the buyer for a deal
+     */
+    @PutMapping("/{dealId}/buyer")
+    public ResponseEntity<?> updateBuyer(
+            @PathVariable Long dealId,
+            @RequestBody Map<String, Long> request,
+            Authentication authentication) {
 
+        logger.info("🔄 UPDATE buyer request for Deal ID: {}", dealId);
 
-    // ==================== GET DEALS BY AGENT (for the agent themselves) ====================
-    @GetMapping("/agent/{agentId}")
-    public ResponseEntity<?> getAgentDeals(@PathVariable Long agentId, Authentication authentication) {
-        // Security check: Ensure logged-in user matches agentId or is ADMIN
-        logger.info("Fetching deals for agent ID: {}", agentId);
         try {
-            // Basic validation
-            if (agentId == null || agentId <= 0) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("Valid Agent ID required."));
+            // Verify authentication and role
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Authentication required"));
             }
-            // Fetch deals using the service method that returns entities
-            List<DealStatus> deals = dealService.getDealsForAgent(agentId);
-            // Convert to basic DTO for this potentially public endpoint
-            List<DealDTO> dealDTOs = deals.stream()
-                    .map(this::convertToDTO)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
 
-            logger.info("✅ Found {} deals for agent {}", dealDTOs.size(), agentId);
-            return ResponseEntity.ok(ApiResponse.success(dealDTOs));
+            String username = authentication.getName();
+            User currentUser = userRepository.findByEmail(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-        } catch (Exception e) {
-            logger.error("❌ Error fetching agent deals for agent {}: ", agentId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to fetch deals for the specified agent."));
-        }
-    }
+            if (!currentUser.getRole().equals(User.UserRole.AGENT) &&
+                    !currentUser.getRole().equals(User.UserRole.ADMIN)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Only agents and admins can update deals"));
+            }
 
-    // ==================== GET DEALS BY STAGE (ADMIN ONLY) ====================
-    @GetMapping("/stage/{stage}")
-    public ResponseEntity<?> getDealsByStage(
-            @PathVariable String stage,
-            Authentication authentication) { // Use Authentication
-
-        // Verify user from authentication is ADMIN
-        logger.info("Admin fetching deals by stage: {}", stage);
-        try {
-            // Convert stage string to enum
-            DealStatus.DealStage dealStage;
-            try {
-                dealStage = DealStatus.DealStage.valueOf(stage.trim().toUpperCase());
-            } catch (IllegalArgumentException | NullPointerException e) {
-                logger.error("❌ Invalid stage value provided: '{}'", stage);
+            Long newBuyerId = request.get("buyerId");
+            if (newBuyerId == null) {
                 return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Invalid stage value: " + stage));
+                        .body(ApiResponse.error("Buyer ID is required"));
             }
 
-            // Get deals by stage using service
-            List<DealStatus> deals = dealService.getDealsByStage(dealStage);
-            // Convert to detailed DTO for admin view
-            List<DealDetailDTO> dealDTOs = deals.stream()
-                    .map(this::convertToDetailDTO)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
+            DealStatus updatedDeal = dealService.updateBuyer(dealId, newBuyerId);
+            logger.info("✅ Buyer updated for Deal ID: {}", dealId);
 
-            logger.info("✅ Found {} deals in stage: {}", dealDTOs.size(), stage);
-            return ResponseEntity.ok(ApiResponse.success(dealDTOs));
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Buyer updated successfully",
+                    updatedDeal
+            ));
 
         } catch (Exception e) {
-            logger.error("❌ Error fetching deals by stage '{}': ", stage, e);
+            logger.error("❌ Error updating buyer for deal {}: ", dealId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to fetch deals by stage."));
+                    .body(ApiResponse.error("Failed to update buyer: " + e.getMessage()));
         }
     }
 
-    // ==================== GET STATS BY STAGE (ADMIN ONLY) ====================
-    @GetMapping("/stats/by-stage")
-    public ResponseEntity<?> getStatsByStage(Authentication authentication) { // Use Authentication
-        // Verify user from authentication is ADMIN
-        logger.info("Admin fetching deal stats by stage...");
-        try {
-            Map<String, Long> statsByStage = new HashMap<>();
-            for (DealStatus.DealStage stageEnum : DealStatus.DealStage.values()) {
-                Long count = dealService.getCountByStage(stageEnum);
-                statsByStage.put(stageEnum.name(), count != null ? count : 0L); // Ensure count is not null
-            }
-
-            logger.info("✅ Stats by stage calculated");
-            return ResponseEntity.ok(ApiResponse.success(statsByStage));
-
-        } catch (Exception e) {
-            logger.error("❌ Error fetching stats by stage: ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to fetch deal statistics."));
-        }
-    }
-
-    // ==================== GET DEALS BY BUYER ID ====================
-    @GetMapping("/buyer/{buyerId}")
-    public ResponseEntity<?> getBuyerDeals(@PathVariable Long buyerId, Authentication authentication) {
-        // Security check: Ensure logged-in user matches buyerId or is ADMIN/AGENT
-        logger.info("Fetching deals for buyer ID: {}", buyerId);
-        try {
-            if (buyerId == null || buyerId <= 0) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("Valid Buyer ID required."));
-            }
-            // Fetch deals using service method returning entities
-            List<DealStatus> deals = dealService.getBuyerDeals(buyerId);
-            // Convert to basic DTO
-            List<DealDTO> dealDTOs = deals.stream()
-                    .map(this::convertToDTO)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
-
-            logger.info("✅ Found {} deals for buyer {}", dealDTOs.size(), buyerId);
-            return ResponseEntity.ok(ApiResponse.success(dealDTOs));
-
-        } catch (Exception e) {
-            logger.error("❌ Error fetching buyer deals for buyer {}: ", buyerId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to fetch deals for the specified buyer."));
-        }
-    }
-
-    // ==================== GET DEALS BY PROPERTY ID ====================
-    @GetMapping("/property/{propertyId}")
-    public ResponseEntity<?> getDealsByProperty(@PathVariable Long propertyId) {
-        logger.info("Fetching deals for property ID: {}", propertyId);
-        try {
-            if (propertyId == null || propertyId <= 0) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("Valid Property ID required."));
-            }
-            // Use the specific service method returning DTOs
-            List<DealDetailDTO> dealDTOs = dealService.getDealsForPropertyAsDTO(propertyId);
-
-            logger.info("✅ Found {} deals for property {}", dealDTOs.size(), propertyId);
-            return ResponseEntity.ok(ApiResponse.success(dealDTOs));
-
-        } catch (Exception e) {
-            logger.error("❌ Error fetching deals for property {}: ", propertyId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to fetch deals for the specified property."));
-        }
-    }
-
+    // ==================== UPDATE SELLER (AGENT/ADMIN) ====================
     /**
-     * Converts DealStatus entity to DealDetailDTO.
-     * ⭐ CORRECTED: Now includes document upload flags.
-     * This is a private helper for the CONTROLLER. The SERVICE has its own.
+     * Update the seller (property owner) for a deal
+     * This updates the property owner, which affects the deal
      */
-    private DealDetailDTO convertToDetailDTO(DealStatus deal) {
-        if (deal == null) return null;
-        DealDetailDTO dto = new DealDetailDTO();
+    @PutMapping("/{dealId}/seller")
+    public ResponseEntity<?> updateSeller(
+            @PathVariable Long dealId,
+            @RequestBody Map<String, Long> request,
+            Authentication authentication) {
 
-        dto.setDealId(deal.getId());
-        dto.setStage(deal.getStage() != null ? deal.getStage().name() : null);
-        dto.setCurrentStage(deal.getStage() != null ? deal.getStage().name() : null);
-        dto.setAgreedPrice(deal.getAgreedPrice());
-        dto.setNotes(deal.getNotes());
-        dto.setCreatedAt(deal.getCreatedAt());
-        dto.setUpdatedAt(deal.getUpdatedAt());
-        dto.setLastUpdatedBy(deal.getLastUpdatedBy());
+        logger.info("🔄 UPDATE seller request for Deal ID: {}", dealId);
 
-        // ✅ ADDED: Document upload flags
-        dto.setAgreementUploaded(deal.isAgreementUploaded());
-        dto.setRegistrationUploaded(deal.isRegistrationUploaded());
-
-        // Stage Timestamps
-        dto.setInquiryDate(deal.getInquiryDate());
-        dto.setShortlistDate(deal.getShortlistDate());
-        dto.setNegotiationDate(deal.getNegotiationDate());
-        dto.setAgreementDate(deal.getAgreementDate());
-        dto.setRegistrationDate(deal.getRegistrationDate());
-        dto.setPaymentDate(deal.getPaymentDate());
-        dto.setCompletedDate(deal.getCompletedDate());
-
-
-        if (deal.getProperty() != null) {
-            dto.setPropertyId(deal.getProperty().getId());
-            dto.setPropertyTitle(deal.getProperty().getTitle());
-            dto.setPropertyPrice(deal.getProperty().getPrice());
-            dto.setPropertyCity(deal.getProperty().getCity());
-
-            if (deal.getProperty().getUser() != null) { // Seller
-                User seller = deal.getProperty().getUser();
-                dto.setSellerId(seller.getId());
-                dto.setSellerName(seller.getFirstName() + " " + seller.getLastName());
-                dto.setSellerEmail(seller.getEmail());
-                dto.setSellerMobile(seller.getMobileNumber());
+        try {
+            // Verify authentication and role
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Authentication required"));
             }
-        }
 
-        if (deal.getBuyer() != null) {
-            dto.setBuyerId(deal.getBuyer().getId());
-            dto.setBuyerName(deal.getBuyer().getFirstName() + " " + deal.getBuyer().getLastName());
-            dto.setBuyerEmail(deal.getBuyer().getEmail());
-            dto.setBuyerMobile(deal.getBuyer().getMobileNumber());
-        }
+            String username = authentication.getName();
+            User currentUser = userRepository.findByEmail(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (deal.getAgent() != null) {
-            dto.setAgentId(deal.getAgent().getId());
-            // Small correction: Use agent's last name, not buyer's
-            dto.setAgentName(deal.getAgent().getFirstName() + " " + deal.getAgent().getLastName());
-            dto.setAgentEmail(deal.getAgent().getEmail());
-            dto.setAgentMobile(deal.getAgent().getMobileNumber());
-        }
+            if (!currentUser.getRole().equals(User.UserRole.AGENT) &&
+                    !currentUser.getRole().equals(User.UserRole.ADMIN)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Only agents and admins can update deals"));
+            }
 
-        return dto;
+            Long newSellerId = request.get("sellerId");
+            if (newSellerId == null) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Seller ID is required"));
+            }
+
+            DealStatus updatedDeal = dealService.updateSeller(dealId, newSellerId);
+            logger.info("✅ Seller updated for Deal ID: {}", dealId);
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Seller updated successfully",
+                    updatedDeal
+            ));
+
+        } catch (Exception e) {
+            logger.error("❌ Error updating seller for deal {}: ", dealId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to update seller: " + e.getMessage()));
+        }
     }
 
+    // ==================== UPDATE AGENT (ADMIN) ====================
     /**
-     * Converts DealStatus entity to DealDTO (a simpler DTO).
+     * Reassign a deal to a different agent
      */
-    private DealDTO convertToDTO(DealStatus deal) {
-        if (deal == null) return null;
-        DealDTO dto = new DealDTO();
+    @PutMapping("/{dealId}/agent")
+    public ResponseEntity<?> updateAgent(
+            @PathVariable Long dealId,
+            @RequestBody Map<String, Long> request,
+            Authentication authentication) {
 
-        dto.setId(deal.getId());
-        dto.setDealId(deal.getId()); // Redundant? id should be enough.
-        dto.setStage(deal.getStage() != null ? deal.getStage().name() : null);
-        dto.setCurrentStage(deal.getStage() != null ? deal.getStage().name() : null); // Also redundant?
-        dto.setNotes(deal.getNotes());
-        dto.setCreatedAt(deal.getCreatedAt());
-        dto.setUpdatedAt(deal.getUpdatedAt());
-        dto.setLastUpdatedBy(deal.getLastUpdatedBy());
+        logger.info("🔄 UPDATE agent request for Deal ID: {}", dealId);
 
-        if (deal.getProperty() != null) {
-            dto.setPropertyId(deal.getProperty().getId());
-            // Create nested PropertyInfo DTO
-            dto.setProperty(new DealDTO.PropertyInfo(
-                    deal.getProperty().getId(),
-                    deal.getProperty().getTitle(),
-                    deal.getProperty().getCity(),
-                    deal.getProperty().getPrice() != null ? deal.getProperty().getPrice().doubleValue() : 0.0, // Handle null price
-                    deal.getProperty().getBedrooms(),
-                    deal.getProperty().getImageUrl()
+        try {
+            // Verify authentication and role
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Authentication required"));
+            }
+
+            String username = authentication.getName();
+            User currentUser = userRepository.findByEmail(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Only admins can reassign agents
+            if (!currentUser.getRole().equals(User.UserRole.ADMIN)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Only admins can reassign agents"));
+            }
+
+            Long newAgentId = request.get("agentId");
+            if (newAgentId == null) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Agent ID is required"));
+            }
+
+            DealStatus updatedDeal = dealService.updateAgent(dealId, newAgentId);
+            logger.info("✅ Agent updated for Deal ID: {}", dealId);
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Agent updated successfully",
+                    updatedDeal
             ));
-        }
 
-        if (deal.getBuyer() != null) {
-            dto.setBuyerId(deal.getBuyer().getId());
-            // Create nested UserInfo DTO
-            dto.setBuyer(new DealDTO.UserInfo(
-                    deal.getBuyer().getId(),
-                    deal.getBuyer().getFirstName(),
-                    deal.getBuyer().getLastName(),
-                    deal.getBuyer().getEmail(),
-                    deal.getBuyer().getMobileNumber()
-            ));
+        } catch (Exception e) {
+            logger.error("❌ Error updating agent for deal {}: ", dealId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to update agent: " + e.getMessage()));
         }
-
-        if (deal.getAgent() != null) {
-            dto.setAgentId(deal.getAgent().getId());
-            // Create nested UserInfo DTO
-            dto.setAgent(new DealDTO.UserInfo(
-                    deal.getAgent().getId(),
-                    deal.getAgent().getFirstName(),
-                    deal.getAgent().getLastName(),
-                    deal.getAgent().getEmail(),
-                    deal.getAgent().getMobileNumber()
-            ));
-        }
-
-        return dto;
     }
 
-    // ==================== INNER DTOs (Request Classes) ====================
+    // ==================== GET ALL DEALS (AGENT/ADMIN) ====================
+    @GetMapping
+    public ResponseEntity<?> getAllDeals(Authentication authentication) {
+        logger.info("📋 Fetching all deals");
+        try {
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Authentication required"));
+            }
 
-    // Request body for basic deal creation
-    static class CreateDealRequest {
-        public Long propertyId;
-        public Long buyerId;
-        public Long agentId; // Optional agent ID
+            String username = authentication.getName();
+            User currentUser = userRepository.findByEmail(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Getters might be needed if using frameworks that require them
-        public Long getPropertyId() { return propertyId; }
-        public Long getBuyerId() { return buyerId; }
-        public Long getAgentId() { return agentId; }
-    }
+            if (!currentUser.getRole().equals(User.UserRole.AGENT) &&
+                    !currentUser.getRole().equals(User.UserRole.ADMIN)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Only agents and admins can view all deals"));
+            }
 
-    // --- MODIFIED INNER DTO ---
-    // Request body for updating deal stage
-    static class UpdateDealStageRequest {
-        private String stage; // Should correspond to DealStage enum names
-        private String notes;
-        private String username; // ✅ ADDED: Field to accept username
+            var deals = dealService.getAllDeals();
+            return ResponseEntity.ok(ApiResponse.success(deals));
 
-        // Getters are needed for Jackson/Spring to deserialize
-        public String getStage() { return stage; }
-        public String getNotes() { return notes; }
-        public String getUsername() { return username; } // ✅ ADDED: Getter for username
-
-        // Setters might also be needed depending on framework usage
-        public void setStage(String stage) { this.stage = stage; }
-        public void setNotes(String notes) { this.notes = notes; }
-        public void setUsername(String username) { this.username = username; } // ✅ ADDED: Setter for username
+        } catch (Exception e) {
+            logger.error("❌ Error fetching deals: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to fetch deals"));
+        }
     }
 }

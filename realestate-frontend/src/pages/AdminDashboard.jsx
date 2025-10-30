@@ -6,8 +6,10 @@ const AdminDashboard = () => {
   const [agents, setAgents] = useState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [agentDeals, setAgentDeals] = useState([]);
+  const [filteredDeals, setFilteredDeals] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     fetchAgents();
@@ -18,6 +20,29 @@ const AdminDashboard = () => {
       fetchAgentDeals(selectedAgent);
     }
   }, [selectedAgent]);
+
+  // ✅ ADDED: Search filter effect
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredDeals(agentDeals);
+    } else {
+      const term = searchTerm.toLowerCase();
+      const filtered = agentDeals.filter((deal) => {
+        const dealId = (deal.dealId || deal.id || '').toString();
+        const propertyTitle = (deal.propertyTitle || '').toLowerCase();
+        const buyerName = (deal.buyerName || '').toLowerCase();
+        const stage = (deal.stage || '').toLowerCase();
+
+        return (
+          dealId.includes(term) ||
+          propertyTitle.includes(term) ||
+          buyerName.includes(term) ||
+          stage.includes(term)
+        );
+      });
+      setFilteredDeals(filtered);
+    }
+  }, [searchTerm, agentDeals]);
 
   const fetchAgents = async () => {
     try {
@@ -64,10 +89,46 @@ const AdminDashboard = () => {
       );
       if (response.ok) {
         const data = await response.json();
-        setAgentDeals(data.success ? data.data : []);
+        const deals = data.success ? data.data : [];
+        setAgentDeals(deals);
+        setFilteredDeals(deals);
       }
     } catch (err) {
       console.error("Error fetching agent deals:", err);
+    }
+  };
+
+  // ✅ ADDED: Delete deal function
+  const handleDeleteDeal = async (dealId) => {
+    if (!window.confirm(`Are you sure you want to permanently delete Deal ID: ${dealId}?\n\nThis will:\n• Remove the deal from the database\n• Delete all associated documents from storage\n• This action cannot be undone!`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/deals/${dealId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        alert("✅ Deal deleted successfully!");
+        // Refresh the deals list
+        if (selectedAgent) {
+          fetchAgentDeals(selectedAgent);
+        }
+        fetchAgents(); // Refresh stats
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        alert(`❌ Failed to delete deal: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error("Error deleting deal:", error);
+      alert("❌ Error deleting deal. Please try again.");
     }
   };
 
@@ -150,6 +211,25 @@ const AdminDashboard = () => {
     boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
     border: "1px solid #e5e7eb",
     padding: "24px",
+  };
+
+  // ✅ ADDED: Search box style
+  const searchBoxStyle = {
+    marginBottom: "16px",
+    padding: "12px",
+    backgroundColor: "#f8fafc",
+    borderRadius: "8px",
+    border: "1px solid #e2e8f0",
+  };
+
+  const searchInputStyle = {
+    width: "100%",
+    padding: "10px 16px",
+    fontSize: "14px",
+    border: "1px solid #cbd5e1",
+    borderRadius: "6px",
+    outline: "none",
+    boxSizing: "border-box",
   };
 
   if (loading) {
@@ -269,7 +349,30 @@ const AdminDashboard = () => {
                 Deals by{" "}
                 {agents.find((a) => a.agentId === selectedAgent)?.agentName}
               </h2>
-              {agentDeals.length > 0 ? (
+
+              {/* ✅ ADDED: Search Box */}
+              {agentDeals.length > 0 && (
+                <div style={searchBoxStyle}>
+                  <input
+                    type="text"
+                    placeholder="🔍 Search by Deal ID, Property, Buyer, or Stage..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={searchInputStyle}
+                  />
+                  {searchTerm && (
+                    <div style={{
+                      marginTop: "8px",
+                      fontSize: "12px",
+                      color: "#64748b"
+                    }}>
+                      Showing {filteredDeals.length} of {agentDeals.length} deals
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {filteredDeals.length > 0 ? (
                 <div
                   style={{
                     display: "flex",
@@ -277,7 +380,7 @@ const AdminDashboard = () => {
                     gap: "12px",
                   }}
                 >
-                  {agentDeals.map((deal) => (
+                  {filteredDeals.map((deal) => (
                     <div
                       key={deal.dealId}
                       style={{
@@ -285,8 +388,26 @@ const AdminDashboard = () => {
                         backgroundColor: "#f8fafc",
                         borderRadius: "8px",
                         border: "1px solid #e2e8f0",
+                        position: "relative",
                       }}
                     >
+                      {/* ✅ ADDED: Deal ID Badge */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "12px",
+                          right: "12px",
+                          backgroundColor: "#1e293b",
+                          color: "white",
+                          padding: "4px 10px",
+                          borderRadius: "12px",
+                          fontSize: "10px",
+                          fontWeight: "700",
+                        }}
+                      >
+                        ID: {deal.dealId}
+                      </div>
+
                       <div
                         style={{
                           display: "flex",
@@ -294,7 +415,7 @@ const AdminDashboard = () => {
                           alignItems: "start",
                         }}
                       >
-                        <div>
+                        <div style={{ flex: 1, marginRight: "60px" }}>
                           <h4
                             style={{
                               margin: "0 0 4px 0",
@@ -339,6 +460,31 @@ const AdminDashboard = () => {
                           {deal.stage}
                         </span>
                       </div>
+
+                      {/* ✅ ADDED: Delete Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteDeal(deal.dealId);
+                        }}
+                        style={{
+                          marginTop: "12px",
+                          padding: "8px 16px",
+                          backgroundColor: "#ef4444",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          fontWeight: "600",
+                          fontSize: "12px",
+                          width: "100%",
+                          transition: "background 0.2s",
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = "#dc2626"}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = "#ef4444"}
+                      >
+                        🗑️ Delete Deal
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -350,7 +496,7 @@ const AdminDashboard = () => {
                     color: "#64748b",
                   }}
                 >
-                  No deals found
+                  {searchTerm ? "No deals match your search" : "No deals found"}
                 </div>
               )}
             </>

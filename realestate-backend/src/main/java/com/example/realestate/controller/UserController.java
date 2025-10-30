@@ -3,14 +3,18 @@ package com.example.realestate.controller;
 import com.example.realestate.dto.ApiResponse;
 import com.example.realestate.model.User;
 import com.example.realestate.repository.UserRepository;
+import com.example.realestate.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -22,6 +26,87 @@ public class UserController {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private UserService userService;
+
+    /**
+     * ✅ NEW/UPDATED: Delete a user (Admin only)
+     * Cascades to delete:
+     * - All properties owned by the user (and their S3 files)
+     * - All deals where user is buyer/seller/agent (and their S3 documents)
+     * - The user account itself
+     *
+     * @param userId The ID of the user to delete
+     * @return ResponseEntity with success or error message
+     */
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long userId, Authentication authentication) {
+        logger.info("🗑️ DELETE request received for User ID: {}", userId);
+
+        try {
+            // Verify authentication
+            if (authentication == null || !authentication.isAuthenticated()) {
+                logger.warn("❌ Unauthorized delete attempt for User ID: {}", userId);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(createErrorResponse("Authentication required"));
+            }
+
+            // Get the authenticated user
+            String username = authentication.getName();
+            User currentUser = userRepository.findByEmail(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Verify only ADMIN can delete users
+            if (!currentUser.getRole().equals(User.UserRole.ADMIN)) {
+                logger.warn("❌ Non-admin user {} attempted to delete User ID: {}", username, userId);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(createErrorResponse("Only administrators can delete users"));
+            }
+
+            // Prevent admin from deleting themselves
+            if (currentUser.getId().equals(userId)) {
+                logger.warn("❌ Admin {} attempted to delete their own account", username);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(createErrorResponse("You cannot delete your own admin account"));
+            }
+
+            // Call service to delete user with cascade (this will handle DB and S3 cleanup)
+            Map<String, Object> deletionResult = userService.deleteUserCascade(userId);
+
+            if ((Boolean) deletionResult.get("success")) {
+                logger.info("✅ User {} deleted successfully by admin: {}", userId, username);
+                return ResponseEntity.ok(createSuccessResponse(
+                        "User deleted successfully",
+                        deletionResult
+                ));
+            } else {
+                logger.warn("⚠️ User {} not found", userId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(createErrorResponse("User not found"));
+            }
+
+        } catch (Exception e) {
+            logger.error("❌ Error deleting user {}: ", userId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createErrorResponse("Failed to delete user: " + e.getMessage()));
+        }
+    }
+
+    // Helper methods for response formatting
+    private Map<String, Object> createSuccessResponse(String message, Object data) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", message);
+        response.put("data", data);
+        return response;
+    }
+
+    private Map<String, Object> createErrorResponse(String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", message);
+        return response;
+    }
 
     // ==================== GET ALL USERS (ADMIN) ====================
     @GetMapping
@@ -156,31 +241,6 @@ public class UserController {
         }
     }
 
-    // ==================== DELETE USER (ADMIN) ====================
-    @DeleteMapping("/{userId}")
-    public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
-        logger.info("Deleting user with ID: {}", userId);
-
-        try {
-            Optional<User> userOptional = userRepository.findById(userId);
-
-            if (userOptional.isEmpty()) {
-                logger.warn("User not found with ID: {}", userId);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(ApiResponse.error("User not found"));
-            }
-
-            userRepository.deleteById(userId);
-            logger.info("User with ID: {} deleted successfully", userId);
-
-            return ResponseEntity.ok(ApiResponse.success("User deleted successfully"));
-
-        } catch (Exception e) {
-            logger.error("Error deleting user: ", e);
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Error deleting user: " + e.getMessage()));
-        }
-    }
 
     // ==================== GET USERS BY ROLE ====================
     @GetMapping("/role/{role}")

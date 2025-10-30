@@ -2,6 +2,16 @@
 import React, { useState } from 'react';
 
 const DealStatusCard = ({ deal, onViewDetails }) => {
+    // Defensive check: if deal is null/undefined, render error message
+    if (!deal) {
+        console.error('DealStatusCard: deal prop is null or undefined');
+        return (
+            <div style={{ padding: '20px', border: '1px solid #ef4444', borderRadius: '8px', color: '#ef4444' }}>
+                ⚠️ Invalid deal data
+            </div>
+        );
+    }
+
     const getStageColor = (stage) => {
         const colors = {
             'INQUIRY': '#fbbf24',
@@ -15,6 +25,14 @@ const DealStatusCard = ({ deal, onViewDetails }) => {
         return colors[stage] || '#6b7280';
     };
 
+    // Helper function to safely format price
+    const formatPrice = (price) => {
+        if (price === null || price === undefined) return null;
+        const numPrice = Number(price);
+        if (isNaN(numPrice)) return null;
+        return numPrice.toLocaleString('en-IN');
+    };
+
     const cardStyle = {
         background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
         borderRadius: '12px',
@@ -25,6 +43,19 @@ const DealStatusCard = ({ deal, onViewDetails }) => {
         padding: '16px',
         cursor: 'pointer',
         position: 'relative',
+    };
+
+    const dealIdBadgeStyle = {
+        position: 'absolute',
+        top: '12px',
+        right: '12px',
+        backgroundColor: '#1e293b',
+        color: 'white',
+        padding: '4px 10px',
+        borderRadius: '12px',
+        fontSize: '10px',
+        fontWeight: '700',
+        letterSpacing: '0.5px',
     };
 
     const badgeStyle = {
@@ -81,10 +112,13 @@ const DealStatusCard = ({ deal, onViewDetails }) => {
         marginTop: '8px',
     };
 
+    // Format the agreed price safely
+    const formattedPrice = formatPrice(deal.agreedPrice);
+
     return (
         <div
             style={cardStyle}
-            onClick={() => onViewDetails(deal)}
+            onClick={() => onViewDetails && onViewDetails(deal)}
             onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-4px)';
                 e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
@@ -94,27 +128,32 @@ const DealStatusCard = ({ deal, onViewDetails }) => {
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
             }}
         >
+            {/* Deal ID Badge */}
+            <div style={dealIdBadgeStyle}>
+                ID: {deal.dealId || deal.id || 'N/A'}
+            </div>
+
             {/* Stage Badge */}
             <div style={badgeStyle}>
-                {deal.currentStage || deal.stage}
+                {deal.currentStage || deal.stage || 'INQUIRY'}
             </div>
 
             {/* Property Title */}
             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#1e293b', fontWeight: '700' }}>
-                {deal.property?.title || 'Property'}
+                {deal.property?.title || deal.propertyTitle || 'Property'}
             </h3>
 
             {/* Location */}
             <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
-                📍 {deal.property?.areaName || deal.property?.city || 'Location'}
+                📍 {deal.property?.areaName || deal.property?.city || deal.propertyCity || 'Location'}
             </div>
 
-            {/* Agreed Price - Prominent */}
-            {deal.agreedPrice && (
+            {/* Agreed Price - Prominent - Only show if valid */}
+            {formattedPrice && (
                 <div style={sectionStyle}>
                     <div style={labelStyle}>Agreed Price</div>
                     <div style={priceStyle}>
-                        ₹{deal.agreedPrice.toLocaleString('en-IN')}
+                        ₹{formattedPrice}
                     </div>
                 </div>
             )}
@@ -123,25 +162,25 @@ const DealStatusCard = ({ deal, onViewDetails }) => {
             <div style={sectionStyle}>
                 <div style={labelStyle}>👤 Buyer</div>
                 <div style={valueStyle}>
-                    {deal.buyer?.firstName} {deal.buyer?.lastName}
+                    {deal.buyer?.firstName || deal.buyerName || 'N/A'} {deal.buyer?.lastName || ''}
                 </div>
-                {deal.buyer?.mobileNumber && (
+                {(deal.buyer?.mobileNumber || deal.buyerMobile) && (
                     <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                        {deal.buyer.mobileNumber}
+                        {deal.buyer?.mobileNumber || deal.buyerMobile}
                     </div>
                 )}
             </div>
 
             {/* Seller Details */}
-            {deal.property?.user && (
+            {(deal.property?.user || deal.sellerName) && (
                 <div style={sectionStyle}>
                     <div style={labelStyle}>🏠 Seller</div>
                     <div style={valueStyle}>
-                        {deal.property.user.firstName} {deal.property.user.lastName}
+                        {deal.property?.user?.firstName || deal.sellerName || 'N/A'} {deal.property?.user?.lastName || ''}
                     </div>
-                    {deal.property.user.mobileNumber && (
+                    {(deal.property?.user?.mobileNumber || deal.sellerMobile) && (
                         <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                            {deal.property.user.mobileNumber}
+                            {deal.property?.user?.mobileNumber || deal.sellerMobile}
                         </div>
                     )}
                 </div>
@@ -154,16 +193,16 @@ const DealStatusCard = ({ deal, onViewDetails }) => {
                     <div>
                         <div style={labelStyle}>📊 Agent ID</div>
                         <div style={valueStyle}>
-                            {deal.agent?.id || 'N/A'}
+                            {deal.agent?.id || deal.agentId || 'N/A'}
                         </div>
                     </div>
 
                     {/* Agent Name */}
-                    {deal.agent && (
+                    {(deal.agent || deal.agentName) && (
                         <div>
                             <div style={labelStyle}>Agent</div>
                             <div style={valueStyle}>
-                                {deal.agent.firstName || 'Agent'}
+                                {deal.agent?.firstName || deal.agentName || 'Agent'}
                             </div>
                         </div>
                     )}
@@ -184,6 +223,10 @@ const DealStatusCard = ({ deal, onViewDetails }) => {
                     fontWeight: '600',
                     fontSize: '13px',
                     transition: 'background 0.2s',
+                }}
+                onClick={(e) => {
+                    e.stopPropagation(); // Prevent card click from firing
+                    onViewDetails && onViewDetails(deal);
                 }}
                 onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
                 onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}

@@ -1,7 +1,16 @@
+// AdminDealPanel.jsx (Enhanced with Delete & Edit functionality)
 import React, { useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
 import DealDetailModal from "./DealDetailModal";
 import { BACKEND_BASE_URL } from "./config/config";
+import {
+  deleteDeal,
+  updateDealBuyer,
+  updateDealSeller,
+  updateDealAgent,
+  getAllUsers,
+  getAllAgents
+} from "./services/api";
 
 const AdminDealPanel = () => {
   const { user } = useAuth();
@@ -11,6 +20,20 @@ const AdminDealPanel = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
   const [error, setError] = useState(null);
+
+  // ⭐ NEW: Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingDeal, setEditingDeal] = useState(null);
+  const [editMode, setEditMode] = useState(null); // 'buyer', 'seller', 'agent'
+  const [users, setUsers] = useState([]);
+  const [agents, setAgents] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
+
+  // ⭐ NEW: Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingDeal, setDeletingDeal] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -30,8 +53,6 @@ const AdminDealPanel = () => {
       const allDealsFlat = [];
       const agentDealsMap = {};
 
-      // ✅ Fetch admin dashboard to get all agents
-      console.log("📊 Fetching admin dashboard data...");
       const adminRes = await fetch(
         `${BACKEND_BASE_URL}/api/deals/admin/dashboard?userId=${user.id}`,
         { headers }
@@ -44,7 +65,6 @@ const AdminDealPanel = () => {
         if (adminData.success && adminData.data?.agentPerformance) {
           console.log(`Found ${adminData.data.agentPerformance.length} agents`);
 
-          // Fetch deals for each agent
           for (const agentPerf of adminData.data.agentPerformance) {
             console.log(
               `📥 Fetching deals for agent: ${agentPerf.agentName} (ID: ${agentPerf.agentId})`
@@ -119,6 +139,98 @@ const AdminDealPanel = () => {
     }
   };
 
+  // ⭐ NEW: Fetch users for edit modal
+  const fetchUsersForEdit = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+
+      if (editMode === 'agent') {
+        const response = await getAllAgents(token);
+        setAgents(response.data || response);
+      } else {
+        const response = await getAllUsers(token);
+        setUsers(response.data || response);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      alert("Failed to load users");
+    }
+  };
+
+  // ⭐ NEW: Open edit modal
+  const openEditModal = (deal, mode) => {
+    setEditingDeal(deal);
+    setEditMode(mode);
+    setShowEditModal(true);
+    setSelectedUserId(null);
+    fetchUsersForEdit();
+  };
+
+  // ⭐ NEW: Handle update
+  const handleUpdate = async () => {
+    if (!selectedUserId) {
+      alert('Please select a user');
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      const token = localStorage.getItem("authToken");
+      const dealId = editingDeal.id;
+
+      console.log(`🔄 Updating ${editMode} for deal ${dealId}...`);
+
+      if (editMode === 'buyer') {
+        await updateDealBuyer(dealId, selectedUserId, token);
+      } else if (editMode === 'seller') {
+        await updateDealSeller(dealId, selectedUserId, token);
+      } else if (editMode === 'agent') {
+        await updateDealAgent(dealId, selectedUserId, token);
+      }
+
+      alert(`✅ ${editMode.charAt(0).toUpperCase() + editMode.slice(1)} updated successfully!`);
+      setShowEditModal(false);
+      setEditingDeal(null);
+      setEditMode(null);
+      fetchDeals(); // Refresh deals
+    } catch (error) {
+      console.error(`Error updating ${editMode}:`, error);
+      alert(`❌ Error: ${error.message}`);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  // ⭐ NEW: Open delete confirmation
+  const openDeleteConfirm = (deal) => {
+    setDeletingDeal(deal);
+    setShowDeleteConfirm(true);
+  };
+
+  // ⭐ NEW: Handle delete
+  const handleDelete = async () => {
+    setDeleteLoading(true);
+    try {
+      const token = localStorage.getItem("authToken");
+      const dealId = deletingDeal.id;
+
+      console.log(`🗑️ Deleting deal ${dealId}...`);
+      const result = await deleteDeal(dealId, token);
+
+      console.log("Delete result:", result);
+      alert(`✅ Deal deleted successfully!\n${result.data?.s3FilesDeleted || 0} files deleted from S3`);
+
+      setShowDeleteConfirm(false);
+      setDeletingDeal(null);
+      fetchDeals(); // Refresh deals
+    } catch (error) {
+      console.error("Error deleting deal:", error);
+      alert(`❌ Error: ${error.message}`);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const getFilteredDealsByAgent = () => {
     const filtered = {};
     Object.keys(dealsByAgent).forEach((agentKey) => {
@@ -138,6 +250,21 @@ const AdminDealPanel = () => {
     });
     return filtered;
   };
+
+  const stages = [
+    "INQUIRY",
+    "SHORTLIST",
+    "NEGOTIATION",
+    "AGREEMENT",
+    "REGISTRATION",
+    "PAYMENT",
+    "COMPLETED",
+  ];
+
+  const stageCounts = stages.reduce((acc, stage) => {
+    acc[stage] = allDeals.filter((d) => d.stage === stage).length;
+    return acc;
+  }, {});
 
   const containerStyle = {
     maxWidth: "1700px",
@@ -246,32 +373,30 @@ const AdminDealPanel = () => {
 
   const cardStyle = {
     padding: "16px",
-    backgroundColor: "#f3f4f6",
-    borderRadius: "12px",
-    border: "1px solid #e5e7eb",
+    backgroundColor: "white",
+    borderRadius: "10px",
+    border: "1px solid #e2e8f0",
     cursor: "pointer",
-    transition: "all 0.2s",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.08), 0 0 12px rgba(59, 130, 246, 0.1)",
-    background: "linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)",
+    transition: "all 0.2s ease",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
   };
 
   const stageBadgeStyle = {
     display: "inline-block",
-    padding: "4px 8px",
-    backgroundColor: "#f59e0b",
+    padding: "4px 12px",
+    backgroundColor: "#3b82f6",
     color: "white",
-    borderRadius: "4px",
+    borderRadius: "12px",
     fontSize: "11px",
-    fontWeight: "600",
-    marginBottom: "8px",
-    boxShadow: "0 2px 4px rgba(245, 158, 11, 0.3)",
+    fontWeight: "700",
+    marginBottom: "10px",
   };
 
   const titleSmallStyle = {
-    margin: "0 0 12px 0",
-    color: "#1e293b",
+    fontSize: "16px",
     fontWeight: "600",
-    fontSize: "14px",
+    color: "#1e293b",
+    marginBottom: "10px",
   };
 
   const buttonStyle = {
@@ -283,40 +408,53 @@ const AdminDealPanel = () => {
     borderRadius: "6px",
     cursor: "pointer",
     fontWeight: "600",
-    fontSize: "12px",
+    fontSize: "13px",
   };
+
+  // ⭐ NEW: Deal action buttons style
+  const dealActionsStyle = {
+    display: "flex",
+    gap: "8px",
+    marginTop: "12px",
+  };
+
+  const editBtnStyle = {
+    flex: 1,
+    padding: "6px 10px",
+    backgroundColor: "#10b981",
+    color: "white",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontWeight: "600",
+    fontSize: "11px",
+  };
+
+  const deleteBtnStyle = {
+    flex: 1,
+    padding: "6px 10px",
+    backgroundColor: "#ef4444",
+    color: "white",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontWeight: "600",
+    fontSize: "11px",
+  };
+
+  const filteredDealsByAgent = getFilteredDealsByAgent();
+  const totalAgents = Object.keys(dealsByAgent).length;
 
   if (loading) {
     return (
       <div style={containerStyle}>
-        <h2>⏳ Loading deals...</h2>
+        <div style={{ textAlign: 'center', padding: '60px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
+          <p>Loading deals...</p>
+        </div>
       </div>
     );
   }
-
-  if (!user) {
-    return (
-      <div style={containerStyle}>
-        <h2>❌ Please log in to view deals</h2>
-      </div>
-    );
-  }
-
-  const stages = [
-    "INQUIRY",
-    "SHORTLIST",
-    "NEGOTIATION",
-    "AGREEMENT",
-    "REGISTRATION",
-    "PAYMENT",
-  ];
-  const stageCounts = {};
-  stages.forEach((stage) => {
-    stageCounts[stage] = allDeals.filter((d) => d.stage === stage).length;
-  });
-
-  const filteredDealsByAgent = getFilteredDealsByAgent();
-  const totalAgents = Object.keys(dealsByAgent).length;
 
   return (
     <div style={containerStyle}>
@@ -423,7 +561,6 @@ const AdminDealPanel = () => {
                     <div
                       key={deal.id}
                       style={cardStyle}
-                      onClick={() => setSelectedDeal(deal)}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.boxShadow =
                           "0 8px 16px rgba(0,0,0,0.15)";
@@ -460,7 +597,7 @@ const AdminDealPanel = () => {
                         </div>
                       )}
 
-                      {/* Buyer Details */}
+                      {/* Buyer Details with Edit */}
                       {buyer && (
                         <div
                           style={{
@@ -469,26 +606,50 @@ const AdminDealPanel = () => {
                             borderRadius: "6px",
                             marginBottom: "8px",
                             fontSize: "12px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
                           }}
                         >
-                          <div
-                            style={{
-                              fontWeight: "600",
-                              color: "#1e293b",
-                              marginBottom: "2px",
-                            }}
-                          >
-                            👤 Buyer: {buyer?.firstName} {buyer?.lastName}
-                          </div>
-                          {buyer?.mobileNumber && (
-                            <div style={{ color: "#64748b", fontSize: "11px" }}>
-                              📞 {buyer.mobileNumber}
+                          <div>
+                            <div
+                              style={{
+                                fontWeight: "600",
+                                color: "#1e293b",
+                                marginBottom: "2px",
+                              }}
+                            >
+                              👤 Buyer: {buyer?.firstName} {buyer?.lastName}
                             </div>
-                          )}
+                            {buyer?.mobileNumber && (
+                              <div style={{ color: "#64748b", fontSize: "11px" }}>
+                                📞 {buyer.mobileNumber}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditModal(deal, 'buyer');
+                            }}
+                            style={{
+                              background: "none",
+                              border: "1px solid #3b82f6",
+                              color: "#3b82f6",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              padding: "4px 8px",
+                              fontSize: "11px",
+                              fontWeight: "600",
+                            }}
+                            title="Change Buyer"
+                          >
+                            ✏️
+                          </button>
                         </div>
                       )}
 
-                      {/* Seller Details */}
+                      {/* Seller Details with Edit */}
                       {seller && (
                         <div
                           style={{
@@ -497,22 +658,46 @@ const AdminDealPanel = () => {
                             borderRadius: "6px",
                             marginBottom: "8px",
                             fontSize: "12px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
                           }}
                         >
-                          <div
-                            style={{
-                              fontWeight: "600",
-                              color: "#1e293b",
-                              marginBottom: "2px",
-                            }}
-                          >
-                            🏢 Seller: {seller.firstName} {seller.lastName}
-                          </div>
-                          {seller.mobileNumber && (
-                            <div style={{ color: "#64748b", fontSize: "11px" }}>
-                              📞 {seller.mobileNumber}
+                          <div>
+                            <div
+                              style={{
+                                fontWeight: "600",
+                                color: "#1e293b",
+                                marginBottom: "2px",
+                              }}
+                            >
+                              🏢 Seller: {seller.firstName} {seller.lastName}
                             </div>
-                          )}
+                            {seller.mobileNumber && (
+                              <div style={{ color: "#64748b", fontSize: "11px" }}>
+                                📞 {seller.mobileNumber}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditModal(deal, 'seller');
+                            }}
+                            style={{
+                              background: "none",
+                              border: "1px solid #3b82f6",
+                              color: "#3b82f6",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              padding: "4px 8px",
+                              fontSize: "11px",
+                              fontWeight: "600",
+                            }}
+                            title="Change Seller"
+                          >
+                            ✏️
+                          </button>
                         </div>
                       )}
 
@@ -527,9 +712,33 @@ const AdminDealPanel = () => {
                         📅 {new Date(deal.createdAt).toLocaleDateString()}
                       </p>
 
+                      {/* ⭐ NEW: Action Buttons */}
+                      <div style={dealActionsStyle}>
+                        <button
+                          style={editBtnStyle}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditModal(deal, 'agent');
+                          }}
+                          title="Reassign Agent"
+                        >
+                          👥 Reassign
+                        </button>
+                        <button
+                          style={deleteBtnStyle}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDeleteConfirm(deal);
+                          }}
+                          title="Delete Deal"
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
+
                       {/* View Button */}
                       <button
-                        style={buttonStyle}
+                        style={{ ...buttonStyle, marginTop: "8px" }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedDeal(deal);
@@ -546,6 +755,7 @@ const AdminDealPanel = () => {
         </div>
       )}
 
+      {/* Deal Detail Modal */}
       {selectedDeal && (
         <DealDetailModal
           deal={selectedDeal}
@@ -556,6 +766,196 @@ const AdminDealPanel = () => {
           }}
           userRole="ADMIN"
         />
+      )}
+
+      {/* ⭐ NEW: Edit Modal */}
+      {showEditModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowEditModal(false);
+          }}
+        >
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '32px',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+          }}>
+            <h3 style={{
+              margin: '0 0 16px 0',
+              fontSize: '24px',
+              fontWeight: '700',
+              color: '#1e293b',
+            }}>
+              Update {editMode === 'buyer' ? 'Buyer' : editMode === 'seller' ? 'Seller' : 'Agent'}
+            </h3>
+
+            <select
+              value={selectedUserId || ''}
+              onChange={(e) => setSelectedUserId(Number(e.target.value))}
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '14px',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                marginBottom: '20px',
+              }}
+            >
+              <option value="">-- Select User --</option>
+              {(editMode === 'agent' ? agents : users).map(u => (
+                <option key={u.id} value={u.id}>
+                  {u.firstName} {u.lastName} - {u.email}
+                  {editMode === 'agent' && ` (${u.role})`}
+                </option>
+              ))}
+            </select>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={handleUpdate}
+                disabled={editLoading || !selectedUserId}
+                style={{
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                }}
+              >
+                {editLoading ? 'Updating...' : 'Update'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingDeal(null);
+                  setEditMode(null);
+                }}
+                disabled={editLoading}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#e2e8f0',
+                  color: '#64748b',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ⭐ NEW: Delete Confirmation Modal */}
+      {showDeleteConfirm && deletingDeal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowDeleteConfirm(false);
+          }}
+        >
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '32px',
+            maxWidth: '500px',
+            width: '90%',
+          }}>
+            <h3 style={{
+              margin: '0 0 16px 0',
+              fontSize: '24px',
+              fontWeight: '700',
+              color: '#1e293b',
+            }}>
+              ⚠️ Confirm Deletion
+            </h3>
+            <p style={{
+              fontSize: '15px',
+              color: '#64748b',
+              lineHeight: '1.6',
+              marginBottom: '24px',
+            }}>
+              Are you sure you want to delete this deal?
+              <br /><br />
+              <strong>Deal ID: {deletingDeal.id}</strong>
+              <br />
+              <strong>Property: {deletingDeal.propertyTitle || deletingDeal.property?.title}</strong>
+              <br /><br />
+              This action cannot be undone. All associated documents will be deleted from storage.
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={handleDelete}
+                disabled={deleteLoading}
+                style={{
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                }}
+              >
+                {deleteLoading ? 'Deleting...' : 'Yes, Delete'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeletingDeal(null);
+                }}
+                disabled={deleteLoading}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#e2e8f0',
+                  color: '#64748b',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
