@@ -1,18 +1,40 @@
 import React, { useState } from 'react';
 import { BACKEND_BASE_URL } from "./config/config";
 
-const DocumentUploadModal = ({ dealId, onClose, onSuccess }) => {
+const DocumentUploadModal = ({ dealId, propertyId, onClose, onSuccess, docType = null }) => {
     const [file, setFile] = useState(null);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState(null);
 
+    // Get document type label
+    const getDocTypeLabel = () => {
+        if (!docType) return 'Document';
+        if (docType === 'AGREEMENT') return 'Agreement Document';
+        if (docType === 'REGISTRATION') return 'Registration Document';
+        return 'Document';
+    };
+
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
         if (selectedFile) {
+            // Validate file size (10MB)
             if (selectedFile.size > 10 * 1024 * 1024) {
                 setError('File size must be less than 10MB');
                 return;
             }
+
+            // Validate file type
+            const allowedTypes = [
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            ];
+
+            if (!allowedTypes.includes(selectedFile.type)) {
+                setError('Invalid file type. Only PDF, DOC, DOCX allowed');
+                return;
+            }
+
             setFile(selectedFile);
             setError(null);
         }
@@ -24,32 +46,62 @@ const DocumentUploadModal = ({ dealId, onClose, onSuccess }) => {
             return;
         }
 
+        if (!propertyId) {
+            setError('Property ID is required');
+            return;
+        }
+
+        // If docType is provided, dealId is required
+        if (docType && !dealId) {
+            setError('Deal ID is required for stage-specific documents');
+            return;
+        }
+
         setUploading(true);
         setError(null);
 
         try {
-            // Simulate upload to S3/storage
-            const docUrl = `https://s3.amazonaws.com/deals/doc_${dealId}_${Date.now()}.pdf`;
+            const formData = new FormData();
+            formData.append('file', file);
 
-            const response = await fetch(`${BACKEND_BASE_URL}/api/deals/${dealId}/upload-document`, {
+            // Determine endpoint based on whether this is a deal document
+            let uploadEndpoint;
+
+            if (docType && dealId) {
+                // Stage-specific deal document (AGREEMENT or REGISTRATION)
+                uploadEndpoint = `${BACKEND_BASE_URL}/api/upload/deal-document?dealId=${dealId}&propertyId=${propertyId}&docType=${docType}`;
+            } else if (dealId) {
+                // General deal document (no specific type)
+                uploadEndpoint = `${BACKEND_BASE_URL}/api/upload/deal-document?dealId=${dealId}&propertyId=${propertyId}`;
+            } else {
+                // Property document (no deal)
+                uploadEndpoint = `${BACKEND_BASE_URL}/api/upload/document?propertyId=${propertyId}`;
+            }
+
+            console.log('📤 Uploading to:', uploadEndpoint);
+            console.log('📄 Document type:', docType || 'General');
+
+            const response = await fetch(uploadEndpoint, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    Authorization: `Bearer ${localStorage.getItem("authToken")}`,
                 },
-                body: JSON.stringify({ docUrl }),
+                body: formData,
             });
 
             const data = await response.json();
+
             if (data.success) {
-                alert('✅ Document uploaded successfully');
-                onSuccess();
+                console.log('✅ Document uploaded to:', data.url);
+                alert(`✅ ${getDocTypeLabel()} uploaded successfully!`);
+                onSuccess(data.url, docType);
                 onClose();
             } else {
-                setError('Upload failed');
+                setError(data.message || 'Upload failed');
             }
         } catch (err) {
-            setError('Error uploading document');
+            console.error('❌ Upload error:', err);
+            setError('Error uploading document: ' + err.message);
         } finally {
             setUploading(false);
         }
@@ -79,7 +131,22 @@ const DocumentUploadModal = ({ dealId, onClose, onSuccess }) => {
     return (
         <div style={modalStyle} onClick={onClose}>
             <div style={contentStyle} onClick={e => e.stopPropagation()}>
-                <h2 style={{ marginTop: 0 }}>📄 Upload Document</h2>
+                <h2 style={{ marginTop: 0 }}>
+                    📄 Upload {getDocTypeLabel()}
+                </h2>
+
+                {docType && (
+                    <div style={{
+                        backgroundColor: '#dbeafe',
+                        color: '#1e40af',
+                        padding: '12px',
+                        borderRadius: '6px',
+                        marginBottom: '15px',
+                        fontSize: '14px',
+                    }}>
+                        ℹ️ This document is required to proceed to the next stage
+                    </div>
+                )}
 
                 {error && (
                     <div style={{
@@ -89,7 +156,7 @@ const DocumentUploadModal = ({ dealId, onClose, onSuccess }) => {
                         borderRadius: '6px',
                         marginBottom: '15px',
                     }}>
-                        {error}
+                        ❌ {error}
                     </div>
                 )}
 
@@ -105,32 +172,38 @@ const DocumentUploadModal = ({ dealId, onClose, onSuccess }) => {
                     <input
                         type="file"
                         onChange={handleFileChange}
-                        accept=".pdf,.doc,.docx"
+                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                         style={{ display: 'none' }}
                         id="fileInput"
                     />
                     <label htmlFor="fileInput" style={{ cursor: 'pointer' }}>
                         <div style={{ fontSize: '32px', marginBottom: '8px' }}>📁</div>
                         <div style={{ fontWeight: '600', color: '#1e40af' }}>
-                            {file ? file.name : 'Click to upload document'}
+                            {file ? file.name : `Click to upload ${getDocTypeLabel()}`}
                         </div>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
                             PDF, DOC, DOCX (Max 10MB)
                         </div>
+                        {file && (
+                            <div style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>
+                                ✓ {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </div>
+                        )}
                     </label>
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px' }}>
                     <button
                         onClick={onClose}
+                        disabled={uploading}
                         style={{
                             flex: 1,
                             padding: '10px',
-                            backgroundColor: '#6b7280',
+                            backgroundColor: uploading ? '#9ca3af' : '#6b7280',
                             color: 'white',
                             border: 'none',
                             borderRadius: '6px',
-                            cursor: 'pointer',
+                            cursor: uploading ? 'not-allowed' : 'pointer',
                             fontWeight: '600',
                         }}
                     >
@@ -142,11 +215,11 @@ const DocumentUploadModal = ({ dealId, onClose, onSuccess }) => {
                         style={{
                             flex: 1,
                             padding: '10px',
-                            backgroundColor: uploading ? '#ccc' : '#10b981',
+                            backgroundColor: !file || uploading ? '#ccc' : '#10b981',
                             color: 'white',
                             border: 'none',
                             borderRadius: '6px',
-                            cursor: uploading ? 'not-allowed' : 'pointer',
+                            cursor: !file || uploading ? 'not-allowed' : 'pointer',
                             fontWeight: '600',
                         }}
                     >

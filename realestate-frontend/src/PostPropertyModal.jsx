@@ -23,6 +23,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     areaId: "",
     address: "",
     imageUrl: "",
+    imageFile: null, // <-- ⭐ FIX 1: Add imageFile to state
     bedrooms: "",
     bathrooms: "",
     balconies: "",
@@ -34,7 +35,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     isReadyToMove: false,
   });
 
-  // UPDATED: Expanded List of common amenities
+  // ... (commonAmenities, hooks, loadAreas, convertToIndianWords, auth check, etc. are unchanged) ...
   const commonAmenities = [
     "Parking",
     "Gym",
@@ -266,26 +267,26 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     const file = e.target.files[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append("file", file);
-
-    setImageUploading(true);
-    try {
-      const res = await fetch(`${BACKEND_BASE_URL}/api/upload/image`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.success) {
-        setFormData((p) => ({ ...p, imageUrl: data.url }));
-      } else {
-        throw new Error(data.url || "Upload failed");
-      }
-    } catch (err) {
-      alert("Upload failed: " + err.message);
-    } finally {
-      setImageUploading(false);
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file");
+      return;
     }
+
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File too large (max 10MB)");
+      return;
+    }
+
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
+
+    // ⭐ FIX 2: Store BOTH the preview URL and the File object
+    setFormData((p) => ({ ...p, imageUrl: previewUrl, imageFile: file }));
+    setFileName(file.name);
+
+    console.log("📸 Image selected:", file.name, "- will upload after property creation");
   };
 
   const handleSubmit = async (e) => {
@@ -293,10 +294,10 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     setLoading(true);
     setError(null);
 
+    // ... (Required field validation is unchanged) ...
     if (
       !formData.title ||
       !formData.areaId ||
-      !formData.imageUrl ||
       !formData.bedrooms ||
       !formData.bathrooms ||
       !formData.price ||
@@ -307,13 +308,31 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       return;
     }
 
+    // ⭐ FIX 3: Get the file from state, NOT from getElementById
+    const imageFile = formData.imageFile;
+
+    // This validation logic is now correct
+    if (!imageFile && !formData.imageUrl) {
+      setError("Please select a property image");
+      setLoading(false);
+      return;
+    }
+
+    // This check is also correct, but now handles the case where
+    // a user might be editing and the imageUrl is already an S3 link
+    if (!imageFile && !formData.imageUrl.startsWith("http")) {
+       setError("Please select a property image");
+       setLoading(false);
+       return;
+    }
+
+    // ... (Numeric parsing and server-side validation unchanged) ...
     const numericPrice = parseFloat(formData.price);
     const beds = parseInt(formData.bedrooms);
     const baths = parseInt(formData.bathrooms);
     const balcs = formData.balconies ? parseInt(formData.balconies) : 0;
     const areaSqft = formData.areaSqft ? parseFloat(formData.areaSqft) : 0;
 
-    // --- SERVER-SIDE VALIDATION CODE ---
     const MAX_PRICE = 1000000000;
     const MAX_ROOMS = 10;
     const MAX_AREA = 9999;
@@ -337,7 +356,6 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       setLoading(false);
       return;
     }
-    // --- END SERVER-SIDE VALIDATION CODE ---
 
     let priceDisplay;
     if (numericPrice >= 10000000) {
@@ -348,51 +366,120 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       priceDisplay = `₹${numericPrice.toLocaleString("en-IN")}`;
     }
 
-    const propertyData = {
-      title: formData.title,
-      type: formData.type,
-      city: formData.city,
-      address:
-        formData.address || `Area ID ${formData.areaId}, ${formData.city}`,
-      imageUrl: formData.imageUrl,
-      description: formData.description,
-      price: numericPrice,
-      priceDisplay: priceDisplay,
-      areaSqft: formData.areaSqft ? parseFloat(formData.areaSqft) : null,
-      bedrooms: beds,
-      bathrooms: baths,
-      balconies: balcs,
-      amenities: formData.amenities || null,
-      listingType: formData.listingType,
-      status: "available",
-      isFeatured: true,
-      isActive: true,
-      ownerType: formData.ownerType,
-      isReadyToMove: formData.isReadyToMove,
-      isVerified: false,
-      area: { id: parseInt(formData.areaId) },
-      user: { id: user.id },
-    };
 
     try {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/properties`, {
+      // STEP 1: Create property WITHOUT image first (using placeholder)
+      const propertyData = {
+        title: formData.title,
+        type: formData.type,
+        city: formData.city,
+        address:
+          formData.address || `Area ID ${formData.areaId}, ${formData.city}`,
+        imageUrl: "https://via.placeholder.com/800x600?text=Uploading...", // Placeholder
+        description: formData.description,
+        price: numericPrice,
+        priceDisplay: priceDisplay,
+        areaSqft: formData.areaSqft ? parseFloat(formData.areaSqft) : null,
+        bedrooms: beds,
+        bathrooms: baths,
+        balconies: balcs,
+        amenities: formData.amenities || null,
+        listingType: formData.listingType,
+        status: "available",
+        isFeatured: true,
+        isActive: true,
+        ownerType: formData.ownerType,
+        isReadyToMove: formData.isReadyToMove,
+        isVerified: false,
+        area: { id: parseInt(formData.areaId) },
+        user: { id: user.id },
+      };
+
+      console.log("📤 Step 1: Creating property without image...");
+      const createResponse = await fetch(`${BACKEND_BASE_URL}/api/properties`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(propertyData),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error("Failed to post property: " + errorText);
+      if (!createResponse.ok) {
+        const errorText = await createResponse.text();
+        throw new Error("Failed to create property: "+"Error in create property " + errorText);
       }
 
+      const createdProperty = await createResponse.json();
+      const propertyId = createdProperty.data?.id || createdProperty.id;
+
+      if (!propertyId) {
+        throw new Error("Property created but ID not returned");
+      }
+
+      console.log("✅ Property created with ID:", propertyId);
+
+      // STEP 2: Upload image to proper folder with propertyId
+
+      // Use the imageUrl from formData (which might be a blob or an existing http link)
+      let imageUrl = formData.imageUrl;
+
+      // ⭐ FIX 4: This block will now execute correctly
+      if (imageFile) {
+        console.log("📤 Step 2: Uploading image to properties/" + propertyId + "/images/...");
+        setImageUploading(true);
+
+        const imageFormData = new FormData();
+        imageFormData.append("file", imageFile); // Use the file from state
+
+        const uploadResponse = await fetch(
+          `${BACKEND_BASE_URL}/api/upload/property-image?propertyId=${propertyId}`,
+          {
+            method: "POST",
+            body: imageFormData,
+          }
+        );
+
+        const uploadData = await uploadResponse.json();
+
+        if (!uploadData.success) {
+          console.error("Image upload failed, but property was created");
+          throw new Error(uploadData.message || "Image upload failed");
+        }
+
+        imageUrl = uploadData.url; // Get the REAL S3 URL
+        console.log("✅ Image uploaded:", imageUrl);
+        setImageUploading(false);
+      }
+
+      // STEP 3: Update property with actual image URL
+      console.log("📤 Step 3: Updating property with image URL...");
+      const updateResponse = await fetch(
+        `${BACKEND_BASE_URL}/api/properties/${propertyId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...propertyData,
+            imageUrl: imageUrl, // This will now be the real S3 URL
+          }),
+        }
+      );
+
+      if (!updateResponse.ok) {
+        console.error("Failed to update property with image");
+        throw new Error("Property created but image update failed");
+      }
+
+      console.log("✅ Property updated with image successfully!");
       alert("✅ Property posted successfully!");
+
       if (onPropertyPosted) onPropertyPosted();
       onClose();
+
     } catch (err) {
+      console.error("❌ Error posting property:", err);
       setError(err.message || "Failed to post property. Please try again.");
     } finally {
       setLoading(false);
+      setImageUploading(false);
     }
   };
 
@@ -407,6 +494,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         {error && <div style={styles.error}>❌ {error}</div>}
 
         <form onSubmit={handleSubmit} style={styles.form}>
+          {/* ... (All form fields are unchanged) ... */}
           <div style={styles.field}>
             <label style={styles.label}>Property Title *</label>
             <input
@@ -544,6 +632,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
             />
           </div>
 
+          {/* This JSX logic is now safe because the File is in state */}
           <div
             style={{
               ...styles.imageSection,
@@ -564,6 +653,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
             {!formData.imageUrl ? (
               <>
                 <input
+                  id="imageInput"
                   type="file"
                   accept="image/*"
                   onChange={handleImageUpload}
@@ -600,7 +690,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                     marginBottom: "12px",
                   }}
                 >
-                  ✅ Image uploaded!
+                  ✅ Image selected! (will upload when you submit)
                 </div>
                 <img
                   src={formData.imageUrl}
@@ -613,7 +703,14 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                 />
                 <button
                   type="button"
-                  onClick={() => setFormData((p) => ({ ...p, imageUrl: "" }))}
+                  // ⭐ FIX 5: Clear both the URL and the File object
+                  onClick={() =>
+                    setFormData((p) => ({
+                      ...p,
+                      imageUrl: "",
+                      imageFile: null,
+                    }))
+                  }
                   style={{
                     marginTop: "12px",
                     padding: "10px 20px",
@@ -623,6 +720,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                     borderRadius: "8px",
                     cursor: "pointer",
                     fontWeight: "600",
+
                     display: "inline-block",
                   }}
                 >
@@ -632,6 +730,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
             )}
           </div>
 
+          {/* ... (Rest of the form is unchanged) ... */}
           <div style={styles.field}>
             <label style={styles.label}>Description *</label>
             <textarea
@@ -723,7 +822,6 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
             </div>
           </div>
 
-          {/* Amenities Selection Block */}
           <div style={styles.field}>
             <label style={styles.label}>✨ Amenities</label>
             <div style={styles.amenitiesGrid}>
@@ -744,6 +842,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                       color: isSelected ? "white" : "#475569",
                       borderColor: isSelected ? "#059669" : "#e2e8f0",
                     }}
+
                   >
                     {amenity}
                   </button>
@@ -751,7 +850,6 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
               })}
             </div>
           </div>
-          {/* END Amenities Selection Block */}
 
           <button
             type="submit"
@@ -785,6 +883,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
   );
 }
 
+// ... (styles object is unchanged) ...
 const styles = {
   backdrop: {
     position: "fixed",

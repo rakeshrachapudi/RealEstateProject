@@ -32,9 +32,6 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
     isVerified: property?.isVerified || false,
   });
 
-  const CLOUDINARY_CLOUD_NAME = "diw5av4fw";
-  const CLOUDINARY_UPLOAD_PRESET = "ml_default";
-
   useEffect(() => {
     loadAreas();
   }, []);
@@ -97,13 +94,20 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
     setUploadProgress(10);
 
     try {
+      const propertyId = property.id || property.propertyId;
+
+      if (!propertyId) {
+        throw new Error("Property ID is required for image upload");
+      }
+
       const fd = new FormData();
       fd.append("file", file);
-      fd.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
 
       setUploadProgress(30);
+
+      // ⭐ Upload to S3 with propertyId for organized folder structure
       const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+        `${BACKEND_BASE_URL}/api/upload/property-image?propertyId=${propertyId}`,
         {
           method: "POST",
           body: fd,
@@ -111,19 +115,27 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
       );
 
       setUploadProgress(70);
+
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(
-          `Upload failed: ${errorData.error?.message || res.statusText}`
+          errorData.message || `Upload failed: ${res.statusText}`
         );
       }
 
       const data = await res.json();
-      setUploadProgress(100);
-      setFormData((p) => ({ ...p, imageUrl: data.secure_url }));
-      setTimeout(() => setUploadProgress(0), 2000);
+
+      if (data.success) {
+        setUploadProgress(100);
+        setFormData((p) => ({ ...p, imageUrl: data.url }));
+        setTimeout(() => setUploadProgress(0), 2000);
+        console.log("✅ Image uploaded to S3:", data.url);
+      } else {
+        throw new Error(data.message || "Upload failed");
+      }
     } catch (err) {
       alert("Upload failed: " + err.message);
+      setUploadProgress(0);
     } finally {
       setImageUploading(false);
     }
