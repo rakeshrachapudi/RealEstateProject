@@ -107,8 +107,7 @@ const PropertyCard = ({ property, dealInfo, onPropertyUpdated, onPropertyDeleted
            <h3 style={styles.title}>{property.title || 'Property Title'}</h3>
            <div style={styles.location}>📍 {property.areaName || property.city || "Location"} {property.pincode && ` - ${property.pincode}`}</div>
            <div style={styles.price}>{formatPrice(property.price)} {property.listingType?.toLowerCase() === "rent" && (<span style={styles.perMonth}>/month</span>)}</div>
-           <div style={styles.propertyType}><strong>{property.propertyType?.typeName || property.type || 'N/A'}</strong></div>
-           <div style={styles.details}>
+           <div style={styles.propertyType}><strong>{property.propertyType || property.propertyType?.typeName || property.type || 'N/A'}</strong></div> <div style={styles.details}>
                 {property.areaSqft && (<div style={styles.detail}><span style={styles.detailIcon}>📐</span><span>{property.areaSqft} sqft</span></div>)}
                 {property.bedrooms > 0 && (<div style={styles.detail}><span style={styles.detailIcon}>🛏️</span><span>{property.bedrooms} Beds</span></div>)}
                 {property.bathrooms > 0 && (<div style={styles.detail}><span style={styles.detailIcon}>🚿</span><span>{property.bathrooms} Baths</span></div>)}
