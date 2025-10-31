@@ -1,79 +1,79 @@
-// HomePage.jsx - Professional & Interesting Animations with WhatsApp Floating Button
+// HomePage.jsx - Professional & Interesting Animations
 import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
 import PropertySearch from "../components/PropertySearch";
 import PropertyList from "../components/PropertyList";
 import DealStatusCard from "../DealStatusCard.jsx";
-import { getFeaturedProperties } from "../services/api";
 import BrowsePropertiesForDeal from "../pages/BrowsePropertiesForDeal";
 import DealDetailModal from "../DealDetailModal.jsx";
 import { BACKEND_BASE_URL } from "../config/config";
+import { getPropertyTypes, getPropertiesByType, getFeaturedProperties, getAllProperties } from "../services/api";
 
 // Professional Animation Styles with Keyframes
 const professionalStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
   @keyframes fadeInUp {
-    0% { 
-      opacity: 0; 
-      transform: translateY(40px); 
+    0% {
+      opacity: 0;
+      transform: translateY(40px);
     }
-    100% { 
-      opacity: 1; 
-      transform: translateY(0); 
+    100% {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 
   @keyframes slideInFromLeft {
-    0% { 
-      opacity: 0; 
-      transform: translateX(-50px); 
+    0% {
+      opacity: 0;
+      transform: translateX(-50px);
     }
-    100% { 
-      opacity: 1; 
-      transform: translateX(0); 
+    100% {
+      opacity: 1;
+      transform: translateX(0);
     }
   }
 
   @keyframes slideInFromRight {
-    0% { 
-      opacity: 0; 
-      transform: translateX(50px); 
+    0% {
+      opacity: 0;
+      transform: translateX(50px);
     }
-    100% { 
-      opacity: 1; 
-      transform: translateX(0); 
+    100% {
+      opacity: 1;
+      transform: translateX(0);
     }
   }
 
   @keyframes scaleIn {
-    0% { 
-      opacity: 0; 
-      transform: scale(0.9); 
+    0% {
+      opacity: 0;
+      transform: scale(0.9);
     }
-    100% { 
-      opacity: 1; 
-      transform: scale(1); 
+    100% {
+      opacity: 1;
+      transform: scale(1);
     }
   }
 
   @keyframes gentleFloat {
-    0%, 100% { 
-      transform: translateY(0px); 
+    0%, 100% {
+      transform: translateY(0px);
     }
-    50% { 
-      transform: translateY(-8px); 
+    50% {
+      transform: translateY(-8px);
     }
   }
 
   @keyframes subtleGlow {
-    0%, 100% { 
-      box-shadow: 0 0 20px rgba(102, 126, 234, 0.15), 
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(102, 126, 234, 0.15),
                   0 8px 32px rgba(102, 126, 234, 0.1);
     }
-    50% { 
-      box-shadow: 0 0 30px rgba(102, 126, 234, 0.25), 
+    50% {
+      box-shadow: 0 0 30px rgba(102, 126, 234, 0.25),
                   0 12px 48px rgba(102, 126, 234, 0.15);
     }
   }
@@ -85,11 +85,11 @@ const professionalStyles = `
   }
 
   @keyframes countUp {
-    0% { 
+    0% {
       opacity: 0;
       transform: translateY(20px);
     }
-    100% { 
+    100% {
       opacity: 1;
       transform: translateY(0);
     }
@@ -112,35 +112,35 @@ const professionalStyles = `
   }
 
   @keyframes cardLift {
-    0% { 
+    0% {
       transform: translateY(0) rotateX(0deg);
       box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     }
-    100% { 
+    100% {
       transform: translateY(-8px) rotateX(2deg);
       box-shadow: 0 20px 40px rgba(0,0,0,0.12);
     }
   }
 
   @keyframes iconBounce {
-    0%, 20%, 50%, 80%, 100% { 
-      transform: translateY(0); 
+    0%, 20%, 50%, 80%, 100% {
+      transform: translateY(0);
     }
-    40% { 
-      transform: translateY(-8px); 
+    40% {
+      transform: translateY(-8px);
     }
-    60% { 
-      transform: translateY(-4px); 
+    60% {
+      transform: translateY(-4px);
     }
   }
 
   @keyframes textReveal {
-    0% { 
+    0% {
       opacity: 0;
       transform: translateY(20px);
       clip-path: inset(100% 0 0 0);
     }
-    100% { 
+    100% {
       opacity: 1;
       transform: translateY(0);
       clip-path: inset(0% 0 0 0);
@@ -153,24 +153,6 @@ const professionalStyles = `
     }
     100% {
       stroke-dasharray: 1000 0;
-    }
-  }
-
-  @keyframes whatsappFloat {
-    0%, 100% { 
-      transform: translateY(0px) scale(1); 
-    }
-    50% { 
-      transform: translateY(-10px) scale(1.05); 
-    }
-  }
-
-  @keyframes whatsappGlow {
-    0%, 100% { 
-      box-shadow: 0 8px 25px rgba(37, 211, 102, 0.3);
-    }
-    50% { 
-      box-shadow: 0 12px 35px rgba(37, 211, 102, 0.5), 0 0 0 0 rgba(37, 211, 102, 0.7);
     }
   }
 
@@ -254,7 +236,7 @@ const proStyles = {
     padding: "clamp(16px, 3vw, 24px) clamp(16px, 3vw, 32px)",
     minHeight: "80vh",
     position: "relative",
-    background: "transparent",
+    background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
     animation: "fadeInUp 0.8s ease-out",
   },
 
@@ -699,57 +681,6 @@ const proStyles = {
     boxShadow: "0 4px 12px rgba(220, 38, 38, 0.1)",
     animation: "slideInFromLeft 0.4s ease-out",
   },
-
-  // ⭐ NEW FLOATING WHATSAPP BUTTON STYLES ⭐
-  floatingWhatsAppButton: {
-    position: "fixed",
-    bottom: "25px",
-    right: "25px",
-    width: "60px",
-    height: "60px",
-    backgroundColor: "#25d366",
-    color: "white",
-    border: "none",
-    borderRadius: "50%",
-    fontSize: "28px",
-    cursor: "pointer",
-    zIndex: 1000,
-    boxShadow: "0 8px 25px rgba(37, 211, 102, 0.4)",
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    animation: "whatsappFloat 6s ease-in-out infinite",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  whatsappIcon: {
-    fontSize: "32px",
-    filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))",
-  },
-
-  // Agent Status Tooltip
-  agentStatusTooltip: {
-    position: "absolute",
-    bottom: "75px",
-    right: "0px",
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
-    color: "white",
-    padding: "8px 12px",
-    borderRadius: "8px",
-    fontSize: "12px",
-    fontWeight: "500",
-    whiteSpace: "nowrap",
-    opacity: 0,
-    transform: "translateY(10px)",
-    transition: "all 0.3s ease",
-    pointerEvents: "none",
-    backdropFilter: "blur(10px)",
-  },
-
-  tooltipVisible: {
-    opacity: 1,
-    transform: "translateY(0)",
-  },
 };
 
 // Utility for Safe JSON Parsing
@@ -798,6 +729,9 @@ const useIntersectionObserver = (callback, options = {}) => {
 function HomePage() {
   const { isAuthenticated, user } = useAuth();
   const [featuredPropsList, setFeaturedPropsList] = useState([]);
+const [allProperties, setAllProperties] = useState([]);
+const [loadingAllProps, setLoadingAllProps] = useState(false);
+
   const [myProperties, setMyProperties] = useState([]);
   const [myDeals, setMyDeals] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
@@ -811,12 +745,10 @@ function HomePage() {
   const [loadingMyDeals, setLoadingMyDeals] = useState(false);
   const [fetchError, setFetchError] = useState(null);
 
-  // ⭐ NEW STATES FOR WHATSAPP FLOATING BUTTON ⭐
-  const [agents, setAgents] = useState([]);
-  const [loadingAgents, setLoadingAgents] = useState(false);
-  const [showTooltip, setShowTooltip] = useState(false);
-
   const navigate = useNavigate();
+  const [propertyTypes, setPropertyTypes] = useState(["All"]);
+  const [selectedType, setSelectedType] = useState("All");
+  const [properties, setProperties] = useState([]);
 
   const popularAreas = [
     { name: "Gachibowli", emoji: "🏢" },
@@ -827,74 +759,62 @@ function HomePage() {
     { name: "Miyapur", emoji: "🌇" },
     { name: "Jubilee Hills", emoji: "🛒" },
   ];
-
-  // Fetch featured properties and agents on initial load
+  // Fetch property types on mount
   useEffect(() => {
-    fetchFeaturedProperties();
-    fetchAgents(); // ⭐ Fetch agents on component mount ⭐
+    getPropertyTypes()
+      .then(types => {
+        const typesArray = Array.isArray(types) ? types : [];
+        setPropertyTypes(["All", ...typesArray]);
+      })
+      .catch(err => {
+        console.error("Error loading property types:", err);
+        setPropertyTypes(["All"]);
+      });
   }, []);
 
-  // ⭐ NEW FUNCTION: Fetch all agents from database ⭐
-  const fetchAgents = async () => {
-    setLoadingAgents(true);
-    try {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/users/agents`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
+  // Fetch properties when selected type changes
+  useEffect(() => {
+    if (activeTab !== "browse-by-type") return;
 
-      if (response.ok) {
-        const result = await safeJsonParse(response);
-        if (result?.success && Array.isArray(result.data)) {
-          const activeAgents = result.data.filter(
-            (agent) => agent.isActive && agent.mobileNumber
-          );
-          setAgents(activeAgents);
-          console.log("✅ Fetched agents on homepage:", activeAgents);
-        } else if (Array.isArray(result)) {
-          const activeAgents = result.filter(
-            (agent) => agent.isActive && agent.mobileNumber
-          );
-          setAgents(activeAgents);
-        }
-      } else {
-        console.error("Failed to fetch agents:", response.status);
-        setAgents([]);
-      }
-    } catch (error) {
-      console.error("Error fetching agents:", error);
-      setAgents([]);
-    } finally {
-      setLoadingAgents(false);
+    if (selectedType === "All") {
+      getAllProperties()
+        .then(props => {
+          setProperties(Array.isArray(props) ? props : []);
+        })
+        .catch(err => {
+          console.error("Error loading all properties:", err);
+          setProperties([]);
+        });
+    } else {
+      getPropertiesByType(selectedType)
+        .then(props => {
+          setProperties(Array.isArray(props) ? props : []);
+        })
+        .catch(err => {
+          console.error("Error loading properties by type:", err);
+          setProperties([]);
+        });
     }
-  };
+  }, [selectedType, activeTab]);
 
-  // ⭐ NEW FUNCTION: Handle floating WhatsApp button click ⭐
-  const handleFloatingWhatsAppClick = () => {
-    if (agents.length === 0) {
-      alert("No agents available at the moment. Please try again later.");
-      return;
+  // Fetch featured properties on initial load
+  useEffect(() => {
+    fetchFeaturedProperties();
+  }, []);
+
+  // Handle tab change - initialize browse-by-type tab
+  useEffect(() => {
+    if (activeTab === "browse-by-type" && selectedType === "All") {
+      getAllProperties()
+        .then(props => {
+          setProperties(Array.isArray(props) ? props : []);
+        })
+        .catch(err => {
+          console.error("Error loading all properties:", err);
+          setProperties([]);
+        });
     }
-
-    const randomIndex = Math.floor(Math.random() * agents.length);
-    const selectedAgent = agents[randomIndex];
-
-    let mobileNumber = selectedAgent.mobileNumber.replace(/\D/g, "");
-    if (mobileNumber.length === 10) {
-      mobileNumber = "91" + mobileNumber;
-    }
-
-    const message = `Hi! I'm interested in exploring real estate opportunities. Could you please help me find properties that match my requirements?`;
-
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${mobileNumber}?text=${encodedMessage}`;
-
-    console.log("Selected Agent from Homepage:", selectedAgent);
-    console.log("WhatsApp URL:", whatsappUrl);
-
-    window.open(whatsappUrl, "_blank");
-  };
+  }, [activeTab]);
 
   // Fetch user-specific data when auth state changes
   useEffect(() => {
@@ -909,12 +829,11 @@ function HomePage() {
         setActiveTab("featured");
       }
     }
-  }, [isAuthenticated, user?.id, user?.role, activeTab]);
+  }, [isAuthenticated, user?.id, user?.role]);
 
   const fetchFeaturedProperties = async () => {
     try {
-      const response = await getFeaturedProperties();
-      const properties = response?.success ? response.data || [] : [];
+      const properties = await getFeaturedProperties();
       setFeaturedPropsList(Array.isArray(properties) ? properties : []);
       setShowSearchResults(false);
     } catch (error) {
@@ -1117,6 +1036,7 @@ function HomePage() {
         return propertyArea.includes(selectedArea.toLowerCase());
       });
     }
+    if (activeTab === "browse-by-type") return properties;
     if (activeTab === "my-properties") return myProperties;
     if (activeTab === "my-deals") return [];
     return featuredPropsList;
@@ -1127,6 +1047,7 @@ function HomePage() {
     activeTab,
     myProperties,
     featuredPropsList,
+    properties,
   ]);
 
   // Determine section title and loading state
@@ -1136,9 +1057,12 @@ function HomePage() {
     activeTab === "my-deals" && !showSearchResults && !selectedArea;
 
   if (showSearchResults) {
-    sectionTitle = `🔍 Search Results (${propertiesForList.length} found)`;
+    sectionTitle = activeTab === 'all-properties' ? `🏠 All Properties (${allProperties.length} found)` : sectionTitle;
   } else if (selectedArea) {
     sectionTitle = `📍 Properties in ${selectedArea} (${propertiesForList.length} found)`;
+    isLoading = false;
+  } else if (activeTab === "browse-by-type") {
+    sectionTitle = `🏘️ ${selectedType} Properties (${propertiesForList.length} found)`;
     isLoading = false;
   } else if (activeTab === "my-properties") {
     sectionTitle = `📄 My Properties (${propertiesForList.length} found)`;
@@ -1189,6 +1113,7 @@ function HomePage() {
     isAuthenticated && user && (user.role === "AGENT" || user.role === "ADMIN");
 
   return (
+
     <>
       <div style={proStyles.container}>
         {/* Professional Banner Section */}
@@ -1206,7 +1131,7 @@ function HomePage() {
           }}
         >
           <div style={proStyles.bannerContent}>
-            <h2 style={proStyles.bannerTitle}>How PropertyDealz Works</h2>
+            <h2 style={proStyles.bannerTitle}>How PropertyDeals Works</h2>
             <p style={proStyles.bannerSubtitle}>
               Simple, transparent, and hassle-free property deals
             </p>
@@ -1314,7 +1239,7 @@ function HomePage() {
         {/* Professional Properties/Deals Section */}
         <section style={proStyles.propertiesSection}>
           {/* Professional Tabs */}
-          {isAuthenticated && !showSearchResults && !selectedArea && (
+          {!showSearchResults && !selectedArea && (
             <div style={proStyles.tabContainer}>
               <button
                 onClick={() => setActiveTab("featured")}
@@ -1327,7 +1252,18 @@ function HomePage() {
                 ⭐ Featured ({featuredPropsList.length})
               </button>
 
-              {(loadingMyProperties || myProperties.length > 0) && (
+              <button
+                onClick={() => setActiveTab("browse-by-type")}
+                style={{
+                  ...proStyles.tab,
+                  ...(activeTab === "browse-by-type" ? proStyles.activeTab : {}),
+                }}
+                className="magnetic-hover"
+              >
+                🏘️ Browse by Type
+              </button>
+
+              {isAuthenticated && (loadingMyProperties || myProperties.length > 0) && (
                 <button
                   onClick={() => setActiveTab("my-properties")}
                   style={{
@@ -1354,6 +1290,47 @@ function HomePage() {
                   📊 My Deals ({myDeals.length})
                 </button>
               )}
+            </div>
+          )}
+
+          {/* Property Type Filter - Show when Browse by Type tab is active */}
+          {activeTab === "browse-by-type" && !showSearchResults && !selectedArea && (
+            <div style={{ marginBottom: "24px", marginTop: "16px" }}>
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                {propertyTypes.map(type => (
+                  <button
+                    key={type}
+                    style={{
+                      padding: "12px 24px",
+                      borderRadius: "8px",
+                      border: "none",
+                      backgroundColor: selectedType === type ? "#667eea" : "#f1f5f9",
+                      color: selectedType === type ? "#fff" : "#475569",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      transition: "all 0.3s ease",
+                      boxShadow: selectedType === type
+                        ? "0 4px 12px rgba(102, 126, 234, 0.3)"
+                        : "0 2px 4px rgba(0, 0, 0, 0.05)"
+                    }}
+                    onClick={() => setSelectedType(type)}
+                    onMouseEnter={(e) => {
+                      if (selectedType !== type) {
+                        e.target.style.backgroundColor = "#e2e8f0";
+                        e.target.style.transform = "translateY(-2px)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedType !== type) {
+                        e.target.style.backgroundColor = "#f1f5f9";
+                        e.target.style.transform = "translateY(0)";
+                      }
+                    }}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -1481,47 +1458,6 @@ function HomePage() {
             ))}
           </div>
         </section>
-      </div>
-
-      {/* ⭐ FLOATING WHATSAPP BUTTON WITH TOOLTIP ⭐ */}
-      <div style={{ position: "relative" }}>
-        <button
-          style={proStyles.floatingWhatsAppButton}
-          onClick={handleFloatingWhatsAppClick}
-          disabled={loadingAgents || agents.length === 0}
-          onMouseEnter={(e) => {
-            if (!e.target.disabled) {
-              e.target.style.transform = "translateY(-6px) scale(1.1)";
-              e.target.style.boxShadow = "0 12px 35px rgba(37, 211, 102, 0.5)";
-              e.target.style.animation = "whatsappGlow 2s ease-in-out infinite";
-              setShowTooltip(true);
-            }
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.transform = "translateY(0) scale(1)";
-            e.target.style.boxShadow = "0 8px 25px rgba(37, 211, 102, 0.4)";
-            e.target.style.animation = "whatsappFloat 6s ease-in-out infinite";
-            setShowTooltip(false);
-          }}
-        >
-          <span style={proStyles.whatsappIcon}>
-            {loadingAgents ? "⏳" : "💬"}
-          </span>
-        </button>
-
-        {/* Tooltip */}
-        <div
-          style={{
-            ...proStyles.agentStatusTooltip,
-            ...(showTooltip ? proStyles.tooltipVisible : {}),
-          }}
-        >
-          {loadingAgents && "Finding agents..."}
-          {!loadingAgents && agents.length === 0 && "No agents available"}
-          {!loadingAgents &&
-            agents.length > 0 &&
-            `${agents.length} agent${agents.length > 1 ? "s" : ""} available`}
-        </div>
       </div>
 
       {/* Modals */}

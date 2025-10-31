@@ -21,10 +21,22 @@ public class PropertyController {
     private static final Logger logger = LoggerFactory.getLogger(PropertyController.class);
     private final PropertyService service;
 
+
     public PropertyController(PropertyService service) {
         this.service = service;
     }
+    @GetMapping("/types")
+    public ResponseEntity<List<String>> getPropertyTypes() {
+        List<String> types = service.getPropertyTypes();
+        return ResponseEntity.ok(types);
+    }
 
+    @GetMapping("/byType")
+    public ResponseEntity<List<PropertyDTO>> getPropertiesByType(@RequestParam String type) {
+        logger.info("Fetching properties of type: {}", type);
+        List<PropertyDTO> properties = service.getPropertiesByTypeAsDTO(type);
+        return ResponseEntity.ok(properties);
+    }
     /**
      * UPDATED METHOD: Create new property using the dedicated DTO and error handling.
      */
@@ -74,6 +86,17 @@ public class PropertyController {
     public ResponseEntity<Property> findById(@PathVariable Long id) {
         Optional<Property> property = service.findById(id);
         return property.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Get all active properties (returns DTOs)
+     * Endpoint: GET /api/properties/all
+     */
+    @GetMapping("/all")
+    public ResponseEntity<List<PropertyDTO>> getAllActiveProperties() {
+        logger.info("Fetching all active properties as DTOs");
+        List<PropertyDTO> properties = service.getAllActivePropertiesAsDTO();
+        return ResponseEntity.ok(properties);
     }
 
     @GetMapping("/byCity/{city}")
