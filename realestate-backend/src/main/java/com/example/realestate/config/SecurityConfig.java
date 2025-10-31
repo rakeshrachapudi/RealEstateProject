@@ -36,7 +36,6 @@ public class SecurityConfig {
                 "https://www.propertydealz.in",
                 "http://propertydealz.in",
                 "http://www.propertydealz.in",
-                "https://propertydealsdotcom.onrender.com/",
                 "http://localhost:3000"
         ));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
