@@ -1,4 +1,4 @@
-// PropertyDetails.jsx (Complete File with Role Check for Buyer)
+// PropertyDetails.jsx (FIXED - With Image Gallery)
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
@@ -25,13 +25,18 @@ const safeJsonParse = async (response) => {
 const PropertyDetails = () => {
   const { id: propertyIdParam } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth(); // Contains { id, role, ... }
+  const { user } = useAuth();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [existingDeal, setExistingDeal] = useState(null); // The deal involving this user for this property
+  const [existingDeal, setExistingDeal] = useState(null);
   const [showDealDetails, setShowDealDetails] = useState(false);
   const [checkingDeal, setCheckingDeal] = useState(false);
+
+  // ⭐ NEW STATE FOR IMAGES ⭐
+  const [propertyImages, setPropertyImages] = useState([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [loadingImages, setLoadingImages] = useState(true);
 
   // Create Deal States
   const [creatingDeal, setCreatingDeal] = useState(false);
@@ -42,14 +47,86 @@ const PropertyDetails = () => {
     fetchPropertyDetails();
   }, [propertyIdParam]);
 
+  // ⭐ NEW EFFECT: Fetch images when property is loaded ⭐
   useEffect(() => {
-    // Check for deals only after property and user are loaded
+    if (property?.id) {
+      fetchPropertyImages(property.id);
+    }
+  }, [property?.id]);
+
+  useEffect(() => {
     if (property?.id && user?.id && user?.role) {
       checkForExistingDeal();
     } else {
-      setExistingDeal(null); // Clear deal if user/property changes
+      setExistingDeal(null);
     }
   }, [property?.id, user?.id, user?.role]);
+
+  // ⭐ NEW FUNCTION: Fetch all images for the property ⭐
+  const fetchPropertyImages = async (propertyId) => {
+    setLoadingImages(true);
+    try {
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const images = await response.json();
+        console.log("✅ Fetched property images:", images);
+
+        if (images && images.length > 0) {
+          // Sort by displayOrder and filter out invalid URLs
+          const sortedImages = images
+            .filter(img => img.imageUrl)
+            .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+
+          setPropertyImages(sortedImages);
+        } else {
+          // No images found - use fallback
+          setPropertyImages([]);
+        }
+      } else {
+        console.error("Failed to fetch property images:", response.status);
+        setPropertyImages([]);
+      }
+    } catch (error) {
+      console.error("Error fetching property images:", error);
+      setPropertyImages([]);
+    } finally {
+      setLoadingImages(false);
+    }
+  };
+
+  // ⭐ IMAGE NAVIGATION FUNCTIONS ⭐
+  const handlePreviousImage = () => {
+    setCurrentImageIndex((prevIndex) =>
+      prevIndex === 0 ? propertyImages.length - 1 : prevIndex - 1
+    );
+  };
+
+  const handleNextImage = () => {
+    setCurrentImageIndex((prevIndex) =>
+      prevIndex === propertyImages.length - 1 ? 0 : prevIndex + 1
+    );
+  };
+
+  const handleThumbnailClick = (index) => {
+    setCurrentImageIndex(index);
+  };
+
+  // Get the current image to display
+  const getCurrentImageUrl = () => {
+    if (propertyImages.length > 0) {
+      return propertyImages[currentImageIndex]?.imageUrl;
+    }
+    // Fallback to property.imageUrl or default
+    return property?.imageUrl || "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&h=600&fit=crop";
+  };
 
   const fetchPropertyDetails = async () => {
     setLoading(true);
@@ -66,15 +143,9 @@ const PropertyDetails = () => {
     }
   };
 
-  /**
-   * Fetches deals relevant to the logged-in user using their ACTUAL role
-   * and filters locally for the current property.
-   */
   const checkForExistingDeal = async () => {
     if (!user || !user.id || !user.role || !property?.id) {
-      console.log(
-        "[PropertyDetails] Skipping deal check: Missing user/role or property details."
-      );
+      console.log("[PropertyDetails] Skipping deal check: Missing user/role or property details.");
       setExistingDeal(null);
       return;
     }
@@ -85,18 +156,12 @@ const PropertyDetails = () => {
     const userId = user.id;
     const endpoint = `${BACKEND_BASE_URL}/api/deals/user/${userId}/role/${actualUserRole}`;
 
-    console.log(
-      `[PropertyDetails] 🔍 Checking deals for user ${userId} (Role: ${actualUserRole}) via: ${endpoint}`
-    );
+    console.log(`[PropertyDetails] 🔍 Checking deals for user ${userId} (Role: ${actualUserRole}) via: ${endpoint}`);
     try {
       const response = await fetch(endpoint, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
+        headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
       });
-      console.log(
-        `[PropertyDetails] 📊 API response status: ${response.status}`
-      );
+      console.log(`[PropertyDetails] 📊 API response status: ${response.status}`);
       if (!response.ok) throw new Error(`API Error ${response.status}`);
 
       const responseData = await safeJsonParse(response);
@@ -111,44 +176,22 @@ const PropertyDetails = () => {
         console.warn("[PropertyDetails] Unexpected data format:", responseData);
       }
 
-      console.log(
-        `[PropertyDetails] 📋 Found ${userDeals.length} total deals for user ${userId}. Starting filter...`
-      );
+      console.log(`[PropertyDetails] 📋 Found ${userDeals.length} total deals for user ${userId}. Starting filter...`);
 
       const currentPagePropertyId = property.id;
-      // DEBUG: Log the ID we are looking for
-      console.log(
-        `[PropertyDetails Debug] Filtering deals for Property ID on THIS PAGE: ${currentPagePropertyId} (Type: ${typeof currentPagePropertyId})`
-      );
-      // console.log(`[PropertyDetails Debug] Full list of deals received from API:`, JSON.stringify(userDeals, null, 2)); // Keep this if needed
+      console.log(`[PropertyDetails Debug] Filtering deals for Property ID on THIS PAGE: ${currentPagePropertyId} (Type: ${typeof currentPagePropertyId})`);
 
-      const dealForThisProperty = userDeals.find((deal, index) => {
-        // DEBUG: Log details for EACH deal being checked
+      const dealForThisProperty = userDeals.find((deal) => {
         const dealPropertyId = deal?.property?.id ?? deal?.propertyId;
-        const dealId = deal?.dealId ?? deal?.id;
-        const dealStage = deal?.stage ?? deal?.currentStage;
-
-        // console.log(`[PropertyDetails Debug] --- Checking Deal #${index} (ID: ${dealId}, Stage: ${dealStage}) ---`);
-        // console.log(`   - Extracted Property ID from Deal: ${dealPropertyId} (Type: ${typeof dealPropertyId})`);
-        // console.log(`   - Comparing with Page Property ID: ${currentPagePropertyId} (Type: ${typeof currentPagePropertyId})`);
-
-        const isMatch = dealPropertyId == currentPagePropertyId; // Use loose equality (==)
-        // console.log(`   - Is Match? ${isMatch}`);
-
+        const isMatch = dealPropertyId == currentPagePropertyId;
         return isMatch;
       });
 
-      // DEBUG: Log the final result of the filter
       if (dealForThisProperty) {
-        console.log(
-          "[PropertyDetails Debug] ✅✅✅ Match found!",
-          dealForThisProperty
-        );
-        setExistingDeal(dealForThisProperty); // <--- STATE IS SET HERE
+        console.log("[PropertyDetails Debug] ✅✅✅ Match found!", dealForThisProperty);
+        setExistingDeal(dealForThisProperty);
       } else {
-        console.log(
-          "[PropertyDetails Debug] ❌❌❌ No matching deal found in the list."
-        );
+        console.log("[PropertyDetails Debug] ❌❌❌ No matching deal found in the list.");
         setExistingDeal(null);
       }
     } catch (err) {
@@ -159,9 +202,7 @@ const PropertyDetails = () => {
     }
   };
 
-  // --- Create Deal Handler ---
   const handleCreateDeal = async () => {
-    // 1. Check if the creator is an Agent/Admin
     if (!user || (user.role !== "AGENT" && user.role !== "ADMIN")) {
       setCreateError("Only agents/admins can create deals.");
       return;
@@ -175,20 +216,12 @@ const PropertyDetails = () => {
     try {
       console.log("🔍 Searching buyer:", buyerPhone);
 
-      // 2. Search for the user (Buyer) by phone number
-      const searchRes = await fetch(
-        `${BACKEND_BASE_URL}/api/users/search?phone=${buyerPhone}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        }
-      );
+      const searchRes = await fetch(`${BACKEND_BASE_URL}/api/users/search?phone=${buyerPhone}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
+      });
       if (!searchRes.ok) {
         const txt = await searchRes.text().catch(() => "");
-        throw new Error(
-          `Buyer search failed: ${searchRes.status} ${txt.slice(0, 100)}`
-        );
+        throw new Error(`Buyer search failed: ${searchRes.status} ${txt.slice(0, 100)}`);
       }
       const searchData = await safeJsonParse(searchRes);
       if (!searchData?.success || !searchData.data?.id) {
@@ -197,7 +230,6 @@ const PropertyDetails = () => {
 
       const buyer = searchData.data;
 
-      // ⭐ 3. CRUCIAL ROLE CHECK: Ensure the found user is a 'USER' (Buyer) ⭐
       if (buyer.role.toUpperCase() !== "USER") {
         console.warn(`Attempted to create deal with non-buyer role: ${buyer.role}`);
         throw new Error(`The user with this phone number is a ${buyer.role}. Only a 'USER' (Buyer) can be the buyer in a deal.`);
@@ -205,7 +237,6 @@ const PropertyDetails = () => {
 
       console.log("✅ Buyer found and validated (Role: USER):", buyer.id);
 
-      // 4. Create the deal
       const createRes = await fetch(`${BACKEND_BASE_URL}/api/deals/create`, {
         method: "POST",
         headers: {
@@ -221,10 +252,7 @@ const PropertyDetails = () => {
       const createData = await safeJsonParse(createRes);
       console.log("📤 Deal creation response:", createData);
       if (!createRes.ok || !createData?.success) {
-        throw new Error(
-          createData?.message ||
-            `Failed to create deal (Status: ${createRes.status})`
-        );
+        throw new Error(createData?.message || `Failed to create deal (Status: ${createRes.status})`);
       }
 
       console.log("✅ Deal created via /create");
@@ -240,11 +268,11 @@ const PropertyDetails = () => {
     }
   };
 
-  // --- Other Handlers ---
   const handleRefreshDeal = () => {
     setShowDealDetails(false);
     checkForExistingDeal();
   };
+
   const formatPrice = (price) => {
     if (price == null) return "Price on request";
     const numPrice = Number(price);
@@ -254,150 +282,132 @@ const PropertyDetails = () => {
     return `₹${numPrice.toLocaleString("en-IN")}`;
   };
 
-  // --- Loading & Error States ---
   if (loading) {
     return (
       <div style={styles.loading}>
-        <div style={styles.spinner}>⏳</div> <p>Loading property details...</p>
+        <div style={styles.spinner}>⏳</div>
+        <p>Loading property details...</p>
       </div>
     );
   }
+
   if (error || !property) {
     return (
       <div style={styles.error}>
-        <h2>{error || "Property not found"}</h2>
-        <button onClick={() => navigate("/")} style={styles.backButton}>
-          Go back home
+        <div style={styles.errorIcon}>⚠️</div>
+        <h2 style={styles.errorTitle}>Error</h2>
+        <p>{error || "Property not found."}</p>
+        <button onClick={() => navigate(-1)} style={styles.backButton}>
+          ← Go Back
         </button>
       </div>
     );
   }
 
-  // --- Prepare Render Data ---
-  const images = property.imageUrl ? [property.imageUrl] : [];
-  const amenitiesList = property.amenities
-    ? property.amenities
-        .split(",")
-        .map((a) => a.trim())
-        .filter((a) => a)
-    : [];
-  const propertyType =
-    property.propertyType?.typeName || property.type || "N/A";
-  const ownerName = property.user
-    ? `${property.user.firstName || ""} ${property.user.lastName || ""}`.trim()
-    : "N/A";
-
-  // --- Corrected Render Logic Variables ---
-  const isAgentOrAdmin =
-    user && (user.role === "AGENT" || user.role === "ADMIN");
-  const isUserRole = user && user.role === "USER";
-  // This depends on the *current* value of existingDeal state
-  const canSeeDealSection =
-    user && (isAgentOrAdmin || (existingDeal && isUserRole));
-  const canCreateDeal = isAgentOrAdmin;
-
-  // ⭐===== CRUCIAL DEBUG LOG =====⭐
-  console.log("[PropertyDetails Render] Checking render conditions:", {
-    userId: user?.id,
-    userRole: user?.role,
-    isUserRole: isUserRole,
-    propertyId: property?.id,
-    // Log simple info about the deal object in state or null
-    existingDealInState: existingDeal
-      ? {
-          id: existingDeal.dealId || existingDeal.id,
-          stage: existingDeal.stage || existingDeal.currentStage,
-        }
-      : null,
-    // Log the calculated visibility flag
-    canSeeDealSectionCalculated: canSeeDealSection,
-  });
-  // ⭐===== END CRUCIAL DEBUG LOG =====⭐
-  console.log("[PropertyDetails Render] Checking render conditions:", {
-    userId: user?.id,
-    userRole: user?.role,
-    isUserRole: isUserRole, // Calculated boolean
-    propertyId: property?.id,
-    // Log simple info about the deal object in state or null
-    existingDealInState: existingDeal
-      ? {
-          id: existingDeal.dealId || existingDeal.id,
-          stage: existingDeal.stage || existingDeal.currentStage,
-        }
-      : null,
-    // Log the calculated visibility flag (if using) or just the state check
-    renderCheck_existingDeal_truthy: Boolean(existingDeal),
-  });
   return (
-    <div style={styles.container}>
-      <button onClick={() => navigate(-1)} style={styles.backButton}>
-        ← Back
-      </button>
+    <div style={styles.pageContainer}>
+      <div style={styles.container}>
+        {/* Back Button */}
+        <button onClick={() => navigate(-1)} style={styles.backButton}>
+          ← Back
+        </button>
 
-      <div style={styles.detailsContainer}>
-        {/* Image Section */}
+        {/* ⭐⭐⭐ UPDATED IMAGE GALLERY SECTION ⭐⭐⭐ */}
         <div style={styles.imageSection}>
-          <div style={styles.mainImage}>
-            {" "}
-            <img
-              src={
-                images[0] || "https://via.placeholder.com/800x600?text=Property"
-              }
-              alt={property.title || "Property"}
-              style={styles.largeImage}
-              onError={(e) => {
-                e.target.src =
-                  "https://via.placeholder.com/800x600?text=Image+Error";
-              }}
-            />{" "}
-          </div>
-        </div>
+          {loadingImages ? (
+            <div style={styles.imageLoading}>
+              <div style={styles.spinner}>⏳</div>
+              <p>Loading images...</p>
+            </div>
+          ) : (
+            <>
+              {/* Main Image Display */}
+              <div style={styles.mainImageContainer}>
+                <img
+                  src={getCurrentImageUrl()}
+                  alt={property.title}
+                  style={styles.mainImage}
+                  onError={(e) => {
+                    e.target.src = "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&h=600&fit=crop";
+                  }}
+                />
 
-        {/* Info Section */}
-        <div style={styles.infoSection}>
-          {/* Price, Title, Type, Location, Key Details */}
-          <div style={styles.priceSection}>
-            {" "}
-            <div style={styles.price}>
-              {formatPrice(property.price || property.expectedPrice)}
-              {property.listingType === "rent" && (
-                <span style={styles.perMonth}>/month</span>
+                {/* Navigation Arrows (only show if multiple images) */}
+                {propertyImages.length > 1 && (
+                  <>
+                    <button
+                      onClick={handlePreviousImage}
+                      style={{ ...styles.navButton, ...styles.navButtonLeft }}
+                      aria-label="Previous image"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      onClick={handleNextImage}
+                      style={{ ...styles.navButton, ...styles.navButtonRight }}
+                      aria-label="Next image"
+                    >
+                      ›
+                    </button>
+
+                    {/* Image Counter */}
+                    <div style={styles.imageCounter}>
+                      {currentImageIndex + 1} / {propertyImages.length}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Thumbnail Gallery (only show if multiple images) */}
+              {propertyImages.length > 1 && (
+                <div style={styles.thumbnailContainer}>
+                  {propertyImages.map((image, index) => (
+                    <img
+                      key={image.id || index}
+                      src={image.imageUrl}
+                      alt={`Property thumbnail ${index + 1}`}
+                      style={{
+                        ...styles.thumbnail,
+                        ...(index === currentImageIndex ? styles.thumbnailActive : {}),
+                      }}
+                      onClick={() => handleThumbnailClick(index)}
+                      onError={(e) => {
+                        e.target.src = "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=200&h=150&fit=crop";
+                      }}
+                    />
+                  ))}
+                </div>
               )}
-            </div>{" "}
-            {property.isFeatured && (
-              <span style={styles.featuredBadge}>⭐ Featured</span>
-            )}{" "}
+
+              {/* No Images Message */}
+              {propertyImages.length === 0 && (
+                <div style={styles.noImagesMessage}>
+                  📷 No images available for this property
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        {/* ⭐⭐⭐ END IMAGE GALLERY SECTION ⭐⭐⭐ */}
+
+        {/* Property Info Section */}
+        <div style={styles.infoSection}>
+          <div style={styles.header}>
+            {property.isFeatured && <span style={styles.featuredBadge}>⭐ Featured</span>}
+            <h1 style={styles.title}>{property.title || "Property Title"}</h1>
+            <span style={styles.typeTag}>
+              {property.listingType?.toLowerCase() === "sale" ? "FOR SALE" : "FOR RENT"}
+            </span>
           </div>
-          <h1 style={styles.title}>{property.title || "Property Title"}</h1>
-          <div style={styles.typeTag}>
-            {property.listingType?.toLowerCase() === "sale"
-              ? "FOR SALE"
-              : "FOR RENT"}
+
+          <div style={styles.location}>📍 {property.areaName || property.city || "Location"}</div>
+          <div style={styles.priceSection}>
+            <span style={styles.price}>{formatPrice(property.price)}</span>
+            {property.listingType?.toLowerCase() === "rent" && <span style={styles.perMonth}>/month</span>}
           </div>
-          <div style={styles.location}>
-            📍 {property.areaName || property.city || "Location"}{" "}
-            {property.pincode && ` - ${property.pincode}`}
-          </div>
+
+          {/* Key Details Grid */}
           <div style={styles.keyDetails}>
-            {" "}
-            <div style={styles.detailCard}>
-              <span style={styles.detailIcon}>🛏️</span>
-              <div>
-                <div style={styles.detailLabel}>Bedrooms</div>
-                <div style={styles.detailValue}>
-                  {property.bedrooms || "N/A"}
-                </div>
-              </div>
-            </div>{" "}
-            <div style={styles.detailCard}>
-              <span style={styles.detailIcon}>🚿</span>
-              <div>
-                <div style={styles.detailLabel}>Bathrooms</div>
-                <div style={styles.detailValue}>
-                  {property.bathrooms || "N/A"}
-                </div>
-              </div>
-            </div>{" "}
             {property.areaSqft && (
               <div style={styles.detailCard}>
                 <span style={styles.detailIcon}>📐</span>
@@ -406,168 +416,164 @@ const PropertyDetails = () => {
                   <div style={styles.detailValue}>{property.areaSqft} sqft</div>
                 </div>
               </div>
-            )}{" "}
-            <div style={styles.detailCard}>
-              <span style={styles.detailIcon}>🏠</span>
-              <div>
-                <div style={styles.detailLabel}>Type</div>
-                <div style={styles.detailValue}>{propertyType}</div>
+            )}
+            {property.bedrooms > 0 && (
+              <div style={styles.detailCard}>
+                <span style={styles.detailIcon}>🛏️</span>
+                <div>
+                  <div style={styles.detailLabel}>Bedrooms</div>
+                  <div style={styles.detailValue}>{property.bedrooms}</div>
+                </div>
               </div>
-            </div>{" "}
+            )}
+            {property.bathrooms > 0 && (
+              <div style={styles.detailCard}>
+                <span style={styles.detailIcon}>🚿</span>
+                <div>
+                  <div style={styles.detailLabel}>Bathrooms</div>
+                  <div style={styles.detailValue}>{property.bathrooms}</div>
+                </div>
+              </div>
+            )}
+            {property.propertyType && (
+              <div style={styles.detailCard}>
+                <span style={styles.detailIcon}>🏠</span>
+                <div>
+                  <div style={styles.detailLabel}>Type</div>
+                  <div style={styles.detailValue}>{property.propertyType.typeName || property.type}</div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Contact & Deal Section */}
+          {/* Contact Section */}
           <div style={styles.contactSection}>
+            <h3 style={styles.contactTitle}>Contact Information</h3>
             {property.user && (
               <div style={styles.ownerInfo}>
-                Dear <div style={styles.ownerName}>{ownerName}</div>
+                <strong>Posted by:</strong>
+                <span style={styles.ownerName}>
+                  {property.user.firstName || ""} {property.user.lastName || ""}
+                </span>
               </div>
             )}
-            <h3 style={styles.contactTitle}>Contact Agent</h3>
             <div style={styles.contactButtons}>
-              {" "}
-              <button style={styles.contactOwnerBtn}>Contact Agent</button>{" "}
-              <button style={styles.getPhoneBtn}>Get Phone No.</button>{" "}
+              <button style={styles.contactOwnerBtn}>📧 Contact Agent</button>
+              <button style={styles.getPhoneBtn}>📞 Get Phone No.</button>
             </div>
 
-            {/* --- ⭐ DEAL SECTION (Simplified Render Condition) --- */}
-            {user && ( // Only show if logged in
-              <div style={styles.dealSection}>
-                <div style={styles.dealSectionTitle}>
-                  {isAgentOrAdmin ? "📋 Deal Management" : "📋 Deal Status"}
-                </div>
+            {/* Deal Management Section */}
+            <div style={styles.dealSection}>
+              <h4 style={styles.dealSectionTitle}>📋 Deal Management</h4>
 
-                {checkingDeal ? (
-                  <div style={styles.loadingDeal}>
-                    ⏳ Checking deal status...
-                  </div>
-                ) : existingDeal ? ( // <<<--- DIRECTLY CHECK existingDeal state here
-                  // --- VIEW EXISTING DEAL ---
-                  <>
-                    <div style={styles.dealExistsBadge}>
-                      <strong>✅ You are involved in this Deal</strong>
+              {checkingDeal && <div style={styles.loadingDeal}>⏳ Checking for existing deals...</div>}
+
+              {!checkingDeal && existingDeal && (
+                <>
+                  <div style={styles.dealExistsBadge}>✅ Deal exists for this property</div>
+                  <div style={styles.dealStageInfo}>
+                    <div style={styles.dealStageBadge}>
+                      Current Stage: {existingDeal.stage || existingDeal.currentStage || "INQUIRY"}
                     </div>
-                    <div style={styles.dealStageInfo}>
-                      <div style={styles.dealStageBadge}>
-                        Stage:{" "}
-                        <strong>
-                          {existingDeal.stage ||
-                            existingDeal.currentStage ||
-                            "INQUIRY"}
-                        </strong>
-                      </div>
+                    {existingDeal.createdAt && (
                       <div style={styles.dealCreatedDate}>
-                        Created:{" "}
-                        {new Date(existingDeal.createdAt).toLocaleDateString()}
+                        Created: {new Date(existingDeal.createdAt).toLocaleDateString()}
                       </div>
-                    </div>
-                    <button
-                      onClick={() => setShowDealDetails(true)}
-                      style={styles.viewDealBtn}
-                    >
-                      👁️ View & Manage Deal
-                    </button>
-                  </>
-                ) : isAgentOrAdmin ? ( // If no deal AND user is Agent/Admin
-                  // --- CREATE NEW DEAL ---
-                  <>
-                    <div style={styles.noDealInfo}>No deals created yet</div>
-                    <div style={styles.buyerInputContainer}>
-                      <input
-                        type="tel"
-                        placeholder="Buyer phone (10 digits)"
-                        value={buyerPhone}
-                        onChange={(e) => {
-                          const c = e.target.value.replace(/\D/g, "");
-                          setBuyerPhone(c.slice(0, 10));
-                          setCreateError(null);
-                        }}
-                        maxLength="10"
-                        style={styles.buyerInput}
-                        disabled={creatingDeal}
-                      />
-                      <button
-                        onClick={handleCreateDeal}
-                        disabled={creatingDeal || buyerPhone.length !== 10}
-                        style={{
-                          ...styles.createDealBtn,
-                          opacity:
-                            creatingDeal || buyerPhone.length !== 10 ? 0.6 : 1,
-                          cursor:
-                            creatingDeal || buyerPhone.length !== 10
-                              ? "not-allowed"
-                              : "pointer",
-                        }}
-                      >
-                        {" "}
-                        {creatingDeal
-                          ? "⏳ Creating..."
-                          : "➕ Create Deal"}{" "}
-                      </button>
-                    </div>
-                    {createError && (
-                      <div style={styles.errorMessage}>{createError}</div>
                     )}
-                  </>
-                ) : (
-                  // If no deal AND user is USER
-                  // --- NO DEAL (User Role) ---
-                  <div style={styles.noDealInfo}>
-                    You are not currently in a deal for this property.
                   </div>
-                )}
+                  <button onClick={() => setShowDealDetails(true)} style={styles.viewDealBtn}>
+                    👁️ View Deal Details
+                  </button>
+                </>
+              )}
+
+              {!checkingDeal && !existingDeal && (
+                <>
+                  <div style={styles.noDealInfo}>ℹ️ No deals created yet</div>
+                  {user && (user.role === "AGENT" || user.role === "ADMIN") && (
+                    <>
+                      <div style={styles.buyerInputContainer}>
+                        <input
+                          type="tel"
+                          value={buyerPhone}
+                          onChange={(e) => setBuyerPhone(e.target.value)}
+                          placeholder="Buyer phone (10 digits)"
+                          style={styles.buyerInput}
+                          maxLength={10}
+                        />
+                        <button
+                          onClick={handleCreateDeal}
+                          style={styles.createDealBtn}
+                          disabled={creatingDeal}
+                        >
+                          {creatingDeal ? "⏳" : "➕"} Create Deal
+                        </button>
+                      </div>
+                      {createError && <div style={styles.errorMessage}>{createError}</div>}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* More Details Section */}
+        <div style={styles.moreDetails}>
+          <h2 style={styles.sectionTitle}>More Details</h2>
+          <div style={styles.detailsGrid}>
+            <div style={styles.detailRow}>
+              <span style={styles.detailRowLabel}>Price</span>
+              <span style={styles.detailRowValue}>{formatPrice(property.price)}</span>
+            </div>
+            {property.address && (
+              <div style={styles.detailRow}>
+                <span style={styles.detailRowLabel}>Address</span>
+                <span style={styles.detailRowValue}>{property.address}</span>
               </div>
             )}
-            {/* --- END DEAL SECTION --- */}
+            {property.pincode && (
+              <div style={styles.detailRow}>
+                <span style={styles.detailRowLabel}>Pincode</span>
+                <span style={styles.detailRowValue}>{property.pincode}</span>
+              </div>
+            )}
           </div>
+
+          {/* Description */}
+          {property.description && (
+            <div style={styles.descriptionSection}>
+              <h3 style={styles.subSectionTitle}>Description</h3>
+              <p style={styles.description}>{property.description}</p>
+            </div>
+          )}
+
+          {/* Amenities */}
+          {property.amenities && (
+            <div style={styles.amenitiesSection}>
+              <h3 style={styles.subSectionTitle}>✨ Amenities</h3>
+              <div style={styles.amenitiesGrid}>
+                {property.amenities
+                  .split(",")
+                  .map((a) => a.trim())
+                  .filter((a) => a)
+                  .map((amenity, idx) => (
+                    <div key={idx} style={styles.amenityItem}>
+                      {amenity}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* More Details Section */}
-      <div style={styles.moreDetails}>
-        <h2 style={styles.sectionTitle}>More Details</h2>
-        <div style={styles.detailsGrid}>
-          {" "}
-          <div style={styles.detailRow}>
-            <span style={styles.detailRowLabel}>Price:</span>
-            <span style={styles.detailRowValue}>
-              {formatPrice(property.price || property.expectedPrice)}
-            </span>
-          </div>{" "}
-          {property.address && (
-            <div style={styles.detailRow}>
-              <span style={styles.detailRowLabel}>Address:</span>
-              <span style={styles.detailRowValue}>{property.address}</span>
-            </div>
-          )}{" "}
-        </div>
-        {property.description && (
-          <div style={styles.descriptionSection}>
-            <h3 style={styles.subSectionTitle}>Description</h3>
-            <p style={styles.description}>{property.description}</p>
-          </div>
-        )}
-        {amenitiesList.length > 0 && (
-          <div style={styles.amenitiesSection}>
-            <h3 style={styles.subSectionTitle}>Amenities</h3>
-            <div style={styles.amenitiesGrid}>
-              {" "}
-              {amenitiesList.map((amenity, idx) => (
-                <div key={idx} style={styles.amenityItem}>
-                  ✓ {amenity}
-                </div>
-              ))}{" "}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Deal Details Modal */}
+      {/* Deal Details Popup */}
       {showDealDetails && existingDeal && (
         <DealDetailsPopup
           deal={existingDeal}
-          onClose={handleRefreshDeal}
-          userRole={user?.role}
+          onClose={() => setShowDealDetails(false)}
+          onDealUpdated={handleRefreshDeal}
         />
       )}
     </div>
@@ -576,71 +582,151 @@ const PropertyDetails = () => {
 
 // --- Styles ---
 const styles = {
-  /* ... keep existing styles ... */
-  container: {
-    maxWidth: 1200,
-    margin: "0 auto",
-    padding: 24,
-    backgroundColor: "#fff",
+  pageContainer: {
+    backgroundColor: "#f9fafb",
+    minHeight: "100vh",
+    paddingTop: "2rem",
+    paddingBottom: "4rem",
   },
+  container: { maxWidth: "1200px", margin: "0 auto", padding: "0 24px" },
   loading: {
-    textAlign: "center",
-    padding: "4rem 2rem",
-    fontSize: "1.2rem",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: "70vh",
+    fontSize: "18px",
     color: "#6b7280",
   },
   spinner: {
-    fontSize: "3rem",
+    fontSize: "48px",
+    animation: "spin 2s linear infinite",
     marginBottom: "1rem",
-    display: "inline-block",
-    animation: "spin 1s linear infinite",
   },
-  error: { textAlign: "center", padding: "4rem 2rem", color: "#ef4444" },
+  error: {
+    textAlign: "center",
+    padding: "60px 20px",
+    maxWidth: "600px",
+    margin: "0 auto",
+  },
+  errorIcon: { fontSize: "64px", marginBottom: "1rem" },
+  errorTitle: { fontSize: "28px", fontWeight: 700, color: "#ef4444", marginBottom: "1rem" },
   backButton: {
-    padding: "10px 20px",
-    borderRadius: 8,
-    background: "#6b7280",
-    color: "white",
-    border: "none",
+    padding: "12px 24px",
+    backgroundColor: "#ffffff",
+    border: "2px solid #e5e7eb",
+    borderRadius: 10,
     cursor: "pointer",
-    marginBottom: 20,
     fontSize: 14,
-    fontWeight: 500,
-    transition: "background 0.2s",
+    fontWeight: 600,
+    color: "#1f2937",
+    marginBottom: "2rem",
+    transition: "all 0.2s",
   },
-  detailsContainer: {
-    display: "grid",
-    gridTemplateColumns: "1.5fr 1fr",
-    gap: 30,
-    marginBottom: 40,
-    "@media (maxWidth: 900px)": { gridTemplateColumns: "1fr" },
+
+  // ⭐⭐⭐ NEW IMAGE GALLERY STYLES ⭐⭐⭐
+  imageSection: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    overflow: "hidden",
+    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+    marginBottom: "2rem",
   },
-  imageSection: { display: "flex", flexDirection: "column", gap: 12 },
+  imageLoading: {
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "400px",
+    color: "#6b7280",
+  },
+  mainImageContainer: {
+    position: "relative",
+    width: "100%",
+    height: "500px",
+    backgroundColor: "#f3f4f6",
+    overflow: "hidden",
+  },
   mainImage: {
     width: "100%",
-    borderRadius: 12,
-    overflow: "hidden",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-  },
-  largeImage: {
-    display: "block",
-    width: "100%",
-    height: 450,
+    height: "100%",
     objectFit: "cover",
   },
-  infoSection: { display: "flex", flexDirection: "column", gap: 20 },
-  priceSection: {
+  navButton: {
+    position: "absolute",
+    top: "50%",
+    transform: "translateY(-50%)",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    color: "white",
+    border: "none",
+    borderRadius: "50%",
+    width: "50px",
+    height: "50px",
+    fontSize: "32px",
+    cursor: "pointer",
     display: "flex",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+    transition: "all 0.3s",
+    lineHeight: 1,
   },
-  price: { fontSize: 32, fontWeight: 700, color: "#3b82f6" },
-  perMonth: {
-    fontSize: 16,
-    fontWeight: 500,
+  navButtonLeft: {
+    left: "20px",
+  },
+  navButtonRight: {
+    right: "20px",
+  },
+  imageCounter: {
+    position: "absolute",
+    bottom: "20px",
+    right: "20px",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    color: "white",
+    padding: "8px 16px",
+    borderRadius: "20px",
+    fontSize: "14px",
+    fontWeight: 600,
+    zIndex: 10,
+  },
+  thumbnailContainer: {
+    display: "flex",
+    gap: "12px",
+    padding: "20px",
+    overflowX: "auto",
+    backgroundColor: "#f9fafb",
+  },
+  thumbnail: {
+    width: "120px",
+    height: "90px",
+    objectFit: "cover",
+    borderRadius: "8px",
+    cursor: "pointer",
+    border: "3px solid transparent",
+    transition: "all 0.3s",
+    flexShrink: 0,
+  },
+  thumbnailActive: {
+    border: "3px solid #3b82f6",
+    transform: "scale(1.05)",
+  },
+  noImagesMessage: {
+    padding: "40px",
+    textAlign: "center",
     color: "#6b7280",
-    marginLeft: "4px",
+    fontSize: "16px",
+    backgroundColor: "#f9fafb",
   },
+  // ⭐⭐⭐ END NEW IMAGE GALLERY STYLES ⭐⭐⭐
+
+  infoSection: {
+    backgroundColor: "#ffffff",
+    padding: 30,
+    borderRadius: 12,
+    border: "1px solid #e5e7eb",
+    marginBottom: "2rem",
+  },
+  header: { marginBottom: "1.5rem" },
   featuredBadge: {
     backgroundColor: "#f59e0b",
     color: "white",
@@ -667,6 +753,9 @@ const styles = {
     width: "fit-content",
   },
   location: { fontSize: 16, color: "#6b7280" },
+  priceSection: { marginTop: "1rem", marginBottom: "1.5rem" },
+  price: { fontSize: 32, fontWeight: 800, color: "#059669" },
+  perMonth: { fontSize: 16, fontWeight: 500, color: "#64748b", marginLeft: "8px" },
   keyDetails: {
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",
@@ -902,7 +991,6 @@ const styles = {
   },
 };
 
-// Keyframes needs global injection or CSS-in-JS
 const keyframesStyle = ` @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } `;
 
 export default PropertyDetails;
