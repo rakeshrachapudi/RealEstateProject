@@ -104,6 +104,7 @@ const PropertyCard = ({ property, dealInfo, onPropertyUpdated, onPropertyDeleted
         {/* Content */}
         <div style={styles.content}>
            <div style={styles.typeTag}>{property.listingType?.toLowerCase() === "sale" ? "FOR SALE" : "FOR RENT"}</div>
+
            <h3 style={styles.title}>{property.title || 'Property Title'}</h3>
            <div style={styles.location}>📍 {property.areaName || property.city || "Location"} {property.pincode && ` - ${property.pincode}`}</div>
            <div style={styles.price}>{formatPrice(property.price)} {property.listingType?.toLowerCase() === "rent" && (<span style={styles.perMonth}>/month</span>)}</div>
@@ -114,6 +115,18 @@ const PropertyCard = ({ property, dealInfo, onPropertyUpdated, onPropertyDeleted
            </div>
            {property.amenities && (<div style={styles.amenities}><strong>✨ Amenities:</strong> {property.amenities.split(",").map(a => a.trim()).filter(a => a).slice(0, 3).join(", ")}{property.amenities.split(",").length > 3 && "..."}</div>)}
            {property.user && (<div style={styles.postedBy}>👤 Posted by: {property.user.firstName || ''} {property.user.lastName || ''}</div>)}
+ <div style={{ display: "flex", gap: "5px", alignItems: "center", flexWrap: "wrap" }}>
+   {(property.id || property.propertyId) && (
+     <span style={styles.idTag}>
+       Property ID: {property.id || property.propertyId}
+     </span>
+   )}
+   {dealInfo && dealInfo.dealId && (
+     <span style={styles.dealTag}>
+       Deal ID: {dealInfo.dealId}
+     </span>
+   )}
+ </div>
 
           {/* --- ⭐ DEAL BUTTON (Modified - Button Only) --- */}
           {dealInfo && ( // Render only if dealInfo exists
@@ -137,6 +150,30 @@ const PropertyCard = ({ property, dealInfo, onPropertyUpdated, onPropertyDeleted
 
 // --- Styles ---
 const styles = {
+    idTag: {
+        display: "inline-block",
+        background: "#EFF6FF",
+        color: "#2563EB",
+        borderRadius: "6px",
+        fontSize: "0.82em",
+        fontWeight: 500,
+        padding: "2px 10px",
+        marginRight: "6px",
+        marginTop: "6px",
+        border: "1px solid #93C5FD"
+      },
+      dealTag: {
+        display: "inline-block",
+        background: "#F0FDF4",
+        color: "#059669",
+        borderRadius: "6px",
+        fontSize: "0.82em",
+        fontWeight: 500,
+        padding: "2px 10px",
+        marginRight: "6px",
+        marginTop: "6px",
+        border: "1px solid #6EE7B7"
+      },
   card: { background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)", borderRadius: "20px", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.08)", transition: "all 0.3s ease", cursor: "pointer", position: "relative", border: "1px solid #e2e8f0", },
   badgeContainer: { position: "absolute", top: "1rem", right: "1rem", display: "flex", flexDirection: "column", gap: "8px", zIndex: 2, },
   badge: { background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", color: "white", padding: "0.5rem 1rem", borderRadius: "2rem", fontSize: "0.75rem", fontWeight: "700", textTransform: "uppercase", boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)", },

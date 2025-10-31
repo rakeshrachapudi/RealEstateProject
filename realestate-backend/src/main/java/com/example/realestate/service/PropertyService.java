@@ -37,7 +37,13 @@ public class PropertyService {
         this.areaRepository = areaRepository;
         this.propertyTypeRepository = propertyTypeRepository;
     }
+    public List<String> getPropertyTypes() {
+        return repo.findDistinctPropertyTypes();
+    }
 
+    public List<Property> findByType(String type) {
+        return repo.findByTypeIgnoreCaseAndIsActiveTrue(type);
+    }
     /**
      * Create new property from DTO.
      */
@@ -165,6 +171,39 @@ public class PropertyService {
     public List<Property> findByCity(String city) { return repo.findByCityIgnoreCase(city); }
 
     public List<Property> findByAreaName(String areaName) { return repo.findByAreaNameAndIsActiveTrue(areaName); }
+
+    /**
+     * Get all active properties
+     */
+    public List<Property> getAllActiveProperties() {
+        logger.info("Fetching all active properties");
+        return repo.findByIsActiveTrueOrderByCreatedAtDesc();
+    }
+
+    /**
+     * Get all active properties and convert to DTOs
+     */
+    public List<PropertyDTO> getAllActivePropertiesAsDTO() {
+        logger.info("Fetching all active properties as DTOs");
+        List<Property> properties = repo.findByIsActiveTrueOrderByCreatedAtDesc();
+
+        return properties.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get properties by type and convert to DTOs
+     */
+    public List<PropertyDTO> getPropertiesByTypeAsDTO(String type) {
+        logger.info("Fetching properties of type: {} as DTOs", type);
+        List<Property> properties = repo.findByTypeIgnoreCaseAndIsActiveTrue(type);
+
+        return properties.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
 // In PropertyService.java
 
     // In PropertyService.java

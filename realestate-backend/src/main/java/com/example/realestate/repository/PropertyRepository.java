@@ -20,6 +20,10 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
     // Find by property type (Apartment, Villa, etc.)
     List<Property> findByTypeIgnoreCaseAndIsActiveTrue(String type);
 
+    // Get distinct property types
+    @Query("SELECT DISTINCT p.type FROM Property p WHERE p.isActive = true AND p.type IS NOT NULL")
+    List<String> findDistinctPropertyTypes();
+
     // Find by area name
     @Query("SELECT p FROM Property p LEFT JOIN p.area a WHERE LOWER(a.areaName) = LOWER(:areaName) AND p.isActive = true")
     List<Property> findByAreaNameAndIsActiveTrue(@Param("areaName") String areaName);
