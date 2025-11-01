@@ -1,49 +1,40 @@
 package com.example.realestate.dto;
 
-import java.util.List;
-import java.util.Map;
-
 public class AdminDealDashboardDTO {
     private Long totalDeals;
-    private Long activeDealCount;
-    private Long completedDealCount;
-    private Map<String, Long> dealsByStage; // INQUIRY: 5, SHORTLIST: 3, etc.
-    private List<AgentPerformanceDTO> agentPerformance;
-    private Map<String, Long> dealsTrendByMonth; // Optional: for charts
+    private Long inquiryCount;
+    private Long shortlistCount;
+    private Long negotiationCount;
+    private Long agreementCount;
+    private Long registrationCount;
+    private Long paymentCount;
+    private Long completedCount;
 
     // Constructors
     public AdminDealDashboardDTO() {}
-
-    public AdminDealDashboardDTO(Long totalDeals, Long activeDealCount, Long completedDealCount,
-                                 Map<String, Long> dealsByStage,
-                                 List<AgentPerformanceDTO> agentPerformance) {
-        this.totalDeals = totalDeals;
-        this.activeDealCount = activeDealCount;
-        this.completedDealCount = completedDealCount;
-        this.dealsByStage = dealsByStage;
-        this.agentPerformance = agentPerformance;
-    }
 
     // Getters and Setters
     public Long getTotalDeals() { return totalDeals; }
     public void setTotalDeals(Long totalDeals) { this.totalDeals = totalDeals; }
 
-    public Long getActiveDealCount() { return activeDealCount; }
-    public void setActiveDealCount(Long activeDealCount) { this.activeDealCount = activeDealCount; }
+    public Long getInquiryCount() { return inquiryCount; }
+    public void setInquiryCount(Long inquiryCount) { this.inquiryCount = inquiryCount; }
 
-    public Long getCompletedDealCount() { return completedDealCount; }
-    public void setCompletedDealCount(Long completedDealCount) { this.completedDealCount = completedDealCount; }
+    public Long getShortlistCount() { return shortlistCount; }
+    public void setShortlistCount(Long shortlistCount) { this.shortlistCount = shortlistCount; }
 
-    public Map<String, Long> getDealsByStage() { return dealsByStage; }
-    public void setDealsByStage(Map<String, Long> dealsByStage) { this.dealsByStage = dealsByStage; }
+    public Long getNegotiationCount() { return negotiationCount; }
+    public void setNegotiationCount(Long negotiationCount) { this.negotiationCount = negotiationCount; }
 
-    public List<AgentPerformanceDTO> getAgentPerformance() { return agentPerformance; }
-    public void setAgentPerformance(List<AgentPerformanceDTO> agentPerformance) {
-        this.agentPerformance = agentPerformance;
-    }
+    public Long getAgreementCount() { return agreementCount; }
+    public void setAgreementCount(Long agreementCount) { this.agreementCount = agreementCount; }
 
-    public Map<String, Long> getDealsTrendByMonth() { return dealsTrendByMonth; }
-    public void setDealsTrendByMonth(Map<String, Long> dealsTrendByMonth) {
-        this.dealsTrendByMonth = dealsTrendByMonth;
-    }
+    public Long getRegistrationCount() { return registrationCount; }
+    public void setRegistrationCount(Long registrationCount) { this.registrationCount = registrationCount; }
+
+    public Long getPaymentCount() { return paymentCount; }
+    public void setPaymentCount(Long paymentCount) { this.paymentCount = paymentCount; }
+
+    public Long getCompletedCount() { return completedCount; }
+    public void setCompletedCount(Long completedCount) { this.completedCount = completedCount; }
 }
