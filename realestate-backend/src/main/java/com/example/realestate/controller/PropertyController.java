@@ -106,10 +106,12 @@ public class PropertyController {
     }
 
     @GetMapping("/byArea/{areaName}")
-    public List<Property> byArea(@PathVariable String areaName) {
+    public ResponseEntity<List<PropertyDTO>> byArea(@PathVariable String areaName) {
         logger.info("Fetching properties in area: {}", areaName);
-        return service.findByAreaName(areaName);
+        List<PropertyDTO> properties = service.findByAreaNameAsDTO(areaName);
+        return ResponseEntity.ok(properties);
     }
+
 
     @PutMapping("/{id}")
     public ResponseEntity<Property> update(@PathVariable Long id, @RequestBody Property propertyDetails) {
@@ -134,4 +136,5 @@ public class PropertyController {
             return ResponseEntity.notFound().build();
         }
     }
+
 }

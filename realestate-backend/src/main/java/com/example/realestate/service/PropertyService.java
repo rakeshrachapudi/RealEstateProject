@@ -79,6 +79,17 @@ public class PropertyService {
     public List<Property> findByType(String type) {
         return repo.findByTypeIgnoreCaseAndIsActiveTrue(type);
     }
+    /**
+     * Get properties by area name and convert to DTOs
+     */
+    public List<PropertyDTO> findByAreaNameAsDTO(String areaName) {
+        logger.info("Finding properties by area name as DTOs: {}", areaName);
+        List<Property> properties = repo.findByAreaNameAndIsActiveTrue(areaName);
+        return properties.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
 
     /**
      * Create new property from DTO.
@@ -301,4 +312,5 @@ public class PropertyService {
         property.setIsActive(false);
         repo.save(property);
     }
+
 }
