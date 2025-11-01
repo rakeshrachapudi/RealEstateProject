@@ -1,7 +1,9 @@
 ﻿// realestate-frontend/src/PostPropertyModal.jsx
+// ⭐ ENHANCED VERSION - Includes user selection for Agents/Admins
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "./AuthContext.jsx";
-import { BACKEND_BASE_URL } from "./config/config";
+import { BACKEND_BASE_URL } from "./config/config"; // Keep original working path
+import UserCreationModal from "./components/UserCreationModal";
 
 function PostPropertyModal({ onClose, onPropertyPosted }) {
   const { user, isAuthenticated } = useAuth();
@@ -13,7 +15,12 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [priceInWords, setPriceInWords] = useState("");
 
-  // ⭐ NEW: State for multiple images
+  // ⭐ NEW: User selection state for agents/admins
+  const [users, setUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [showUserCreation, setShowUserCreation] = useState(false);
+
+  // ⭐ State for multiple images
   const [selectedImages, setSelectedImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
 
@@ -24,7 +31,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     city: "Hyderabad",
     areaId: "",
     address: "",
-    imageUrl: "", // Primary image URL (will be set from first uploaded image)
+    imageUrl: "",
     bedrooms: "",
     bathrooms: "",
     balconies: "",
@@ -42,6 +49,9 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     "24/7 Water Supply", "Community Hall",
   ];
 
+  // ⭐ Check if user is Agent or Admin
+  const isAgentOrAdmin = user?.role === "AGENT" || user?.role === "ADMIN";
+
   useEffect(() => {
     const originalStyle = window.getComputedStyle(document.body).overflow;
     document.body.style.overflow = "hidden";
@@ -53,6 +63,13 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
   useEffect(() => {
     loadAreas();
   }, []);
+
+  // ⭐ NEW: Load users for agent/admin to select from
+  useEffect(() => {
+    if (isAgentOrAdmin) {
+      loadUsers();
+    }
+  }, [isAgentOrAdmin]);
 
   const loadAreas = async () => {
     setAreasLoading(true);
@@ -73,6 +90,36 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     } finally {
       setAreasLoading(false);
     }
+  };
+
+  // ⭐ NEW: Load users for selection
+  const loadUsers = async () => {
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/users`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && Array.isArray(data.data)) {
+          // Filter to show only regular users (not agents/admins)
+          const regularUsers = data.data.filter(u => u.role === "USER");
+          setUsers(regularUsers);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading users:", err);
+    }
+  };
+
+  // ⭐ NEW: Handle user creation callback
+  const handleUserCreated = (newUser) => {
+    setUsers((prev) => [...prev, newUser]);
+    setSelectedUserId(newUser.id);
+    setShowUserCreation(false);
+    alert(`✅ User created: ${newUser.firstName} ${newUser.lastName}\nEmail: ${newUser.email}\nPassword: ${newUser.temporaryPassword}`);
   };
 
   const convertToIndianWords = (numStr) => {
@@ -118,6 +165,17 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     return words.trim() + " Rupees Only";
   };
 
+  const handlePriceChange = (e) => {
+    const priceValue = e.target.value;
+    setFormData((prev) => ({ ...prev, price: priceValue }));
+    if (priceValue) {
+      const words = convertToIndianWords(priceValue);
+      setPriceInWords(words);
+    } else {
+      setPriceInWords("");
+    }
+  };
+
   if (!isAuthenticated || !user) {
     return (
       <div style={styles.backdrop} onClick={onClose}>
@@ -130,30 +188,26 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     );
   }
 
-  // ⭐ NEW: Handle multiple image selection
+  // Handle multiple image selection
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
 
     if (files.length === 0) return;
 
-    // Validate total number of images (max 10)
     if (selectedImages.length + files.length > 10) {
       alert("You can upload maximum 10 images");
       return;
     }
 
-    // Validate each file
     const validFiles = [];
     const newPreviews = [];
 
     for (const file of files) {
-      // Validate file type
       if (!file.type.startsWith("image/")) {
         alert(`"${file.name}" is not an image file`);
         continue;
       }
 
-      // Validate file size (10MB)
       if (file.size > 10 * 1024 * 1024) {
         alert(`"${file.name}" is too large (max 10MB)`);
         continue;
@@ -169,18 +223,16 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     console.log(`📸 ${validFiles.length} image(s) selected. Total: ${selectedImages.length + validFiles.length}`);
   };
 
-  // ⭐ NEW: Remove image from selection
   const removeImage = (index) => {
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
     setImagePreviews(prev => {
-      URL.revokeObjectURL(prev[index]); // Clean up memory
+      URL.revokeObjectURL(prev[index]);
       return prev.filter((_, i) => i !== index);
     });
   };
 
-  // ⭐ NEW: Set primary image
   const setPrimaryImage = (index) => {
-    if (index === 0) return; // Already primary
+    if (index === 0) return;
 
     const newImages = [...selectedImages];
     const newPreviews = [...imagePreviews];
@@ -198,685 +250,812 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         ? prev.amenities.split(",").map((a) => a.trim()).filter((a) => a.length > 0)
         : [];
 
-      let newAmenitiesArray;
-      if (amenitiesArray.includes(amenity)) {
-        newAmenitiesArray = amenitiesArray.filter((a) => a !== amenity);
+      const index = amenitiesArray.indexOf(amenity);
+      if (index > -1) {
+        amenitiesArray.splice(index, 1);
       } else {
-        newAmenitiesArray = [...amenitiesArray, amenity];
+        amenitiesArray.push(amenity);
       }
 
-      return { ...prev, amenities: newAmenitiesArray.join(", ") };
+      return { ...prev, amenities: amenitiesArray.join(", ") };
     });
-    setError(null);
   };
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    let processedValue = type === "checkbox" ? checked : value;
-
-    const MAX_PRICE = 1000000000;
-    const MAX_ROOMS = 10;
-    const MAX_AREA = 9999;
-
-    if (name === "price") {
-      const numValue = Number(processedValue);
-      if (!isNaN(numValue) && numValue > MAX_PRICE) {
-        setError(`Price cannot exceed ₹${MAX_PRICE.toLocaleString("en-IN")} (100 Crore).`);
-        return;
-      }
-    }
-
-    if (["bedrooms", "bathrooms", "balconies"].includes(name)) {
-      const numValue = Number(processedValue);
-      if (!isNaN(numValue) && numValue > MAX_ROOMS) {
-        setError(`${name.charAt(0).toUpperCase() + name.slice(1)} cannot exceed ${MAX_ROOMS}.`);
-        return;
-      }
-    }
-
-    if (name === "areaSqft") {
-      const numValue = Number(processedValue);
-      if (!isNaN(numValue) && numValue > MAX_AREA) {
-        setError(`Area cannot exceed ${MAX_AREA.toLocaleString()} sqft.`);
-        return;
-      }
-    }
-
-    if (name === "price" && processedValue.length > 1 && processedValue.startsWith("0")) {
-      processedValue = processedValue.substring(1);
-    }
-
-    setFormData((prev) => ({ ...prev, [name]: processedValue }));
-
-    if (name === "price") {
-      setPriceInWords(convertToIndianWords(processedValue));
-    }
-    setError(null);
-  };
-
-  // ⭐ UPDATED: Upload multiple images to S3
-  const uploadImagesToS3 = async (propertyId) => {
-    console.log(`🚀 Starting upload of ${selectedImages.length} images for property ${propertyId}`);
-
-    const uploadedUrls = [];
-
-    for (let i = 0; i < selectedImages.length; i++) {
-      const file = selectedImages[i];
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("propertyId", propertyId);
-
-      console.log(`📤 Uploading image ${i + 1}/${selectedImages.length}: ${file.name}`);
-      setUploadProgress(Math.round(((i + 1) / selectedImages.length) * 100));
-
-      try {
-        const response = await fetch(`${BACKEND_BASE_URL}/api/upload/property-image`, {
-          method: "POST",
-          body: formData,
-        });
-
-        const data = await response.json();
-
-        if (data.success && data.url) {
-          uploadedUrls.push(data.url);
-          console.log(`✅ Image ${i + 1} uploaded: ${data.url}`);
-        } else {
-          throw new Error(data.message || "Upload failed");
-        }
-      } catch (err) {
-        console.error(`❌ Error uploading image ${i + 1}:`, err);
-        throw new Error(`Failed to upload image ${i + 1}: ${err.message}`);
-      }
-    }
-
-    console.log(`✅ All ${uploadedUrls.length} images uploaded successfully`);
-    return uploadedUrls;
-  };
-
-  // ⭐ UPDATED: Save image URLs to database
-  const saveImageUrlsToDatabase = async (propertyId, imageUrls) => {
-    console.log(`💾 Saving ${imageUrls.length} image URLs to database for property ${propertyId}`);
-
-    const imageRequests = imageUrls.map((url, index) => ({
-      imageUrl: url,
-      isPrimary: index === 0, // First image is primary
-      displayOrder: index,
-    }));
-
-    try {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(imageRequests),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save images to database");
-      }
-
-      const savedImages = await response.json();
-      console.log(`✅ ${savedImages.length} images saved to database`);
-      return savedImages;
-    } catch (err) {
-      console.error("❌ Error saving images to database:", err);
-      throw err;
-    }
-  };
-
-  // ⭐ UPDATED: Submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
-    setImageUploading(true);
+
+    if (!isAuthenticated) {
+      alert("Please log in to post a property");
+      return;
+    }
+
+    // ⭐ NEW: Validate user selection for agents/admins
+    if (isAgentOrAdmin && !selectedUserId) {
+      alert("Please select a user to post this property under");
+      return;
+    }
+
+    if (!formData.areaId) {
+      alert("Please select an area");
+      return;
+    }
+
+    if (selectedImages.length === 0) {
+      alert("Please upload at least one image");
+      return;
+    }
 
     try {
-      // Validate images
-      if (selectedImages.length === 0) {
-        throw new Error("Please select at least one image");
+      setLoading(true);
+      setImageUploading(true);
+      setUploadProgress(0);
+
+      // Upload images to S3
+      const uploadedImageUrls = [];
+      for (let i = 0; i < selectedImages.length; i++) {
+        const file = selectedImages[i];
+        const formDataImage = new FormData();
+        formDataImage.append("file", file);
+
+        console.log(`📤 Uploading image ${i + 1}/${selectedImages.length}: ${file.name}`);
+
+        const uploadResponse = await fetch(`${BACKEND_BASE_URL}/api/s3/upload-image`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+          body: formDataImage,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error(`Failed to upload image ${file.name}`);
+        }
+
+        const uploadResult = await uploadResponse.json();
+        if (uploadResult.success && uploadResult.data) {
+          uploadedImageUrls.push(uploadResult.data);
+          console.log(`✅ Uploaded: ${uploadResult.data}`);
+        } else {
+          throw new Error(`Invalid response for image ${file.name}`);
+        }
+
+        setUploadProgress(((i + 1) / selectedImages.length) * 100);
       }
 
-      // Step 1: Create property WITHOUT images
-      console.log("📝 Step 1: Creating property...");
+      setImageUploading(false);
+      console.log(`✅ All ${uploadedImageUrls.length} images uploaded successfully`);
 
-      const propertyPayload = {
-        title: formData.title,
-        type: formData.type,
-        listingType: formData.listingType,
-        city: formData.city,
+      // ⭐ NEW: Determine which user ID to use
+      const ownerUserId = isAgentOrAdmin ? selectedUserId : user.id;
+
+      // Prepare property data
+      const propertyData = {
+        ...formData,
+        user: { id: ownerUserId }, // ⭐ Use selected user ID for agents, own ID for regular users
         area: { id: parseInt(formData.areaId) },
-        user: { id: user.id },
-        address: formData.address,
-        imageUrl: "", // Will be updated after upload
-        priceDisplay: priceInWords,
+        price: parseFloat(formData.price) || 0,
         bedrooms: parseInt(formData.bedrooms) || 0,
         bathrooms: parseInt(formData.bathrooms) || 0,
         balconies: parseInt(formData.balconies) || 0,
-        areaSqft: parseFloat(formData.areaSqft) || 0,
-        price: parseFloat(formData.price),
-        amenities: formData.amenities,
-        description: formData.description,
-        ownerType: formData.ownerType,
-        isReadyToMove: formData.isReadyToMove,
-        status: "available",
+        areaSqft: parseFloat(formData.areaSqft) || null,
+        imageUrl: uploadedImageUrls[0], // Primary image
         isFeatured: false,
         isActive: true,
         isVerified: false,
+        status: "available",
+        priceDisplay: priceInWords,
       };
 
-      const propertyResponse = await fetch(`${BACKEND_BASE_URL}/api/properties`, {
+      console.log("📤 Posting property:", propertyData);
+
+      const response = await fetch(`${BACKEND_BASE_URL}/api/properties`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(propertyPayload),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+        body: JSON.stringify(propertyData),
       });
 
-      if (!propertyResponse.ok) {
-        const errorText = await propertyResponse.text();
-        throw new Error(errorText || "Failed to create property");
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to post property");
       }
 
-      const createdProperty = await propertyResponse.json();
-      const propertyId = createdProperty.id;
-      console.log(`✅ Property created with ID: ${propertyId}`);
+      const result = await response.json();
+      console.log("✅ Property posted successfully:", result);
 
-      // Step 2: Upload images to S3
-      console.log("📤 Step 2: Uploading images to S3...");
-      const uploadedImageUrls = await uploadImagesToS3(propertyId);
-
-      // Step 3: Save image URLs to database
-      console.log("💾 Step 3: Saving image URLs to database...");
-      await saveImageUrlsToDatabase(propertyId, uploadedImageUrls);
-
-      // Step 4: Update property with primary image URL
-      console.log("🔄 Step 4: Updating property with primary image...");
-      await fetch(`${BACKEND_BASE_URL}/api/properties/${propertyId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...createdProperty,
-          imageUrl: uploadedImageUrls[0], // Set primary image
-        }),
-      });
-
-      console.log("🎉 Property posted successfully with all images!");
-      alert(`Property posted successfully with ${uploadedImageUrls.length} images!`);
+      alert("✅ Property posted successfully!");
 
       if (onPropertyPosted) onPropertyPosted();
       onClose();
 
     } catch (err) {
       console.error("❌ Error posting property:", err);
-      setError(err.message || "Failed to post property");
+      alert(`❌ Error: ${err.message}`);
     } finally {
       setLoading(false);
       setImageUploading(false);
-      setUploadProgress(0);
     }
   };
 
   return (
-    <div style={styles.backdrop} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} style={styles.closeBtn}>×</button>
-        <h2 style={styles.title}>🏡 Post New Property</h2>
+    <>
+      <div style={styles.backdrop} onClick={onClose}>
+        <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+          <button onClick={onClose} style={styles.closeBtn}>×</button>
 
-        {error && <div style={styles.error}>{error}</div>}
+          <h2 style={styles.title}>🏠 Post Property</h2>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          {/* Title */}
-          <div style={styles.field}>
-            <label style={styles.label}>Property Title *</label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              placeholder="e.g., Spacious 2BHK Apartment"
-              style={styles.input}
-              required
-            />
-          </div>
+          {/* ⭐ NEW: User Selection Section for Agents/Admins */}
+          {isAgentOrAdmin && (
+            <div style={styles.userSelectionBox}>
+              <h3 style={styles.sectionTitle}>👤 Select Property Owner</h3>
+              <p style={styles.helperText}>
+                As an {user?.role?.toLowerCase()}, you need to select which user this property belongs to.
+              </p>
 
-          {/* Property Type & Listing Type */}
-          <div style={styles.row}>
-            <div style={styles.field}>
-              <label style={styles.label}>Property Type *</label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                style={styles.select}
-                required
-              >
-                <option value="Apartment">🏢 Apartment</option>
-                <option value="Villa">🏡 Villa</option>
-                <option value="Independent House">🏠 Independent House</option>
-                <option value="Plot">📍 Plot</option>
-                <option value="Commercial">🏪 Commercial</option>
-              </select>
+              <div style={styles.userSelectRow}>
+                <select
+                  value={selectedUserId || ""}
+                  onChange={(e) => setSelectedUserId(Number(e.target.value))}
+                  style={styles.userSelect}
+                  required
+                >
+                  <option value="">-- Select Property Owner --</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.firstName} {u.lastName} - {u.email} ({u.mobileNumber})
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => setShowUserCreation(true)}
+                  style={styles.createUserBtn}
+                >
+                  ➕ Create New User
+                </button>
+              </div>
+
+              {selectedUserId && (
+                <div style={styles.selectedUserInfo}>
+                  ✅ Property will be posted under:{" "}
+                  <strong>
+                    {users.find((u) => u.id === selectedUserId)?.firstName}{" "}
+                    {users.find((u) => u.id === selectedUserId)?.lastName}
+                  </strong>
+                </div>
+              )}
             </div>
-            <div style={styles.field}>
-              <label style={styles.label}>Listing Type *</label>
-              <select
-                name="listingType"
-                value={formData.listingType}
-                onChange={handleChange}
-                style={styles.select}
-                required
-              >
-                <option value="sale">🏘️ For Sale</option>
-                <option value="rent">🔑 For Rent</option>
-              </select>
+          )}
+
+          {error && (
+            <div style={styles.errorBanner}>
+              ⚠️ {error}
             </div>
-          </div>
+          )}
 
-          {/* Posted By */}
-          <div style={styles.field}>
-            <label style={styles.label}>👤 Posted By *</label>
-            <select
-              name="ownerType"
-              value={formData.ownerType}
-              onChange={handleChange}
-              style={styles.select}
-              required
-            >
-              <option value="owner">Owner</option>
-              <option value="broker">Broker</option>
-            </select>
-          </div>
+          <form onSubmit={handleSubmit} style={styles.form}>
+            {/* Basic Details */}
+            <div style={styles.section}>
+              <h3 style={styles.sectionHeader}>📝 Basic Details</h3>
 
-          {/* City & Area */}
-          <div style={styles.row}>
-            <div style={styles.field}>
-              <label style={styles.label}>City *</label>
-              <input
-                type="text"
-                name="city"
-                value={formData.city}
-                readOnly
-                style={styles.input}
-              />
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Property Title *</label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  style={styles.input}
+                  required
+                  placeholder="e.g., 3 BHK Luxury Apartment in Banjara Hills"
+                />
+              </div>
+
+              <div style={styles.formRow}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Property Type *</label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({...formData, type: e.target.value})}
+                    style={styles.input}
+                    required
+                  >
+                    <option value="Apartment">Apartment</option>
+                    <option value="Villa">Villa</option>
+                    <option value="Independent House">Independent House</option>
+                    <option value="Plot">Plot</option>
+                    <option value="Commercial">Commercial</option>
+                  </select>
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Listing Type *</label>
+                  <select
+                    value={formData.listingType}
+                    onChange={(e) => setFormData({...formData, listingType: e.target.value})}
+                    style={styles.input}
+                    required
+                  >
+                    <option value="sale">For Sale</option>
+                    <option value="rent">For Rent</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={styles.formRow}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Area *</label>
+                  <select
+                    value={formData.areaId}
+                    onChange={(e) => setFormData({...formData, areaId: e.target.value})}
+                    style={styles.input}
+                    required
+                    disabled={areasLoading}
+                  >
+                    <option value="">-- Select Area --</option>
+                    {areas.map((area) => (
+                      <option key={area.areaId} value={area.areaId}>
+                        {area.areaName} - {area.pincode}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Owner Type *</label>
+                  <select
+                    value={formData.ownerType}
+                    onChange={(e) => setFormData({...formData, ownerType: e.target.value})}
+                    style={styles.input}
+                  >
+                    <option value="owner">Owner</option>
+                    <option value="dealer">Dealer</option>
+                    <option value="builder">Builder</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Complete Address *</label>
+                <textarea
+                  value={formData.address}
+                  onChange={(e) => setFormData({...formData, address: e.target.value})}
+                  style={{...styles.input, minHeight: "80px", resize: "vertical"}}
+                  required
+                  placeholder="Enter complete property address"
+                />
+              </div>
             </div>
-            <div style={styles.field}>
-              <label style={styles.label}>
-                📍 Area * ({areas.length} available)
-              </label>
-              <select
-                name="areaId"
-                value={formData.areaId}
-                onChange={handleChange}
-                style={styles.select}
-                required
-                disabled={areasLoading}
-              >
-                <option value="">-- Select Area --</option>
-                {areas.map((area) => (
-                  <option key={area.areaId} value={area.areaId}>
-                    {area.areaName} ({area.pincode})
-                  </option>
-                ))}
-              </select>
+
+            {/* Property Specifications */}
+            <div style={styles.section}>
+              <h3 style={styles.sectionHeader}>📐 Property Specifications</h3>
+
+              <div style={styles.formRow}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Bedrooms *</label>
+                  <input
+                    type="number"
+                    value={formData.bedrooms}
+                    onChange={(e) => setFormData({...formData, bedrooms: e.target.value})}
+                    style={styles.input}
+                    min="0"
+                    required
+                  />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Bathrooms *</label>
+                  <input
+                    type="number"
+                    value={formData.bathrooms}
+                    onChange={(e) => setFormData({...formData, bathrooms: e.target.value})}
+                    style={styles.input}
+                    min="0"
+                    required
+                  />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Balconies</label>
+                  <input
+                    type="number"
+                    value={formData.balconies}
+                    onChange={(e) => setFormData({...formData, balconies: e.target.value})}
+                    style={styles.input}
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              <div style={styles.formRow}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Area (sqft) *</label>
+                  <input
+                    type="number"
+                    value={formData.areaSqft}
+                    onChange={(e) => setFormData({...formData, areaSqft: e.target.value})}
+                    style={styles.input}
+                    min="0"
+                    required
+                  />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Price (₹) *</label>
+                  <input
+                    type="number"
+                    value={formData.price}
+                    onChange={handlePriceChange}
+                    style={styles.input}
+                    min="0"
+                    required
+                  />
+                </div>
+              </div>
+
+              {priceInWords && (
+                <div style={styles.priceInWords}>
+                  💰 {priceInWords}
+                </div>
+              )}
+
+              <div style={styles.checkboxGroup}>
+                <label style={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={formData.isReadyToMove}
+                    onChange={(e) => setFormData({...formData, isReadyToMove: e.target.checked})}
+                    style={styles.checkbox}
+                  />
+                  <span>Ready to Move</span>
+                </label>
+              </div>
             </div>
-          </div>
 
-          {/* Address */}
-          <div style={styles.field}>
-            <label style={styles.label}>Complete Address (Optional)</label>
-            <input
-              type="text"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              placeholder="House/Plot number, Street name"
-              style={styles.input}
-            />
-          </div>
+            {/* Images */}
+            <div style={styles.section}>
+              <h3 style={styles.sectionHeader}>📸 Property Images</h3>
 
-          {/* Ready to Move Checkbox */}
-          <label style={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              name="isReadyToMove"
-              checked={formData.isReadyToMove}
-              onChange={handleChange}
-              style={styles.checkbox}
-            />
-            <span style={styles.checkboxText}>✅ Ready to Move</span>
-          </label>
+              <div style={styles.imageUploadSection}>
+                <input
+                  type="file"
+                  id="imageUpload"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageUpload}
+                  style={{ display: "none" }}
+                />
+                <label htmlFor="imageUpload" style={styles.uploadButton}>
+                  📁 Select Images (Max 10)
+                </label>
+                <p style={styles.uploadHint}>First image will be the primary image</p>
+              </div>
 
-          {/* ⭐ NEW: Multiple Image Upload Section */}
-          <div style={styles.imageSection}>
-            <label style={styles.label}>📷 Upload Property Images * (Max 10)</label>
-
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImageUpload}
-              style={styles.fileInput}
-            />
-
-            {/* Image Previews */}
-            {imagePreviews.length > 0 && (
-              <div style={styles.imagePreviewContainer}>
-                {imagePreviews.map((preview, index) => (
-                  <div key={index} style={styles.imagePreviewWrapper}>
-                    <img src={preview} alt={`Preview ${index + 1}`} style={styles.imagePreview} />
-
-                    {/* Primary Badge */}
-                    {index === 0 && (
-                      <div style={styles.primaryBadge}>Primary</div>
-                    )}
-
-                    {/* Image Controls */}
-                    <div style={styles.imageControls}>
-                      {index !== 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setPrimaryImage(index)}
-                          style={styles.setPrimaryBtn}
-                          title="Set as primary image"
-                        >
-                          ⭐ Set Primary
-                        </button>
+              {imagePreviews.length > 0 && (
+                <div style={styles.imagePreviewGrid}>
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} style={styles.imagePreviewContainer}>
+                      <img src={preview} alt={`Preview ${index + 1}`} style={styles.imagePreview} />
+                      {index === 0 && (
+                        <span style={styles.primaryBadge}>Primary</span>
                       )}
                       <button
                         type="button"
                         onClick={() => removeImage(index)}
                         style={styles.removeImageBtn}
-                        title="Remove image"
                       >
-                        ❌ Remove
+                        ×
                       </button>
+                      {index !== 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setPrimaryImage(index)}
+                          style={styles.setPrimaryBtn}
+                        >
+                          Set as Primary
+                        </button>
+                      )}
                     </div>
+                  ))}
+                </div>
+              )}
 
-                    <div style={styles.imageNumber}>{index + 1}</div>
+              {imageUploading && (
+                <div style={styles.uploadProgress}>
+                  <div style={styles.progressBar}>
+                    <div style={{...styles.progressFill, width: `${uploadProgress}%`}} />
                   </div>
+                  <p style={styles.progressText}>Uploading... {Math.round(uploadProgress)}%</p>
+                </div>
+              )}
+            </div>
+
+            {/* Amenities */}
+            <div style={styles.section}>
+              <h3 style={styles.sectionHeader}>✨ Amenities</h3>
+
+              <div style={styles.amenitiesGrid}>
+                {commonAmenities.map((amenity) => (
+                  <label key={amenity} style={styles.amenityLabel}>
+                    <input
+                      type="checkbox"
+                      checked={formData.amenities.includes(amenity)}
+                      onChange={() => handleAmenityChange(amenity)}
+                      style={styles.checkbox}
+                    />
+                    <span>{amenity}</span>
+                  </label>
                 ))}
               </div>
-            )}
+            </div>
 
-            {selectedImages.length > 0 && (
-              <p style={styles.imageCount}>
-                {selectedImages.length} image(s) selected (First image will be the primary image)
-              </p>
-            )}
+            {/* Description */}
+            <div style={styles.section}>
+              <h3 style={styles.sectionHeader}>📄 Description</h3>
 
-            {imageUploading && (
-              <div style={styles.progressContainer}>
-                <div style={styles.progressBar}>
-                  <div style={{ ...styles.progressFill, width: `${uploadProgress}%` }} />
-                </div>
-                <p style={styles.progressText}>Uploading... {uploadProgress}%</p>
-              </div>
-            )}
-          </div>
-
-          {/* Description */}
-          <div style={styles.field}>
-            <label style={styles.label}>Description *</label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Describe your property..."
-              style={{ ...styles.input, minHeight: "100px", resize: "vertical" }}
-              required
-            />
-          </div>
-
-          {/* Bedrooms, Bathrooms, Balconies */}
-          <div style={styles.row3}>
-            <div style={styles.field}>
-              <label style={styles.label}>🛏️ Bedrooms *</label>
-              <input
-                type="number"
-                name="bedrooms"
-                value={formData.bedrooms}
-                onChange={handleChange}
-                min="0"
-                max="10"
-                style={styles.input}
-                placeholder="2"
-                required
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                style={{...styles.input, minHeight: "120px", resize: "vertical"}}
+                placeholder="Describe your property..."
               />
             </div>
-            <div style={styles.field}>
-              <label style={styles.label}>🚿 Bathrooms *</label>
-              <input
-                type="number"
-                name="bathrooms"
-                value={formData.bathrooms}
-                onChange={handleChange}
-                min="0"
-                max="10"
-                style={styles.input}
-                placeholder="2"
-                required
-              />
-            </div>
-            <div style={styles.field}>
-              <label style={styles.label}>🏠 Balconies</label>
-              <input
-                type="number"
-                name="balconies"
-                value={formData.balconies}
-                onChange={handleChange}
-                min="0"
-                max="10"
-                style={styles.input}
-                placeholder="1"
-              />
-            </div>
-          </div>
 
-          {/* Area & Price */}
-          <div style={styles.row}>
-            <div style={styles.field}>
-              <label style={styles.label}>📐 Area (sqft)</label>
-              <input
-                type="number"
-                name="areaSqft"
-                value={formData.areaSqft}
-                onChange={handleChange}
-                placeholder="1200"
-                style={styles.input}
-                max="9999"
-              />
+            {/* Submit Button */}
+            <div style={styles.buttonRow}>
+              <button
+                type="button"
+                onClick={onClose}
+                style={styles.cancelBtn}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                style={styles.submitBtn}
+                disabled={loading || imageUploading || (isAgentOrAdmin && !selectedUserId)}
+              >
+                {loading ? "Posting..." : "📝 Post Property"}
+              </button>
             </div>
-            <div style={styles.field}>
-              <label style={styles.label}>💰 Expected Price (₹) *</label>
-              <input
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleChange}
-                placeholder="e.g..,5000000"
-                style={styles.input}
-                required
-                max="1000000000"
-              />
-              {priceInWords && <p style={styles.priceInWords}>{priceInWords}</p>}
-            </div>
-          </div>
-
-          {/* Amenities */}
-          <div style={styles.field}>
-            <label style={styles.label}>✨ Amenities</label>
-            <div style={styles.amenitiesGrid}>
-              {commonAmenities.map((amenity) => {
-                const selectedAmenities = formData.amenities
-                  ? formData.amenities.split(",").map((a) => a.trim())
-                  : [];
-                const isSelected = selectedAmenities.includes(amenity);
-
-                return (
-                  <button
-                    key={amenity}
-                    type="button"
-                    onClick={() => handleAmenityChange(amenity)}
-                    style={{
-                      ...styles.amenityBtn,
-                      backgroundColor: isSelected ? "#10b981" : "#f1f5f9",
-                      color: isSelected ? "white" : "#475569",
-                      borderColor: isSelected ? "#059669" : "#e2e8f0",
-                    }}
-                  >
-                    {amenity}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading || imageUploading}
-            style={{
-              ...styles.submitBtn,
-              opacity: loading || imageUploading ? 0.6 : 1,
-              cursor: loading || imageUploading ? "not-allowed" : "pointer",
-            }}
-          >
-            {loading ? "⏳ Posting..." : imageUploading ? "⏳ Uploading..." : "📤 Post Property"}
-          </button>
-
-          <p style={{ textAlign: "center", fontSize: "12px", color: "#9ca3af", margin: "8px 0 0 0" }}>
-            * Required fields
-          </p>
-        </form>
+          </form>
+        </div>
       </div>
-    </div>
+
+      {/* ⭐ NEW: User Creation Modal */}
+      {showUserCreation && (
+        <UserCreationModal
+          onClose={() => setShowUserCreation(false)}
+          onUserCreated={handleUserCreated}
+        />
+      )}
+    </>
   );
 }
 
+// ==================== STYLES ====================
 const styles = {
   backdrop: {
-    position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
-    background: "rgba(0, 0, 0, 0.75)", display: "flex", justifyContent: "center",
-    alignItems: "center", zIndex: 1000, backdropFilter: "blur(4px)",
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+    padding: "20px",
   },
   modal: {
-    background: "white", padding: "2rem", borderRadius: "16px", width: "750px",
-    maxHeight: "90vh", overflowY: "auto", position: "relative",
+    backgroundColor: "white",
+    borderRadius: "16px",
+    padding: "32px",
+    maxWidth: "900px",
+    width: "100%",
+    maxHeight: "90vh",
+    overflow: "auto",
     boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+    position: "relative",
   },
   closeBtn: {
-    position: "absolute", top: "15px", right: "15px", background: "#ef4444",
-    color: "white", border: "none", fontSize: "24px", cursor: "pointer",
-    width: "40px", height: "40px", borderRadius: "8px", display: "flex",
-    alignItems: "center", justifyContent: "center", fontWeight: "bold",
+    position: "absolute",
+    top: "16px",
+    right: "16px",
+    background: "none",
+    border: "none",
+    fontSize: "32px",
+    cursor: "pointer",
+    color: "#64748b",
+    lineHeight: 1,
+    padding: "8px",
   },
   title: {
-    textAlign: "center", marginBottom: "1rem", fontSize: "28px",
-    color: "#1e293b", fontWeight: "800",
+    fontSize: "28px",
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: "24px",
   },
-  form: { display: "flex", flexDirection: "column", gap: "1rem" },
-  field: { display: "flex", flexDirection: "column" },
-  row: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" },
-  row3: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" },
+  // ⭐ NEW: User Selection Styles
+  userSelectionBox: {
+    backgroundColor: "#f0f9ff",
+    border: "2px solid #3b82f6",
+    borderRadius: "12px",
+    padding: "20px",
+    marginBottom: "24px",
+  },
+  sectionTitle: {
+    fontSize: "18px",
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: "8px",
+    marginTop: 0,
+  },
+  helperText: {
+    fontSize: "13px",
+    color: "#64748b",
+    marginBottom: "16px",
+  },
+  userSelectRow: {
+    display: "flex",
+    gap: "12px",
+    alignItems: "center",
+  },
+  userSelect: {
+    flex: 1,
+    padding: "12px 16px",
+    border: "2px solid #cbd5e1",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: "500",
+    outline: "none",
+  },
+  createUserBtn: {
+    padding: "12px 20px",
+    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    fontWeight: "700",
+    fontSize: "14px",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  selectedUserInfo: {
+    marginTop: "12px",
+    padding: "12px 16px",
+    backgroundColor: "#d1fae5",
+    border: "1px solid #6ee7b7",
+    borderRadius: "8px",
+    fontSize: "14px",
+    color: "#065f46",
+  },
+  errorBanner: {
+    padding: "12px 16px",
+    backgroundColor: "#fef2f2",
+    border: "1px solid #fecaca",
+    borderRadius: "8px",
+    color: "#dc2626",
+    fontSize: "14px",
+    marginBottom: "20px",
+  },
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "24px",
+  },
+  section: {
+    padding: "20px",
+    backgroundColor: "#f8fafc",
+    borderRadius: "12px",
+    border: "1px solid #e2e8f0",
+  },
+  sectionHeader: {
+    fontSize: "18px",
+    fontWeight: "700",
+    color: "#1e293b",
+    marginTop: 0,
+    marginBottom: "16px",
+  },
+  formGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    flex: 1,
+  },
+  formRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+    gap: "16px",
+  },
   label: {
-    marginBottom: "6px", fontWeight: "700", fontSize: "14px", color: "#1e293b",
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#475569",
+  },
+  input: {
+    padding: "12px 16px",
+    border: "2px solid #e2e8f0",
+    borderRadius: "8px",
+    fontSize: "14px",
+    transition: "border-color 0.2s",
+    outline: "none",
+  },
+  priceInWords: {
+    padding: "12px 16px",
+    backgroundColor: "#fef3c7",
+    border: "1px solid #fde047",
+    borderRadius: "8px",
+    fontSize: "14px",
+    color: "#92400e",
+    fontWeight: "600",
+  },
+  checkboxGroup: {
+    marginTop: "12px",
   },
   checkboxLabel: {
-    display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px",
-    background: "#f0f9ff", borderRadius: "8px", cursor: "pointer",
-    border: "2px solid #bfdbfe",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "500",
   },
-  checkbox: { width: "20px", height: "20px", cursor: "pointer" },
-  checkboxText: { fontSize: "14px", fontWeight: "600", color: "#1e40af" },
-  input: {
-    padding: "12px 16px", border: "2px solid #e2e8f0", borderRadius: "8px",
-    fontSize: "14px", fontFamily: "inherit", transition: "border-color 0.3s",
+  checkbox: {
+    width: "18px",
+    height: "18px",
+    cursor: "pointer",
   },
-  select: {
-    padding: "12px 16px", border: "2px solid #e2e8f0", borderRadius: "8px",
-    fontSize: "14px", cursor: "pointer", fontFamily: "inherit", backgroundColor: "white",
-  },
-  imageSection: {
-    padding: "16px", borderRadius: "12px", background: "#f8fafc",
+  imageUploadSection: {
+    textAlign: "center",
+    padding: "20px",
     border: "2px dashed #cbd5e1",
+    borderRadius: "8px",
+    backgroundColor: "white",
   },
-  fileInput: {
-    padding: "12px", border: "2px solid #e2e8f0", borderRadius: "8px",
-    backgroundColor: "white", cursor: "pointer", width: "100%",
+  uploadButton: {
+    display: "inline-block",
+    padding: "12px 24px",
+    background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+    color: "white",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "700",
     fontSize: "14px",
   },
-  imagePreviewContainer: {
-    display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-    gap: "12px", marginTop: "16px",
+  uploadHint: {
+    marginTop: "8px",
+    fontSize: "12px",
+    color: "#64748b",
   },
-  imagePreviewWrapper: {
-    position: "relative", borderRadius: "8px", overflow: "hidden",
-    border: "2px solid #e2e8f0", backgroundColor: "white",
+  imagePreviewGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+    gap: "16px",
+    marginTop: "16px",
+  },
+  imagePreviewContainer: {
+    position: "relative",
+    borderRadius: "8px",
+    overflow: "hidden",
+    border: "2px solid #e2e8f0",
   },
   imagePreview: {
-    width: "100%", height: "150px", objectFit: "cover", display: "block",
-  },
-  imageControls: {
-    position: "absolute", bottom: "0", left: "0", right: "0",
-    background: "rgba(0, 0, 0, 0.7)", padding: "8px",
-    display: "flex", gap: "4px", justifyContent: "center",
-  },
-  setPrimaryBtn: {
-    padding: "4px 8px", fontSize: "11px", background: "#10b981",
-    color: "white", border: "none", borderRadius: "4px", cursor: "pointer",
-    fontWeight: "600",
-  },
-  removeImageBtn: {
-    padding: "4px 8px", fontSize: "11px", background: "#ef4444",
-    color: "white", border: "none", borderRadius: "4px", cursor: "pointer",
-    fontWeight: "600",
+    width: "100%",
+    height: "150px",
+    objectFit: "cover",
   },
   primaryBadge: {
-    position: "absolute", top: "8px", left: "8px", background: "#10b981",
-    color: "white", padding: "4px 8px", borderRadius: "4px", fontSize: "11px",
-    fontWeight: "700", boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+    position: "absolute",
+    top: "8px",
+    left: "8px",
+    padding: "4px 8px",
+    backgroundColor: "#10b981",
+    color: "white",
+    fontSize: "11px",
+    fontWeight: "700",
+    borderRadius: "4px",
   },
-  imageNumber: {
-    position: "absolute", top: "8px", right: "8px", background: "rgba(0, 0, 0, 0.7)",
-    color: "white", width: "24px", height: "24px", borderRadius: "50%",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    fontSize: "12px", fontWeight: "700",
+  removeImageBtn: {
+    position: "absolute",
+    top: "8px",
+    right: "8px",
+    width: "24px",
+    height: "24px",
+    background: "#ef4444",
+    color: "white",
+    border: "none",
+    borderRadius: "50%",
+    cursor: "pointer",
+    fontSize: "18px",
+    lineHeight: 1,
   },
-  imageCount: {
-    marginTop: "12px", fontSize: "13px", color: "#64748b",
-    textAlign: "center", fontWeight: "600",
+  setPrimaryBtn: {
+    position: "absolute",
+    bottom: "8px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    padding: "4px 8px",
+    background: "#3b82f6",
+    color: "white",
+    border: "none",
+    borderRadius: "4px",
+    cursor: "pointer",
+    fontSize: "11px",
+    fontWeight: "600",
   },
-  progressContainer: { marginTop: "12px" },
+  uploadProgress: {
+    marginTop: "16px",
+  },
   progressBar: {
-    width: "100%", height: "8px", background: "#e2e8f0", borderRadius: "4px",
+    width: "100%",
+    height: "8px",
+    backgroundColor: "#e2e8f0",
+    borderRadius: "4px",
     overflow: "hidden",
   },
   progressFill: {
-    height: "100%", background: "linear-gradient(90deg, #10b981, #059669)",
-    transition: "width 0.3s ease",
+    height: "100%",
+    backgroundColor: "#3b82f6",
+    transition: "width 0.3s",
   },
   progressText: {
-    textAlign: "center", fontSize: "12px", color: "#64748b",
-    marginTop: "4px", fontWeight: "600",
-  },
-  error: {
-    background: "#fee2e2", border: "2px solid #fecaca", borderRadius: "8px",
-    padding: "12px", marginBottom: "1rem", textAlign: "center",
-    color: "#dc3545", fontWeight: "600", fontSize: "14px",
-  },
-  submitBtn: {
-    padding: "16px", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-    color: "white", border: "none", borderRadius: "10px", fontSize: "16px",
-    fontWeight: "700", cursor: "pointer", marginTop: "1rem",
-    boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
-  },
-  priceInWords: {
-    margin: "6px 0 0 4px", fontSize: "12px", color: "#64748b", fontStyle: "italic",
+    marginTop: "8px",
+    fontSize: "14px",
+    color: "#64748b",
+    textAlign: "center",
   },
   amenitiesGrid: {
-    display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "4px",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+    gap: "12px",
   },
-  amenityBtn: {
-    padding: "8px 16px", borderRadius: "20px", border: "1px solid",
-    cursor: "pointer", fontSize: "13px", fontWeight: "600", transition: "all 0.2s",
+  amenityLabel: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "500",
+    padding: "8px 12px",
+    backgroundColor: "white",
+    borderRadius: "6px",
+    border: "1px solid #e2e8f0",
+  },
+  buttonRow: {
+    display: "flex",
+    gap: "12px",
+    justifyContent: "flex-end",
+    marginTop: "24px",
+  },
+  cancelBtn: {
+    padding: "12px 24px",
+    border: "2px solid #e2e8f0",
+    borderRadius: "8px",
+    backgroundColor: "white",
+    color: "#64748b",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.2s",
+  },
+  submitBtn: {
+    padding: "12px 24px",
+    border: "none",
+    borderRadius: "8px",
+    background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+    color: "white",
+    fontSize: "14px",
+    fontWeight: "700",
+    cursor: "pointer",
+    boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
+    transition: "transform 0.2s",
   },
 };
 

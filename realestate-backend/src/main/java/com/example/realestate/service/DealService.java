@@ -36,6 +36,115 @@ public class DealService {
     @Autowired
     private UserRepository userRepository;
 
+    // ==================== ⭐ CASCADE DELETE METHODS (NEW) ====================
+
+    /**
+     * ⭐ DELETE ALL DEALS FOR AN AGENT (CASCADE DELETE)
+     * Called when an agent is deleted
+     */
+    @Transactional
+    public void deleteAllDealsForAgent(Long agentId) {
+        logger.info("🗑️ CASCADE DELETE: Deleting all deals for agent ID: {}", agentId);
+
+        List<DealStatus> agentDeals = dealStatusRepository.findByAgentId(agentId);
+
+        if (agentDeals.isEmpty()) {
+            logger.info("✅ No deals found for agent {}. Nothing to delete.", agentId);
+            return;
+        }
+
+        logger.info("Found {} deals assigned to agent {}. Deleting...", agentDeals.size(), agentId);
+
+        for (DealStatus deal : agentDeals) {
+            logger.info("  - Deleting Deal ID: {} (Property: {}, Buyer: {})",
+                    deal.getId(),
+                    deal.getProperty() != null ? deal.getProperty().getId() : "N/A",
+                    deal.getBuyer() != null ? deal.getBuyer().getId() : "N/A");
+        }
+
+        dealStatusRepository.deleteAll(agentDeals);
+        logger.info("✅ Successfully deleted {} deals for agent {}", agentDeals.size(), agentId);
+    }
+
+    /**
+     * ⭐ DELETE ALL DEALS FOR A USER (CASCADE DELETE)
+     * Deletes deals where the user is:
+     * 1. The buyer
+     * 2. The seller (property owner)
+     * Called when a user is deleted
+     */
+    @Transactional
+    public void deleteAllDealsForUser(Long userId) {
+        logger.info("🗑️ CASCADE DELETE: Deleting all deals for user ID: {}", userId);
+
+        // 1. Find all deals where user is the buyer
+        List<DealStatus> buyerDeals = dealStatusRepository.findByBuyerId(userId);
+        logger.info("Found {} deals where user {} is the BUYER", buyerDeals.size(), userId);
+
+        // 2. Find all properties owned by this user
+        List<Property> userProperties = propertyRepository.findByUserId(userId);
+        logger.info("Found {} properties owned by user {}", userProperties.size(), userId);
+
+        // 3. Find all deals for those properties (where user is the seller)
+        List<DealStatus> sellerDeals = new ArrayList<>();
+        for (Property property : userProperties) {
+            List<DealStatus> propertyDeals = dealStatusRepository.findByPropertyId(property.getId());
+            sellerDeals.addAll(propertyDeals);
+        }
+        logger.info("Found {} deals where user {} is the SELLER", sellerDeals.size(), userId);
+
+        // 4. Combine and remove duplicates
+        Set<DealStatus> allDealsToDelete = new HashSet<>();
+        allDealsToDelete.addAll(buyerDeals);
+        allDealsToDelete.addAll(sellerDeals);
+
+        if (allDealsToDelete.isEmpty()) {
+            logger.info("✅ No deals found for user {}. Nothing to delete.", userId);
+            return;
+        }
+
+        logger.info("Total unique deals to delete: {}", allDealsToDelete.size());
+
+        for (DealStatus deal : allDealsToDelete) {
+            logger.info("  - Deleting Deal ID: {} (Property: {}, Stage: {})",
+                    deal.getId(),
+                    deal.getProperty() != null ? deal.getProperty().getTitle() : "N/A",
+                    deal.getStage());
+        }
+
+        dealStatusRepository.deleteAll(allDealsToDelete);
+        logger.info("✅ Successfully deleted {} deals for user {}", allDealsToDelete.size(), userId);
+    }
+
+    /**
+     * ⭐ DELETE ALL DEALS FOR A PROPERTY (CASCADE DELETE)
+     * Called when a property is deleted
+     */
+    @Transactional
+    public void deleteAllDealsForProperty(Long propertyId) {
+        logger.info("🗑️ CASCADE DELETE: Deleting all deals for property ID: {}", propertyId);
+
+        List<DealStatus> propertyDeals = dealStatusRepository.findByPropertyId(propertyId);
+
+        if (propertyDeals.isEmpty()) {
+            logger.info("✅ No deals found for property {}. Nothing to delete.", propertyId);
+            return;
+        }
+
+        logger.info("Found {} deals for property {}. Deleting...", propertyDeals.size(), propertyId);
+
+        for (DealStatus deal : propertyDeals) {
+            logger.info("  - Deleting Deal ID: {} (Buyer: {}, Agent: {}, Stage: {})",
+                    deal.getId(),
+                    deal.getBuyer() != null ? deal.getBuyer().getId() : "N/A",
+                    deal.getAgent() != null ? deal.getAgent().getId() : "N/A",
+                    deal.getStage());
+        }
+
+        dealStatusRepository.deleteAll(propertyDeals);
+        logger.info("✅ Successfully deleted {} deals for property {}", propertyDeals.size(), propertyId);
+    }
+
     // ==================== CREATE DEAL WITH PRICE ====================
     /**
      * Creates a new deal, typically by an agent, including an agreed price.
@@ -82,11 +191,11 @@ public class DealService {
         deal.setProperty(property);
         deal.setBuyer(buyer);
         deal.setAgent(agent);
-        deal.setStage(DealStatus.DealStage.INQUIRY); // Initial stage
+        deal.setStage(DealStatus.DealStage.INQUIRY);
         deal.setAgreedPrice(dto.getAgreedPrice());
         deal.setNotes(dto.getNotes() != null ? dto.getNotes() : "Deal initiated - Agreed Price: " + dto.getAgreedPrice());
         deal.setLastUpdatedBy(agent.getUsername());
-        deal.setInquiryDate(LocalDateTime.now()); // Set initial timestamp
+        deal.setInquiryDate(LocalDateTime.now());
 
         DealStatus savedDeal = dealStatusRepository.save(deal);
         logger.info("✅ Deal created with price - Deal ID: {}, Property ID: {}, Buyer ID: {}, Agent ID: {}, Price: {}",
@@ -94,10 +203,7 @@ public class DealService {
         return savedDeal;
     }
 
-    // ==================== ORIGINAL CREATE DEAL (Used for basic inquiries) ====================
-    /**
-     * Creates a basic deal (e.g., from user inquiry) without an agreed price.
-     */
+    // ==================== ORIGINAL CREATE DEAL ====================
     public DealStatus createDeal(Long propertyId, Long buyerId, Long agentId) {
         logger.info("Creating basic deal - Property: {}, Buyer: {}, Agent: {}",
                 propertyId, buyerId, agentId);
@@ -108,7 +214,6 @@ public class DealService {
         User buyer = userRepository.findById(buyerId)
                 .orElseThrow(() -> new RuntimeException("Buyer user not found with ID: " + buyerId));
 
-        // Prevent duplicate deals for the same property and buyer
         if (dealStatusRepository.existsByPropertyIdAndBuyerId(propertyId, buyerId)) {
             logger.warn("Attempted to create duplicate deal for property {} and buyer {}", propertyId, buyerId);
             throw new RuntimeException("Deal already exists for this property and buyer");
@@ -119,7 +224,6 @@ public class DealService {
             agent = userRepository.findById(agentId)
                     .orElseThrow(() -> new RuntimeException("Agent user not found with ID: " + agentId));
 
-            // Ensure assigned agent is actually an AGENT or ADMIN
             if (!agent.getRole().equals(User.UserRole.AGENT) && !agent.getRole().equals(User.UserRole.ADMIN)) {
                 logger.warn("Attempted to assign non-agent user {} to deal.", agentId);
                 throw new RuntimeException("Assigned user is not an agent or admin");
@@ -129,11 +233,11 @@ public class DealService {
         DealStatus deal = new DealStatus();
         deal.setProperty(property);
         deal.setBuyer(buyer);
-        deal.setAgent(agent); // Can be null if not assigned initially
+        deal.setAgent(agent);
         deal.setStage(DealStatus.DealStage.INQUIRY);
         deal.setNotes("Deal initiated - Initial Inquiry");
-        deal.setLastUpdatedBy(buyer.getUsername()); // Assume buyer initiated
-        deal.setInquiryDate(LocalDateTime.now()); // Set initial timestamp
+        deal.setLastUpdatedBy(buyer.getUsername());
+        deal.setInquiryDate(LocalDateTime.now());
 
         DealStatus savedDeal = dealStatusRepository.save(deal);
         logger.info("✅ Basic Deal created - Deal ID: {}, Property ID: {}, Buyer ID: {}",
@@ -141,268 +245,104 @@ public class DealService {
         return savedDeal;
     }
 
-    // ==================== ROLE-BASED DEAL FETCHING (CORRECTED) ====================
-    /**
-     * ⭐ CORRECTED: Gets deals relevant to a user based on their system role (USER, AGENT, ADMIN).
-     * USER: Sees deals where they are the buyer OR the seller (property owner).
-     * AGENT: Sees deals they created/are assigned to.
-     * ADMIN: Sees all deals.
-     * The `userRole` parameter MUST be one of 'USER', 'AGENT', 'ADMIN'.
-     */
+    // ==================== ROLE-BASED DEAL FETCHING ====================
     public List<DealDetailDTO> getDealsByRole(Long userId, String userRole) {
-        // Log the exact input received from the controller
-        logger.info("Fetching deals ::::  getDealsByRole");
         logger.info("Fetching deals for user ID: {} with provided role: '{}'", userId, userRole);
 
         List<DealStatus> deals = new ArrayList<>();
-        // Normalize the role string: convert to uppercase and handle null
-        logger.info("Before Normalized role for processing:");
         String normalizedRole = (userRole != null) ? userRole : "UNKNOWN";
         logger.info("Normalized role for processing: '{}'", normalizedRole);
-
-
 
         switch (normalizedRole) {
             case "USER":
                 logger.info("Processing as USER role for user {}", userId);
-
-                // 1. Find deals where the user is the BUYER
                 List<DealStatus> buyerDeals = dealStatusRepository.findByBuyerId(userId);
-                logger.info(" -> Found {} deals where user {} is the Buyer.", buyerDeals.size(), userId);
+                logger.info("Found {} deals where user {} is BUYER", buyerDeals.size(), userId);
+                deals.addAll(buyerDeals);
 
-                // 2. Find deals where the user is the SELLER (property owner)
-                List<Property> sellerProperties = propertyRepository.findByUserId(userId);
-                List<DealStatus> sellerDeals = new ArrayList<>();
+                List<Property> userProperties = propertyRepository.findByUserId(userId);
+                logger.info("Found {} properties owned by user {}", userProperties.size(), userId);
 
-                if (sellerProperties != null && !sellerProperties.isEmpty()) {
-                    List<Long> propertyIds = sellerProperties.stream()
-                            .map(Property::getId)
-                            .collect(Collectors.toList());
-                    logger.info(" -> User {} owns {} properties with IDs: {}", userId, sellerProperties.size(), propertyIds);
-
-                    // Use the required repository method findByPropertyIdIn
-                    sellerDeals = dealStatusRepository.findByPropertyIdIn(propertyIds);
-                    logger.info(" -> Found {} deals associated with these properties (user as Seller).", sellerDeals.size());
-                } else {
-                    logger.info(" -> User {} owns no properties.", userId);
+                for (Property property : userProperties) {
+                    List<DealStatus> propertyDeals = dealStatusRepository.findByPropertyId(property.getId());
+                    logger.info("Property ID {} has {} deals", property.getId(), propertyDeals.size());
+                    deals.addAll(propertyDeals);
                 }
-
-                // 3. Combine lists using a Map to ensure uniqueness by Deal ID
-                Map<Long, DealStatus> combinedDeals = new HashMap<>();
-                buyerDeals.forEach(deal -> combinedDeals.put(deal.getId(), deal));
-                sellerDeals.forEach(deal -> combinedDeals.put(deal.getId(), deal)); // Overwrites duplicates which is fine
-
-                deals = new ArrayList<>(combinedDeals.values());
-                // Sort by last updated (most recent first) for combined list
-                deals.sort(Comparator.comparing(DealStatus::getUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder())));
-                logger.info(" -> Combined unique deals for USER {}: {}", userId, deals.size());
                 break;
 
             case "AGENT":
                 logger.info("Processing as AGENT role for user {}", userId);
                 deals = dealStatusRepository.findByAgentId(userId);
+                logger.info("Found {} deals for agent {}", deals.size(), userId);
                 break;
 
             case "ADMIN":
-                logger.info("Processing as ADMIN role for user {}. Fetching all deals.", userId);
+                logger.info("Processing as ADMIN role - fetching all deals");
                 deals = dealStatusRepository.findAll();
+                logger.info("Found {} total deals", deals.size());
                 break;
 
             default:
-                // Handles "BUYER", "SELLER", null, or any other invalid string
-                logger.warn("❌ Unknown or unsupported role provided: '{}'. Cannot fetch deals based on this role.", userRole);
-                deals = Collections.emptyList(); // Return empty list for safety
+                logger.error("Invalid or unknown role: '{}'", normalizedRole);
+                throw new RuntimeException("Invalid role: " + normalizedRole);
         }
 
-        logger.info("✅ Found {} total deals for user {}: {}", deals.size(), userId, normalizedRole);
-        // Convert the final list of deals to DTOs
-        return deals.stream()
+        logger.info("Total deals found before conversion: {}", deals.size());
+        List<DealDetailDTO> dtos = deals.stream()
                 .map(this::convertToDealDetailDTO)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+
+        logger.info("Successfully converted {} deals to DTOs", dtos.size());
+        return dtos;
     }
 
-
-    // ==================== ADMIN DASHBOARD ====================
-    /**
-     * Generates a dashboard with aggregate statistics for an Admin.
-     */
-    public AdminDealDashboardDTO getAdminDashboard() {
-        logger.info("📊 Generating admin dashboard");
-        List<DealStatus> allDeals = dealStatusRepository.findAll();
-        AdminDealDashboardDTO dashboard = new AdminDealDashboardDTO();
-
-        Long totalDeals = (long) allDeals.size();
-        Long completedDealCount = allDeals.stream()
-                .filter(d -> d.getStage() == DealStatus.DealStage.COMPLETED)
-                .count();
-        Long activeDealCount = totalDeals - completedDealCount;
-
-        dashboard.setTotalDeals(totalDeals);
-        dashboard.setActiveDealCount(activeDealCount);
-        dashboard.setCompletedDealCount(completedDealCount);
-
-        // Group deals by stage and count them using Streams API
-        Map<String, Long> dealsByStage = allDeals.stream()
-                .filter(d -> d.getStage() != null) // Avoid potential NullPointerException
-                .collect(Collectors.groupingBy(d -> d.getStage().name(), Collectors.counting()));
-        dashboard.setDealsByStage(dealsByStage);
-
-        dashboard.setAgentPerformance(getAgentPerformanceMetrics()); // Fetch agent performance
-        logger.info("✅ Admin dashboard generated - Total deals: {}", totalDeals);
-        return dashboard;
-    }
-
-    // ==================== AGENT PERFORMANCE METRICS ====================
-    /**
-     * Calculates performance metrics for all users with the AGENT role.
-     */
-    public List<AgentPerformanceDTO> getAgentPerformanceMetrics() {
-        logger.info("📈 Calculating agent performance metrics");
-        List<User> agents = userRepository.findByRole(User.UserRole.AGENT);
-        List<AgentPerformanceDTO> performanceList = new ArrayList<>();
-
-        for (User agent : agents) {
-            List<DealStatus> agentDeals = dealStatusRepository.findByAgentId(agent.getId());
-            Long totalDeals = (long) agentDeals.size();
-            Long completedDeals = agentDeals.stream()
-                    .filter(d -> d.getStage() == DealStatus.DealStage.COMPLETED)
-                    .count();
-            Long activeDeals = totalDeals - completedDeals;
-
-            // Calculate conversion rate
-            String conversionRate = "0.00%";
-            if (totalDeals > 0) {
-                double rate = (completedDeals.doubleValue() / totalDeals.doubleValue()) * 100;
-                conversionRate = String.format("%.2f%%", rate);
-            }
-
-            // Calculate average agreed price
-            BigDecimal averagePrice = BigDecimal.ZERO;
-            List<BigDecimal> pricedDeals = agentDeals.stream()
-                    .map(DealStatus::getAgreedPrice)
-                    .filter(Objects::nonNull) // Filter out null prices
-                    .collect(Collectors.toList());
-
-            if (!pricedDeals.isEmpty()) {
-                BigDecimal totalPrice = pricedDeals.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
-                // Use ROUND_HALF_UP and ensure divisor is not zero
-                averagePrice = totalPrice.divide(BigDecimal.valueOf(pricedDeals.size()), 2, BigDecimal.ROUND_HALF_UP);
-            }
-
-            AgentPerformanceDTO performance = new AgentPerformanceDTO();
-            performance.setAgentId(agent.getId());
-            performance.setAgentName(agent.getFirstName() + " " + agent.getLastName());
-            performance.setAgentEmail(agent.getEmail());
-            performance.setAgentMobile(agent.getMobileNumber());
-            performance.setTotalDeals(totalDeals);
-            performance.setActiveDeals(activeDeals);
-            performance.setCompletedDeals(completedDeals);
-            performance.setConversionRate(conversionRate);
-            performance.setAverageDealPrice(averagePrice);
-
-            // Count deals in each stage for this agent
-            Map<DealStatus.DealStage, Long> stageCounts = agentDeals.stream()
-                    .filter(d -> d.getStage() != null)
-                    .collect(Collectors.groupingBy(DealStatus::getStage, Collectors.counting()));
-
-            performance.setInquiryCount(stageCounts.getOrDefault(DealStatus.DealStage.INQUIRY, 0L));
-            performance.setShortlistCount(stageCounts.getOrDefault(DealStatus.DealStage.SHORTLIST, 0L));
-            performance.setNegotiationCount(stageCounts.getOrDefault(DealStatus.DealStage.NEGOTIATION, 0L));
-            performance.setAgreementCount(stageCounts.getOrDefault(DealStatus.DealStage.AGREEMENT, 0L));
-            performance.setRegistrationCount(stageCounts.getOrDefault(DealStatus.DealStage.REGISTRATION, 0L));
-            performance.setPaymentCount(stageCounts.getOrDefault(DealStatus.DealStage.PAYMENT, 0L));
-            // Note: Completed count is already calculated above
-
-            performanceList.add(performance);
-        }
-
-        logger.info("✅ Agent performance metrics calculated for {} agents", performanceList.size());
-        return performanceList;
-    }
-
-    // ==================== GET DEALS BY AGENT (FOR ADMIN) ====================
-    /**
-     * Gets all deals for a specific agent, returns as DTOs (intended for Admin view).
-     */
-    public List<DealDetailDTO> getDealsByAgentForAdmin(Long agentId) {
-        logger.info("👤 Fetching all deals for agent {} (Admin view)", agentId);
-        List<DealStatus> deals = dealStatusRepository.findByAgentId(agentId);
-        logger.info(" -> Found {} deals for agent {}", deals.size(), agentId);
-        return deals.stream()
-                .map(this::convertToDealDetailDTO)
-                .collect(Collectors.toList());
-    }
-
-    // ==================== CONVERT TO DETAIL DTO (CORRECTED) ====================
-    /**
-     * Private helper method to convert a DealStatus entity to a DealDetailDTO.
-     * Includes details of property, buyer, seller, and agent.
-     * ⭐ CORRECTED: Now includes document upload flags.
-     */
+    // ==================== CONVERT TO DTO ====================
     private DealDetailDTO convertToDealDetailDTO(DealStatus deal) {
         if (deal == null) {
-            logger.warn("Attempted to convert a null DealStatus to DTO.");
+            logger.warn("Attempted to convert null deal to DTO");
             return null;
         }
-        DealDetailDTO dto = new DealDetailDTO();
 
-        // Basic Deal Info
+        DealDetailDTO dto = new DealDetailDTO();
         dto.setDealId(deal.getId());
-        dto.setStage(deal.getStage() != null ? deal.getStage().name() : "UNKNOWN");
-        dto.setCurrentStage(deal.getStage() != null ? deal.getStage().name() : "UNKNOWN");
-        dto.setAgreedPrice(deal.getAgreedPrice()); // Can be null
+        dto.setStage(deal.getStage() != null ? deal.getStage().toString() : "UNKNOWN");
+        dto.setAgreedPrice(deal.getAgreedPrice());
         dto.setNotes(deal.getNotes());
         dto.setCreatedAt(deal.getCreatedAt());
         dto.setUpdatedAt(deal.getUpdatedAt());
         dto.setLastUpdatedBy(deal.getLastUpdatedBy());
 
-        // ✅ ADDED: Document upload flags
-        dto.setAgreementUploaded(deal.isAgreementUploaded());
-        dto.setRegistrationUploaded(deal.isRegistrationUploaded());
-
-        // Property & Seller Info
         Property property = deal.getProperty();
         if (property != null) {
             dto.setPropertyId(property.getId());
             dto.setPropertyTitle(property.getTitle());
             dto.setPropertyPrice(property.getPrice());
-            dto.setPropertyCity(property.getCity());
+            dto.setPropertyCity(property.getCity()); // ⭐ Using propertyCity instead of propertyAddress
+            // Note: DealDetailDTO doesn't have propertyImageUrl field
 
-            // Seller is the user associated with the property
             User seller = property.getUser();
             if (seller != null) {
-                dto.setSellerId(seller.getId());
                 dto.setSellerName(seller.getFirstName() + " " + seller.getLastName());
                 dto.setSellerEmail(seller.getEmail());
                 dto.setSellerMobile(seller.getMobileNumber());
-            } else {
-                logger.warn("Deal {} refers to Property {} which has no associated User (Seller).", deal.getId(), property.getId());
             }
-        } else {
-            logger.warn("Deal {} has no associated Property.", deal.getId());
         }
 
-        // Buyer Info
         User buyer = deal.getBuyer();
         if (buyer != null) {
-            dto.setBuyerId(buyer.getId());
             dto.setBuyerName(buyer.getFirstName() + " " + buyer.getLastName());
             dto.setBuyerEmail(buyer.getEmail());
             dto.setBuyerMobile(buyer.getMobileNumber());
-        } else {
-            logger.warn("Deal {} has no associated Buyer.", deal.getId());
         }
 
-        // Agent Info
         User agent = deal.getAgent();
         if (agent != null) {
-            dto.setAgentId(agent.getId());
             dto.setAgentName(agent.getFirstName() + " " + agent.getLastName());
             dto.setAgentEmail(agent.getEmail());
             dto.setAgentMobile(agent.getMobileNumber());
-        } // Agent can be null, so no warning needed
+        }
 
-        // Stage Timestamps
         dto.setInquiryDate(deal.getInquiryDate());
         dto.setShortlistDate(deal.getShortlistDate());
         dto.setNegotiationDate(deal.getNegotiationDate());
@@ -411,65 +351,45 @@ public class DealService {
         dto.setPaymentDate(deal.getPaymentDate());
         dto.setCompletedDate(deal.getCompletedDate());
 
+        // ⭐ NEW: Set document upload flags
+        dto.setAgreementUploaded(deal.isAgreementUploaded());
+        dto.setRegistrationUploaded(deal.isRegistrationUploaded());
+
         return dto;
     }
 
-    // ... inside DealService.java ...
-
-    // ... inside DealService.java ...
-
-    /**
-     * Updates the stage of a specific deal.
-     * ✅ CORRECTED: Enforces document upload rules ONLY for specific stages.
-     */
-// In: realestate-backend/src/main/java/com/example/realestate/service/DealService.java
-
     // ==================== UPDATE DEAL STAGE ====================
-    /**
-     * Updates the stage of a specific deal.
-     * ✅ CORRECTED: Enforces document upload rules ONLY for specific stages.
-     */
     public DealStatus updateDealStage(Long dealId, DealStatus.DealStage newStage,
                                       String notes, String updatedByUsername) {
         logger.info("Attempting to update deal {} to stage {} by user {}", dealId, newStage, updatedByUsername);
 
-        DealStatus deal = dealStatusRepository.findDealWithRelations(dealId)
+        DealStatus deal = dealStatusRepository.findById(dealId)
                 .orElseThrow(() -> new RuntimeException("Deal not found"));
 
-        // If stage is the same and no notes are added, do nothing
         if (newStage == deal.getStage() && (notes == null || notes.trim().isEmpty())) {
             logger.warn("ℹ️ No update needed: Deal {} is already in stage {}. No new notes provided.", dealId, newStage);
-            return deal; // Return existing deal without saving
+            return deal;
         }
 
-        // Prevent moving to a previous stage (based on enum order)
         if (deal.getStage() != null && newStage.getOrder() < deal.getStage().getOrder()) {
             logger.warn("❌ Failed update: Cannot move deal {} from {} to previous stage {}", dealId, deal.getStage(), newStage);
             throw new RuntimeException("Cannot move deal to a previous stage");
         }
 
-        // ==================== ✅ NEW BUSINESS LOGIC (Corrected) ====================
-        // We put the checks here, right before setting the new stage.
-
-        // RULE 1: Must upload Agreement before moving to REGISTRATION
         if (newStage == DealStatus.DealStage.REGISTRATION && !deal.isAgreementUploaded()) {
             logger.warn("❌ Failed update: Deal {} cannot move to REGISTRATION. Agreement is not uploaded.", dealId);
             throw new RuntimeException("Agreement document must be uploaded to move to Registration stage.");
         }
 
-        // RULE 2: Must upload Registration before moving to PAYMENT
         if (newStage == DealStatus.DealStage.PAYMENT && !deal.isRegistrationUploaded()) {
             logger.warn("❌ Failed update: Deal {} cannot move to PAYMENT. Registration document is not uploaded.", dealId);
             throw new RuntimeException("Registration document must be uploaded to move to Payment stage.");
         }
-        // =========================================================================
 
-        // If the checks pass (or don't apply), we proceed to update the stage.
         DealStatus.DealStage oldStage = deal.getStage();
         deal.setStage(newStage);
         LocalDateTime now = LocalDateTime.now();
 
-        // Set the corresponding stage date field
         switch (newStage) {
             case INQUIRY: if (deal.getInquiryDate() == null) deal.setInquiryDate(now); break;
             case SHORTLIST: if (deal.getShortlistDate() == null) deal.setShortlistDate(now); break;
@@ -480,7 +400,6 @@ public class DealService {
             case COMPLETED: if (deal.getCompletedDate() == null) deal.setCompletedDate(now); break;
         }
 
-        // Append notes if provided
         if (notes != null && !notes.trim().isEmpty()) {
             String existingNotes = deal.getNotes() != null ? deal.getNotes() : "";
             String separator = existingNotes.isEmpty() ? "" : "\n";
@@ -489,29 +408,114 @@ public class DealService {
             deal.setNotes(existingNotes + separator + newNotesEntry);
         }
 
-        // Update metadata
         deal.setLastUpdatedBy(updatedByUsername);
-        deal.setUpdatedAt(LocalDateTime.now()); // Explicitly set update time
+        deal.setUpdatedAt(LocalDateTime.now());
 
         DealStatus updatedDeal = dealStatusRepository.save(deal);
         logger.info("✅ Deal {} updated successfully from {} to {}", dealId, oldStage, newStage);
         return updatedDeal;
     }
 
-// ... rest of your DealService.java file ...
+    // ==================== OTHER DEAL METHODS ====================
+
+    // ==================== ADMIN DASHBOARD & METRICS ====================
+
+    /**
+     * Get admin dashboard statistics
+     */
+    public AdminDealDashboardDTO getAdminDashboard() {
+        logger.info("Generating admin dashboard statistics");
+
+        AdminDealDashboardDTO dashboard = new AdminDealDashboardDTO();
+
+        try {
+            // Total deals
+            long totalDeals = dealStatusRepository.count();
+            dashboard.setTotalDeals(totalDeals);
+
+            // Deals by stage
+            for (DealStatus.DealStage stage : DealStatus.DealStage.values()) {
+                Long count = dealStatusRepository.countByStage(stage);
+                switch (stage) {
+                    case INQUIRY: dashboard.setInquiryCount(count); break;
+                    case SHORTLIST: dashboard.setShortlistCount(count); break;
+                    case NEGOTIATION: dashboard.setNegotiationCount(count); break;
+                    case AGREEMENT: dashboard.setAgreementCount(count); break;
+                    case REGISTRATION: dashboard.setRegistrationCount(count); break;
+                    case PAYMENT: dashboard.setPaymentCount(count); break;
+                    case COMPLETED: dashboard.setCompletedCount(count); break;
+                }
+            }
+
+            logger.info("✅ Admin dashboard generated - Total deals: {}", totalDeals);
+            return dashboard;
+
+        } catch (Exception e) {
+            logger.error("❌ Error generating admin dashboard", e);
+            throw new RuntimeException("Failed to generate admin dashboard", e);
+        }
+    }
+
+    /**
+     * Get agent performance metrics
+     */
+    public List<AgentPerformanceDTO> getAgentPerformanceMetrics() {
+        logger.info("Generating agent performance metrics");
+
+        try {
+            List<User> agents = userRepository.findByRole(User.UserRole.AGENT);
+
+            List<AgentPerformanceDTO> metrics = agents.stream()
+                    .map(agent -> {
+                        AgentPerformanceDTO dto = new AgentPerformanceDTO();
+                        dto.setAgentId(agent.getId());
+                        dto.setAgentName(agent.getFirstName() + " " + agent.getLastName());
+                        dto.setAgentEmail(agent.getEmail());
+
+                        // Get deals for this agent
+                        List<DealStatus> agentDeals = dealStatusRepository.findByAgentId(agent.getId());
+                        dto.setTotalDeals((long) agentDeals.size());
+
+                        // Count active deals (not completed)
+                        long activeDeals = agentDeals.stream()
+                                .filter(deal -> deal.getStage() != DealStatus.DealStage.COMPLETED)
+                                .count();
+                        dto.setActiveDeals(activeDeals);
+
+                        // Count completed deals
+                        long completedDeals = agentDeals.stream()
+                                .filter(deal -> deal.getStage() == DealStatus.DealStage.COMPLETED)
+                                .count();
+                        dto.setCompletedDeals(completedDeals);
+
+                        // Calculate total deal value (sum of agreed prices)
+                        BigDecimal totalValue = agentDeals.stream()
+                                .filter(deal -> deal.getAgreedPrice() != null)
+                                .map(DealStatus::getAgreedPrice)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                        dto.setTotalDealValue(totalValue);
+
+                        return dto;
+                    })
+                    .collect(Collectors.toList());
+
+            logger.info("✅ Generated performance metrics for {} agents", metrics.size());
+            return metrics;
+
+        } catch (Exception e) {
+            logger.error("❌ Error generating agent performance metrics", e);
+            throw new RuntimeException("Failed to generate agent performance metrics", e);
+        }
+    }
 
     // ==================== OTHER DEAL METHODS ====================
 
-    /**
-     * Assigns an agent to a specific deal.
-     */
     public DealStatus assignAgentToDeal(Long dealId, Long agentId, String updatedByUsername) {
         logger.info("Assigning agent {} to deal {} by user {}", agentId, dealId, updatedByUsername);
-        DealStatus deal = getDealById(dealId); // Reuse getDealById for consistency
+        DealStatus deal = getDealById(dealId);
         User agent = userRepository.findById(agentId)
                 .orElseThrow(() -> new RuntimeException("Agent user not found with ID: " + agentId));
 
-        // Ensure the user being assigned is actually an AGENT or ADMIN
         if (!agent.getRole().equals(User.UserRole.AGENT) && !agent.getRole().equals(User.UserRole.ADMIN)) {
             logger.warn("❌ Failed assignment: User {} is not an agent or admin.", agentId);
             throw new RuntimeException("User being assigned is not an agent or admin");
@@ -519,95 +523,68 @@ public class DealService {
 
         deal.setAgent(agent);
         deal.setLastUpdatedBy(updatedByUsername);
-        // `updated_at` handled automatically
         return dealStatusRepository.save(deal);
     }
 
-    /**
-     * Gets a single deal by its ID, throwing exception if not found.
-     */
     public DealStatus getDealById(Long dealId) {
         return dealStatusRepository.findById(dealId)
                 .orElseThrow(() -> new RuntimeException("Deal not found with ID: " + dealId));
     }
 
-    /**
-     * Gets all deals associated with a specific property, returned as DTOs.
-     * Useful for a controller endpoint like /api/deals/property/{propertyId}
-     */
     public List<DealDetailDTO> getDealsForPropertyAsDTO(Long propertyId) {
         logger.info("Fetching deals as DTO for property ID: {}", propertyId);
         List<DealStatus> deals = dealStatusRepository.findByPropertyId(propertyId);
         logger.info(" -> Found {} deals for property {}", deals.size(), propertyId);
         return deals.stream()
-                .map(this::convertToDealDetailDTO) // Converts each deal to DTO
-                .filter(Objects::nonNull) // Filter out any null DTOs from conversion issues
+                .map(this::convertToDealDetailDTO)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Gets all deals associated with a specific property (internal use).
-     */
     public List<DealStatus> getDealsForProperty(Long propertyId) {
         return dealStatusRepository.findByPropertyId(propertyId);
     }
 
-    /**
-     * Gets all deals associated with a specific agent.
-     */
     public List<DealStatus> getDealsForAgent(Long agentId) {
         return dealStatusRepository.findByAgentId(agentId);
     }
 
     /**
-     * Gets only active (not COMPLETED) deals for a specific agent.
-     * Requires a custom query in the repository: findActiveDealsForAgent.
+     * Get deals by agent for admin - returns DTOs
      */
+    public List<DealDetailDTO> getDealsByAgentForAdmin(Long agentId) {
+        logger.info("Admin fetching deals for agent ID: {}", agentId);
+        List<DealStatus> deals = dealStatusRepository.findByAgentId(agentId);
+        return deals.stream()
+                .map(this::convertToDealDetailDTO)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
     public List<DealStatus> getActiveDealsForAgent(Long agentId) {
-        // Assuming findActiveDealsForAgent exists in the repository
         return dealStatusRepository.findActiveDealsForAgent(agentId);
     }
 
-    /**
-     * Gets all deals where a specific user is the buyer.
-     */
     public List<DealStatus> getBuyerDeals(Long buyerId) {
         return dealStatusRepository.findByBuyerId(buyerId);
     }
 
-    /**
-     * Gets only active (not COMPLETED) deals where a specific user is the buyer.
-     * Requires a custom query in the repository: findActiveDealForBuyer.
-     */
     public List<DealStatus> getActiveDealForBuyer(Long buyerId) {
-        // Assuming findActiveDealForBuyer exists in the repository
         return dealStatusRepository.findActiveDealForBuyer(buyerId);
     }
 
-    /**
-     * Gets all deals currently in a specific stage.
-     */
     public List<DealStatus> getDealsByStage(DealStatus.DealStage stage) {
         return dealStatusRepository.findByStage(stage);
     }
 
-    /**
-     * Counts the number of deals currently in a specific stage.
-     */
     public Long getCountByStage(DealStatus.DealStage stage) {
         return dealStatusRepository.countByStage(stage);
     }
 
-    /**
-     * Gets deals for a specific agent that are currently in a specific stage.
-     */
     public List<DealStatus> getAgentDealsAtStage(Long agentId, DealStatus.DealStage stage) {
         return dealStatusRepository.findByAgentIdAndStage(agentId, stage);
     }
 
-    /**
-     * Finds an existing deal for a property and buyer, or creates a new one if none exists.
-     */
     public DealStatus findOrCreateDeal(Long propertyId, Long buyerId, Long agentId) {
         Optional<DealStatus> existing = dealStatusRepository
                 .findByPropertyIdAndBuyerId(propertyId, buyerId);
@@ -617,14 +594,10 @@ public class DealService {
             return existing.get();
         } else {
             logger.info("No existing deal found for property {} and buyer {}. Creating new one.", propertyId, buyerId);
-            // Use the basic createDeal method here
             return createDeal(propertyId, buyerId, agentId);
         }
     }
 
-    /**
-     * ✅ Sets document upload flag for a deal
-     */
     @Transactional
     public void setDocumentFlag(Long dealId, String docType) {
         logger.info("Setting document flag - Deal ID: {}, DocType: {}", dealId, docType);
@@ -646,8 +619,4 @@ public class DealService {
         deal.setUpdatedAt(LocalDateTime.now());
         dealStatusRepository.save(deal);
     }
-
-    // ==================== DUPLICATE METHODS REMOVED ====================
-    // The duplicate convertToDealDetailDTO and getDealsByRole methods
-    // that were here have been removed to fix the ambiguity error.
 }
