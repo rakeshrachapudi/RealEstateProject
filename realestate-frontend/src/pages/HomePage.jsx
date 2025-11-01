@@ -978,11 +978,47 @@ const [loadingAllProps, setLoadingAllProps] = useState(false);
     setActiveTab("featured");
   };
 
-  const handleAreaClick = (area) => {
-    setSelectedArea(area.name);
-    setShowSearchResults(false);
-    setActiveTab("featured");
-  };
+ const handleAreaClick = async (area) => {
+     console.log('Area clicked:', area.name);
+     setSelectedArea(area.name);
+     setShowSearchResults(false);
+     setActiveTab("featured");
+     setSearchLoading(true);
+     setFetchError(null);
+
+     try {
+       const response = await fetch(
+         `${BACKEND_BASE_URL}/api/properties/byArea/${encodeURIComponent(area.name)}`,
+         {
+           method: 'GET',
+           headers: {
+             'Content-Type': 'application/json',
+           }
+         }
+       );
+
+       if (!response.ok) {
+         throw new Error(`Failed to fetch properties for ${area.name}`);
+       }
+
+       const data = await response.json();
+       console.log(`API returned ${data.length} properties for ${area.name}:`, data);
+
+       // Set as search results to display them
+       setSearchResults(data);
+       setShowSearchResults(true);
+
+     } catch (error) {
+       console.error(`Error fetching properties for area ${area.name}:`, error);
+       setFetchError(`Could not load properties for ${area.name}`);
+       setSearchResults([]);
+       setShowSearchResults(true);
+     } finally {
+       setSearchLoading(false);
+     }
+   };
+
+
 
   // Property Update/Delete Callbacks
   const handlePropertyUpdated = () => {
@@ -1028,11 +1064,14 @@ const [loadingAllProps, setLoadingAllProps] = useState(false);
     if (showSearchResults) return searchResults;
     if (selectedArea) {
       return featuredPropsList.filter((property) => {
-        const propertyArea = (
-          property?.areaName ||
-          property?.area?.areaName ||
-          ""
-        ).toLowerCase();
+       const propertyArea = (
+         property?.areaName ||
+         property?.area?.areaName ||
+         property?.area?.name ||
+         property?.locality ||
+         property?.location?.area ||
+         ""
+       ).toLowerCase().trim();
         return propertyArea.includes(selectedArea.toLowerCase());
       });
     }
