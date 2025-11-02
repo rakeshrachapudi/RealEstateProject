@@ -1,0 +1,635 @@
+// FurniturePartner.jsx - Professional Furniture Partner Section with Animations
+import React, { useState, useEffect } from 'react';
+
+const FurniturePartner = () => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Sample furniture categories from HiVibes Interiors
+  const furnitureCategories = [
+    {
+      id: 1,
+      name: "Modular Kitchens",
+      description: "Modern, functional kitchen solutions with premium finishes",
+      image: "🏠",
+      features: ["German Hardware", "15-Year Warranty", "Factory Finish"],
+      price: "₹1.5L - ₹4L",
+      gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+    },
+    {
+      id: 2,
+      name: "Wardrobes & Storage",
+      description: "Custom wardrobes designed for maximum space utilization",
+      image: "🚪",
+      features: ["Sliding Doors", "LED Lighting", "Soft-Close Hinges"],
+      price: "₹80K - ₹2.5L",
+      gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
+    },
+    {
+      id: 3,
+      name: "Living Room Solutions",
+      description: "Contemporary furniture for elegant living spaces",
+      image: "🛋️",
+      features: ["Premium Upholstery", "Ergonomic Design", "Stain Resistant"],
+      price: "₹50K - ₹3L",
+      gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"
+    },
+    {
+      id: 4,
+      name: "Bedroom Interiors",
+      description: "Complete bedroom solutions with modern aesthetics",
+      image: "🛏️",
+      features: ["Orthopedic Mattress", "Designer Headboards", "Study Units"],
+      price: "₹1L - ₹5L",
+      gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)"
+    },
+    {
+      id: 5,
+      name: "Office Furniture",
+      description: "Ergonomic office solutions for home and commercial spaces",
+      image: "💼",
+      features: ["Height Adjustable", "Cable Management", "Multi-functional"],
+      price: "₹25K - ₹1.5L",
+      gradient: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)"
+    },
+    {
+      id: 6,
+      name: "Dining Solutions",
+      description: "Elegant dining sets for memorable family moments",
+      image: "🍽️",
+      features: ["Solid Wood", "Extendable Tables", "Comfortable Seating"],
+      price: "₹40K - ₹2L",
+      gradient: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)"
+    }
+  ];
+
+  // Auto-scroll functionality
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => 
+        prev === furnitureCategories.length - 1 ? 0 : prev + 1
+      );
+    }, 4000); // Change slide every 4 seconds
+
+    return () => clearInterval(interval);
+  }, [furnitureCategories.length]);
+
+  // Intersection Observer for animations
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const element = document.getElementById('furniture-partner-section');
+    if (element) {
+      observer.observe(element);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const handleDotClick = (index) => {
+    setCurrentSlide(index);
+  };
+
+  const handlePrevSlide = () => {
+    setCurrentSlide(
+      currentSlide === 0 ? furnitureCategories.length - 1 : currentSlide - 1
+    );
+  };
+
+  const handleNextSlide = () => {
+    setCurrentSlide(
+      currentSlide === furnitureCategories.length - 1 ? 0 : currentSlide + 1
+    );
+  };
+
+  const handleVisitWebsite = () => {
+    window.open('https://hivibesinterio.in', '_blank', 'noopener,noreferrer');
+  };
+
+  const handleCallNow = () => {
+    window.open('tel:+919876543210', '_self');
+  };
+
+  const styles = {
+    container: {
+      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+      borderRadius: '24px',
+      padding: 'clamp(30px, 5vw, 50px) 0',
+      marginBottom: 'clamp(20px, 3vw, 40px)',
+      position: 'relative',
+      overflow: 'hidden',
+      border: '1px solid rgba(255, 255, 255, 0.2)',
+      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+      opacity: isVisible ? 1 : 0,
+      transform: isVisible ? 'translateY(0)' : 'translateY(40px)',
+      transition: 'all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+    },
+    header: {
+      textAlign: 'center',
+      marginBottom: 'clamp(30px, 4vw, 40px)',
+      padding: '0 clamp(20px, 4vw, 40px)',
+    },
+    partnerBadge: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      color: 'white',
+      padding: '8px 20px',
+      borderRadius: '50px',
+      fontSize: 'clamp(12px, 1.5vw, 14px)',
+      fontWeight: '600',
+      marginBottom: '16px',
+      animation: isVisible ? 'slideInFromTop 0.6s ease-out 0.2s both' : 'none',
+    },
+    mainTitle: {
+      fontSize: 'clamp(24px, 4vw, 32px)',
+      fontWeight: '800',
+      color: '#1e293b',
+      marginBottom: '12px',
+      lineHeight: '1.2',
+      animation: isVisible ? 'fadeInUp 0.8s ease-out 0.4s both' : 'none',
+    },
+    subtitle: {
+      fontSize: 'clamp(16px, 2.5vw, 18px)',
+      color: '#64748b',
+      lineHeight: '1.6',
+      maxWidth: '600px',
+      margin: '0 auto',
+      animation: isVisible ? 'fadeInUp 0.8s ease-out 0.6s both' : 'none',
+    },
+    sliderContainer: {
+      position: 'relative',
+      maxWidth: '1400px',
+      margin: '0 auto',
+      padding: '0 clamp(20px, 4vw, 40px)',
+    },
+    slider: {
+      display: 'flex',
+      transition: 'transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+      transform: `translateX(-${currentSlide * (100 / 3)}%)`,
+    },
+    slideWrapper: {
+      flex: '0 0 33.333%',
+      padding: '0 clamp(8px, 1.5vw, 12px)',
+    },
+    card: {
+      background: 'white',
+      borderRadius: '20px',
+      padding: 'clamp(24px, 4vw, 32px)',
+      height: '100%',
+      position: 'relative',
+      overflow: 'hidden',
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)',
+      transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+      cursor: 'pointer',
+      border: '1px solid rgba(255, 255, 255, 0.8)',
+    },
+    cardHeader: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+      marginBottom: '20px',
+    },
+    cardIcon: {
+      fontSize: 'clamp(32px, 5vw, 40px)',
+      padding: '12px',
+      borderRadius: '16px',
+      background: 'rgba(255, 255, 255, 0.1)',
+      backdropFilter: 'blur(20px)',
+      border: '1px solid rgba(255, 255, 255, 0.2)',
+    },
+    cardTitle: {
+      fontSize: 'clamp(18px, 3vw, 22px)',
+      fontWeight: '700',
+      color: '#1e293b',
+      lineHeight: '1.3',
+    },
+    cardDescription: {
+      fontSize: 'clamp(14px, 2vw, 16px)',
+      color: '#64748b',
+      lineHeight: '1.5',
+      marginBottom: '20px',
+    },
+    featuresList: {
+      marginBottom: '20px',
+    },
+    feature: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      fontSize: 'clamp(13px, 1.8vw, 14px)',
+      color: '#475569',
+      marginBottom: '8px',
+    },
+    checkmark: {
+      color: '#10b981',
+      fontWeight: '700',
+    },
+    cardFooter: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 'auto',
+      paddingTop: '16px',
+      borderTop: '1px solid #f1f5f9',
+    },
+    price: {
+      fontSize: 'clamp(16px, 2.5vw, 18px)',
+      fontWeight: '700',
+      color: '#667eea',
+    },
+    exploreBtn: {
+      background: 'transparent',
+      border: '2px solid #667eea',
+      color: '#667eea',
+      padding: '8px 16px',
+      borderRadius: '8px',
+      fontSize: 'clamp(12px, 1.5vw, 14px)',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'all 0.3s ease',
+    },
+    controls: {
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 'clamp(16px, 3vw, 24px)',
+      marginTop: 'clamp(30px, 4vw, 40px)',
+    },
+    navButton: {
+      background: 'white',
+      border: '2px solid #e2e8f0',
+      borderRadius: '50%',
+      width: '48px',
+      height: '48px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      fontSize: '18px',
+      color: '#64748b',
+      transition: 'all 0.3s ease',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+    },
+    dots: {
+      display: 'flex',
+      gap: '8px',
+    },
+    dot: {
+      width: '12px',
+      height: '12px',
+      borderRadius: '50%',
+      cursor: 'pointer',
+      transition: 'all 0.3s ease',
+      border: '2px solid transparent',
+    },
+    ctaSection: {
+      textAlign: 'center',
+      marginTop: 'clamp(30px, 4vw, 40px)',
+      padding: '0 clamp(20px, 4vw, 40px)',
+    },
+    ctaButtons: {
+      display: 'flex',
+      gap: 'clamp(12px, 2vw, 16px)',
+      justifyContent: 'center',
+      flexWrap: 'wrap',
+    },
+    primaryCta: {
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      color: 'white',
+      padding: 'clamp(12px, 2vw, 16px) clamp(24px, 4vw, 32px)',
+      borderRadius: '12px',
+      border: 'none',
+      cursor: 'pointer',
+      fontWeight: '600',
+      fontSize: 'clamp(14px, 2vw, 16px)',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      transition: 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
+    },
+    secondaryCta: {
+      background: 'white',
+      color: '#667eea',
+      padding: 'clamp(12px, 2vw, 16px) clamp(24px, 4vw, 32px)',
+      borderRadius: '12px',
+      border: '2px solid #667eea',
+      cursor: 'pointer',
+      fontWeight: '600',
+      fontSize: 'clamp(14px, 2vw, 16px)',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      transition: 'all 0.3s ease',
+      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.1)',
+    },
+    gradientOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      opacity: 0,
+      transition: 'opacity 0.3s ease',
+      borderRadius: '20px',
+    },
+  };
+
+  // Inject keyframe animations
+  useEffect(() => {
+    const animationStyles = `
+      @keyframes slideInFromTop {
+        0% {
+          opacity: 0;
+          transform: translateY(-30px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      @keyframes fadeInUp {
+        0% {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      @keyframes cardFloat {
+        0%, 100% {
+          transform: translateY(0px);
+        }
+        50% {
+          transform: translateY(-8px);
+        }
+      }
+      
+      @keyframes shimmer {
+        0% {
+          background-position: -200% 0;
+        }
+        100% {
+          background-position: 200% 0;
+        }
+      }
+    `;
+
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = animationStyles;
+    document.head.appendChild(styleSheet);
+
+    return () => {
+      document.head.removeChild(styleSheet);
+    };
+  }, []);
+
+  return (
+    <section id="furniture-partner-section" style={styles.container}>
+      {/* Header */}
+      <div style={styles.header}>
+        <div style={styles.partnerBadge}>
+          🤝 <span>Furniture Partner</span>
+        </div>
+        <h2 style={styles.mainTitle}>
+          Transform Your New Home with HiVibes Interiors
+        </h2>
+        <p style={styles.subtitle}>
+          Premium furniture solutions for your dream property. From modular kitchens to complete home interiors, we bring your vision to life with quality and style.
+        </p>
+      </div>
+
+      {/* Slider */}
+      <div style={styles.sliderContainer}>
+        <div style={styles.slider}>
+          {furnitureCategories.map((category, index) => (
+            <div key={category.id} style={styles.slideWrapper}>
+              <div 
+                style={{
+                  ...styles.card,
+                  background: index === currentSlide ? category.gradient : 'white',
+                  color: index === currentSlide ? 'white' : '#1e293b',
+                  transform: index === currentSlide ? 'scale(1.02)' : 'scale(1)',
+                  zIndex: index === currentSlide ? 10 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-8px) scale(1.02)';
+                  e.target.style.boxShadow = '0 20px 60px rgba(0, 0, 0, 0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = index === currentSlide ? 'scale(1.02)' : 'scale(1)';
+                  e.target.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)';
+                }}
+              >
+                <div style={styles.cardHeader}>
+                  <div style={{
+                    ...styles.cardIcon,
+                    background: index === currentSlide 
+                      ? 'rgba(255, 255, 255, 0.2)' 
+                      : 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)'
+                  }}>
+                    {category.image}
+                  </div>
+                  <h3 style={{
+                    ...styles.cardTitle,
+                    color: index === currentSlide ? 'white' : '#1e293b'
+                  }}>
+                    {category.name}
+                  </h3>
+                </div>
+                
+                <p style={{
+                  ...styles.cardDescription,
+                  color: index === currentSlide ? 'rgba(255, 255, 255, 0.9)' : '#64748b'
+                }}>
+                  {category.description}
+                </p>
+                
+                <div style={styles.featuresList}>
+                  {category.features.map((feature, featureIndex) => (
+                    <div key={featureIndex} style={styles.feature}>
+                      <span style={{
+                        ...styles.checkmark,
+                        color: index === currentSlide ? '#10b981' : '#10b981'
+                      }}>✓</span>
+                      <span style={{
+                        color: index === currentSlide ? 'rgba(255, 255, 255, 0.9)' : '#475569'
+                      }}>
+                        {feature}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                
+                <div style={styles.cardFooter}>
+                  <span style={{
+                    ...styles.price,
+                    color: index === currentSlide ? 'white' : '#667eea'
+                  }}>
+                    {category.price}
+                  </span>
+                  <button 
+                    style={{
+                      ...styles.exploreBtn,
+                      background: index === currentSlide ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+                      borderColor: index === currentSlide ? 'rgba(255, 255, 255, 0.5)' : '#667eea',
+                      color: index === currentSlide ? 'white' : '#667eea'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = index === currentSlide 
+                        ? 'rgba(255, 255, 255, 0.3)' 
+                        : '#667eea';
+                      e.target.style.color = 'white';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = index === currentSlide 
+                        ? 'rgba(255, 255, 255, 0.2)' 
+                        : 'transparent';
+                      e.target.style.color = index === currentSlide ? 'white' : '#667eea';
+                    }}
+                  >
+                    Explore
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div style={styles.controls}>
+        <button 
+          style={styles.navButton}
+          onClick={handlePrevSlide}
+          onMouseEnter={(e) => {
+            e.target.style.borderColor = '#667eea';
+            e.target.style.color = '#667eea';
+            e.target.style.transform = 'scale(1.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.borderColor = '#e2e8f0';
+            e.target.style.color = '#64748b';
+            e.target.style.transform = 'scale(1)';
+          }}
+        >
+          ‹
+        </button>
+        
+        <div style={styles.dots}>
+          {furnitureCategories.map((_, index) => (
+            <div
+              key={index}
+              style={{
+                ...styles.dot,
+                background: index === currentSlide 
+                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                  : '#e2e8f0'
+              }}
+              onClick={() => handleDotClick(index)}
+              onMouseEnter={(e) => {
+                if (index !== currentSlide) {
+                  e.target.style.background = '#cbd5e1';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (index !== currentSlide) {
+                  e.target.style.background = '#e2e8f0';
+                }
+              }}
+            />
+          ))}
+        </div>
+        
+        <button 
+          style={styles.navButton}
+          onClick={handleNextSlide}
+          onMouseEnter={(e) => {
+            e.target.style.borderColor = '#667eea';
+            e.target.style.color = '#667eea';
+            e.target.style.transform = 'scale(1.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.borderColor = '#e2e8f0';
+            e.target.style.color = '#64748b';
+            e.target.style.transform = 'scale(1)';
+          }}
+        >
+          ›
+        </button>
+      </div>
+
+      {/* CTA Section */}
+      <div style={styles.ctaSection}>
+        <div style={styles.ctaButtons}>
+          <button 
+            style={styles.primaryCta}
+            onClick={handleVisitWebsite}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-3px) scale(1.02)';
+              e.target.style.boxShadow = '0 12px 35px rgba(102, 126, 234, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0) scale(1)';
+              e.target.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.3)';
+            }}
+          >
+            🌐 Visit HiVibes Interiors
+          </button>
+          <button 
+            style={styles.secondaryCta}
+            onClick={handleCallNow}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#667eea';
+              e.target.style.color = 'white';
+              e.target.style.transform = 'translateY(-3px)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'white';
+              e.target.style.color = '#667eea';
+              e.target.style.transform = 'translateY(0)';
+            }}
+          >
+            📞 Call for Consultation
+          </button>
+        </div>
+      </div>
+
+      {/* Responsive Styles */}
+      <style jsx>{`
+        @media (max-width: 1024px) {
+          .slider {
+            transform: translateX(-${currentSlide * 50}%) !important;
+          }
+          .slideWrapper {
+            flex: 0 0 50% !important;
+          }
+        }
+        
+        @media (max-width: 768px) {
+          .slider {
+            transform: translateX(-${currentSlide * 100}%) !important;
+          }
+          .slideWrapper {
+            flex: 0 0 100% !important;
+          }
+        }
+      `}</style>
+    </section>
+  );
+};
+
+export default FurniturePartner;
