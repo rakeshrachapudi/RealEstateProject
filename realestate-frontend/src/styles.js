@@ -90,7 +90,7 @@ export const styles = {
   app: {
     fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
     minHeight: "100vh",
-    background: "linear-gradient(135deg,  #ffffffff  0%, #c9cacbff 100%)",
+    background: "#ffffff",
     // overflow: "hidden",
     position: "relative",
   },

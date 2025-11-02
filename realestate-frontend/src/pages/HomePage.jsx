@@ -8,7 +8,12 @@ import DealStatusCard from "../DealStatusCard.jsx";
 import BrowsePropertiesForDeal from "../pages/BrowsePropertiesForDeal";
 import DealDetailModal from "../DealDetailModal.jsx";
 import { BACKEND_BASE_URL } from "../config/config";
-import { getPropertyTypes, getPropertiesByType, getFeaturedProperties, getAllProperties } from "../services/api";
+import {
+  getPropertyTypes,
+  getPropertiesByType,
+  getFeaturedProperties,
+  getAllProperties,
+} from "../services/api";
 
 // Professional Animation Styles with Keyframes
 const professionalStyles = `
@@ -236,21 +241,22 @@ const proStyles = {
     padding: "clamp(16px, 3vw, 24px) clamp(16px, 3vw, 32px)",
     minHeight: "80vh",
     position: "relative",
-    background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
+    background: "transparent",
     animation: "fadeInUp 0.8s ease-out",
   },
 
   // Enhanced Banner
   banner: {
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    padding: "clamp(40px, 6vw, 80px) clamp(30px, 4vw, 60px)",
+    padding: "clamp(30px, 4.5vw, 60px) clamp(22.5px, 3vw, 45px)",
     color: "white",
     display: "flex",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: "clamp(20px, 4vw, 60px)",
+    gap: "clamp(10px, 2vw, 30px)",
     borderRadius: "24px",
-    marginBottom: "clamp(30px, 5vw, 60px)",
+    marginBottom: "clamp(15px, 2.5vw, 30px)",
     position: "relative",
     overflow: "hidden",
     boxShadow:
@@ -261,10 +267,14 @@ const proStyles = {
   },
 
   bannerContent: {
-    flex: "1 1 400px",
-    maxWidth: "600px",
+    flex: "1 1 49%",
+    maxWidth: "49%",
     zIndex: 2,
     animation: "textReveal 1s ease-out 0.3s both",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "flex-start",
   },
 
   bannerTitle: {
@@ -298,7 +308,8 @@ const proStyles = {
     padding: "12px 0",
     transition: "all 0.3s ease",
     cursor: "pointer",
-    borderRadius: "8px",
+    borderRadius: "20px",
+    maxWidth: "99%",
     paddingLeft: "8px",
   },
 
@@ -317,13 +328,17 @@ const proStyles = {
   },
 
   bannerIllustration: {
-    fontSize: "clamp(80px, 12vw, 140px)",
-    textAlign: "center",
+    flex: "1 1 49%",
+    maxWidth: "49%",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
+    fontSize: "clamp(120px, 18vw, 210px)",
     opacity: 0.9,
     userSelect: "none",
     animation: "gentleFloat 4s ease-in-out infinite",
     filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.1))",
-    flex: "0 0 auto",
   },
 
   // Enhanced Hero Section
@@ -333,7 +348,7 @@ const proStyles = {
     backdropFilter: "blur(20px)",
     padding: "clamp(40px, 6vw, 80px) clamp(30px, 4vw, 60px)",
     borderRadius: "24px",
-    marginBottom: "clamp(30px, 5vw, 60px)",
+    marginBottom: "clamp(15px, 2.5vw, 30px)",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
@@ -384,7 +399,7 @@ const proStyles = {
   // Enhanced Search Section
   searchSection: {
     marginTop: "clamp(-40px, -6vw, -80px)",
-    marginBottom: "clamp(40px, 6vw, 80px)",
+    marginBottom: "clamp(20px, 3vw, 40px)",
     zIndex: 10,
     position: "relative",
     padding: "0 clamp(8px, 2vw, 16px)",
@@ -394,7 +409,7 @@ const proStyles = {
 
   // Enhanced Section Styles
   section: {
-    marginBottom: "clamp(40px, 6vw, 80px)",
+    marginBottom: "clamp(5px, 0.75vw, 10px)",
     position: "relative",
     animation: "fadeInUp 0.6s ease-out",
   },
@@ -506,14 +521,14 @@ const proStyles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "clamp(20px, 4vw, 32px)",
+    marginBottom: "clamp(5px, 1vw, 8px)",
     flexWrap: "wrap",
     gap: "16px",
     background: "white",
-    padding: "clamp(16px, 2.5vw, 24px) clamp(20px, 3vw, 32px)",
+    // padding: "clamp(16px, 2.5vw, 24px) clamp(20px, 3vw, 32px)",
     borderRadius: "16px",
-    border: "1px solid #e2e8f0",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+    // border: "1px solid #e2e8f0",
+    // boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
     animation: "slideInFromLeft 0.6s ease-out 0.2s both",
   },
 
@@ -729,8 +744,8 @@ const useIntersectionObserver = (callback, options = {}) => {
 function HomePage() {
   const { isAuthenticated, user } = useAuth();
   const [featuredPropsList, setFeaturedPropsList] = useState([]);
-const [allProperties, setAllProperties] = useState([]);
-const [loadingAllProps, setLoadingAllProps] = useState(false);
+  const [allProperties, setAllProperties] = useState([]);
+  const [loadingAllProps, setLoadingAllProps] = useState(false);
 
   const [myProperties, setMyProperties] = useState([]);
   const [myDeals, setMyDeals] = useState([]);
@@ -762,11 +777,11 @@ const [loadingAllProps, setLoadingAllProps] = useState(false);
   // Fetch property types on mount
   useEffect(() => {
     getPropertyTypes()
-      .then(types => {
+      .then((types) => {
         const typesArray = Array.isArray(types) ? types : [];
         setPropertyTypes(["All", ...typesArray]);
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("Error loading property types:", err);
         setPropertyTypes(["All"]);
       });
@@ -778,19 +793,19 @@ const [loadingAllProps, setLoadingAllProps] = useState(false);
 
     if (selectedType === "All") {
       getAllProperties()
-        .then(props => {
+        .then((props) => {
           setProperties(Array.isArray(props) ? props : []);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Error loading all properties:", err);
           setProperties([]);
         });
     } else {
       getPropertiesByType(selectedType)
-        .then(props => {
+        .then((props) => {
           setProperties(Array.isArray(props) ? props : []);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Error loading properties by type:", err);
           setProperties([]);
         });
@@ -806,10 +821,10 @@ const [loadingAllProps, setLoadingAllProps] = useState(false);
   useEffect(() => {
     if (activeTab === "browse-by-type" && selectedType === "All") {
       getAllProperties()
-        .then(props => {
+        .then((props) => {
           setProperties(Array.isArray(props) ? props : []);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Error loading all properties:", err);
           setProperties([]);
         });
@@ -978,47 +993,49 @@ const [loadingAllProps, setLoadingAllProps] = useState(false);
     setActiveTab("featured");
   };
 
- const handleAreaClick = async (area) => {
-     console.log('Area clicked:', area.name);
-     setSelectedArea(area.name);
-     setShowSearchResults(false);
-     setActiveTab("featured");
-     setSearchLoading(true);
-     setFetchError(null);
+  const handleAreaClick = async (area) => {
+    console.log("Area clicked:", area.name);
+    setSelectedArea(area.name);
+    setShowSearchResults(false);
+    setActiveTab("featured");
+    setSearchLoading(true);
+    setFetchError(null);
 
-     try {
-       const response = await fetch(
-         `${BACKEND_BASE_URL}/api/properties/byArea/${encodeURIComponent(area.name)}`,
-         {
-           method: 'GET',
-           headers: {
-             'Content-Type': 'application/json',
-           }
-         }
-       );
+    try {
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/properties/byArea/${encodeURIComponent(
+          area.name
+        )}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-       if (!response.ok) {
-         throw new Error(`Failed to fetch properties for ${area.name}`);
-       }
+      if (!response.ok) {
+        throw new Error(`Failed to fetch properties for ${area.name}`);
+      }
 
-       const data = await response.json();
-       console.log(`API returned ${data.length} properties for ${area.name}:`, data);
+      const data = await response.json();
+      console.log(
+        `API returned ${data.length} properties for ${area.name}:`,
+        data
+      );
 
-       // Set as search results to display them
-       setSearchResults(data);
-       setShowSearchResults(true);
-
-     } catch (error) {
-       console.error(`Error fetching properties for area ${area.name}:`, error);
-       setFetchError(`Could not load properties for ${area.name}`);
-       setSearchResults([]);
-       setShowSearchResults(true);
-     } finally {
-       setSearchLoading(false);
-     }
-   };
-
-
+      // Set as search results to display them
+      setSearchResults(data);
+      setShowSearchResults(true);
+    } catch (error) {
+      console.error(`Error fetching properties for area ${area.name}:`, error);
+      setFetchError(`Could not load properties for ${area.name}`);
+      setSearchResults([]);
+      setShowSearchResults(true);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
   // Property Update/Delete Callbacks
   const handlePropertyUpdated = () => {
@@ -1064,14 +1081,16 @@ const [loadingAllProps, setLoadingAllProps] = useState(false);
     if (showSearchResults) return searchResults;
     if (selectedArea) {
       return featuredPropsList.filter((property) => {
-       const propertyArea = (
-         property?.areaName ||
-         property?.area?.areaName ||
-         property?.area?.name ||
-         property?.locality ||
-         property?.location?.area ||
-         ""
-       ).toLowerCase().trim();
+        const propertyArea = (
+          property?.areaName ||
+          property?.area?.areaName ||
+          property?.area?.name ||
+          property?.locality ||
+          property?.location?.area ||
+          ""
+        )
+          .toLowerCase()
+          .trim();
         return propertyArea.includes(selectedArea.toLowerCase());
       });
     }
@@ -1096,7 +1115,10 @@ const [loadingAllProps, setLoadingAllProps] = useState(false);
     activeTab === "my-deals" && !showSearchResults && !selectedArea;
 
   if (showSearchResults) {
-    sectionTitle = activeTab === 'all-properties' ? `🏠 All Properties (${allProperties.length} found)` : sectionTitle;
+    sectionTitle =
+      activeTab === "all-properties"
+        ? `🏠 All Properties (${allProperties.length} found)`
+        : sectionTitle;
   } else if (selectedArea) {
     sectionTitle = `📍 Properties in ${selectedArea} (${propertiesForList.length} found)`;
     isLoading = false;
@@ -1152,7 +1174,6 @@ const [loadingAllProps, setLoadingAllProps] = useState(false);
     isAuthenticated && user && (user.role === "AGENT" || user.role === "ADMIN");
 
   return (
-
     <>
       <div style={proStyles.container}>
         {/* Professional Banner Section */}
@@ -1170,7 +1191,7 @@ const [loadingAllProps, setLoadingAllProps] = useState(false);
           }}
         >
           <div style={proStyles.bannerContent}>
-            <h2 style={proStyles.bannerTitle}>How PropertyDeals Works</h2>
+            <h2 style={proStyles.bannerTitle}>How PropertyDealz works</h2>
             <p style={proStyles.bannerSubtitle}>
               Simple, transparent, and hassle-free property deals
             </p>
@@ -1295,27 +1316,30 @@ const [loadingAllProps, setLoadingAllProps] = useState(false);
                 onClick={() => setActiveTab("browse-by-type")}
                 style={{
                   ...proStyles.tab,
-                  ...(activeTab === "browse-by-type" ? proStyles.activeTab : {}),
+                  ...(activeTab === "browse-by-type"
+                    ? proStyles.activeTab
+                    : {}),
                 }}
                 className="magnetic-hover"
               >
                 🏘️ Browse by Type
               </button>
 
-              {isAuthenticated && (loadingMyProperties || myProperties.length > 0) && (
-                <button
-                  onClick={() => setActiveTab("my-properties")}
-                  style={{
-                    ...proStyles.tab,
-                    ...(activeTab === "my-properties"
-                      ? proStyles.activeTab
-                      : {}),
-                  }}
-                  className="magnetic-hover"
-                >
-                  📄 My Properties ({myProperties.length})
-                </button>
-              )}
+              {isAuthenticated &&
+                (loadingMyProperties || myProperties.length > 0) && (
+                  <button
+                    onClick={() => setActiveTab("my-properties")}
+                    style={{
+                      ...proStyles.tab,
+                      ...(activeTab === "my-properties"
+                        ? proStyles.activeTab
+                        : {}),
+                    }}
+                    className="magnetic-hover"
+                  >
+                    📄 My Properties ({myProperties.length})
+                  </button>
+                )}
 
               {isAuthenticated && (loadingMyDeals || myDeals.length > 0) && (
                 <button
@@ -1333,45 +1357,49 @@ const [loadingAllProps, setLoadingAllProps] = useState(false);
           )}
 
           {/* Property Type Filter - Show when Browse by Type tab is active */}
-          {activeTab === "browse-by-type" && !showSearchResults && !selectedArea && (
-            <div style={{ marginBottom: "24px", marginTop: "16px" }}>
-              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                {propertyTypes.map(type => (
-                  <button
-                    key={type}
-                    style={{
-                      padding: "12px 24px",
-                      borderRadius: "8px",
-                      border: "none",
-                      backgroundColor: selectedType === type ? "#667eea" : "#f1f5f9",
-                      color: selectedType === type ? "#fff" : "#475569",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      transition: "all 0.3s ease",
-                      boxShadow: selectedType === type
-                        ? "0 4px 12px rgba(102, 126, 234, 0.3)"
-                        : "0 2px 4px rgba(0, 0, 0, 0.05)"
-                    }}
-                    onClick={() => setSelectedType(type)}
-                    onMouseEnter={(e) => {
-                      if (selectedType !== type) {
-                        e.target.style.backgroundColor = "#e2e8f0";
-                        e.target.style.transform = "translateY(-2px)";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (selectedType !== type) {
-                        e.target.style.backgroundColor = "#f1f5f9";
-                        e.target.style.transform = "translateY(0)";
-                      }
-                    }}
-                  >
-                    {type}
-                  </button>
-                ))}
+          {activeTab === "browse-by-type" &&
+            !showSearchResults &&
+            !selectedArea && (
+              <div style={{ marginBottom: "24px", marginTop: "16px" }}>
+                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                  {propertyTypes.map((type) => (
+                    <button
+                      key={type}
+                      style={{
+                        padding: "12px 24px",
+                        borderRadius: "8px",
+                        border: "none",
+                        backgroundColor:
+                          selectedType === type ? "#667eea" : "#f1f5f9",
+                        color: selectedType === type ? "#fff" : "#475569",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        transition: "all 0.3s ease",
+                        boxShadow:
+                          selectedType === type
+                            ? "0 4px 12px rgba(102, 126, 234, 0.3)"
+                            : "0 2px 4px rgba(0, 0, 0, 0.05)",
+                      }}
+                      onClick={() => setSelectedType(type)}
+                      onMouseEnter={(e) => {
+                        if (selectedType !== type) {
+                          e.target.style.backgroundColor = "#e2e8f0";
+                          e.target.style.transform = "translateY(-2px)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedType !== type) {
+                          e.target.style.backgroundColor = "#f1f5f9";
+                          e.target.style.transform = "translateY(0)";
+                        }
+                      }}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Professional Section Header */}
           <div style={proStyles.sectionHeader}>
