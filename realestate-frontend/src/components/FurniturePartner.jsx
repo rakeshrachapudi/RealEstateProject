@@ -176,8 +176,9 @@ const FurniturePartner = () => {
       transition: isTransitioning
         ? "transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)"
         : "none",
-      transform: `translateX(-${currentSlide * (100 / 3)}%)`,
+      transform: `translateX(-${currentSlide * 33.333}%)`, // NOW SCROLLS 1 CARD AT A TIME
     },
+
     slideWrapper: {
       flex: "0 0 33.333%",
       padding: "0 clamp(8px, 1.5vw, 12px)",
@@ -463,7 +464,8 @@ const FurniturePartner = () => {
         <div style={styles.slider}>
           {extendedCategories.map((category, index) => {
             const actualIndex = index % furnitureCategories.length;
-            const isActive = index === currentSlide + 1; // CENTER CARD IS ACTIVE
+            const centerIndex = currentSlide + 1; // Center visible position
+            const isActive = index >= centerIndex && index < centerIndex + 1; // Only center card
 
             return (
               <div key={`${category.id}-${index}`} style={styles.slideWrapper}>
