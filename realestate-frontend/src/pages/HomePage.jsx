@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
 import PropertySearch from "../components/PropertySearch";
 import PropertyList from "../components/PropertyList";
+import FurniturePartner from "../components/FurniturePartner.jsx";
 import DealStatusCard from "../DealStatusCard.jsx";
 import BrowsePropertiesForDeal from "../pages/BrowsePropertiesForDeal";
 import DealDetailModal from "../DealDetailModal.jsx";
@@ -1295,6 +1296,9 @@ function HomePage() {
             ))}
           </div>
         </section>
+
+        {/* 🪴 FURNITURE PARTNER SECTION - Added between Popular Areas and Properties */}
+        <FurniturePartner />
 
         {/* Professional Properties/Deals Section */}
         <section style={proStyles.propertiesSection}>
