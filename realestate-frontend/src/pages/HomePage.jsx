@@ -1255,6 +1255,9 @@ function HomePage() {
         {/* Error Display */}
         {fetchError && <div style={proStyles.fetchError}>⚠️ {fetchError}</div>}
 
+        {/* 🪴 FURNITURE PARTNER SECTION - Added between Popular Areas and Properties */}
+        <FurniturePartner />
+
         {/* Professional Popular Areas Section */}
         <section style={proStyles.section}>
           <h2 style={proStyles.sectionTitle}>
@@ -1296,9 +1299,6 @@ function HomePage() {
             ))}
           </div>
         </section>
-
-        {/* 🪴 FURNITURE PARTNER SECTION - Added between Popular Areas and Properties */}
-        <FurniturePartner />
 
         {/* Professional Properties/Deals Section */}
         <section style={proStyles.propertiesSection}>
