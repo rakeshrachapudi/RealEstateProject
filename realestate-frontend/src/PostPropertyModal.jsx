@@ -50,6 +50,9 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     "24/7 Water Supply", "Community Hall",
   ];
 
+  // ⭐ Check if property type is plot, land, or villa
+  const isPlotOrLandOrVilla = formData.type?.toLowerCase() === "plot" || formData.type?.toLowerCase() === "land" || formData.type?.toLowerCase() === "villa";
+
   // ⭐ Check if user is Agent or Admin
   const isAgentOrAdmin = user?.role === "AGENT" || user?.role === "ADMIN";
 
@@ -351,9 +354,9 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         address: formData.address,
         imageUrl: "",
         priceDisplay: priceInWords,
-        bedrooms: parseInt(formData.bedrooms) || 0,
-        bathrooms: parseInt(formData.bathrooms) || 0,
-        balconies: parseInt(formData.balconies) || 0,
+        bedrooms: isPlotOrLandOrVilla ? 0 : (parseInt(formData.bedrooms) || 0),
+        bathrooms: isPlotOrLandOrVilla ? 0 : (parseInt(formData.bathrooms) || 0),
+        balconies: isPlotOrLandOrVilla ? 0 : (parseInt(formData.balconies) || 0),
         areaSqft: parseFloat(formData.areaSqft) || 0,
         price: parseFloat(formData.price),
         amenities: formData.amenities,
@@ -680,7 +683,10 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
               />
             </div>
 
-            {/* Bedrooms, Bathrooms, Balconies */}
+          {!isPlotOrLandOrVilla && (
+            <>
+              {/* Bedrooms, Bathrooms, Balconies */}
+
             <div style={styles.row3}>
               <div style={styles.field}>
                 <label style={styles.label}>🛏️ Bedrooms *</label>
@@ -724,6 +730,9 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                 />
               </div>
             </div>
+              </>
+            )}
+
 
             {/* Area & Price */}
             <div style={styles.row}>
@@ -753,6 +762,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                 />
                 {priceInWords && <p style={styles.priceInWords}>{priceInWords}</p>}
               </div>
+            )}
             </div>
 
             {/* Amenities */}

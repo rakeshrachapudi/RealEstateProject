@@ -31,7 +31,6 @@ const styles = {
     justifyContent: "center",
     alignItems: "center",
     flexDirection: "column",
-    alignItems: "center",
   },
   contentGrid: {
     display: "grid",
