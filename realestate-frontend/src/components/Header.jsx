@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
 import { styles } from "../styles.js"; // Assuming styles are defined/imported here
-import logo from "../assets/logo.png"; // Assuming logo path
+import logo from "../assets/logo-black.png"; // Assuming logo path
 
 function Header({
   onLoginClick,
