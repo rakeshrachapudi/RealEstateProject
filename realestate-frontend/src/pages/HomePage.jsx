@@ -16,7 +16,9 @@ import {
   getAllProperties,
 } from "../services/api";
 
-// Professional Animation Styles with Keyframes
+// NOTE: EmiCalculator import and state removed for cleaner page flow
+
+// Professional Animation Styles with Keyframes (Remains the same)
 const professionalStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
@@ -48,7 +50,6 @@ const professionalStyles = `
       transform: translateX(50px);
     }
     100% {
-      opacity: 1;
       transform: translateX(0);
     }
   }
@@ -683,23 +684,39 @@ const proStyles = {
     fontWeight: "500",
   },
 
-  // Error Display
-  fetchError: {
-    padding: "16px 24px",
-    background: "linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)",
-    color: "#dc2626",
-    borderRadius: "12px",
-    border: "1px solid #fecaca",
-    marginBottom: "24px",
-    textAlign: "center",
-    fontWeight: "500",
-    fontSize: "14px",
-    boxShadow: "0 4px 12px rgba(220, 38, 38, 0.1)",
-    animation: "slideInFromLeft 0.4s ease-out",
+  // 🎯 NEW STYLES FOR BUTTON PLACEMENT
+  emiTriggerButton: {
+    backgroundColor: '#ff9800', // Amber/Orange color
+    color: 'white',
+    padding: '15px 25px',
+    borderRadius: '8px',
+    fontWeight: '700',
+    fontSize: '1rem',
+    boxShadow: '0 4px 8px rgba(255, 152, 0, 0.4)',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'transform 0.2s, box-shadow 0.2s',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '10px',
+    textTransform: 'uppercase',
+    width: '300px', // Fixed width for prominence
+    margin: '20px auto', // Center the button
   },
+  emiTriggerButtonHover: {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 6px 12px rgba(255, 152, 0, 0.6)',
+  },
+  emiButtonContainer: {
+    textAlign: 'center',
+    padding: '40px 0',
+    background: 'linear-gradient(180deg, #f8fafc 0%, #fff 100%)',
+    marginBottom: '-20px', // Pull it slightly over the footer boundary
+  }
 };
 
-// Utility for Safe JSON Parsing
+// Utility for Safe JSON Parsing (remains the same)
 const safeJsonParse = async (response) => {
   try {
     const contentType = response.headers.get("content-type");
@@ -714,7 +731,7 @@ const safeJsonParse = async (response) => {
   }
 };
 
-// Professional Animation Observer Hook
+// Professional Animation Observer Hook (remains the same)
 const useIntersectionObserver = (callback, options = {}) => {
   const [ref, setRef] = useState(null);
 
@@ -742,6 +759,8 @@ const useIntersectionObserver = (callback, options = {}) => {
   return setRef;
 };
 
+// NOTE: EmiCalculatorModal is no longer needed here as it's a separate page
+
 function HomePage() {
   const { isAuthenticated, user } = useAuth();
   const [featuredPropsList, setFeaturedPropsList] = useState([]);
@@ -760,6 +779,9 @@ function HomePage() {
   const [loadingMyProperties, setLoadingMyProperties] = useState(false);
   const [loadingMyDeals, setLoadingMyDeals] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+
+  // 🎯 REMOVED STATE: showEmiCalculator is no longer needed
+  // const [showEmiCalculator, setShowEmiCalculator] = useState(false);
 
   const navigate = useNavigate();
   const [propertyTypes, setPropertyTypes] = useState(["All"]);
@@ -1076,6 +1098,12 @@ function HomePage() {
     setSelectedDealForModal(null);
     fetchMyDeals();
   };
+
+  // 🎯 NEW HANDLER: Navigate to the EMI Calculator page
+  const handleOpenEmiCalculatorPage = () => {
+    navigate('/emi-calculator');
+  };
+
 
   // Determine properties to display
   const propertiesForList = useMemo(() => {
@@ -1529,6 +1557,26 @@ function HomePage() {
             ))}
           </div>
         </section>
+
+        {/* 🎯 FINAL PLACEMENT: EMI Calculator Button inside the page flow, linking to the new page */}
+        <div style={proStyles.emiButtonContainer}>
+          <button
+              onClick={handleOpenEmiCalculatorPage}
+              style={proStyles.emiTriggerButton}
+              onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = proStyles.emiTriggerButtonHover.transform;
+                  e.currentTarget.style.boxShadow = proStyles.emiTriggerButtonHover.boxShadow;
+              }}
+              onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(255, 152, 0, 0.4)';
+              }}
+          >
+            <span role="img" aria-label="calculator">🧮</span>
+            Open EMI Calculator
+          </button>
+        </div>
+        {/* 🎯 END FINAL PLACEMENT 🎯 */}
       </div>
 
       {/* Modals */}
