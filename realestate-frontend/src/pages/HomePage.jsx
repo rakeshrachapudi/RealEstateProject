@@ -686,34 +686,34 @@ const proStyles = {
 
   // 🎯 NEW STYLES FOR BUTTON PLACEMENT
   emiTriggerButton: {
-    backgroundColor: '#ff9800', // Amber/Orange color
-    color: 'white',
-    padding: '15px 25px',
-    borderRadius: '8px',
-    fontWeight: '700',
-    fontSize: '1rem',
-    boxShadow: '0 4px 8px rgba(255, 152, 0, 0.4)',
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '10px',
-    textTransform: 'uppercase',
-    width: '300px', // Fixed width for prominence
-    margin: '20px auto', // Center the button
+    backgroundColor: "#ff9800", // Amber/Orange color
+    color: "white",
+    padding: "15px 25px",
+    borderRadius: "8px",
+    fontWeight: "700",
+    fontSize: "1rem",
+    boxShadow: "0 4px 8px rgba(255, 152, 0, 0.4)",
+    border: "none",
+    cursor: "pointer",
+    transition: "transform 0.2s, box-shadow 0.2s",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "10px",
+    textTransform: "uppercase",
+    width: "300px", // Fixed width for prominence
+    margin: "20px auto", // Center the button
   },
   emiTriggerButtonHover: {
-    transform: 'translateY(-2px)',
-    boxShadow: '0 6px 12px rgba(255, 152, 0, 0.6)',
+    transform: "translateY(-2px)",
+    boxShadow: "0 6px 12px rgba(255, 152, 0, 0.6)",
   },
   emiButtonContainer: {
-    textAlign: 'center',
-    padding: '40px 0',
-    background: 'linear-gradient(180deg, #f8fafc 0%, #fff 100%)',
-    marginBottom: '-20px', // Pull it slightly over the footer boundary
-  }
+    textAlign: "center",
+    padding: "40px 0",
+    background: "linear-gradient(180deg, #f8fafc 0%, #fff 100%)",
+    marginBottom: "-20px", // Pull it slightly over the footer boundary
+  },
 };
 
 // Utility for Safe JSON Parsing (remains the same)
@@ -1101,9 +1101,8 @@ function HomePage() {
 
   // 🎯 NEW HANDLER: Navigate to the EMI Calculator page
   const handleOpenEmiCalculatorPage = () => {
-    navigate('/emi-calculator');
+    navigate("/emi-calculator");
   };
-
 
   // Determine properties to display
   const propertiesForList = useMemo(() => {
@@ -1524,7 +1523,7 @@ function HomePage() {
         <FurniturePartner />
 
         {/* Professional Stats Section */}
-        <section style={proStyles.statsSection}>
+        {/* <section style={proStyles.statsSection}>
           <div style={proStyles.statsGrid} className="stagger-animation">
             {[
               { icon: "🏠", number: "10,000+", label: "Properties Listed" },
@@ -1556,23 +1555,28 @@ function HomePage() {
               </div>
             ))}
           </div>
-        </section>
+        </section> */}
 
         {/* 🎯 FINAL PLACEMENT: EMI Calculator Button inside the page flow, linking to the new page */}
         <div style={proStyles.emiButtonContainer}>
           <button
-              onClick={handleOpenEmiCalculatorPage}
-              style={proStyles.emiTriggerButton}
-              onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = proStyles.emiTriggerButtonHover.transform;
-                  e.currentTarget.style.boxShadow = proStyles.emiTriggerButtonHover.boxShadow;
-              }}
-              onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(255, 152, 0, 0.4)';
-              }}
+            onClick={handleOpenEmiCalculatorPage}
+            style={proStyles.emiTriggerButton}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform =
+                proStyles.emiTriggerButtonHover.transform;
+              e.currentTarget.style.boxShadow =
+                proStyles.emiTriggerButtonHover.boxShadow;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow =
+                "0 4px 8px rgba(255, 152, 0, 0.4)";
+            }}
           >
-            <span role="img" aria-label="calculator">🧮</span>
+            <span role="img" aria-label="calculator">
+              🧮
+            </span>
             Open EMI Calculator
           </button>
         </div>
