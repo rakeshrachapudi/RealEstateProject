@@ -268,8 +268,8 @@ const proStyles = {
   },
 
   bannerContent: {
-    flex: "1 1 49%",
-    maxWidth: "49%",
+    flex: "1 1 39%",
+    maxWidth: "39%",
     zIndex: 2,
     animation: "textReveal 1s ease-out 0.3s both",
     display: "flex",
@@ -329,8 +329,8 @@ const proStyles = {
   },
 
   bannerIllustration: {
-    flex: "1 1 49%",
-    maxWidth: "49%",
+    flex: "1 1 5%",
+    maxWidth: "59%",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -1255,9 +1255,6 @@ function HomePage() {
         {/* Error Display */}
         {fetchError && <div style={proStyles.fetchError}>⚠️ {fetchError}</div>}
 
-        {/* 🪴 FURNITURE PARTNER SECTION - Added between Popular Areas and Properties */}
-        <FurniturePartner />
-
         {/* Professional Popular Areas Section */}
         <section style={proStyles.section}>
           <h2 style={proStyles.sectionTitle}>
@@ -1494,6 +1491,9 @@ function HomePage() {
             </div>
           )}
         </section>
+
+        {/* 🪴 FURNITURE PARTNER SECTION - Added between Popular Areas and Properties */}
+        <FurniturePartner />
 
         {/* Professional Stats Section */}
         <section style={proStyles.statsSection}>
