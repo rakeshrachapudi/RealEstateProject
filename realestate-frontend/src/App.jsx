@@ -15,9 +15,10 @@ import SignupModal from "./SignupModal.jsx";
 import UserProfileModal from "./UserProfileModal.jsx";
 import PropertyEditModal from "./PropertyEditModal.jsx";
 import AdminDealPanel from "./AdminDealPanel.jsx";
+import AdminDashboard from "./pages/AdminDashboard.jsx";
 
 import AdminUsersPage from "./pages/AdminUsersPage";
-import CreateSaleAgreementPage from './pages/CreateSaleAgreementPage';
+import CreateSaleAgreementPage from "./pages/CreateSaleAgreementPage";
 
 import Header from "./components/Header.jsx";
 import SubHeader from "./components/SubHeader.jsx";
@@ -91,7 +92,16 @@ function AppContent() {
         {/* Main Pages */}
         <Route path="/" element={<HomePage />} />
         <Route path="/search" element={<SearchResultsPage />} />
-        <Route path="/property/:id" element={<PropertyDetails />} />
+        <Route
+          path="/property/:id"
+          element={
+            <PropertyDetails
+              onLoginClick={() => setIsLoginModalOpen(true)}
+              onSignupClick={() => setIsSignupModalOpen(true)}
+            />
+          }
+        />
+
         <Route
           path="/property-type/:listingType/:propertyType"
           element={<PropertyTypePage />}
@@ -122,6 +132,7 @@ function AppContent() {
 
         {/* Admin Pages */}
         <Route path="/admin-deals" element={<AdminDealPanel />} />
+        <Route path="/admin-dashboard" element={<AdminDashboard />} />
         {/* NEW ADMIN ROUTES - Add these */}
         <Route path="/admin-agents" element={<AdminAgentsPage />} />
         <Route path="/admin-users" element={<AdminUsersPage />} />
