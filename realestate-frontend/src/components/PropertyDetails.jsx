@@ -21,7 +21,7 @@ const safeJsonParse = async (response) => {
   }
 };
 
-const PropertyDetails = () => {
+const PropertyDetails = ({ onLoginClick, onSignupClick }) => {
   const { id: propertyIdParam } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -88,7 +88,17 @@ const PropertyDetails = () => {
   };
 
   // ⭐ HANDLE CONTACT AGENT WHATSAPP FUNCTION ⭐
+  // ⭐ HANDLE CONTACT AGENT WHATSAPP FUNCTION WITH NAVIGATION ⭐
   const handleContactAgent = () => {
+    // If not logged in, open the login/register modal
+    if (!user) {
+      if (typeof onLoginClick === "function") {
+        onLoginClick(); // this opens LoginModal (the username/password form with toggle)
+      }
+      return;
+    }
+
+    // existing WhatsApp flow for logged-in users
     if (agents.length === 0) {
       alert("No agents available at the moment. Please try again later.");
       return;
@@ -115,9 +125,6 @@ const PropertyDetails = () => {
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${mobileNumber}?text=${encodedMessage}`;
-
-    console.log("Selected Agent:", selectedAgent);
-    console.log("WhatsApp URL:", whatsappUrl);
 
     window.open(whatsappUrl, "_blank");
   };
@@ -588,13 +595,14 @@ const PropertyDetails = () => {
                 )}
 
                 <div style={styles.contactButtons}>
+                  {/* Update the whatsappButton section (around line 735) to show conditional text: */}
                   <button
                     style={styles.whatsappButton}
                     onClick={handleContactAgent}
                     disabled={loadingAgents || agents.length === 0}
                   >
                     <span>{loadingAgents ? "⏳" : "💬"}</span>
-                    WhatsApp
+                    {user ? "WhatsApp" : "Login to chat"}
                   </button>
 
                   <button style={styles.phoneButton}>
@@ -755,7 +763,7 @@ const keyframesStyles = `
 // Compact Professional Styles
 const styles = {
   pageContainer: {
-    background: "linear-gradient(135deg, #c9cacbff 0%, #e3dbecff 100%)",
+    background: "#ffffff",
     minHeight: "100vh",
     padding: "1rem 0",
     animation: "fadeInUp 0.5s ease-out",
