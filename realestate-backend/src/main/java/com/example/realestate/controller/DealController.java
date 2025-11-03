@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 // import org.springframework.web.multipart.MultipartFile; // Removed if not used
 // import java.io.IOException; // Removed if not used
@@ -31,6 +32,8 @@ public class DealController {
 
     @Autowired
     private com.example.realestate.repository.UserRepository userRepository;
+    @Autowired
+    private com.example.realestate.repository.DealStatusRepository dealStatusRepository;
 
     // ==================== GET DEALS BY USER AND ROLE (CORRECTED) ====================
     /**
@@ -674,5 +677,74 @@ public class DealController {
         public void setStage(String stage) { this.stage = stage; }
         public void setNotes(String notes) { this.notes = notes; }
         public void setUsername(String username) { this.username = username; } // ✅ ADDED: Setter for username
+    }
+    // Add this method to your DealController.java
+
+    /**
+     * ==================== DELETE DEAL BY ID (NEW) ====================
+     * Deletes a specific deal by its ID
+     * Endpoint: DELETE /api/deals/{dealId}
+     */
+    @DeleteMapping("/{dealId}")
+    public ResponseEntity<?> deleteDeal(
+            @PathVariable Long dealId,
+            Authentication authentication) {
+
+        logger.info("🗑️ DELETE DEAL REQUEST - Deal ID: {}", dealId);
+
+        try {
+            // Verify the deal exists
+            DealStatus deal = dealService.getDealById(dealId);
+
+            logger.info("Deleting deal {} for property {} (Buyer: {}, Agent: {})",
+                    dealId,
+                    deal.getProperty() != null ? deal.getProperty().getId() : "N/A",
+                    deal.getBuyer() != null ? deal.getBuyer().getId() : "N/A",
+                    deal.getAgent() != null ? deal.getAgent().getId() : "N/A");
+
+            // Delete the deal
+            dealService.deleteDeal(dealId);
+
+            logger.info("✅ Deal {} deleted successfully", dealId);
+
+            return ResponseEntity.ok(ApiResponse.success("Deal deleted successfully"));
+
+        } catch (RuntimeException e) {
+            logger.error("❌ Error deleting deal {}: {}", dealId, e.getMessage());
+            if (e.getMessage().contains("Deal not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("Deal not found with ID: " + dealId));
+            }
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("❌ Unexpected error deleting deal {}: ", dealId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("An unexpected error occurred while deleting the deal."));
+        }
+    }
+
+    // Add this method to your DealService.java
+
+    /**
+     * ⭐ DELETE A SINGLE DEAL BY ID (NEW)
+     * Deletes a specific deal
+     */
+    @Transactional
+    public void deleteDeal(Long dealId) {
+        logger.info("🗑️ Deleting single deal with ID: {}", dealId);
+
+        DealStatus deal = dealStatusRepository.findById(dealId)
+                .orElseThrow(() -> new RuntimeException("Deal not found with ID: " + dealId));
+
+        logger.info("Deleting Deal ID: {} (Property: {}, Buyer: {}, Stage: {})",
+                deal.getId(),
+                deal.getProperty() != null ? deal.getProperty().getTitle() : "N/A",
+                deal.getBuyer() != null ? deal.getBuyer().getId() : "N/A",
+                deal.getStage());
+
+        dealStatusRepository.delete(deal);
+
+        logger.info("✅ Successfully deleted deal {}", dealId);
     }
 }
