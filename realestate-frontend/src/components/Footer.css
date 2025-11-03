@@ -1,0 +1,32 @@
+@media (max-width: 768px) {
+  .footer-content-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+    text-align: center !important;
+  }
+
+  .footer-social-icons {
+    justify-content: center !important;
+  }
+
+  .footer-app-buttons {
+    justify-content: center !important;
+  }
+
+  .footer-trust-badges {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .footer-trust-badge {
+    width: 100% !important;
+    max-width: 280px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer-app-button {
+    width: 100% !important;
+    max-width: 140px !important;
+  }
+}
