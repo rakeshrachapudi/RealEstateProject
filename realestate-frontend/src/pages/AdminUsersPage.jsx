@@ -1,234 +1,215 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../AuthContext";
+import React, { useState, useEffect } from "react";
 import { BACKEND_BASE_URL } from "../config/config";
 
 const AdminUsersPage = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterRole, setFilterRole] = useState("all");
   const [selectedUser, setSelectedUser] = useState(null);
   const [userDeals, setUserDeals] = useState([]);
-  const [dealsLoading, setDealsLoading] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedDeal, setSelectedDeal] = useState(null);
+  const [userProperties, setUserProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("details"); // details, deals, properties
+  const [filterRole, setFilterRole] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [deleteModal, setDeleteModal] = useState({ show: false, type: null, item: null });
 
   useEffect(() => {
-    if (user?.role !== "ADMIN") {
-      navigate("/");
-      return;
-    }
-    fetchAllUsers();
-  }, [user, navigate]);
+    fetchUsers();
+  }, []);
 
-  const fetchAllUsers = async () => {
-    setLoading(true);
+  useEffect(() => {
+    if (selectedUser) {
+      fetchUserDeals(selectedUser.id);
+      fetchUserProperties(selectedUser.id);
+    }
+  }, [selectedUser]);
+
+  // ==================== FETCH FUNCTIONS ====================
+
+  const fetchUsers = async () => {
     try {
       const response = await fetch(`${BACKEND_BASE_URL}/api/users`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
       });
-
       if (response.ok) {
         const data = await response.json();
-        const usersList = data.success
-          ? data.data || []
-          : Array.isArray(data)
-          ? data
-          : [];
+        const usersList = data.success ? data.data : [];
         setUsers(usersList);
-        filterUsers(usersList, searchTerm, filterRole);
+        if (usersList.length > 0 && !selectedUser) {
+          setSelectedUser(usersList[0]);
+        }
       }
-    } catch (error) {
-      console.error("Error fetching users:", error);
+    } catch (err) {
+      console.error("Error fetching users:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchUserDeals = async (selectedUserData) => {
-    setDealsLoading(true);
+  const fetchUserDeals = async (userId) => {
     try {
-      let allDeals = [];
+      const user = users.find(u => u.id === userId);
+      if (!user) return;
 
-      // If user is an AGENT, fetch deals they created
-      if (selectedUserData.role === "AGENT") {
-        console.log("Fetching agent deals for agent ID:", selectedUserData.id);
-        const agentResponse = await fetch(
-          `${BACKEND_BASE_URL}/api/deals/admin/agent/${selectedUserData.id}?userId=${user.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-            },
-          }
-        );
+      const userRole = user.role; // "USER", "AGENT", or "ADMIN"
 
-        console.log("Agent deals response status:", agentResponse.status);
-
-        if (agentResponse.ok) {
-          const data = await agentResponse.json();
-          console.log("Agent deals response:", data);
-          const deals = data.success
-            ? data.data || []
-            : Array.isArray(data)
-            ? data
-            : [];
-          allDeals = [...allDeals, ...deals];
-        } else {
-          console.warn("Agent deals response not ok:", agentResponse.status);
-        }
-      }
-      // If user is a regular USER, fetch deals where they're a buyer
-      else if (selectedUserData.role === "USER") {
-        console.log("Fetching buyer deals for user ID:", selectedUserData.id);
-        const buyerResponse = await fetch(
-          `${BACKEND_BASE_URL}/api/deals/user/${selectedUserData.id}/role/BUYER`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-            },
-          }
-        );
-
-        console.log("Buyer deals response status:", buyerResponse.status);
-
-        if (buyerResponse.ok) {
-          const data = await buyerResponse.json();
-          console.log("Buyer deals response:", data);
-          const deals = data.success
-            ? data.data || []
-            : Array.isArray(data)
-            ? data
-            : [];
-          allDeals = [...allDeals, ...deals];
-        } else {
-          console.warn("Buyer deals response not ok:", buyerResponse.status);
-        }
-      }
-
-      console.log("Total deals loaded for user:", allDeals.length);
-      setUserDeals(allDeals);
-    } catch (error) {
-      console.error("Error fetching user deals:", error);
-      setUserDeals([]);
-    } finally {
-      setDealsLoading(false);
-    }
-  };
-
-  const filterUsers = (userList, search, role) => {
-    let filtered = userList;
-
-    if (role !== "all") {
-      filtered = filtered.filter((u) => u.role === role);
-    }
-
-    if (search) {
-      filtered = filtered.filter(
-        (u) =>
-          u.firstName?.toLowerCase().includes(search.toLowerCase()) ||
-          u.lastName?.toLowerCase().includes(search.toLowerCase()) ||
-          u.email?.toLowerCase().includes(search.toLowerCase()) ||
-          u.mobileNumber?.includes(search)
-      );
-    }
-
-    setFilteredUsers(filtered);
-  };
-
-  const handleSearch = (value) => {
-    setSearchTerm(value);
-    filterUsers(users, value, filterRole);
-  };
-
-  const handleRoleFilter = (role) => {
-    setFilterRole(role);
-    filterUsers(users, searchTerm, role);
-  };
-
-  const handleSelectUser = (userToSelect) => {
-    setSelectedUser(userToSelect);
-    fetchUserDeals(userToSelect);
-  };
-
-  const handleEditUser = (userToEdit) => {
-    setEditingUser({ ...userToEdit });
-    setShowEditModal(true);
-  };
-
-  const handleSaveUser = async () => {
-    try {
       const response = await fetch(
-        `${BACKEND_BASE_URL}/api/users/${editingUser.id}`,
+        `${BACKEND_BASE_URL}/api/deals/user/${userId}/role/${userRole}`,
         {
-          method: "PUT",
           headers: {
-            "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
-          body: JSON.stringify(editingUser),
         }
       );
 
       if (response.ok) {
-        const updated = await response.json();
-        const updatedUser = updated.data || editingUser;
-        setUsers(users.map((u) => (u.id === editingUser.id ? updatedUser : u)));
-        filterUsers(
-          users.map((u) => (u.id === editingUser.id ? updatedUser : u)),
-          searchTerm,
-          filterRole
-        );
-        setSelectedUser(updatedUser);
-        setShowEditModal(false);
-        setEditingUser(null);
-        alert("User updated successfully!");
-      } else {
-        alert("Failed to update user");
+        const data = await response.json();
+        setUserDeals(data.success ? data.data : []);
       }
-    } catch (error) {
-      console.error("Error updating user:", error);
-      alert("Error updating user");
+    } catch (err) {
+      console.error("Error fetching user deals:", err);
+      setUserDeals([]);
     }
   };
 
-  const handleDeleteUser = async (userId) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
-      try {
-        const response = await fetch(
-          `${BACKEND_BASE_URL}/api/users/${userId}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-            },
-          }
-        );
-
-        if (response.ok) {
-          setUsers(users.filter((u) => u.id !== userId));
-          filterUsers(
-            users.filter((u) => u.id !== userId),
-            searchTerm,
-            filterRole
-          );
-          setSelectedUser(null);
-          setUserDeals([]);
-          alert("User deleted successfully!");
-        } else {
-          alert("Failed to delete user");
+  const fetchUserProperties = async (userId) => {
+    try {
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/properties/user/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
         }
-      } catch (error) {
-        console.error("Error deleting user:", error);
-        alert("Error deleting user");
+      );
+
+      if (response.ok) {
+        const properties = await response.json();
+        setUserProperties(Array.isArray(properties) ? properties : []);
       }
+    } catch (err) {
+      console.error("Error fetching user properties:", err);
+      setUserProperties([]);
     }
+  };
+
+  // ==================== DELETE FUNCTIONS ====================
+
+  const handleDeleteDeal = async (dealId) => {
+    try {
+      // Note: You may need to add a DELETE endpoint for individual deals
+      // For now, we'll use a workaround or the cascade delete
+
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/deals/${dealId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        showSuccessMessage("Deal deleted successfully");
+        fetchUserDeals(selectedUser.id);
+      } else {
+        showErrorMessage("Failed to delete deal");
+      }
+    } catch (err) {
+      console.error("Error deleting deal:", err);
+      showErrorMessage("Error deleting deal");
+    }
+
+    closeDeleteModal();
+  };
+
+  const handleDeleteProperty = async (propertyId) => {
+    try {
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/properties/${propertyId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        showSuccessMessage("Property deleted successfully");
+        fetchUserProperties(selectedUser.id);
+        fetchUserDeals(selectedUser.id); // Refresh deals as well
+      } else {
+        showErrorMessage("Failed to delete property");
+      }
+    } catch (err) {
+      console.error("Error deleting property:", err);
+      showErrorMessage("Error deleting property");
+    }
+
+    closeDeleteModal();
+  };
+
+  const handleDeleteUser = async (userId) => {
+    try {
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/users/${userId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        showSuccessMessage("User deleted successfully (cascade delete applied)");
+        setSelectedUser(null);
+        fetchUsers();
+      } else {
+        showErrorMessage("Failed to delete user");
+      }
+    } catch (err) {
+      console.error("Error deleting user:", err);
+      showErrorMessage("Error deleting user");
+    }
+
+    closeDeleteModal();
+  };
+
+  // ==================== MODAL FUNCTIONS ====================
+
+  const openDeleteModal = (type, item) => {
+    setDeleteModal({ show: true, type, item });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ show: false, type: null, item: null });
+  };
+
+  const confirmDelete = () => {
+    const { type, item } = deleteModal;
+
+    if (type === "deal") {
+      handleDeleteDeal(item.dealId);
+    } else if (type === "property") {
+      handleDeleteProperty(item.propertyId);
+    } else if (type === "user") {
+      handleDeleteUser(item.id);
+    }
+  };
+
+  // ==================== UTILITY FUNCTIONS ====================
+
+  const showSuccessMessage = (message) => {
+    // You can integrate a toast library here
+    alert(message);
+  };
+
+  const showErrorMessage = (message) => {
+    alert(message);
   };
 
   const getStageColor = (stage) => {
@@ -244,519 +225,706 @@ const AdminUsersPage = () => {
     return colors[stage] || "#6b7280";
   };
 
+  const formatPrice = (price) => {
+    if (!price) return "N/A";
+    return `₹${Number(price).toLocaleString("en-IN")}`;
+  };
+
+  // ==================== FILTER FUNCTIONS ====================
+
+  const filteredUsers = users.filter(user => {
+    const matchesRole = filterRole === "all" || user.role === filterRole;
+    const matchesSearch =
+      user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.mobileNumber?.includes(searchQuery);
+
+    return matchesRole && matchesSearch;
+  });
+
+  // ==================== STYLES ====================
+
+  const styles = {
+    container: {
+      maxWidth: "1800px",
+      margin: "0 auto",
+      padding: "24px",
+      backgroundColor: "#f9fafb",
+      minHeight: "100vh",
+    },
+    header: {
+      marginBottom: "24px",
+      paddingBottom: "16px",
+      borderBottom: "2px solid #e5e7eb",
+    },
+    title: {
+      fontSize: "32px",
+      fontWeight: "800",
+      color: "#1e293b",
+      margin: "0 0 8px 0",
+    },
+    subtitle: {
+      color: "#64748b",
+      fontSize: "16px",
+      margin: 0,
+    },
+    searchBar: {
+      marginBottom: "20px",
+      display: "flex",
+      gap: "12px",
+      flexWrap: "wrap",
+    },
+    searchInput: {
+      flex: 1,
+      minWidth: "250px",
+      padding: "10px 14px",
+      border: "1px solid #e2e8f0",
+      borderRadius: "8px",
+      fontSize: "14px",
+    },
+    filterButtons: {
+      display: "flex",
+      gap: "8px",
+    },
+    filterBtn: (active) => ({
+      padding: "10px 16px",
+      backgroundColor: active ? "#3b82f6" : "white",
+      color: active ? "white" : "#64748b",
+      border: `1px solid ${active ? "#3b82f6" : "#e2e8f0"}`,
+      borderRadius: "8px",
+      cursor: "pointer",
+      fontSize: "13px",
+      fontWeight: "600",
+      transition: "all 0.2s",
+    }),
+    mainGrid: {
+      display: "grid",
+      gridTemplateColumns: "350px 1fr",
+      gap: "24px",
+      alignItems: "start",
+    },
+    userList: {
+      backgroundColor: "white",
+      borderRadius: "12px",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+      border: "1px solid #e5e7eb",
+      maxHeight: "calc(100vh - 200px)",
+      overflowY: "auto",
+    },
+    userListHeader: {
+      padding: "16px",
+      backgroundColor: "#f8fafc",
+      borderBottom: "1px solid #e5e7eb",
+      fontWeight: "700",
+      position: "sticky",
+      top: 0,
+      zIndex: 1,
+    },
+    userItem: (isSelected) => ({
+      padding: "14px 16px",
+      borderBottom: "1px solid #e5e7eb",
+      cursor: "pointer",
+      backgroundColor: isSelected ? "#f0f9ff" : "white",
+      borderLeft: isSelected ? "4px solid #3b82f6" : "4px solid transparent",
+      transition: "all 0.2s",
+    }),
+    roleBadge: (role) => {
+      const colors = {
+        ADMIN: { bg: "#fef3c7", text: "#92400e", border: "#fbbf24" },
+        AGENT: { bg: "#dbeafe", text: "#1e40af", border: "#3b82f6" },
+        USER: { bg: "#e0e7ff", text: "#3730a3", border: "#6366f1" },
+      };
+      const color = colors[role] || colors.USER;
+      return {
+        display: "inline-block",
+        padding: "2px 8px",
+        backgroundColor: color.bg,
+        color: color.text,
+        border: `1px solid ${color.border}`,
+        borderRadius: "4px",
+        fontSize: "11px",
+        fontWeight: "600",
+        marginLeft: "8px",
+      };
+    },
+    detailsPanel: {
+      backgroundColor: "white",
+      borderRadius: "12px",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+      border: "1px solid #e5e7eb",
+      overflow: "hidden",
+    },
+    tabBar: {
+      display: "flex",
+      borderBottom: "2px solid #e5e7eb",
+      backgroundColor: "#f8fafc",
+    },
+    tab: (active) => ({
+      flex: 1,
+      padding: "14px 20px",
+      backgroundColor: active ? "white" : "transparent",
+      color: active ? "#3b82f6" : "#64748b",
+      border: "none",
+      borderBottom: active ? "2px solid #3b82f6" : "2px solid transparent",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "600",
+      transition: "all 0.2s",
+      marginBottom: "-2px",
+    }),
+    tabContent: {
+      padding: "24px",
+      maxHeight: "calc(100vh - 300px)",
+      overflowY: "auto",
+    },
+    infoGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+      gap: "16px",
+      marginBottom: "24px",
+    },
+    infoCard: {
+      padding: "16px",
+      backgroundColor: "#f8fafc",
+      borderRadius: "8px",
+      border: "1px solid #e2e8f0",
+    },
+    infoLabel: {
+      fontSize: "12px",
+      color: "#64748b",
+      fontWeight: "600",
+      marginBottom: "4px",
+      textTransform: "uppercase",
+      letterSpacing: "0.5px",
+    },
+    infoValue: {
+      fontSize: "15px",
+      color: "#1e293b",
+      fontWeight: "500",
+    },
+    deleteBtn: {
+      padding: "10px 20px",
+      backgroundColor: "#ef4444",
+      color: "white",
+      border: "none",
+      borderRadius: "8px",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "600",
+      transition: "all 0.2s",
+    },
+    propertiesGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+      gap: "16px",
+    },
+    propertyCard: {
+      backgroundColor: "#f8fafc",
+      borderRadius: "12px",
+      border: "1px solid #e2e8f0",
+      overflow: "hidden",
+      transition: "all 0.2s",
+    },
+    propertyImage: {
+      width: "100%",
+      height: "180px",
+      objectFit: "cover",
+      backgroundColor: "#e2e8f0",
+    },
+    propertyContent: {
+      padding: "16px",
+    },
+    propertyTitle: {
+      fontSize: "16px",
+      fontWeight: "700",
+      color: "#1e293b",
+      margin: "0 0 8px 0",
+    },
+    propertyPrice: {
+      fontSize: "18px",
+      fontWeight: "700",
+      color: "#10b981",
+      marginBottom: "12px",
+    },
+    propertyDetails: {
+      fontSize: "13px",
+      color: "#64748b",
+      marginBottom: "4px",
+    },
+    dealsGrid: {
+      display: "grid",
+      gap: "12px",
+    },
+    dealCard: {
+      padding: "16px",
+      backgroundColor: "#f8fafc",
+      borderRadius: "8px",
+      border: "1px solid #e2e8f0",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "start",
+    },
+    dealContent: {
+      flex: 1,
+    },
+    dealTitle: {
+      fontSize: "15px",
+      fontWeight: "600",
+      color: "#1e293b",
+      margin: "0 0 8px 0",
+    },
+    dealInfo: {
+      fontSize: "13px",
+      color: "#64748b",
+      margin: "4px 0",
+    },
+    stageBadge: (stage) => ({
+      display: "inline-block",
+      padding: "4px 10px",
+      backgroundColor: getStageColor(stage),
+      color: "white",
+      borderRadius: "6px",
+      fontSize: "11px",
+      fontWeight: "600",
+    }),
+    actionButtons: {
+      display: "flex",
+      gap: "8px",
+      marginTop: "12px",
+    },
+    iconBtn: (color) => ({
+      padding: "6px 12px",
+      backgroundColor: color === "red" ? "#fee2e2" : "#dbeafe",
+      color: color === "red" ? "#dc2626" : "#2563eb",
+      border: "none",
+      borderRadius: "6px",
+      cursor: "pointer",
+      fontSize: "13px",
+      fontWeight: "600",
+      transition: "all 0.2s",
+    }),
+    modal: {
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 1000,
+    },
+    modalContent: {
+      backgroundColor: "white",
+      borderRadius: "12px",
+      padding: "24px",
+      maxWidth: "500px",
+      width: "90%",
+      boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
+    },
+    modalTitle: {
+      fontSize: "20px",
+      fontWeight: "700",
+      color: "#1e293b",
+      margin: "0 0 12px 0",
+    },
+    modalText: {
+      fontSize: "15px",
+      color: "#64748b",
+      marginBottom: "24px",
+    },
+    modalButtons: {
+      display: "flex",
+      gap: "12px",
+      justifyContent: "flex-end",
+    },
+    modalBtn: (variant) => ({
+      padding: "10px 20px",
+      backgroundColor: variant === "danger" ? "#ef4444" : "#e5e7eb",
+      color: variant === "danger" ? "white" : "#1e293b",
+      border: "none",
+      borderRadius: "8px",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "600",
+    }),
+    emptyState: {
+      textAlign: "center",
+      padding: "60px 20px",
+      color: "#94a3b8",
+    },
+    emptyIcon: {
+      fontSize: "48px",
+      marginBottom: "16px",
+    },
+  };
+
   if (loading) {
     return (
       <div style={styles.container}>
-        <div style={styles.loading}>⏳ Loading users...</div>
+        <div style={{ textAlign: "center", padding: "60px" }}>
+          Loading users...
+        </div>
       </div>
     );
   }
 
   return (
     <div style={styles.container}>
+      {/* Header */}
       <div style={styles.header}>
-        <h1 style={styles.title}>👨‍💼 User Management</h1>
+        <h1 style={styles.title}>👥 User Management</h1>
         <p style={styles.subtitle}>
-          Manage all users - view, edit, and modify user details
+          Manage users, view their properties and deals
         </p>
       </div>
 
-      <div style={styles.controlsSection}>
-        <div style={styles.searchBox}>
-          <input
-            type="text"
-            placeholder="Search by name, email, or phone..."
-            value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
-            style={styles.searchInput}
-          />
-        </div>
-
+      {/* Search and Filters */}
+      <div style={styles.searchBar}>
+        <input
+          type="text"
+          placeholder="🔍 Search by name, email, or phone..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={styles.searchInput}
+        />
         <div style={styles.filterButtons}>
           <button
-            onClick={() => handleRoleFilter("all")}
-            style={{
-              ...styles.filterBtn,
-              ...(filterRole === "all" ? styles.activeFilter : {}),
-            }}
+            onClick={() => setFilterRole("all")}
+            style={styles.filterBtn(filterRole === "all")}
           >
             All Users ({users.length})
           </button>
           <button
-            onClick={() => handleRoleFilter("USER")}
-            style={{
-              ...styles.filterBtn,
-              ...(filterRole === "USER" ? styles.activeFilter : {}),
-            }}
+            onClick={() => setFilterRole("USER")}
+            style={styles.filterBtn(filterRole === "USER")}
           >
-            Buyers/Sellers ({users.filter((u) => u.role === "USER").length})
+            👤 Users ({users.filter(u => u.role === "USER").length})
           </button>
           <button
-            onClick={() => handleRoleFilter("AGENT")}
-            style={{
-              ...styles.filterBtn,
-              ...(filterRole === "AGENT" ? styles.activeFilter : {}),
-            }}
+            onClick={() => setFilterRole("AGENT")}
+            style={styles.filterBtn(filterRole === "AGENT")}
           >
-            Agents ({users.filter((u) => u.role === "AGENT").length})
+            📊 Agents ({users.filter(u => u.role === "AGENT").length})
           </button>
           <button
-            onClick={() => handleRoleFilter("ADMIN")}
-            style={{
-              ...styles.filterBtn,
-              ...(filterRole === "ADMIN" ? styles.activeFilter : {}),
-            }}
+            onClick={() => setFilterRole("ADMIN")}
+            style={styles.filterBtn(filterRole === "ADMIN")}
           >
-            Admins ({users.filter((u) => u.role === "ADMIN").length})
+            ⚙️ Admins ({users.filter(u => u.role === "ADMIN").length})
           </button>
         </div>
       </div>
 
-      <div style={styles.mainContent}>
-        <div style={styles.usersList}>
-          <div style={styles.usersHeader}>
-            <h3>Users ({filteredUsers.length})</h3>
+      {/* Main Grid */}
+      <div style={styles.mainGrid}>
+        {/* User List */}
+        <div style={styles.userList}>
+          <div style={styles.userListHeader}>
+            Users ({filteredUsers.length})
           </div>
-
-          {filteredUsers.length === 0 ? (
-            <div style={styles.emptyState}>
-              <p>🔍 No users found</p>
-            </div>
-          ) : (
-            <div style={styles.usersGrid}>
-              {filteredUsers.map((u) => (
-                <div
-                  key={u.id}
-                  style={{
-                    ...styles.userCard,
-                    backgroundColor:
-                      selectedUser?.id === u.id ? "#dbeafe" : "white",
-                    borderColor:
-                      selectedUser?.id === u.id ? "#3b82f6" : "#e2e8f0",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => handleSelectUser(u)}
-                >
-                  <div style={styles.userCardHeader}>
-                    <div>
-                      <h4 style={styles.userName}>
-                        {u.firstName} {u.lastName}
-                      </h4>
-                      <p style={styles.userEmail}>{u.email}</p>
-                    </div>
-                    <span
-                      style={{
-                        ...styles.roleBadge,
-                        backgroundColor: getRoleColor(u.role),
-                      }}
-                    >
-                      {u.role}
-                    </span>
-                  </div>
-                  <div style={styles.userInfo}>
-                    <p>📱 {u.mobileNumber || "N/A"}</p>
-                    <p>📅 {new Date(u.createdAt).toLocaleDateString()}</p>
-                  </div>
+          {filteredUsers.map((user) => (
+            <div
+              key={user.id}
+              style={styles.userItem(selectedUser?.id === user.id)}
+              onClick={() => setSelectedUser(user)}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <h3 style={{ margin: "0 0 4px 0", fontSize: "15px", fontWeight: "600" }}>
+                    {user.firstName} {user.lastName}
+                  </h3>
+                  <p style={{ margin: "2px 0", fontSize: "13px", color: "#64748b" }}>
+                    {user.email}
+                  </p>
+                  <p style={{ margin: "2px 0", fontSize: "12px", color: "#94a3b8" }}>
+                    📱 {user.mobileNumber}
+                  </p>
                 </div>
-              ))}
+                <span style={styles.roleBadge(user.role)}>
+                  {user.role}
+                </span>
+              </div>
             </div>
-          )}
+          ))}
         </div>
 
-        <div style={styles.userDetails}>
+        {/* Details Panel */}
+        <div style={styles.detailsPanel}>
           {selectedUser ? (
             <>
-              <div style={styles.detailsCard}>
-                <h2 style={styles.detailsTitle}>User Details</h2>
-                <div style={styles.detailsGrid}>
-                  <div>
-                    <p style={styles.label}>First Name</p>
-                    <p style={styles.value}>{selectedUser.firstName}</p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Last Name</p>
-                    <p style={styles.value}>{selectedUser.lastName}</p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Email</p>
-                    <p style={styles.value}>{selectedUser.email}</p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Phone</p>
-                    <p style={styles.value}>
-                      {selectedUser.mobileNumber || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Role</p>
-                    <span
-                      style={{
-                        ...styles.roleBadge,
-                        backgroundColor: getRoleColor(selectedUser.role),
-                      }}
-                    >
-                      {selectedUser.role}
-                    </span>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Member Since</p>
-                    <p style={styles.value}>
-                      {new Date(selectedUser.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-
-                {selectedUser.address && (
-                  <div style={styles.addressSection}>
-                    <p style={styles.label}>Address</p>
-                    <p style={styles.value}>{selectedUser.address}</p>
-                  </div>
-                )}
-
-                <div style={styles.actionButtons}>
-                  <button
-                    onClick={() => handleEditUser(selectedUser)}
-                    style={styles.editBtn}
-                  >
-                    ✏️ Edit User
-                  </button>
-                  <button
-                    onClick={() => handleDeleteUser(selectedUser.id)}
-                    style={styles.deleteBtn}
-                  >
-                    🗑️ Delete User
-                  </button>
-                </div>
+              {/* Tab Bar */}
+              <div style={styles.tabBar}>
+                <button
+                  onClick={() => setActiveTab("details")}
+                  style={styles.tab(activeTab === "details")}
+                >
+                  📋 User Details
+                </button>
+                <button
+                  onClick={() => setActiveTab("properties")}
+                  style={styles.tab(activeTab === "properties")}
+                >
+                  🏠 Properties ({userProperties.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab("deals")}
+                  style={styles.tab(activeTab === "deals")}
+                >
+                  💼 Deals ({userDeals.length})
+                </button>
               </div>
 
-              <div style={styles.dealsSection}>
-                <h3 style={styles.dealsTitle}>Deals ({userDeals.length})</h3>
+              {/* Tab Content */}
+              <div style={styles.tabContent}>
+                {/* USER DETAILS TAB */}
+                {activeTab === "details" && (
+                  <>
+                    <h2 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "16px" }}>
+                      {selectedUser.firstName} {selectedUser.lastName}
+                      <span style={styles.roleBadge(selectedUser.role)}>
+                        {selectedUser.role}
+                      </span>
+                    </h2>
 
-                {dealsLoading ? (
-                  <div style={styles.loading}>⏳ Loading deals...</div>
-                ) : userDeals.length === 0 ? (
-                  <div style={styles.emptyDeals}>
-                    <p>No deals for this user</p>
-                  </div>
-                ) : (
-                  <div style={styles.dealsGrid}>
-                    {userDeals.map((deal) => (
-                      <div
-                        key={deal.id || deal.dealId}
-                        style={styles.dealCard}
-                        onClick={() => setSelectedDeal(deal)}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.boxShadow =
-                            "0 8px 16px rgba(0,0,0,0.15)";
-                          e.currentTarget.style.transform = "translateY(-4px)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.boxShadow =
-                            "0 1px 3px rgba(0,0,0,0.05)";
-                          e.currentTarget.style.transform = "translateY(0)";
-                        }}
-                      >
-                        <div
-                          style={{
-                            ...styles.dealStageBadge,
-                            backgroundColor: getStageColor(
-                              deal.stage || deal.currentStage
-                            ),
-                          }}
-                        >
-                          {deal.stage || deal.currentStage}
-                        </div>
-
-                        <h4 style={styles.dealTitle}>
-                          {deal.property?.title || deal.propertyTitle}
-                        </h4>
-
-                        {deal.property?.city && (
-                          <p style={styles.dealMeta}>📍 {deal.property.city}</p>
-                        )}
-
-                        {deal.seller && (
-                          <p style={styles.dealMeta}>
-                            🏠 Seller: {deal.seller.firstName}{" "}
-                            {deal.seller.lastName}
-                          </p>
-                        )}
-
-                        {deal.agreedPrice && (
-                          <p style={styles.dealPrice}>
-                            💰 ₹{deal.agreedPrice.toLocaleString("en-IN")}
-                          </p>
-                        )}
-
-                        <p style={styles.dealDate}>
-                          📅 {new Date(deal.createdAt).toLocaleDateString()}
-                        </p>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedDeal(deal);
-                          }}
-                          style={styles.viewDealDetailsBtn}
-                        >
-                          View Deal Details
-                        </button>
+                    <div style={styles.infoGrid}>
+                      <div style={styles.infoCard}>
+                        <div style={styles.infoLabel}>Email</div>
+                        <div style={styles.infoValue}>{selectedUser.email}</div>
                       </div>
-                    ))}
-                  </div>
+                      <div style={styles.infoCard}>
+                        <div style={styles.infoLabel}>Phone</div>
+                        <div style={styles.infoValue}>{selectedUser.mobileNumber}</div>
+                      </div>
+                      <div style={styles.infoCard}>
+                        <div style={styles.infoLabel}>Username</div>
+                        <div style={styles.infoValue}>{selectedUser.username}</div>
+                      </div>
+                      <div style={styles.infoCard}>
+                        <div style={styles.infoLabel}>Status</div>
+                        <div style={styles.infoValue}>
+                          {selectedUser.isActive ? "✅ Active" : "❌ Inactive"}
+                        </div>
+                      </div>
+                      {selectedUser.address && (
+                        <div style={{ ...styles.infoCard, gridColumn: "1 / -1" }}>
+                          <div style={styles.infoLabel}>Address</div>
+                          <div style={styles.infoValue}>{selectedUser.address}</div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid #e5e7eb" }}>
+                      <button
+                        onClick={() => openDeleteModal("user", selectedUser)}
+                        style={styles.deleteBtn}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = "#dc2626"}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = "#ef4444"}
+                      >
+                        🗑️ Delete User (Cascade Delete)
+                      </button>
+                      <p style={{ fontSize: "13px", color: "#94a3b8", marginTop: "8px" }}>
+                        ⚠️ This will delete the user and all associated properties and deals
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* PROPERTIES TAB */}
+                {activeTab === "properties" && (
+                  <>
+                    <h2 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "16px" }}>
+                      Properties Owned by {selectedUser.firstName}
+                    </h2>
+
+                    {userProperties.length === 0 ? (
+                      <div style={styles.emptyState}>
+                        <div style={styles.emptyIcon}>🏚️</div>
+                        <p>No properties found</p>
+                      </div>
+                    ) : (
+                      <div style={styles.propertiesGrid}>
+                        {userProperties.map((property) => (
+                          <div
+                            key={property.propertyId}
+                            style={styles.propertyCard}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = "translateY(-4px)";
+                              e.currentTarget.style.boxShadow = "0 8px 16px rgba(0,0,0,0.1)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = "translateY(0)";
+                              e.currentTarget.style.boxShadow = "none";
+                            }}
+                          >
+                            {property.imageUrl && (
+                              <img
+                                src={property.imageUrl}
+                                alt={property.title}
+                                style={styles.propertyImage}
+                              />
+                            )}
+                            <div style={styles.propertyContent}>
+                              <h3 style={styles.propertyTitle}>{property.title}</h3>
+                              <div style={styles.propertyPrice}>
+                                {formatPrice(property.price)}
+                              </div>
+                              <div style={styles.propertyDetails}>
+                                📍 {property.cityName || property.areaName}
+                              </div>
+                              <div style={styles.propertyDetails}>
+                                🛏️ {property.bedrooms} BHK | 🛁 {property.bathrooms} Bath
+                              </div>
+                              <div style={styles.propertyDetails}>
+                                📐 {property.areaSqft} sqft
+                              </div>
+                              <div style={styles.propertyDetails}>
+                                📊 {property.status || "Available"}
+                              </div>
+
+                              <div style={styles.actionButtons}>
+                                <button
+                                  onClick={() => openDeleteModal("property", property)}
+                                  style={styles.iconBtn("red")}
+                                  onMouseEnter={(e) => e.target.style.backgroundColor = "#fecaca"}
+                                  onMouseLeave={(e) => e.target.style.backgroundColor = "#fee2e2"}
+                                >
+                                  🗑️ Delete
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* DEALS TAB */}
+                {activeTab === "deals" && (
+                  <>
+                    <h2 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "16px" }}>
+                      Deals Associated with {selectedUser.firstName}
+                    </h2>
+
+                    {userDeals.length === 0 ? (
+                      <div style={styles.emptyState}>
+                        <div style={styles.emptyIcon}>📭</div>
+                        <p>No deals found</p>
+                      </div>
+                    ) : (
+                      <div style={styles.dealsGrid}>
+                        {userDeals.map((deal) => (
+                          <div key={deal.dealId} style={styles.dealCard}>
+                            <div style={styles.dealContent}>
+                              <h3 style={styles.dealTitle}>
+                                {deal.propertyTitle}
+                              </h3>
+
+                              <div style={styles.dealInfo}>
+                                <strong>Stage:</strong>{" "}
+                                <span style={styles.stageBadge(deal.stage)}>
+                                  {deal.stage}
+                                </span>
+                              </div>
+
+                              {deal.agreedPrice && (
+                                <div style={styles.dealInfo}>
+                                  <strong>Agreed Price:</strong> {formatPrice(deal.agreedPrice)}
+                                </div>
+                              )}
+
+                              <div style={styles.dealInfo}>
+                                <strong>Buyer:</strong> {deal.buyerName}
+                              </div>
+
+                              {deal.agentName && (
+                                <div style={styles.dealInfo}>
+                                  <strong>Agent:</strong> {deal.agentName}
+                                </div>
+                              )}
+
+                              <div style={styles.dealInfo}>
+                                <strong>Created:</strong>{" "}
+                                {new Date(deal.createdAt).toLocaleDateString()}
+                              </div>
+
+                              <div style={styles.actionButtons}>
+                                <button
+                                  onClick={() => openDeleteModal("deal", deal)}
+                                  style={styles.iconBtn("red")}
+                                  onMouseEnter={(e) => e.target.style.backgroundColor = "#fecaca"}
+                                  onMouseLeave={(e) => e.target.style.backgroundColor = "#fee2e2"}
+                                >
+                                  🗑️ Delete Deal
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </>
           ) : (
-            <div style={styles.emptyDetails}>
-              <p>👈 Select a user to view details and deals</p>
+            <div style={styles.emptyState}>
+              <div style={styles.emptyIcon}>👆</div>
+              <p>Select a user to view details</p>
             </div>
           )}
         </div>
       </div>
 
-      {selectedDeal && (
-        <div style={styles.modal}>
-          <div style={styles.modalContent}>
-            <div style={styles.modalHeader}>
-              <h3>Deal Details</h3>
-              <button
-                onClick={() => setSelectedDeal(null)}
-                style={styles.closeBtn}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div style={styles.dealDetailsGrid}>
-              <div>
-                <p style={styles.label}>Deal Stage</p>
-                <div
-                  style={{
-                    display: "inline-block",
-                    padding: "6px 12px",
-                    backgroundColor: getStageColor(
-                      selectedDeal.stage || selectedDeal.currentStage
-                    ),
-                    color: "white",
-                    borderRadius: "6px",
-                    fontWeight: "600",
-                    fontSize: "13px",
-                  }}
-                >
-                  {selectedDeal.stage || selectedDeal.currentStage}
-                </div>
-              </div>
-              <div>
-                <p style={styles.label}>Created Date</p>
-                <p style={styles.value}>
-                  {new Date(selectedDeal.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-
-            <div style={styles.sectionDivider}>
-              <h4 style={styles.sectionTitle}>Property Details</h4>
-              <div style={styles.dealDetailsGrid}>
-                <div>
-                  <p style={styles.label}>Property Title</p>
-                  <p style={styles.value}>
-                    {selectedDeal.property?.title || selectedDeal.propertyTitle}
-                  </p>
-                </div>
-                {selectedDeal.property?.city && (
-                  <div>
-                    <p style={styles.label}>Location</p>
-                    <p style={styles.value}>{selectedDeal.property.city}</p>
-                  </div>
-                )}
-                {selectedDeal.property?.price && (
-                  <div>
-                    <p style={styles.label}>Property Price</p>
-                    <p style={styles.value}>
-                      ₹{selectedDeal.property.price.toLocaleString("en-IN")}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {selectedDeal.agreedPrice && (
-              <div style={styles.sectionDivider}>
-                <h4 style={styles.sectionTitle}>Agreed Price</h4>
-                <p
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: "700",
-                    color: "#10b981",
-                  }}
-                >
-                  ₹{selectedDeal.agreedPrice.toLocaleString("en-IN")}
-                </p>
-              </div>
-            )}
-
-            {selectedDeal.seller && (
-              <div style={styles.sectionDivider}>
-                <h4 style={styles.sectionTitle}>Seller Information</h4>
-                <div style={styles.dealDetailsGrid}>
-                  <div>
-                    <p style={styles.label}>Name</p>
-                    <p style={styles.value}>
-                      {selectedDeal.seller.firstName}{" "}
-                      {selectedDeal.seller.lastName}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Email</p>
-                    <p style={styles.value}>{selectedDeal.seller.email}</p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Phone</p>
-                    <p style={styles.value}>
-                      {selectedDeal.seller.mobileNumber}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {selectedDeal.agent && (
-              <div style={styles.sectionDivider}>
-                <h4 style={styles.sectionTitle}>Agent Information</h4>
-                <div style={styles.dealDetailsGrid}>
-                  <div>
-                    <p style={styles.label}>Name</p>
-                    <p style={styles.value}>
-                      {selectedDeal.agent.firstName}{" "}
-                      {selectedDeal.agent.lastName}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Email</p>
-                    <p style={styles.value}>{selectedDeal.agent.email}</p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Phone</p>
-                    <p style={styles.value}>
-                      {selectedDeal.agent.mobileNumber}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+      {/* Delete Confirmation Modal */}
+      {deleteModal.show && (
+        <div style={styles.modal} onClick={closeDeleteModal}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>
+              ⚠️ Confirm Delete
+            </h2>
+            <p style={styles.modalText}>
+              {deleteModal.type === "user" && (
+                <>
+                  Are you sure you want to delete user <strong>{deleteModal.item.firstName} {deleteModal.item.lastName}</strong>?
+                  <br /><br />
+                  This will also delete:
+                  <ul style={{ marginTop: "8px", paddingLeft: "20px" }}>
+                    <li>All properties owned by this user</li>
+                    <li>All deals associated with this user</li>
+                  </ul>
+                </>
+              )}
+              {deleteModal.type === "property" && (
+                <>
+                  Are you sure you want to delete the property <strong>{deleteModal.item.title}</strong>?
+                  <br /><br />
+                  This will also delete all deals associated with this property.
+                </>
+              )}
+              {deleteModal.type === "deal" && (
+                <>
+                  Are you sure you want to delete this deal for <strong>{deleteModal.item.propertyTitle}</strong>?
+                </>
+              )}
+            </p>
             <div style={styles.modalButtons}>
               <button
-                onClick={() => setSelectedDeal(null)}
-                style={styles.cancelBtn}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showEditModal && editingUser && (
-        <div style={styles.modal}>
-          <div style={styles.modalContent}>
-            <div style={styles.modalHeader}>
-              <h3>Edit User</h3>
-              <button
-                onClick={() => setShowEditModal(false)}
-                style={styles.closeBtn}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div style={styles.formGroup}>
-              <label>First Name</label>
-              <input
-                type="text"
-                value={editingUser.firstName || ""}
-                onChange={(e) =>
-                  setEditingUser({ ...editingUser, firstName: e.target.value })
-                }
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.formGroup}>
-              <label>Last Name</label>
-              <input
-                type="text"
-                value={editingUser.lastName || ""}
-                onChange={(e) =>
-                  setEditingUser({ ...editingUser, lastName: e.target.value })
-                }
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.formGroup}>
-              <label>Email</label>
-              <input
-                type="email"
-                value={editingUser.email || ""}
-                onChange={(e) =>
-                  setEditingUser({ ...editingUser, email: e.target.value })
-                }
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.formGroup}>
-              <label>Phone</label>
-              <input
-                type="tel"
-                value={editingUser.mobileNumber || ""}
-                onChange={(e) =>
-                  setEditingUser({
-                    ...editingUser,
-                    mobileNumber: e.target.value,
-                  })
-                }
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.formGroup}>
-              <label>Role</label>
-              <select
-                value={editingUser.role || "USER"}
-                onChange={(e) =>
-                  setEditingUser({ ...editingUser, role: e.target.value })
-                }
-                style={styles.input}
-              >
-                <option value="USER">User</option>
-                <option value="AGENT">Agent</option>
-                <option value="ADMIN">Admin</option>
-              </select>
-            </div>
-
-            <div style={styles.formGroup}>
-              <label>Address</label>
-              <textarea
-                value={editingUser.address || ""}
-                onChange={(e) =>
-                  setEditingUser({ ...editingUser, address: e.target.value })
-                }
-                style={styles.textarea}
-              />
-            </div>
-
-            <div style={styles.modalButtons}>
-              <button onClick={handleSaveUser} style={styles.saveBtn}>
-                💾 Save Changes
-              </button>
-              <button
-                onClick={() => setShowEditModal(false)}
-                style={styles.cancelBtn}
+                onClick={closeDeleteModal}
+                style={styles.modalBtn("cancel")}
               >
                 Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                style={styles.modalBtn("danger")}
+                onMouseEnter={(e) => e.target.style.backgroundColor = "#dc2626"}
+                onMouseLeave={(e) => e.target.style.backgroundColor = "#ef4444"}
+              >
+                Delete
               </button>
             </div>
           </div>
@@ -764,399 +932,6 @@ const AdminUsersPage = () => {
       )}
     </div>
   );
-};
-
-const getRoleColor = (role) => {
-  const colors = {
-    USER: "#3b82f6",
-    AGENT: "#10b981",
-    ADMIN: "#f59e0b",
-  };
-  return colors[role] || "#6b7280";
-};
-
-const styles = {
-  container: {
-    maxWidth: 1700,
-    margin: "0 auto",
-    padding: "24px 32px",
-    minHeight: "100vh",
-    backgroundColor: "#f8fafc",
-    marginTop: "10px",
-  },
-  header: {
-    marginBottom: "32px",
-  },
-  title: {
-    fontSize: "32px",
-    fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: "8px",
-  },
-  subtitle: {
-    fontSize: "16px",
-    color: "#64748b",
-    margin: 0,
-  },
-  loading: {
-    textAlign: "center",
-    padding: "80px 20px",
-    fontSize: "18px",
-    color: "#64748b",
-  },
-  controlsSection: {
-    marginBottom: "24px",
-  },
-  searchBox: {
-    marginBottom: "16px",
-  },
-  searchInput: {
-    width: "100%",
-    padding: "12px 16px",
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
-    fontSize: "14px",
-    boxSizing: "border-box",
-  },
-  filterButtons: {
-    display: "flex",
-    gap: "12px",
-    flexWrap: "wrap",
-  },
-  filterBtn: {
-    padding: "10px 16px",
-    backgroundColor: "#f1f5f9",
-    border: "1px solid #e2e8f0",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "14px",
-    transition: "all 0.2s",
-  },
-  activeFilter: {
-    backgroundColor: "#3b82f6",
-    color: "white",
-    borderColor: "#3b82f6",
-  },
-  mainContent: {
-    display: "grid",
-    gridTemplateColumns: "350px 1fr",
-    gap: "24px",
-  },
-  usersList: {
-    backgroundColor: "white",
-    borderRadius: "12px",
-    padding: "20px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-    height: "fit-content",
-  },
-  usersHeader: {
-    marginBottom: "16px",
-    paddingBottom: "12px",
-    borderBottom: "2px solid #e2e8f0",
-  },
-  usersGrid: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  userCard: {
-    padding: "12px",
-    borderRadius: "8px",
-    border: "1px solid",
-    transition: "all 0.2s",
-  },
-  userCardHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: "8px",
-  },
-  userName: {
-    fontSize: "14px",
-    fontWeight: "700",
-    color: "#1e293b",
-    margin: 0,
-  },
-  userEmail: {
-    fontSize: "12px",
-    color: "#64748b",
-    margin: "4px 0 0 0",
-  },
-  roleBadge: {
-    display: "inline-block",
-    padding: "4px 8px",
-    borderRadius: "4px",
-    color: "white",
-    fontSize: "10px",
-    fontWeight: "600",
-  },
-  userInfo: {
-    fontSize: "12px",
-    color: "#64748b",
-    margin: 0,
-  },
-  userDetails: {
-    backgroundColor: "white",
-    borderRadius: "12px",
-    padding: "20px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-    overflowY: "auto",
-    maxHeight: "calc(100vh - 200px)",
-  },
-  detailsCard: {
-    marginBottom: "24px",
-    paddingBottom: "24px",
-    borderBottom: "2px solid #e2e8f0",
-  },
-  detailsTitle: {
-    fontSize: "20px",
-    fontWeight: "700",
-    color: "#1e293b",
-    margin: "0 0 16px 0",
-  },
-  detailsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
-    gap: "16px",
-    marginBottom: "16px",
-  },
-  label: {
-    fontSize: "12px",
-    color: "#64748b",
-    margin: "0 0 4px 0",
-    fontWeight: "600",
-  },
-  value: {
-    fontSize: "14px",
-    fontWeight: "700",
-    color: "#1e293b",
-    margin: 0,
-  },
-  addressSection: {
-    marginTop: "16px",
-    padding: "12px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "6px",
-  },
-  actionButtons: {
-    display: "flex",
-    gap: "12px",
-    marginTop: "16px",
-  },
-  editBtn: {
-    flex: 1,
-    padding: "10px 16px",
-    backgroundColor: "#3b82f6",
-    color: "white",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "14px",
-  },
-  deleteBtn: {
-    flex: 1,
-    padding: "10px 16px",
-    backgroundColor: "#ef4444",
-    color: "white",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "14px",
-  },
-  dealsSection: {
-    marginTop: "24px",
-  },
-  dealsTitle: {
-    fontSize: "18px",
-    fontWeight: "700",
-    color: "#1e293b",
-    margin: "0 0 16px 0",
-  },
-  dealsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-    gap: "12px",
-  },
-  dealCard: {
-    padding: "12px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-  },
-  dealStageBadge: {
-    display: "inline-block",
-    padding: "4px 8px",
-    borderRadius: "4px",
-    color: "white",
-    fontSize: "10px",
-    fontWeight: "600",
-    marginBottom: "8px",
-  },
-  dealTitle: {
-    fontSize: "13px",
-    fontWeight: "700",
-    color: "#1e293b",
-    margin: "0 0 8px 0",
-  },
-  dealMeta: {
-    fontSize: "11px",
-    color: "#64748b",
-    margin: "4px 0",
-  },
-  dealPrice: {
-    fontSize: "12px",
-    fontWeight: "700",
-    color: "#10b981",
-    margin: "8px 0 4px 0",
-  },
-  dealDate: {
-    fontSize: "10px",
-    color: "#94a3b8",
-    margin: "4px 0",
-  },
-  viewDealDetailsBtn: {
-    width: "100%",
-    marginTop: "8px",
-    padding: "6px 10px",
-    backgroundColor: "#3b82f6",
-    color: "white",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "11px",
-    transition: "background 0.2s",
-  },
-  emptyDeals: {
-    textAlign: "center",
-    padding: "20px",
-    color: "#64748b",
-    backgroundColor: "#f8fafc",
-    borderRadius: "8px",
-    border: "1px dashed #e2e8f0",
-    fontSize: "13px",
-  },
-  emptyDetails: {
-    textAlign: "center",
-    padding: "60px 20px",
-    color: "#64748b",
-  },
-  emptyState: {
-    textAlign: "center",
-    padding: "40px 20px",
-    color: "#64748b",
-    backgroundColor: "#f8fafc",
-    borderRadius: "8px",
-    border: "1px dashed #e2e8f0",
-  },
-  modal: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1000,
-  },
-  modalContent: {
-    backgroundColor: "white",
-    borderRadius: "12px",
-    padding: "24px",
-    maxWidth: "600px",
-    width: "90%",
-    maxHeight: "90vh",
-    overflowY: "auto",
-  },
-  modalHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "16px",
-    paddingBottom: "12px",
-    borderBottom: "1px solid #e2e8f0",
-  },
-  closeBtn: {
-    backgroundColor: "transparent",
-    border: "none",
-    fontSize: "24px",
-    cursor: "pointer",
-    color: "#64748b",
-  },
-  dealDetailsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-    gap: "16px",
-    marginBottom: "12px",
-  },
-  sectionDivider: {
-    marginTop: "16px",
-    paddingTop: "16px",
-    borderTop: "1px solid #e2e8f0",
-  },
-  sectionTitle: {
-    fontSize: "14px",
-    fontWeight: "700",
-    color: "#1e293b",
-    margin: "0 0 12px 0",
-  },
-  formGroup: {
-    marginBottom: "16px",
-  },
-  input: {
-    width: "100%",
-    padding: "10px 12px",
-    borderRadius: "6px",
-    border: "1px solid #e2e8f0",
-    fontSize: "14px",
-    boxSizing: "border-box",
-    fontFamily: "inherit",
-  },
-  textarea: {
-    width: "100%",
-    padding: "10px 12px",
-    borderRadius: "6px",
-    border: "1px solid #e2e8f0",
-    fontSize: "14px",
-    boxSizing: "border-box",
-    minHeight: "100px",
-    fontFamily: "inherit",
-  },
-  modalButtons: {
-    display: "flex",
-    gap: "12px",
-    marginTop: "20px",
-  },
-  saveBtn: {
-    flex: 1,
-    padding: "10px 16px",
-    backgroundColor: "#10b981",
-    color: "white",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "14px",
-  },
-  cancelBtn: {
-    flex: 1,
-    padding: "10px 16px",
-    backgroundColor: "#e2e8f0",
-    color: "#1e293b",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "14px",
-  },
 };
 
 export default AdminUsersPage;

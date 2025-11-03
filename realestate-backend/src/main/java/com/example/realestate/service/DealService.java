@@ -619,4 +619,27 @@ public class DealService {
         deal.setUpdatedAt(LocalDateTime.now());
         dealStatusRepository.save(deal);
     }
+    // Add this method to your DealService.java
+
+    /**
+     * ⭐ DELETE A SINGLE DEAL BY ID (NEW)
+     * Deletes a specific deal
+     */
+    @Transactional
+    public void deleteDeal(Long dealId) {
+        logger.info("🗑️ Deleting single deal with ID: {}", dealId);
+
+        DealStatus deal = dealStatusRepository.findById(dealId)
+                .orElseThrow(() -> new RuntimeException("Deal not found with ID: " + dealId));
+
+        logger.info("Deleting Deal ID: {} (Property: {}, Buyer: {}, Stage: {})",
+                deal.getId(),
+                deal.getProperty() != null ? deal.getProperty().getTitle() : "N/A",
+                deal.getBuyer() != null ? deal.getBuyer().getId() : "N/A",
+                deal.getStage());
+
+        dealStatusRepository.delete(deal);
+
+        logger.info("✅ Successfully deleted deal {}", dealId);
+    }
 }
