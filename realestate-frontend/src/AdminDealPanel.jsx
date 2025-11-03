@@ -11,11 +11,20 @@ const AdminDealPanel = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
   const [error, setError] = useState(null);
-  const [sortOrder, setSortOrder] = useState("newest"); // 'newest' (default) or 'oldest' (by days since creation)
+  const [sortOrder, setSortOrder] = useState("newest");
+  const [openAgents, setOpenAgents] = useState({});
 
-  // State for managing open/closed agent deals
-  const [openAgents, setOpenAgents] = useState({}); // { 'agentId-agentName': true/false }
-
+  // ✅ NEW: State for dashboard stats
+  const [dashboardStats, setDashboardStats] = useState({
+    totalDeals: 0,
+    inquiryCount: 0,
+    shortlistCount: 0,
+    negotiationCount: 0,
+    agreementCount: 0,
+    registrationCount: 0,
+    paymentCount: 0,
+    completedCount: 0
+  });
 
   useEffect(() => {
     if (user?.id) {
@@ -35,86 +44,107 @@ const AdminDealPanel = () => {
       const allDealsFlat = [];
       const agentDealsMap = {};
 
-      // ✅ Fetch admin dashboard to get all agents
-      console.log("📊 Fetching admin dashboard data...");
-      const adminRes = await fetch(
-        `${BACKEND_BASE_URL}/api/deals/admin/dashboard?userId=${user.id}`,
+      // ✅ FIXED: Fetch dashboard stats separately
+      console.log("📊 Fetching dashboard stats...");
+      const dashboardRes = await fetch(
+        `${BACKEND_BASE_URL}/api/deals/admin/dashboard`,
         { headers }
       );
 
-      if (adminRes.ok) {
-        const adminData = await adminRes.json();
-        console.log("✅ Admin dashboard response:", adminData);
+      if (dashboardRes.ok) {
+        const dashboardData = await dashboardRes.json();
+        console.log("✅ Dashboard stats response:", dashboardData);
 
-        if (adminData.success && adminData.data?.agentPerformance) {
-          console.log(`Found ${adminData.data.agentPerformance.length} agents`);
-
-          // Fetch deals for each agent
-          // --- START MODIFIED CODE ---
-          const initialOpenAgents = {}; // Initialize as empty object to keep all deals closed by default
-          // --- END MODIFIED CODE ---
-
-          for (const agentPerf of adminData.data.agentPerformance) {
-            console.log(
-              `📥 Fetching deals for agent: ${agentPerf.agentName} (ID: ${agentPerf.agentId})`
-            );
-
-            const agentDealsRes = await fetch(
-              `${BACKEND_BASE_URL}/api/deals/admin/agent/${agentPerf.agentId}?userId=${user.id}`,
-              { headers }
-            );
-
-            if (agentDealsRes.ok) {
-              const agentDealsData = await agentDealsRes.json();
-              console.log(
-                `Response for ${agentPerf.agentName}:`,
-                agentDealsData
-              );
-
-              let deals = [];
-              if (Array.isArray(agentDealsData)) {
-                deals = agentDealsData;
-              } else if (
-                agentDealsData.data &&
-                Array.isArray(agentDealsData.data)
-              ) {
-                deals = agentDealsData.data;
-              } else if (
-                agentDealsData.success &&
-                Array.isArray(agentDealsData.data)
-              ) {
-                deals = agentDealsData.data;
-              }
-
-              console.log(
-                `✅ Got ${deals.length} deals for agent ${agentPerf.agentName}`
-              );
-
-              if (deals.length > 0) {
-                const agentKey = `${agentPerf.agentId}-${agentPerf.agentName}`;
-                agentDealsMap[agentKey] = {
-                  agentId: agentPerf.agentId,
-                  agentName: agentPerf.agentName,
-                  agentEmail: agentPerf.agentEmail,
-                  agentMobile: agentPerf.agentMobile,
-                  totalDeals: agentPerf.totalDeals,
-                  completedDeals: agentPerf.completedDeals,
-                  deals: deals,
-                };
-                allDealsFlat.push(...deals);
-                // REMOVED: initialOpenAgents[agentKey] = true;
-              }
-            } else {
-              console.warn(
-                `⚠️ Failed to fetch deals for agent ${agentPerf.agentName}`
-              );
-            }
-          }
-          setOpenAgents(initialOpenAgents); // This will set openAgents to {} (all closed)
+        if (dashboardData.success && dashboardData.data) {
+          setDashboardStats(dashboardData.data);
         }
+      }
+
+      // ✅ FIXED: Fetch agents performance separately
+      console.log("📊 Fetching agents performance data...");
+      const agentsRes = await fetch(
+        `${BACKEND_BASE_URL}/api/deals/admin/agents-performance`,
+        { headers }
+      );
+
+      if (agentsRes.ok) {
+        const agentsData = await agentsRes.json();
+        console.log("✅ Agents performance response:", agentsData);
+
+        // ✅ Handle the response - it might be wrapped in ApiResponse
+        let agentPerformance = [];
+        if (Array.isArray(agentsData)) {
+          agentPerformance = agentsData;
+        } else if (agentsData.success && Array.isArray(agentsData.data)) {
+          agentPerformance = agentsData.data;
+        } else if (agentsData.data && Array.isArray(agentsData.data)) {
+          agentPerformance = agentsData.data;
+        }
+
+        console.log(`Found ${agentPerformance.length} agents`);
+
+        // Fetch deals for each agent
+        const initialOpenAgents = {};
+
+        for (const agentPerf of agentPerformance) {
+          console.log(
+            `📥 Fetching deals for agent: ${agentPerf.agentName} (ID: ${agentPerf.agentId})`
+          );
+
+          const agentDealsRes = await fetch(
+            `${BACKEND_BASE_URL}/api/deals/admin/agent/${agentPerf.agentId}`,
+            { headers }
+          );
+
+          if (agentDealsRes.ok) {
+            const agentDealsData = await agentDealsRes.json();
+            console.log(
+              `Response for ${agentPerf.agentName}:`,
+              agentDealsData
+            );
+
+            let deals = [];
+            if (Array.isArray(agentDealsData)) {
+              deals = agentDealsData;
+            } else if (
+              agentDealsData.data &&
+              Array.isArray(agentDealsData.data)
+            ) {
+              deals = agentDealsData.data;
+            } else if (
+              agentDealsData.success &&
+              Array.isArray(agentDealsData.data)
+            ) {
+              deals = agentDealsData.data;
+            }
+
+            console.log(
+              `✅ Got ${deals.length} deals for agent ${agentPerf.agentName}`
+            );
+
+            if (deals.length > 0) {
+              const agentKey = `${agentPerf.agentId}-${agentPerf.agentName}`;
+              agentDealsMap[agentKey] = {
+                agentId: agentPerf.agentId,
+                agentName: agentPerf.agentName,
+                agentEmail: agentPerf.agentEmail,
+                agentMobile: agentPerf.agentMobile,
+                totalDeals: agentPerf.totalDeals,
+                completedDeals: agentPerf.completedDeals,
+                deals: deals,
+              };
+              allDealsFlat.push(...deals);
+            }
+          } else {
+            console.warn(
+              `⚠️ Failed to fetch deals for agent ${agentPerf.agentName}`
+            );
+          }
+        }
+        setOpenAgents(initialOpenAgents);
       } else {
-        console.error("❌ Failed to fetch admin dashboard:", adminRes.status);
-        setError(`Failed to load admin dashboard (${adminRes.status})`);
+        console.error("❌ Failed to fetch agents performance:", agentsRes.status);
+        setError(`Failed to load agents performance (${agentsRes.status})`);
       }
 
       console.log(`✅ Total deals loaded: ${allDealsFlat.length}`);
@@ -151,9 +181,7 @@ const AdminDealPanel = () => {
     let completedValue = 0;
 
     deals.forEach(deal => {
-      // Use agreedPrice if available, otherwise fallback to propertyPrice
       const price = deal.agreedPrice || deal.propertyPrice || 0;
-
       totalValue += price;
 
       if (deal.stage === 'COMPLETED') {
@@ -180,7 +208,6 @@ const AdminDealPanel = () => {
       return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-
   const getFilteredDealsByAgent = () => {
     const filtered = {};
     Object.keys(dealsByAgent).forEach((agentKey) => {
@@ -191,20 +218,16 @@ const AdminDealPanel = () => {
         deals = deals.filter((d) => d.stage === activeTab);
       }
 
-      // --- Sorting Filter ---
       deals.sort((a, b) => {
         const daysA = getDaysSinceCreation(a.createdAt);
         const daysB = getDaysSinceCreation(b.createdAt);
 
-        // Sort deals by days since creation (Highest to Lowest)
         if (sortOrder === "oldest") {
-            return daysB - daysA; // Highest days (oldest) first
+          return daysB - daysA;
+        } else {
+          return daysA - daysB;
         }
-        // Default: Sort by newest first (lowest days)
-        return daysA - daysB;
       });
-      // --- End Sorting Filter ---
-
 
       if (deals.length > 0) {
         filtered[agentKey] = {
@@ -213,364 +236,393 @@ const AdminDealPanel = () => {
         };
       }
     });
+
     return filtered;
   };
 
+  const getTabCount = (stage) => {
+    if (stage === "all") return allDeals.length;
+    return allDeals.filter((d) => d.stage === stage).length;
+  };
+
+  // Styles
   const containerStyle = {
     maxWidth: "1700px",
     margin: "0 auto",
-    padding: "24px",
-    marginTop: "10px",
+    padding: "24px 32px",
+    backgroundColor: "#f9fafb",
+    minHeight: "100vh",
+  };
+
+  const headerStyle = {
+    marginBottom: "32px",
+    paddingBottom: "24px",
+    borderBottom: "2px solid #e5e7eb",
   };
 
   const titleStyle = {
-    fontSize: "32px",
-    fontWeight: "700",
+    fontSize: "36px",
+    fontWeight: "800",
     color: "#1e293b",
-    marginBottom: "8px",
+    margin: "0 0 8px 0",
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
   };
 
   const subtitleStyle = {
-    fontSize: "16px",
+    fontSize: "14px",
     color: "#64748b",
-    marginBottom: "24px",
+    margin: "8px 0 0 0",
   };
 
-  const tabsStyle = {
+  const tabContainerStyle = {
     display: "flex",
-    gap: "12px",
+    gap: "8px",
     marginBottom: "24px",
-    borderBottom: "2px solid #e2e8f0",
-    paddingBottom: "12px",
-    overflowX: "auto",
+    flexWrap: "wrap",
+    alignItems: "center",
   };
 
   const tabStyle = (isActive) => ({
-    padding: "10px 20px",
-    backgroundColor: isActive ? "#3b82f6" : "#f8fafc",
+    padding: "10px 18px",
+    backgroundColor: isActive ? "#3b82f6" : "white",
     color: isActive ? "white" : "#64748b",
-    border: "none",
-    borderRadius: "6px",
+    border: isActive ? "2px solid #3b82f6" : "2px solid #e5e7eb",
+    borderRadius: "8px",
     cursor: "pointer",
+    fontSize: "13px",
     fontWeight: "600",
-    fontSize: "14px",
-    whiteSpace: "nowrap",
+    transition: "all 0.2s",
+  });
+
+  const sortButtonStyle = (isActive) => ({
+    padding: "10px 18px",
+    backgroundColor: isActive ? "#10b981" : "white",
+    color: isActive ? "white" : "#64748b",
+    border: isActive ? "2px solid #10b981" : "2px solid #e5e7eb",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "13px",
+    fontWeight: "600",
+    transition: "all 0.2s",
+    marginLeft: "auto",
   });
 
   const agentSectionStyle = {
-    backgroundColor: "#f9fafb",
+    marginBottom: "32px",
+    backgroundColor: "white",
     borderRadius: "12px",
-    padding: "24px",
-    marginBottom: "24px",
-    border: "2px solid #e2e8f0",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+    border: "1px solid #e5e7eb",
+    overflow: "hidden",
   };
 
   const agentHeaderStyle = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: "20px",
-    paddingBottom: "16px",
-    borderBottom: "2px solid #e2e8f0",
+    padding: "20px 24px",
+    backgroundColor: "#f8fafc",
+    borderBottom: "1px solid #e5e7eb",
   };
 
   const agentNameStyle = {
-    fontSize: "22px",
+    fontSize: "20px",
     fontWeight: "700",
     color: "#1e293b",
-    margin: "0 0 12px 0",
+    margin: "0 0 8px 0",
   };
 
-  const agentMetaStyle = {
-    display: "flex",
-    gap: "16px",
-    flexWrap: "wrap",
+  const agentInfoStyle = {
     fontSize: "13px",
     color: "#64748b",
+    margin: "0",
   };
 
-  const agentStatsStyle = {
-    display: "flex",
-    gap: "12px",
-    flexWrap: 'wrap',
-  };
-
-  const statBoxStyle = {
+  const financialStatsContainerStyle = {
+    padding: "20px 24px",
     backgroundColor: "white",
-    padding: "10px 14px", // BASE PADDING
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
-    textAlign: "center",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+    gap: "16px",
+    alignItems: "center",
   };
 
-  const financialStatBoxStyle = (isCompleted, isSuccessRate) => ({
-    ...statBoxStyle,
-    backgroundColor: isSuccessRate ? '#e0f2fe' : isCompleted ? '#ecfdf5' : '#fef2f2',
-    border: isSuccessRate ? '1px solid #93c5fd' : isCompleted ? '1px solid #34d399' : '1px solid #fca5a5',
+  const financialStatBoxStyle = (isPositive = false, isNeutral = false) => ({
+    padding: "16px",
+    backgroundColor: isPositive ? "#dcfce7" : isNeutral ? "#f1f5f9" : "#fee2e2",
+    borderRadius: "8px",
+    border: isPositive ? "1px solid #10b981" : isNeutral ? "1px solid #cbd5e1" : "1px solid #f87171",
+    textAlign: "center",
   });
 
   const statLabelStyle = {
-    fontSize: "11px",
-    color: "#64748b",
+    fontSize: "12px",
     fontWeight: "600",
-    marginBottom: "4px",
+    color: "#64748b",
+    marginBottom: "8px",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
   };
 
-  const statValueStyle = {
-    fontSize: "18px",
-    fontWeight: "700",
-    color: "#3b82f6",
-  };
-
-  const financialStatValueStyle = (isCompleted, isSuccessRate) => ({
-    fontSize: "18px",
-    fontWeight: "700",
-    color: isSuccessRate ? "#0284c7" : isCompleted ? '#059669' : '#ef4444',
+  const financialStatValueStyle = (isPositive = false, isNeutral = false) => ({
+    fontSize: "24px",
+    fontWeight: "800",
+    color: isPositive ? "#065f46" : isNeutral ? "#475569" : "#991b1b",
   });
 
-  // Final Toggle Button Style Matching Stat Boxes
   const toggleButtonStyle = (isOpen) => ({
-      ...statBoxStyle, // Inherit base box style (padding, border, etc.)
-      padding: "10px 14px",
-
-      // Background and border color depend on state
-      backgroundColor: isOpen ? '#e0f2fe' : '#ecfdf5', // Light blue (open) or light green (closed)
-      border: isOpen ? '1px solid #93c5fd' : '1px solid #34d399', // Blue or Green border
-
-      cursor: "pointer",
-
-      // Ensure the content is centered
-      display: 'flex',
-      flexDirection: 'column', // Align content vertically
-      alignItems: 'center',
-      justifyContent: 'center',
-
-      // Remove text, just show icon and label below
-      color: isOpen ? "#0284c7" : "#059669", // Icon/Text color matches financial palette
-      fontWeight: "700",
-      fontSize: "18px", // This controls the icon size now
-      transition: 'all 0.2s',
+    padding: "16px",
+    backgroundColor: isOpen ? "#dbeafe" : "#f0f9ff",
+    border: isOpen ? "1px solid #3b82f6" : "1px solid #93c5fd",
+    borderRadius: "8px",
+    cursor: "pointer",
+    textAlign: "center",
+    transition: "all 0.2s",
+    color: isOpen ? "#1e3a8a" : "#3b82f6",
+    fontWeight: "600",
   });
 
   const gridStyle = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-    gap: "16px",
+    gap: "20px",
+    padding: "24px",
   };
 
   const cardStyle = {
-    padding: "16px",
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "white",
     borderRadius: "12px",
+    padding: "20px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
     border: "1px solid #e5e7eb",
     cursor: "pointer",
     transition: "all 0.2s",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.08), 0 0 12px rgba(59, 130, 246, 0.1)",
-    background: "linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)",
+    position: "relative",
   };
 
-  // Stage Badge Style - Updated to support COMPLETED
-  const stageBadgeStyle = (stage) => ({
-      display: "inline-block",
-      padding: "4px 8px",
-      backgroundColor: stage === "COMPLETED" ? "#10b981" : "#f59e0b",
-      color: "white",
-      borderRadius: "4px",
+  const stageBadgeStyle = (stage) => {
+    const colors = {
+      INQUIRY: { bg: "#dbeafe", text: "#1e40af" },
+      SHORTLIST: { bg: "#e0e7ff", text: "#4338ca" },
+      NEGOTIATION: { bg: "#fef3c7", text: "#92400e" },
+      AGREEMENT: { bg: "#dcfce7", text: "#065f46" },
+      REGISTRATION: { bg: "#dbeafe", text: "#075985" },
+      PAYMENT: { bg: "#fce7f3", text: "#9f1239" },
+      COMPLETED: { bg: "#d1fae5", text: "#065f46" },
+    };
+
+    const color = colors[stage] || { bg: "#f3f4f6", text: "#6b7280" };
+
+    return {
+      position: "absolute",
+      top: "12px",
+      right: "12px",
+      padding: "6px 12px",
+      backgroundColor: color.bg,
+      color: color.text,
       fontSize: "11px",
-      fontWeight: "600",
-      marginBottom: "8px",
-      boxShadow: `0 2px 4px rgba(${stage === "COMPLETED" ? '16, 185, 129' : '245, 158, 11'}, 0.3)`,
-  });
+      fontWeight: "700",
+      borderRadius: "6px",
+      textTransform: "uppercase",
+      letterSpacing: "0.5px",
+    };
+  };
 
   const titleSmallStyle = {
     margin: "0 0 12px 0",
+    fontSize: "16px",
+    fontWeight: "700",
     color: "#1e293b",
-    fontWeight: "600",
-    fontSize: "14px",
+    paddingRight: "100px",
   };
 
-  // Button Style - Updated to support COMPLETED
   const buttonStyle = (isCompleted) => ({
     width: "100%",
-    padding: "8px 12px",
+    padding: "10px",
     backgroundColor: isCompleted ? "#10b981" : "#3b82f6",
     color: "white",
     border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
+    borderRadius: "8px",
+    fontSize: "13px",
     fontWeight: "600",
-    fontSize: "12px",
+    cursor: "pointer",
+    transition: "all 0.2s",
   });
 
   if (loading) {
     return (
-      <div style={containerStyle}>
-        <h2>⏳ Loading deals...</h2>
+      <div style={{ ...containerStyle, textAlign: "center", paddingTop: "80px" }}>
+        <div style={{ fontSize: "18px", color: "#64748b" }}>
+          Loading deals...
+        </div>
       </div>
     );
   }
 
-  if (!user) {
+  if (error) {
     return (
-      <div style={containerStyle}>
-        <h2>❌ Please log in to view deals</h2>
+      <div style={{ ...containerStyle, textAlign: "center", paddingTop: "80px" }}>
+        <div style={{ fontSize: "18px", color: "#ef4444", marginBottom: "16px" }}>
+          {error}
+        </div>
+        <button
+          onClick={fetchDeals}
+          style={{
+            padding: "12px 24px",
+            backgroundColor: "#3b82f6",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontSize: "14px",
+            fontWeight: "600",
+          }}
+        >
+          Retry
+        </button>
       </div>
     );
   }
-
-  const stages = [
-    "INQUIRY",
-    "SHORTLIST",
-    "NEGOTIATION",
-    "AGREEMENT",
-    "REGISTRATION",
-    "PAYMENT",
-    "COMPLETED",
-  ];
-  const stageCounts = {};
-  stages.forEach((stage) => {
-    stageCounts[stage] = allDeals.filter((d) => d.stage === stage).length;
-  });
 
   const filteredDealsByAgent = getFilteredDealsByAgent();
-  const totalAgents = Object.keys(dealsByAgent).length;
+  const agentCount = Object.keys(dealsByAgent).length;
 
   return (
     <div style={containerStyle}>
-      <h1 style={titleStyle}>⚙️ Admin Dashboard - Deal Management</h1>
-      <p style={subtitleStyle}>
-        {totalAgents} Agent{totalAgents !== 1 ? "s" : ""} • {allDeals.length}{" "}
-        Total Deals
-      </p>
+      {/* Header */}
+      <div style={headerStyle}>
+        <h1 style={titleStyle}>
+          🏢 Admin Dashboard - Deal Management
+        </h1>
+        <p style={subtitleStyle}>
+          {agentCount} Agents • {dashboardStats.totalDeals} Total Deals
+        </p>
+      </div>
 
-      {error && (
-        <div
-          style={{
-            padding: "12px 16px",
-            backgroundColor: "#fee2e2",
-            color: "#dc2626",
-            borderRadius: "8px",
-            marginBottom: "16px",
-            border: "1px solid #fecaca",
-          }}
-        >
-          ❌ {error}
-        </div>
-      )}
-
-      {/* Filter Tabs and Sort Button */}
-      <div style={tabsStyle}>
+      {/* Stage Filter Tabs */}
+      <div style={tabContainerStyle}>
         <button
           style={tabStyle(activeTab === "all")}
           onClick={() => setActiveTab("all")}
         >
-          All Deals ({allDeals.length})
+          All Deals ({getTabCount("all")})
         </button>
-        {stages.map((stage) => (
-          <button
-            key={stage}
-            style={tabStyle(activeTab === stage)}
-            onClick={() => setActiveTab(stage)}
-          >
-            {stage} ({stageCounts[stage]})
-          </button>
-        ))}
-
-        {/* --- START Sort Button --- */}
         <button
-            style={{
-                ...tabStyle(false),
-                marginLeft: 'auto',
-                backgroundColor: sortOrder === 'oldest' ? "#f59e0b" : "#e2e8f0",
-                color: sortOrder === 'oldest' ? "white" : "#1e293b",
-                fontWeight: '700'
-            }}
-            onClick={() => setSortOrder(sortOrder === "newest" ? "oldest" : "newest")}
+          style={tabStyle(activeTab === "INQUIRY")}
+          onClick={() => setActiveTab("INQUIRY")}
         >
-            {sortOrder === "newest" ? "📅 Sort: Newest First" : "🚨 Sort: Oldest First"}
+          INQUIRY ({getTabCount("INQUIRY")})
         </button>
-        {/* --- END Sort Button --- */}
+        <button
+          style={tabStyle(activeTab === "SHORTLIST")}
+          onClick={() => setActiveTab("SHORTLIST")}
+        >
+          SHORTLIST ({getTabCount("SHORTLIST")})
+        </button>
+        <button
+          style={tabStyle(activeTab === "NEGOTIATION")}
+          onClick={() => setActiveTab("NEGOTIATION")}
+        >
+          NEGOTIATION ({getTabCount("NEGOTIATION")})
+        </button>
+        <button
+          style={tabStyle(activeTab === "AGREEMENT")}
+          onClick={() => setActiveTab("AGREEMENT")}
+        >
+          AGREEMENT ({getTabCount("AGREEMENT")})
+        </button>
+        <button
+          style={tabStyle(activeTab === "REGISTRATION")}
+          onClick={() => setActiveTab("REGISTRATION")}
+        >
+          REGISTRATION ({getTabCount("REGISTRATION")})
+        </button>
+        <button
+          style={tabStyle(activeTab === "PAYMENT")}
+          onClick={() => setActiveTab("PAYMENT")}
+        >
+          PAYMENT ({getTabCount("PAYMENT")})
+        </button>
+        <button
+          style={tabStyle(activeTab === "COMPLETED")}
+          onClick={() => setActiveTab("COMPLETED")}
+        >
+          COMPLETED ({getTabCount("COMPLETED")})
+        </button>
+
+        {/* Sort Button */}
+        <button
+          style={sortButtonStyle(sortOrder === "oldest")}
+          onClick={() => setSortOrder(sortOrder === "newest" ? "oldest" : "newest")}
+        >
+          📊 Sort: {sortOrder === "newest" ? "Newest First" : "Oldest First"}
+        </button>
       </div>
 
-      {/* Deals grouped by agent */}
+      {/* Deals by Agent */}
       {Object.keys(filteredDealsByAgent).length === 0 ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "60px 20px",
-            color: "#64748b",
-            backgroundColor: "#f8fafc",
-            borderRadius: "12px",
-          }}
-        >
-          <div style={{ fontSize: "48px", marginBottom: "12px" }}>🔍</div>
-          <p style={{ margin: 0, fontSize: "16px", fontWeight: "600" }}>
-            No deals found
-          </p>
+        <div style={{ textAlign: "center", padding: "60px 20px", color: "#64748b" }}>
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>🔍</div>
+          <div style={{ fontSize: "18px", fontWeight: "600" }}>No deals found</div>
+          <div style={{ fontSize: "14px", marginTop: "8px" }}>
+            {activeTab === "all"
+              ? "No deals have been created yet"
+              : `No deals in ${activeTab} stage`}
+          </div>
         </div>
       ) : (
         <div>
-          {Object.entries(filteredDealsByAgent).map(([agentKey, agentData]) => {
-            const financials = calculateFinancials(agentData.deals);
-            const successRate = calculateSuccessRate(agentData.totalDeals, agentData.completedDeals);
-
-            const dealsToRender = filteredDealsByAgent[agentKey]?.deals || [];
-            const isAgentDealsOpen = openAgents[agentKey]; // Check the state
+          {Object.keys(filteredDealsByAgent).map((agentKey) => {
+            const agentData = filteredDealsByAgent[agentKey];
+            const dealsToRender = agentData.deals;
+            const financials = calculateFinancials(dealsToRender);
+            const isAgentDealsOpen = openAgents[agentKey] || false;
 
             return (
               <div key={agentKey} style={agentSectionStyle}>
                 {/* Agent Header */}
                 <div style={agentHeaderStyle}>
-                  <div>
-                    <h2 style={agentNameStyle}>📊 {agentData.agentName}</h2>
-                    <div style={agentMetaStyle}>
-                      <span>
-                        <strong>🆔 ID:</strong> {agentData.agentId}
-                      </span>
-                      <span>
-                        <strong>📧 Email:</strong> {agentData.agentEmail || "N/A"}
-                      </span>
-                      <span>
-                        <strong>📞 Phone:</strong>{" "}
-                        {agentData.agentMobile || "N/A"}
-                      </span>
-                    </div>
-                  </div>
-                  <div style={agentStatsStyle}>
-                    {/* Deal Counts (Standard) */}
-                    <div style={statBoxStyle}>
-                      <div style={statLabelStyle}>Total Deals</div>
-                      <div style={statValueStyle}>{agentData.totalDeals}</div>
-                    </div>
-                    <div style={statBoxStyle}>
-                      <div style={statLabelStyle}>Completed</div>
-                      <div style={statValueStyle}>{agentData.completedDeals}</div>
-                    </div>
-                    <div style={statBoxStyle}>
-                      <div style={statLabelStyle}>Filtered</div>
-                      <div style={statValueStyle}>{dealsToRender.length}</div>
-                    </div>
+                  <h2 style={agentNameStyle}>
+                    👤 {agentData.agentName}
+                  </h2>
+                  <p style={agentInfoStyle}>
+                    📧 {agentData.agentEmail || "N/A"}
+                    {agentData.agentMobile && ` • 📞 ${agentData.agentMobile}`}
+                  </p>
+                </div>
 
-                    {/* Financial Stats */}
-                    {/* 1. Success Rate */}
+                {/* Financial Stats Row */}
+                <div>
+                  <div style={financialStatsContainerStyle}>
+                    {/* 1. Total Pipeline Value */}
                     <div style={financialStatBoxStyle(false, true)}>
-                      <div style={statLabelStyle}>Success Rate</div>
-                      <div style={financialStatValueStyle(false, true)}>{successRate}%</div>
-                    </div>
-
-                    {/* 2. Total Deal Value (Sum of all prices) */}
-                    <div style={financialStatBoxStyle(false, false)}>
-                      <div style={statLabelStyle}>Total Pipeline Value</div>
-                      <div style={financialStatValueStyle(false, false)}>
+                      <div style={statLabelStyle}>Total Pipeline</div>
+                      <div style={financialStatValueStyle(false, true)}>
                         {formatAmount(financials.totalValue)}
+                      </div>
+                      <div style={{...statLabelStyle, marginTop: '8px', color: '#3b82f6'}}>
+                        {dealsToRender.length} Deals
                       </div>
                     </div>
 
-                    {/* 3. Completed Deal Value */}
-                    <div style={financialStatBoxStyle(true, false)}>
-                      <div style={statLabelStyle}>Completed Value</div>
-                      <div style={financialStatValueStyle(true, false)}>
+                    {/* 2. Completed Value */}
+                    <div style={financialStatBoxStyle(true)}>
+                      <div style={statLabelStyle}>Completed</div>
+                      <div style={financialStatValueStyle(true)}>
                         {formatAmount(financials.completedValue)}
+                      </div>
+                      <div style={{...statLabelStyle, marginTop: '8px', color: '#10b981'}}>
+                        {dealsToRender.filter(d => d.stage === 'COMPLETED').length} Deals
+                      </div>
+                    </div>
+
+                    {/* 3. Success Rate */}
+                    <div style={financialStatBoxStyle(true)}>
+                      <div style={statLabelStyle}>Success Rate</div>
+                      <div style={financialStatValueStyle(true)}>
+                        {calculateSuccessRate(agentData.totalDeals, agentData.completedDeals)}%
+                      </div>
+                      <div style={{...statLabelStyle, marginTop: '8px', color: '#10b981'}}>
+                        {agentData.completedDeals}/{agentData.totalDeals}
                       </div>
                     </div>
 
@@ -588,27 +640,23 @@ const AdminDealPanel = () => {
                         onClick={() => toggleAgentDeals(agentKey)}
                         title={isAgentDealsOpen ? "Collapse Deals" : "Expand Deals"}
                     >
-                        {/* Label: Show "Collapse" when open, "Expand" when closed */}
                         <div style={{...statLabelStyle, color: 'inherit'}}>
                             {isAgentDealsOpen ? "Collapse Deals" : "Expand Deals"}
                         </div>
-                        {/* Icon: Show up arrow when open, down arrow when closed */}
                         <div style={{ fontSize: '18px', lineHeight: '1', color: 'inherit' }}>
-                            {isAgentDealsOpen ? `\u25B2` : `\u25BC`} {/* ▲ (Up) or ▼ (Down) */}
+                            {isAgentDealsOpen ? `▲` : `▼`}
                         </div>
                     </button>
                   </div>
                 </div>
 
-                {/* Agent's Deals Grid (Conditional Rendering) */}
+                {/* Agent's Deals Grid */}
                 {isAgentDealsOpen && (
                     <div style={gridStyle}>
                       {dealsToRender.map((deal) => {
                         const buyer = deal.buyer;
                         const seller = deal.property?.user;
-
                         const key = deal.dealId;
-
                         const isCompleted = deal.stage === "COMPLETED";
 
                         return (
@@ -617,17 +665,15 @@ const AdminDealPanel = () => {
                             style={cardStyle}
                             onClick={() => setSelectedDeal(deal)}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.boxShadow =
-                                "0 8px 16px rgba(0,0,0,0.15)";
+                              e.currentTarget.style.boxShadow = "0 8px 16px rgba(0,0,0,0.15)";
                               e.currentTarget.style.transform = "translateY(-2px)";
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.boxShadow =
-                                "0 2px 4px rgba(0,0,0,0.05)";
+                              e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)";
                               e.currentTarget.style.transform = "translateY(0)";
                             }}
                           >
-                            {/* Stage Badge (Now Dynamic) */}
+                            {/* Stage Badge */}
                             <div style={stageBadgeStyle(deal.stage)}>
                                 {deal.stage}
                             </div>
@@ -637,7 +683,7 @@ const AdminDealPanel = () => {
                               🏠 {deal.propertyTitle || deal.property?.title}
                             </h4>
 
-                            {/* Agreed Price / Listing Price Logic */}
+                            {/* Deal Price */}
                             {(deal.agreedPrice || deal.propertyPrice) && (
                               <div
                                 style={{
@@ -657,7 +703,6 @@ const AdminDealPanel = () => {
                                     (deal.agreedPrice || deal.propertyPrice)?.toLocaleString("en-IN", { maximumFractionDigits: 0 })
                                   }
                                 </div>
-
                                 <div style={{ fontSize: "11px", fontWeight: "500", color: "#64748b", marginTop: '4px' }}>
                                   {deal.agreedPrice ? 'Agreed Price' : 'Listing Price (Agreed Price Pending)'}
                                 </div>
@@ -675,13 +720,7 @@ const AdminDealPanel = () => {
                                   fontSize: "12px",
                                 }}
                               >
-                                <div
-                                  style={{
-                                    fontWeight: "600",
-                                    color: "#1e293b",
-                                    marginBottom: "2px",
-                                  }}
-                                >
+                                <div style={{ fontWeight: "600", color: "#1e293b", marginBottom: "2px" }}>
                                   👤 Buyer: {buyer?.firstName} {buyer?.lastName}
                                 </div>
                                 {buyer?.mobileNumber && (
@@ -703,13 +742,7 @@ const AdminDealPanel = () => {
                                   fontSize: "12px",
                                 }}
                               >
-                                <div
-                                  style={{
-                                    fontWeight: "600",
-                                    color: "#1e293b",
-                                    marginBottom: "2px",
-                                  }}
-                                >
+                                <div style={{ fontWeight: "600", color: "#1e293b", marginBottom: "2px" }}>
                                   🏢 Seller: {seller.firstName} {seller.lastName}
                                 </div>
                                 {seller.mobileNumber && (
@@ -721,21 +754,14 @@ const AdminDealPanel = () => {
                             )}
 
                             {/* Date and Age */}
-                            <p
-                              style={{
-                                margin: "8px 0 12px 0",
-                                fontSize: "11px",
-                                color: "#64748b",
-                              }}
-                            >
+                            <p style={{ margin: "8px 0 12px 0", fontSize: "11px", color: "#64748b" }}>
                               📅 {new Date(deal.createdAt).toLocaleDateString()}
-                              {/* Show Deal Age in Days */}
                               <span style={{marginLeft: '8px', color: '#f59e0b', fontWeight: '600'}}>
                                 ({getDaysSinceCreation(deal.createdAt)} days old)
                               </span>
                             </p>
 
-                            {/* View Button (Now Dynamic) */}
+                            {/* View Button */}
                             <button
                               style={buttonStyle(isCompleted)}
                               onClick={(e) => {
