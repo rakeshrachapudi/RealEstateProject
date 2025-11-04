@@ -36,9 +36,8 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
     gap: "clamp(24px, 4vw, 48px)",
-    width: "100%",
     maxWidth: "1700px",
-    paddingBottom: "20px",
+    padding: "40px",
     textAlign: "left",
   },
   columnTitle: {
