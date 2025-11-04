@@ -7,17 +7,15 @@ const AdminAgentsPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [agents, setAgents] = useState([]);
-  const [filteredAgents, setFilteredAgents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [agentDeals, setAgentDeals] = useState([]);
-  const [dealsLoading, setDealsLoading] = useState(false);
-  const [selectedDeal, setSelectedDeal] = useState(null);
-  const [editingAgent, setEditingAgent] = useState(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  // NEW STATE: To hold the calculated success rate
-  const [agentSuccessRate, setAgentSuccessRate] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("details");
+  const [deleteModal, setDeleteModal] = useState({ show: false, type: null, item: null });
+  const [editAgentModal, setEditAgentModal] = useState({ show: false, agent: null });
+  const [editAgentFormData, setEditAgentFormData] = useState({});
+  const [agentStats, setAgentStats] = useState({ totalDeals: 0, completedDeals: 0, successRate: 0 });
 
   useEffect(() => {
     if (user?.role !== "ADMIN") {
@@ -26,6 +24,14 @@ const AdminAgentsPage = () => {
     }
     fetchAllAgents();
   }, [user, navigate]);
+
+  useEffect(() => {
+    if (selectedAgent) {
+      fetchAgentDeals(selectedAgent.id);
+    }
+  }, [selectedAgent]);
+
+  // ==================== FETCH FUNCTIONS ====================
 
   const fetchAllAgents = async () => {
     setLoading(true);
@@ -44,7 +50,9 @@ const AdminAgentsPage = () => {
           ? data
           : [];
         setAgents(agentsList);
-        filterAgents(agentsList, searchTerm);
+        if (agentsList.length > 0 && !selectedAgent) {
+          setSelectedAgent(agentsList[0]);
+        }
       } else {
         console.error("Failed to fetch agents:", response.status);
         setAgents([]);
@@ -58,7 +66,6 @@ const AdminAgentsPage = () => {
   };
 
   const fetchAgentDeals = async (agentId) => {
-    setDealsLoading(true);
     try {
       const response = await fetch(
         `${BACKEND_BASE_URL}/api/deals/admin/agent/${agentId}?userId=${user.id}`,
@@ -77,133 +84,168 @@ const AdminAgentsPage = () => {
           ? data
           : [];
         setAgentDeals(deals);
-
-        // NEW: Calculate success rate immediately after fetching deals
-        calculateSuccessRate(deals);
+        calculateAgentStats(deals);
       } else {
         console.error("Failed to fetch deals:", response.status);
         setAgentDeals([]);
-        setAgentSuccessRate(null); // Clear rate on failure
+        setAgentStats({ totalDeals: 0, completedDeals: 0, successRate: 0 });
       }
     } catch (error) {
       console.error("Error fetching deals:", error);
       setAgentDeals([]);
-      setAgentSuccessRate(null); // Clear rate on failure
-    } finally {
-      setDealsLoading(false);
+      setAgentStats({ totalDeals: 0, completedDeals: 0, successRate: 0 });
     }
   };
 
-  // NEW FUNCTION: Logic to calculate the success rate
-  const calculateSuccessRate = (deals) => {
+  const calculateAgentStats = (deals) => {
     if (!deals || deals.length === 0) {
-      setAgentSuccessRate(0);
+      setAgentStats({ totalDeals: 0, completedDeals: 0, successRate: 0 });
       return;
     }
 
+    const totalDeals = deals.length;
     const completedDeals = deals.filter(
       (deal) => (deal.stage || deal.currentStage) === "COMPLETED"
     ).length;
+    const successRate = ((completedDeals / totalDeals) * 100).toFixed(0);
 
-    const rate = ((completedDeals / deals.length) * 100).toFixed(0);
-    setAgentSuccessRate(rate);
+    setAgentStats({ totalDeals, completedDeals, successRate });
   };
 
-  const filterAgents = (agentList, search) => {
-    let filtered = agentList;
+  // ==================== DELETE FUNCTIONS ====================
 
-    if (search) {
-      filtered = filtered.filter(
-        (a) =>
-          a.firstName?.toLowerCase().includes(search.toLowerCase()) ||
-          a.lastName?.toLowerCase().includes(search.toLowerCase()) ||
-          a.email?.toLowerCase().includes(search.toLowerCase()) ||
-          a.mobileNumber?.includes(search)
-      );
-    }
-
-    setFilteredAgents(filtered);
-  };
-
-  const handleSearch = (value) => {
-    setSearchTerm(value);
-    filterAgents(agents, value);
-  };
-
-  const handleSelectAgent = (agent) => {
-    setSelectedAgent(agent);
-    fetchAgentDeals(agent.id);
-  };
-
-  const handleEditAgent = (agentToEdit) => {
-    setEditingAgent({ ...agentToEdit });
-    setShowEditModal(true);
-  };
-
-  const handleSaveAgent = async () => {
+  const handleDeleteAgent = async (agentId) => {
     try {
       const response = await fetch(
-        `${BACKEND_BASE_URL}/api/users/${editingAgent.id}`,
+        `${BACKEND_BASE_URL}/api/users/${agentId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        showSuccessMessage("Agent deleted successfully (cascade delete applied)");
+        setSelectedAgent(null);
+        setAgentDeals([]);
+        setAgentStats({ totalDeals: 0, completedDeals: 0, successRate: 0 });
+        fetchAllAgents();
+      } else {
+        showErrorMessage("Failed to delete agent");
+      }
+    } catch (error) {
+      console.error("Error deleting agent:", error);
+      showErrorMessage("Error deleting agent");
+    }
+
+    closeDeleteModal();
+  };
+
+  const handleDeleteDeal = async (dealId) => {
+    try {
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/deals/${dealId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        showSuccessMessage("Deal deleted successfully");
+        fetchAgentDeals(selectedAgent.id);
+      } else {
+        showErrorMessage("Failed to delete deal");
+      }
+    } catch (err) {
+      console.error("Error deleting deal:", err);
+      showErrorMessage("Error deleting deal");
+    }
+
+    closeDeleteModal();
+  };
+
+  // ==================== EDIT FUNCTIONS ====================
+
+  const handleEditAgent = async () => {
+    try {
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/users/${editAgentFormData.id}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
-          body: JSON.stringify(editingAgent),
+          body: JSON.stringify(editAgentFormData),
         }
       );
 
       if (response.ok) {
         const updated = await response.json();
-        const updatedAgent = updated.data || editingAgent;
+        const updatedAgent = updated.data || editAgentFormData;
         const newAgents = agents.map((a) =>
-          a.id === editingAgent.id ? updatedAgent : a
+          a.id === editAgentFormData.id ? updatedAgent : a
         );
         setAgents(newAgents);
-        filterAgents(newAgents, searchTerm);
         setSelectedAgent(updatedAgent);
-        setShowEditModal(false);
-        setEditingAgent(null);
-        alert("Agent updated successfully!");
+        closeEditAgentModal();
+        showSuccessMessage("Agent updated successfully!");
       } else {
-        alert("Failed to update agent");
+        showErrorMessage("Failed to update agent");
       }
     } catch (error) {
       console.error("Error updating agent:", error);
-      alert("Error updating agent");
+      showErrorMessage("Error updating agent");
     }
   };
 
-  const handleDeleteAgent = async (agentId) => {
-    if (window.confirm("Are you sure you want to delete this agent?")) {
-      try {
-        const response = await fetch(
-          `${BACKEND_BASE_URL}/api/users/${agentId}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-            },
-          }
-        );
+  const openEditAgentModal = (agent) => {
+    setEditAgentFormData({ ...agent });
+    setEditAgentModal({ show: true, agent });
+  };
 
-        if (response.ok) {
-          const newAgents = agents.filter((a) => a.id !== agentId);
-          setAgents(newAgents);
-          filterAgents(newAgents, searchTerm);
-          setSelectedAgent(null);
-          setAgentDeals([]);
-          setAgentSuccessRate(null); // Clear rate on deletion
-          alert("Agent deleted successfully!");
-        } else {
-          alert("Failed to delete agent");
-        }
-      } catch (error) {
-        console.error("Error deleting agent:", error);
-        alert("Error deleting agent");
-      }
+  const closeEditAgentModal = () => {
+    setEditAgentModal({ show: false, agent: null });
+    setEditAgentFormData({});
+  };
+
+  const handleEditAgentFormChange = (field, value) => {
+    setEditAgentFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // ==================== MODAL FUNCTIONS ====================
+
+  const openDeleteModal = (type, item) => {
+    setDeleteModal({ show: true, type, item });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ show: false, type: null, item: null });
+  };
+
+  const confirmDelete = () => {
+    const { type, item } = deleteModal;
+
+    if (type === "agent") {
+      handleDeleteAgent(item.id);
+    } else if (type === "deal") {
+      handleDeleteDeal(item.dealId);
     }
+  };
+
+  // ==================== UTILITY FUNCTIONS ====================
+
+  const showSuccessMessage = (message) => {
+    alert(message);
+  };
+
+  const showErrorMessage = (message) => {
+    alert(message);
   };
 
   const getStageColor = (stage) => {
@@ -219,518 +261,797 @@ const AdminAgentsPage = () => {
     return colors[stage] || "#6b7280";
   };
 
+  const formatPrice = (price) => {
+    if (!price) return "N/A";
+    return `₹${Number(price).toLocaleString("en-IN")}`;
+  };
+
+  // ==================== FILTER FUNCTIONS ====================
+
+  const filteredAgents = agents.filter(agent => {
+    return (
+      agent.id?.toString().includes(searchQuery) ||
+      agent.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      agent.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      agent.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      agent.mobileNumber?.includes(searchQuery)
+    );
+  });
+
+  // ==================== STYLES ====================
+
+  const styles = {
+    container: {
+      maxWidth: "1800px",
+      margin: "0 auto",
+      padding: "24px 32px",
+      backgroundColor: "#f9fafb",
+      minHeight: "100vh",
+    },
+    header: {
+      marginBottom: "32px",
+      paddingBottom: "24px",
+      borderBottom: "2px solid #e5e7eb",
+    },
+    title: {
+      fontSize: "36px",
+      fontWeight: "800",
+      color: "#1e293b",
+      margin: "0 0 8px 0",
+    },
+    subtitle: {
+      color: "#64748b",
+      margin: "0",
+      fontSize: "16px",
+    },
+    controls: {
+      marginBottom: "24px",
+    },
+    searchInput: {
+      width: "100%",
+      padding: "12px 16px",
+      border: "1px solid #e2e8f0",
+      borderRadius: "8px",
+      fontSize: "14px",
+      fontFamily: "inherit",
+    },
+    mainGrid: {
+      display: "grid",
+      gridTemplateColumns: "350px 1fr",
+      gap: "24px",
+      alignItems: "start",
+    },
+    agentList: {
+      backgroundColor: "white",
+      borderRadius: "12px",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+      border: "1px solid #e5e7eb",
+      maxHeight: "calc(100vh - 240px)",
+      overflowY: "auto",
+    },
+    agentListHeader: {
+      padding: "16px",
+      backgroundColor: "#f8fafc",
+      borderBottom: "1px solid #e5e7eb",
+      fontWeight: "700",
+      position: "sticky",
+      top: 0,
+      zIndex: 1,
+    },
+    agentItem: (isSelected) => ({
+      padding: "14px 16px",
+      borderBottom: "1px solid #e5e7eb",
+      cursor: "pointer",
+      backgroundColor: isSelected ? "#f0f9ff" : "white",
+      borderLeft: isSelected ? "4px solid #3b82f6" : "4px solid transparent",
+      transition: "all 0.2s",
+    }),
+    agentItemName: {
+      fontSize: "14px",
+      fontWeight: "600",
+      color: "#1e293b",
+      marginBottom: "4px",
+    },
+    agentItemEmail: {
+      fontSize: "12px",
+      color: "#64748b",
+      marginBottom: "8px",
+    },
+    agentItemMeta: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      fontSize: "11px",
+      color: "#94a3b8",
+    },
+    roleBadge: {
+      display: "inline-block",
+      padding: "2px 6px",
+      backgroundColor: "#10b981",
+      color: "white",
+      borderRadius: "4px",
+      fontSize: "10px",
+      fontWeight: "700",
+    },
+    rightPanel: {
+      backgroundColor: "white",
+      borderRadius: "12px",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+      border: "1px solid #e5e7eb",
+      padding: "24px",
+      maxHeight: "calc(100vh - 240px)",
+      overflowY: "auto",
+    },
+    tabs: {
+      display: "flex",
+      gap: "8px",
+      marginBottom: "24px",
+      borderBottom: "2px solid #e5e7eb",
+      paddingBottom: "12px",
+    },
+    tab: (isActive) => ({
+      padding: "8px 16px",
+      backgroundColor: "transparent",
+      color: isActive ? "#3b82f6" : "#64748b",
+      border: "none",
+      borderBottom: isActive ? "2px solid #3b82f6" : "2px solid transparent",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "600",
+      transition: "all 0.2s",
+      marginBottom: "-14px",
+    }),
+    statsGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+      gap: "12px",
+      marginBottom: "24px",
+    },
+    statCard: {
+      padding: "16px",
+      backgroundColor: "#f8fafc",
+      borderRadius: "8px",
+      border: "1px solid #e2e8f0",
+      textAlign: "center",
+    },
+    statValue: {
+      fontSize: "28px",
+      fontWeight: "800",
+      color: "#1e293b",
+      marginBottom: "4px",
+    },
+    statLabel: {
+      fontSize: "11px",
+      color: "#64748b",
+      fontWeight: "600",
+      textTransform: "uppercase",
+    },
+    detailsGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+      gap: "16px",
+      marginBottom: "24px",
+    },
+    detailCard: {
+      padding: "12px",
+      backgroundColor: "#f8fafc",
+      borderRadius: "8px",
+      border: "1px solid #e2e8f0",
+    },
+    detailLabel: {
+      fontSize: "11px",
+      color: "#64748b",
+      marginBottom: "4px",
+      fontWeight: "600",
+      textTransform: "uppercase",
+    },
+    detailValue: {
+      fontSize: "14px",
+      color: "#1e293b",
+      fontWeight: "600",
+    },
+    actionButtons: {
+      display: "flex",
+      gap: "12px",
+      marginTop: "16px",
+      flexWrap: "wrap",
+    },
+    editBtn: {
+      padding: "10px 20px",
+      backgroundColor: "#3b82f6",
+      color: "white",
+      border: "none",
+      borderRadius: "8px",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "600",
+      transition: "background 0.2s",
+    },
+    deleteBtn: {
+      padding: "10px 20px",
+      backgroundColor: "#ef4444",
+      color: "white",
+      border: "none",
+      borderRadius: "8px",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "600",
+      transition: "background 0.2s",
+    },
+    iconBtn: (color) => {
+      const colors = {
+        red: { bg: "#fee2e2", hover: "#fecaca", text: "#dc2626" },
+        blue: { bg: "#dbeafe", hover: "#bfdbfe", text: "#1e40af" },
+      };
+      const c = colors[color] || colors.blue;
+      return {
+        padding: "8px 12px",
+        backgroundColor: c.bg,
+        color: c.text,
+        border: "none",
+        borderRadius: "6px",
+        cursor: "pointer",
+        fontSize: "12px",
+        fontWeight: "600",
+        transition: "background 0.2s",
+      };
+    },
+    dealsGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+      gap: "16px",
+    },
+    dealCard: {
+      padding: "16px",
+      backgroundColor: "#f8fafc",
+      borderRadius: "12px",
+      border: "1px solid #e2e8f0",
+    },
+    dealContent: {
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+    },
+    dealTitle: {
+      fontSize: "16px",
+      fontWeight: "700",
+      color: "#1e293b",
+      marginBottom: "8px",
+    },
+    dealInfo: {
+      fontSize: "13px",
+      color: "#64748b",
+      marginBottom: "4px",
+    },
+    stageBadge: (stage) => ({
+      display: "inline-block",
+      padding: "4px 8px",
+      backgroundColor: getStageColor(stage),
+      color: "white",
+      borderRadius: "4px",
+      fontSize: "11px",
+      fontWeight: "700",
+    }),
+    emptyState: {
+      textAlign: "center",
+      padding: "60px 20px",
+      color: "#64748b",
+    },
+    emptyIcon: {
+      fontSize: "64px",
+      marginBottom: "16px",
+    },
+    modal: {
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 1000,
+    },
+    modalContent: {
+      backgroundColor: "white",
+      borderRadius: "12px",
+      padding: "24px",
+      maxWidth: "500px",
+      width: "90%",
+      maxHeight: "90vh",
+      overflowY: "auto",
+    },
+    modalTitle: {
+      fontSize: "22px",
+      fontWeight: "700",
+      color: "#1e293b",
+      marginBottom: "16px",
+    },
+    modalText: {
+      fontSize: "14px",
+      color: "#64748b",
+      lineHeight: "1.6",
+      marginBottom: "8px",
+    },
+    modalButtons: {
+      display: "flex",
+      gap: "12px",
+      marginTop: "24px",
+    },
+    modalBtn: (variant) => {
+      const variants = {
+        cancel: { bg: "#e2e8f0", color: "#1e293b", hover: "#cbd5e1" },
+        danger: { bg: "#ef4444", color: "white", hover: "#dc2626" },
+        primary: { bg: "#3b82f6", color: "white", hover: "#2563eb" },
+      };
+      const v = variants[variant] || variants.cancel;
+      return {
+        flex: 1,
+        padding: "10px 16px",
+        backgroundColor: v.bg,
+        color: v.color,
+        border: "none",
+        borderRadius: "8px",
+        cursor: "pointer",
+        fontSize: "14px",
+        fontWeight: "600",
+        transition: "background 0.2s",
+      };
+    },
+    formGroup: {
+      marginBottom: "16px",
+    },
+    formLabel: {
+      display: "block",
+      fontSize: "13px",
+      fontWeight: "600",
+      color: "#1e293b",
+      marginBottom: "6px",
+    },
+    formInput: {
+      width: "100%",
+      padding: "10px 12px",
+      border: "1px solid #e2e8f0",
+      borderRadius: "6px",
+      fontSize: "14px",
+      fontFamily: "inherit",
+      boxSizing: "border-box",
+    },
+  };
+
   if (loading) {
     return (
-      <div style={styles.container}>
-        <div style={styles.loading}>⏳ Loading agents...</div>
+      <div style={{ ...styles.container, textAlign: "center", paddingTop: "80px" }}>
+        ⏳ Loading agents...
       </div>
     );
   }
 
   return (
     <div style={styles.container}>
+      {/* HEADER */}
       <div style={styles.header}>
         <h1 style={styles.title}>👥 Agent Management</h1>
         <p style={styles.subtitle}>
-          Manage all agents - view, edit, and modify agent details and their
-          deals
+          Manage all agents - view, edit, and monitor agent performance
         </p>
       </div>
 
-      <div style={styles.controlsSection}>
-        <div style={styles.searchBox}>
-          <input
-            type="text"
-            placeholder="Search by name, email, or phone..."
-            value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
-            style={styles.searchInput}
-          />
-        </div>
+      {/* CONTROLS */}
+      <div style={styles.controls}>
+        <input
+          type="text"
+          style={styles.searchInput}
+          placeholder="🔍 Search by ID, name, email, or phone..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
 
-      <div style={styles.mainContent}>
-        <div style={styles.agentsList}>
-          <div style={styles.agentsHeader}>
-            <h3>Agents ({filteredAgents.length})</h3>
+      {/* MAIN GRID */}
+      <div style={styles.mainGrid}>
+        {/* AGENT LIST */}
+        <div style={styles.agentList}>
+          <div style={styles.agentListHeader}>
+            Agents ({filteredAgents.length})
           </div>
-
           {filteredAgents.length === 0 ? (
             <div style={styles.emptyState}>
               <p>🔍 No agents found</p>
             </div>
           ) : (
-            <div style={styles.agentsGrid}>
-              {filteredAgents.map((agent) => (
-                <div
-                  key={agent.id}
-                  style={{
-                    ...styles.agentCard,
-                    backgroundColor:
-                      selectedAgent?.id === agent.id ? "#dbeafe" : "white",
-                    // Use explicit border properties to avoid React style warning
-                    borderColor:
-                      selectedAgent?.id === agent.id ? "#3b82f6" : "#e2e8f0",
-                    borderStyle: "solid",
-                    borderWidth: "1px",
-                  }}
-                  onClick={() => handleSelectAgent(agent)}
-                >
-                  <div style={styles.agentCardHeader}>
-                    <div>
-                      <h4 style={styles.agentName}>
-                        {agent.firstName} {agent.lastName}
-                      </h4>
-                      <p style={styles.agentEmail}>{agent.email}</p>
-                    </div>
-                    <span style={styles.roleBadge}>AGENT</span>
-                  </div>
-                  <div style={styles.agentInfo}>
-                    <p>📱 {agent.mobileNumber || "N/A"}</p>
-                    <p>📅 {new Date(agent.createdAt).toLocaleDateString()}</p>
-                  </div>
+            filteredAgents.map((agent) => (
+              <div
+                key={agent.id}
+                style={styles.agentItem(selectedAgent?.id === agent.id)}
+                onClick={() => setSelectedAgent(agent)}
+              >
+                <div style={styles.agentItemName}>
+                  {agent.firstName} {agent.lastName}
                 </div>
-              ))}
-            </div>
+                <div style={styles.agentItemEmail}>{agent.email}</div>
+                <div style={styles.agentItemMeta}>
+                  <span style={styles.roleBadge}>AGENT</span>
+                  <span>ID: {agent.id}</span>
+                </div>
+              </div>
+            ))
           )}
         </div>
 
+        {/* RIGHT PANEL */}
         <div style={styles.rightPanel}>
           {selectedAgent ? (
             <>
-              <div style={styles.detailsCard}>
-                <h2 style={styles.detailsTitle}>Agent Details</h2>
-                <div style={styles.detailsGrid}>
-                  <div>
-                    <p style={styles.label}>First Name</p>
-                    <p style={styles.value}>{selectedAgent.firstName}</p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Last Name</p>
-                    <p style={styles.value}>{selectedAgent.lastName}</p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Email</p>
-                    <p style={styles.value}>{selectedAgent.email}</p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Phone</p>
-                    <p style={styles.value}>
-                      {selectedAgent.mobileNumber || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Username</p>
-                    <p style={styles.value}>
-                      {selectedAgent.username || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Member Since</p>
-                    <p style={styles.value}>
-                      {new Date(selectedAgent.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  {/* NEW DISPLAY: Agent Success Rate */}
-                  <div>
-                    <p style={styles.label}>Success Rate</p>
-                    <p
-                      style={{
-                        ...styles.value,
-                        color:
-                          agentSuccessRate > 50
-                            ? "#10b981"
-                            : agentSuccessRate > 0
-                            ? "#f59e0b"
-                            : "#ef4444",
-                      }}
-                    >
-                      {agentSuccessRate !== null
-                        ? `${agentSuccessRate}%`
-                        : "N/A"}
-                    </p>
-                  </div>
-                  {/* END NEW DISPLAY */}
-                </div>
-
-                {selectedAgent.address && (
-                  <div style={styles.addressSection}>
-                    <p style={styles.label}>Address</p>
-                    <p style={styles.value}>{selectedAgent.address}</p>
-                  </div>
-                )}
-
-                <div style={styles.statusSection}>
-                  <p style={styles.label}>Status</p>
-                  <span
-                    style={{
-                      ...styles.statusBadge,
-                      backgroundColor: selectedAgent.isActive
-                        ? "#10b981"
-                        : "#ef4444",
-                    }}
-                  >
-                    {selectedAgent.isActive ? "Active" : "Inactive"}
-                  </span>
-                </div>
-
-                <div style={styles.actionButtons}>
-                  <button
-                    onClick={() => handleEditAgent(selectedAgent)}
-                    style={styles.editBtn}
-                  >
-                    ✏️ Edit Agent
-                  </button>
-                  <button
-                    onClick={() => handleDeleteAgent(selectedAgent.id)}
-                    style={styles.deleteBtn}
-                  >
-                    🗑️ Delete Agent
-                  </button>
-                </div>
+              {/* TABS */}
+              <div style={styles.tabs}>
+                <button
+                  style={styles.tab(activeTab === "details")}
+                  onClick={() => setActiveTab("details")}
+                >
+                  📋 Details
+                </button>
+                <button
+                  style={styles.tab(activeTab === "deals")}
+                  onClick={() => setActiveTab("deals")}
+                >
+                  💼 Deals ({agentDeals.length})
+                </button>
+                <button
+                  style={styles.tab(activeTab === "performance")}
+                  onClick={() => setActiveTab("performance")}
+                >
+                  📊 Performance
+                </button>
               </div>
 
-              <div style={styles.dealsSection}>
-                <h3 style={styles.dealsTitle}>
-                  Deals by {selectedAgent.firstName} ({agentDeals.length})
-                </h3>
+              {/* CONTENT */}
+              <div>
+                {/* DETAILS TAB */}
+                {activeTab === "details" && (
+                  <>
+                    <h2 style={{ fontSize: "24px", fontWeight: "700", marginBottom: "16px" }}>
+                      Agent Details
+                    </h2>
 
-                {dealsLoading ? (
-                  <div style={styles.loading}>⏳ Loading deals...</div>
-                ) : agentDeals.length === 0 ? (
-                  <div style={styles.emptyDeals}>
-                    <p>No deals created by this agent</p>
-                  </div>
-                ) : (
-                  <div style={styles.dealsGrid}>
-                    {agentDeals.map((deal) => (
-                      <div
-                        key={deal.id || deal.dealId}
-                        style={styles.dealCard}
-                        onClick={() => setSelectedDeal(deal)}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.boxShadow =
-                            "0 8px 16px rgba(0,0,0,0.15)";
-                          e.currentTarget.style.transform = "translateY(-4px)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.boxShadow =
-                            "0 1px 3px rgba(0,0,0,0.05)";
-                          e.currentTarget.style.transform = "translateY(0)";
-                        }}
-                      >
-                        <div
-                          style={{
-                            ...styles.dealStageBadge,
-                            backgroundColor: getStageColor(
-                              deal.stage || deal.currentStage
-                            ),
-                          }}
-                        >
-                          {deal.stage || deal.currentStage}
-                        </div>
-
-                        <h4 style={styles.dealTitle}>
-                          {deal.property?.title || deal.propertyTitle}
-                        </h4>
-
-                        {deal.property?.city && (
-                          <p style={styles.dealMeta}>📍 {deal.property.city}</p>
-                        )}
-
-                        {deal.buyer && (
-                          <p style={styles.dealMeta}>
-                            👤 Buyer: {deal.buyer.firstName}{" "}
-                            {deal.buyer.lastName}
-                          </p>
-                        )}
-
-                        {deal.property?.user && (
-                          <p style={styles.dealMeta}>
-                            🏠 Seller: {deal.property.user.firstName}{" "}
-                            {deal.property.user.lastName}
-                          </p>
-                        )}
-
-                        {deal.agreedPrice && (
-                          <p style={styles.dealPrice}>
-                            💰 ₹{deal.agreedPrice.toLocaleString("en-IN")}
-                          </p>
-                        )}
-
-                        <p style={styles.dealDate}>
-                          📅 {new Date(deal.createdAt).toLocaleDateString()}
-                        </p>
+                    <div style={styles.detailsGrid}>
+                      <div style={styles.detailCard}>
+                        <div style={styles.detailLabel}>Agent ID</div>
+                        <div style={styles.detailValue}>{selectedAgent.id}</div>
                       </div>
-                    ))}
-                  </div>
+                      <div style={styles.detailCard}>
+                        <div style={styles.detailLabel}>Full Name</div>
+                        <div style={styles.detailValue}>
+                          {selectedAgent.firstName} {selectedAgent.lastName}
+                        </div>
+                      </div>
+                      <div style={styles.detailCard}>
+                        <div style={styles.detailLabel}>Email</div>
+                        <div style={styles.detailValue}>{selectedAgent.email}</div>
+                      </div>
+                      <div style={styles.detailCard}>
+                        <div style={styles.detailLabel}>Mobile</div>
+                        <div style={styles.detailValue}>
+                          {selectedAgent.mobileNumber || "N/A"}
+                        </div>
+                      </div>
+                      <div style={styles.detailCard}>
+                        <div style={styles.detailLabel}>Role</div>
+                        <div style={styles.detailValue}>
+                          <span style={styles.roleBadge}>AGENT</span>
+                        </div>
+                      </div>
+                      <div style={styles.detailCard}>
+                        <div style={styles.detailLabel}>Joined Date</div>
+                        <div style={styles.detailValue}>
+                          {new Date(selectedAgent.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {selectedAgent.addressLine1 && (
+                      <div style={{ marginTop: "16px", padding: "16px", backgroundColor: "#f8fafc", borderRadius: "8px" }}>
+                        <div style={styles.detailLabel}>Address</div>
+                        <div style={{ fontSize: "14px", color: "#1e293b", marginTop: "8px" }}>
+                          {selectedAgent.addressLine1}
+                          {selectedAgent.addressLine2 && <><br />{selectedAgent.addressLine2}</>}
+                          <br />
+                          {selectedAgent.city}, {selectedAgent.state} - {selectedAgent.pincode}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={styles.actionButtons}>
+                      <button
+                        onClick={() => openEditAgentModal(selectedAgent)}
+                        style={styles.editBtn}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = "#2563eb"}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = "#3b82f6"}
+                      >
+                        ✏️ Edit Agent
+                      </button>
+                      <button
+                        onClick={() => openDeleteModal("agent", selectedAgent)}
+                        style={styles.deleteBtn}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = "#dc2626"}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = "#ef4444"}
+                      >
+                        🗑️ Delete Agent
+                      </button>
+                    </div>
+                    <p style={{ fontSize: "13px", color: "#94a3b8", marginTop: "12px" }}>
+                      ⚠️ Deleting an agent will affect all their associated deals
+                    </p>
+                  </>
+                )}
+
+                {/* DEALS TAB */}
+                {activeTab === "deals" && (
+                  <>
+                    <h2 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "16px" }}>
+                      Deals Handled by {selectedAgent.firstName}
+                    </h2>
+
+                    {agentDeals.length === 0 ? (
+                      <div style={styles.emptyState}>
+                        <div style={styles.emptyIcon}>📭</div>
+                        <p>No deals found</p>
+                      </div>
+                    ) : (
+                      <div style={styles.dealsGrid}>
+                        {agentDeals.map((deal) => (
+                          <div key={deal.dealId} style={styles.dealCard}>
+                            <div style={styles.dealContent}>
+                              <h3 style={styles.dealTitle}>
+                                {deal.propertyTitle}
+                              </h3>
+
+                              <div style={styles.dealInfo}>
+                                <strong>Stage:</strong>{" "}
+                                <span style={styles.stageBadge(deal.stage || deal.currentStage)}>
+                                  {deal.stage || deal.currentStage}
+                                </span>
+                              </div>
+
+                              {deal.agreedPrice && (
+                                <div style={styles.dealInfo}>
+                                  <strong>Agreed Price:</strong> {formatPrice(deal.agreedPrice)}
+                                </div>
+                              )}
+
+                              <div style={styles.dealInfo}>
+                                <strong>Buyer:</strong> {deal.buyerName}
+                              </div>
+
+                              <div style={styles.dealInfo}>
+                                <strong>Created:</strong>{" "}
+                                {new Date(deal.createdAt).toLocaleDateString()}
+                              </div>
+
+                              <div style={styles.actionButtons}>
+                                <button
+                                  onClick={() => openDeleteModal("deal", deal)}
+                                  style={styles.iconBtn("red")}
+                                  onMouseEnter={(e) => e.target.style.backgroundColor = "#fecaca"}
+                                  onMouseLeave={(e) => e.target.style.backgroundColor = "#fee2e2"}
+                                >
+                                  🗑️ Delete Deal
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* PERFORMANCE TAB */}
+                {activeTab === "performance" && (
+                  <>
+                    <h2 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "16px" }}>
+                      Performance Metrics for {selectedAgent.firstName}
+                    </h2>
+
+                    <div style={styles.statsGrid}>
+                      <div style={styles.statCard}>
+                        <div style={{ fontSize: "32px", marginBottom: "8px" }}>📊</div>
+                        <div style={styles.statValue}>{agentStats.totalDeals}</div>
+                        <div style={styles.statLabel}>Total Deals</div>
+                      </div>
+                      <div style={styles.statCard}>
+                        <div style={{ fontSize: "32px", marginBottom: "8px" }}>✅</div>
+                        <div style={{ ...styles.statValue, color: "#10b981" }}>
+                          {agentStats.completedDeals}
+                        </div>
+                        <div style={styles.statLabel}>Completed</div>
+                      </div>
+                      <div style={styles.statCard}>
+                        <div style={{ fontSize: "32px", marginBottom: "8px" }}>🎯</div>
+                        <div style={{ ...styles.statValue, color: "#3b82f6" }}>
+                          {agentStats.successRate}%
+                        </div>
+                        <div style={styles.statLabel}>Success Rate</div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: "24px", padding: "20px", backgroundColor: "#f8fafc", borderRadius: "8px" }}>
+                      <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "12px" }}>
+                        📈 Performance Summary
+                      </h3>
+                      <p style={{ fontSize: "14px", color: "#64748b", lineHeight: "1.6" }}>
+                        <strong>{selectedAgent.firstName}</strong> has handled a total of{" "}
+                        <strong>{agentStats.totalDeals}</strong> deals, with{" "}
+                        <strong>{agentStats.completedDeals}</strong> successfully completed.
+                        This represents a success rate of{" "}
+                        <strong>{agentStats.successRate}%</strong>.
+                      </p>
+                    </div>
+                  </>
                 )}
               </div>
             </>
           ) : (
-            <div style={styles.emptyDetails}>
-              <p>👈 Select an agent to view details and deals</p>
+            <div style={styles.emptyState}>
+              <div style={styles.emptyIcon}>👆</div>
+              <p>Select an agent to view details</p>
             </div>
           )}
         </div>
       </div>
 
-      {selectedDeal && (
-        <div style={styles.modal}>
-          <div style={styles.modalContent}>
-            <div style={styles.modalHeader}>
-              <h3>Deal Details</h3>
-              <button
-                onClick={() => setSelectedDeal(null)}
-                style={styles.closeBtn}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div style={styles.dealDetailsGrid}>
-              <div>
-                <p style={styles.label}>Deal Stage</p>
-                <div
-                  style={{
-                    display: "inline-block",
-                    padding: "6px 12px",
-                    backgroundColor: getStageColor(
-                      selectedDeal.stage || selectedDeal.currentStage
-                    ),
-                    color: "white",
-                    borderRadius: "6px",
-                    fontWeight: "600",
-                    fontSize: "13px",
-                  }}
-                >
-                  {selectedDeal.stage || selectedDeal.currentStage}
-                </div>
-              </div>
-              <div>
-                <p style={styles.label}>Created Date</p>
-                <p style={styles.value}>
-                  {new Date(selectedDeal.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-
-            <div style={styles.sectionDivider}>
-              <h4 style={styles.sectionTitle}>Property Details</h4>
-              <div style={styles.dealDetailsGrid}>
-                <div>
-                  <p style={styles.label}>Property Title</p>
-                  <p style={styles.value}>
-                    {selectedDeal.property?.title || selectedDeal.propertyTitle}
-                  </p>
-                </div>
-                {selectedDeal.property?.city && (
-                  <div>
-                    <p style={styles.label}>Location</p>
-                    <p style={styles.value}>{selectedDeal.property.city}</p>
-                  </div>
-                )}
-                {selectedDeal.property?.price && (
-                  <div>
-                    <p style={styles.label}>Property Price</p>
-                    <p style={styles.value}>
-                      ₹{selectedDeal.property.price.toLocaleString("en-IN")}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {selectedDeal.agreedPrice && (
-              <div style={styles.sectionDivider}>
-                <h4 style={styles.sectionTitle}>Agreed Price</h4>
-                <p
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: "700",
-                    color: "#10b981",
-                  }}
-                >
-                  ₹{selectedDeal.agreedPrice.toLocaleString("en-IN")}
-                </p>
-              </div>
-            )}
-
-            {selectedDeal.buyer && (
-              <div style={styles.sectionDivider}>
-                <h4 style={styles.sectionTitle}>Buyer Information</h4>
-                <div style={styles.dealDetailsGrid}>
-                  <div>
-                    <p style={styles.label}>Name</p>
-                    <p style={styles.value}>
-                      {selectedDeal.buyer.firstName}{" "}
-                      {selectedDeal.buyer.lastName}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Email</p>
-                    <p style={styles.value}>{selectedDeal.buyer.email}</p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Phone</p>
-                    <p style={styles.value}>
-                      {selectedDeal.buyer.mobileNumber}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {selectedDeal.property?.user && (
-              <div style={styles.sectionDivider}>
-                <h4 style={styles.sectionTitle}>Seller Information</h4>
-                <div style={styles.dealDetailsGrid}>
-                  <div>
-                    <p style={styles.label}>Name</p>
-                    <p style={styles.value}>
-                      {selectedDeal.property.user.firstName}{" "}
-                      {selectedDeal.property.user.lastName}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Email</p>
-                    <p style={styles.value}>
-                      {selectedDeal.property.user.email}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={styles.label}>Phone</p>
-                    <p style={styles.value}>
-                      {selectedDeal.property.user.mobileNumber}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {selectedDeal.notes && (
-              <div style={styles.sectionDivider}>
-                <h4 style={styles.sectionTitle}>Notes</h4>
-                <p style={styles.value}>{selectedDeal.notes}</p>
-              </div>
-            )}
-
+      {/* Delete Confirmation Modal */}
+      {deleteModal.show && (
+        <div style={styles.modal} onClick={closeDeleteModal}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>
+              ⚠️ Confirm Delete
+            </h2>
+            <p style={styles.modalText}>
+              {deleteModal.type === "agent" && (
+                <>
+                  Are you sure you want to delete agent <strong>{deleteModal.item.firstName} {deleteModal.item.lastName}</strong>?
+                  <br /><br />
+                  This action will remove the agent from the system and may affect their associated deals.
+                </>
+              )}
+              {deleteModal.type === "deal" && (
+                <>
+                  Are you sure you want to delete this deal for <strong>{deleteModal.item.propertyTitle}</strong>?
+                </>
+              )}
+            </p>
             <div style={styles.modalButtons}>
               <button
-                onClick={() => setSelectedDeal(null)}
-                style={styles.cancelBtn}
+                onClick={closeDeleteModal}
+                style={styles.modalBtn("cancel")}
               >
-                Close
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                style={styles.modalBtn("danger")}
+                onMouseEnter={(e) => e.target.style.backgroundColor = "#dc2626"}
+                onMouseLeave={(e) => e.target.style.backgroundColor = "#ef4444"}
+              >
+                Delete
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {showEditModal && editingAgent && (
-        <div style={styles.modal}>
-          <div style={styles.modalContent}>
-            <div style={styles.modalHeader}>
-              <h3>Edit Agent</h3>
-              <button
-                onClick={() => setShowEditModal(false)}
-                style={styles.closeBtn}
-              >
-                ✕
-              </button>
-            </div>
+      {/* Edit Agent Modal */}
+      {editAgentModal.show && (
+        <div style={styles.modal} onClick={closeEditAgentModal}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h3 style={styles.modalTitle}>✏️ Edit Agent</h3>
 
             <div style={styles.formGroup}>
-              <label>First Name</label>
+              <label style={styles.formLabel}>First Name</label>
               <input
                 type="text"
-                value={editingAgent.firstName || ""}
-                onChange={(e) =>
-                  setEditingAgent({
-                    ...editingAgent,
-                    firstName: e.target.value,
-                  })
-                }
-                style={styles.input}
+                style={styles.formInput}
+                value={editAgentFormData.firstName || ""}
+                onChange={(e) => handleEditAgentFormChange("firstName", e.target.value)}
               />
             </div>
 
             <div style={styles.formGroup}>
-              <label>Last Name</label>
+              <label style={styles.formLabel}>Last Name</label>
               <input
                 type="text"
-                value={editingAgent.lastName || ""}
-                onChange={(e) =>
-                  setEditingAgent({ ...editingAgent, lastName: e.target.value })
-                }
-                style={styles.input}
+                style={styles.formInput}
+                value={editAgentFormData.lastName || ""}
+                onChange={(e) => handleEditAgentFormChange("lastName", e.target.value)}
               />
             </div>
 
             <div style={styles.formGroup}>
-              <label>Email</label>
+              <label style={styles.formLabel}>Email</label>
               <input
                 type="email"
-                value={editingAgent.email || ""}
-                onChange={(e) =>
-                  setEditingAgent({ ...editingAgent, email: e.target.value })
-                }
-                style={styles.input}
+                style={styles.formInput}
+                value={editAgentFormData.email || ""}
+                onChange={(e) => handleEditAgentFormChange("email", e.target.value)}
               />
             </div>
 
             <div style={styles.formGroup}>
-              <label>Phone</label>
+              <label style={styles.formLabel}>Mobile Number</label>
               <input
                 type="tel"
-                value={editingAgent.mobileNumber || ""}
-                onChange={(e) =>
-                  setEditingAgent({
-                    ...editingAgent,
-                    mobileNumber: e.target.value,
-                  })
-                }
-                style={styles.input}
+                style={styles.formInput}
+                value={editAgentFormData.mobileNumber || ""}
+                onChange={(e) => handleEditAgentFormChange("mobileNumber", e.target.value)}
               />
             </div>
 
             <div style={styles.formGroup}>
-              <label>Address</label>
-              <textarea
-                value={editingAgent.address || ""}
-                onChange={(e) =>
-                  setEditingAgent({ ...editingAgent, address: e.target.value })
-                }
-                style={styles.textarea}
+              <label style={styles.formLabel}>Address Line 1</label>
+              <input
+                type="text"
+                style={styles.formInput}
+                value={editAgentFormData.addressLine1 || ""}
+                onChange={(e) => handleEditAgentFormChange("addressLine1", e.target.value)}
               />
             </div>
 
             <div style={styles.formGroup}>
-              <label>Active Status</label>
-              <select
-                value={editingAgent.isActive ? "true" : "false"}
-                onChange={(e) =>
-                  setEditingAgent({
-                    ...editingAgent,
-                    isActive: e.target.value === "true",
-                  })
-                }
-                style={styles.input}
-              >
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
-              </select>
+              <label style={styles.formLabel}>Address Line 2</label>
+              <input
+                type="text"
+                style={styles.formInput}
+                value={editAgentFormData.addressLine2 || ""}
+                onChange={(e) => handleEditAgentFormChange("addressLine2", e.target.value)}
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.formLabel}>City</label>
+              <input
+                type="text"
+                style={styles.formInput}
+                value={editAgentFormData.city || ""}
+                onChange={(e) => handleEditAgentFormChange("city", e.target.value)}
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.formLabel}>State</label>
+              <input
+                type="text"
+                style={styles.formInput}
+                value={editAgentFormData.state || ""}
+                onChange={(e) => handleEditAgentFormChange("state", e.target.value)}
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.formLabel}>Pin Code</label>
+              <input
+                type="text"
+                style={styles.formInput}
+                value={editAgentFormData.pincode || ""}
+                onChange={(e) => handleEditAgentFormChange("pincode", e.target.value)}
+              />
             </div>
 
             <div style={styles.modalButtons}>
-              <button onClick={handleSaveAgent} style={styles.saveBtn}>
-                💾 Save Changes
-              </button>
               <button
-                onClick={() => setShowEditModal(false)}
-                style={styles.cancelBtn}
+                style={styles.modalBtn("cancel")}
+                onClick={closeEditAgentModal}
               >
                 Cancel
+              </button>
+              <button
+                style={styles.modalBtn("primary")}
+                onClick={handleEditAgent}
+                onMouseEnter={(e) => e.target.style.backgroundColor = "#2563eb"}
+                onMouseLeave={(e) => e.target.style.backgroundColor = "#3b82f6"}
+              >
+                Save Changes
               </button>
             </div>
           </div>
@@ -738,394 +1059,6 @@ const AdminAgentsPage = () => {
       )}
     </div>
   );
-};
-
-// Styles object (cleaned up agentCard border properties)
-const styles = {
-  container: {
-    maxWidth: 1700,
-    margin: "0 auto",
-    padding: "24px 32px",
-    minHeight: "100vh",
-    backgroundColor: "#f8fafc",
-    marginTop: "10px",
-  },
-  header: {
-    marginBottom: "32px",
-  },
-  title: {
-    fontSize: "32px",
-    fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: "8px",
-  },
-  subtitle: {
-    fontSize: "16px",
-    color: "#64748b",
-    margin: 0,
-  },
-  loading: {
-    textAlign: "center",
-    padding: "80px 20px",
-    fontSize: "18px",
-    color: "#64748b",
-  },
-  controlsSection: {
-    marginBottom: "24px",
-  },
-  searchBox: {
-    marginBottom: "16px",
-  },
-  searchInput: {
-    width: "100%",
-    padding: "12px 16px",
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
-    fontSize: "14px",
-    boxSizing: "border-box",
-  },
-  mainContent: {
-    display: "grid",
-    gridTemplateColumns: "350px 1fr",
-    gap: "24px",
-  },
-  agentsList: {
-    backgroundColor: "white",
-    borderRadius: "12px",
-    padding: "20px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-    height: "fit-content",
-  },
-  agentsHeader: {
-    marginBottom: "16px",
-    paddingBottom: "12px",
-    borderBottom: "2px solid #e2e8f0",
-  },
-  agentsGrid: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  agentCard: {
-    padding: "12px",
-    borderRadius: "8px",
-    // Fix for style warning: Use explicit properties
-    border: "1px solid #e2e8f0",
-    cursor: "pointer",
-    transition: "all 0.2s",
-  },
-  agentCardHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: "8px",
-  },
-  agentName: {
-    fontSize: "14px",
-    fontWeight: "700",
-    color: "#1e293b",
-    margin: 0,
-  },
-  agentEmail: {
-    fontSize: "12px",
-    color: "#64748b",
-    margin: "4px 0 0 0",
-  },
-  roleBadge: {
-    display: "inline-block",
-    padding: "4px 8px",
-    borderRadius: "4px",
-    color: "white",
-    fontSize: "10px",
-    fontWeight: "600",
-    backgroundColor: "#10b981",
-  },
-  agentInfo: {
-    fontSize: "12px",
-    color: "#64748b",
-    margin: 0,
-  },
-  viewDealsBtn: {
-    width: "100%",
-    marginTop: "12px",
-    padding: "10px 16px",
-    backgroundColor: "#3b82f6",
-    color: "white",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "13px",
-    transition: "background 0.2s",
-  },
-  rightPanel: {
-    backgroundColor: "white",
-    borderRadius: "12px",
-    padding: "20px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-    overflowY: "auto",
-    maxHeight: "calc(100vh - 200px)",
-  },
-  detailsCard: {
-    marginBottom: "24px",
-    paddingBottom: "24px",
-    borderBottom: "2px solid #e2e8f0",
-  },
-  detailsTitle: {
-    fontSize: "20px",
-    fontWeight: "700",
-    color: "#1e293b",
-    margin: "0 0 16px 0",
-  },
-  detailsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
-    gap: "16px",
-    marginBottom: "16px",
-  },
-  label: {
-    fontSize: "12px",
-    color: "#64748b",
-    margin: "0 0 4px 0",
-    fontWeight: "600",
-  },
-  value: {
-    fontSize: "14px",
-    fontWeight: "700",
-    color: "#1e293b",
-    margin: 0,
-  },
-  addressSection: {
-    marginTop: "16px",
-    padding: "12px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "6px",
-  },
-  statusSection: {
-    marginTop: "16px",
-    padding: "12px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "6px",
-  },
-  statusBadge: {
-    display: "inline-block",
-    padding: "4px 8px",
-    borderRadius: "4px",
-    color: "white",
-    fontSize: "12px",
-    fontWeight: "600",
-  },
-  actionButtons: {
-    display: "flex",
-    gap: "12px",
-    marginTop: "16px",
-  },
-  editBtn: {
-    flex: 1,
-    padding: "10px 16px",
-    backgroundColor: "#3b82f6",
-    color: "white",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "14px",
-  },
-  deleteBtn: {
-    flex: 1,
-    padding: "10px 16px",
-    backgroundColor: "#ef4444",
-    color: "white",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "14px",
-  },
-  dealsSection: {
-    marginTop: "24px",
-  },
-  dealsTitle: {
-    fontSize: "18px",
-    fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: "16px",
-    margin: "0 0 16px 0",
-  },
-  dealsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-    gap: "12px",
-  },
-  dealCard: {
-    padding: "12px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
-    cursor: "pointer",
-    transition: "all 0.3s",
-    ":hover": {
-      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-      transform: "translateY(-2px)",
-    },
-  },
-  dealStageBadge: {
-    display: "inline-block",
-    padding: "4px 8px",
-    borderRadius: "4px",
-    color: "white",
-    fontSize: "10px",
-    fontWeight: "600",
-    marginBottom: "8px",
-  },
-  dealTitle: {
-    fontSize: "13px",
-    fontWeight: "700",
-    color: "#1e293b",
-    margin: "0 0 8px 0",
-  },
-  dealMeta: {
-    fontSize: "11px",
-    color: "#64748b",
-    margin: "4px 0",
-  },
-  dealPrice: {
-    fontSize: "12px",
-    fontWeight: "700",
-    color: "#10b981",
-    margin: "8px 0 4px 0",
-  },
-  dealDate: {
-    fontSize: "10px",
-    color: "#94a3b8",
-    margin: "4px 0",
-  },
-  dealDetailsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-    gap: "16px",
-    marginBottom: "12px",
-  },
-  sectionDivider: {
-    marginTop: "16px",
-    paddingTop: "16px",
-    borderTop: "1px solid #e2e8f0",
-  },
-  sectionTitle: {
-    fontSize: "14px",
-    fontWeight: "700",
-    color: "#1e293b",
-    margin: "0 0 12px 0",
-  },
-  emptyDeals: {
-    textAlign: "center",
-    padding: "20px",
-    color: "#64748b",
-    backgroundColor: "#f8fafc",
-    borderRadius: "8px",
-    border: "1px dashed #e2e8f0",
-    fontSize: "13px",
-  },
-  emptyDetails: {
-    textAlign: "center",
-    padding: "60px 20px",
-    color: "#64748b",
-  },
-  emptyState: {
-    textAlign: "center",
-    padding: "40px 20px",
-    color: "#64748b",
-    backgroundColor: "#f8fafc",
-    borderRadius: "8px",
-    border: "1px dashed #e2e8f0",
-  },
-  modal: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1000,
-  },
-  modalContent: {
-    backgroundColor: "white",
-    borderRadius: "12px",
-    padding: "24px",
-    maxWidth: "500px",
-    width: "90%",
-    maxHeight: "90vh",
-    overflowY: "auto",
-  },
-  modalHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "16px",
-    paddingBottom: "12px",
-    borderBottom: "1px solid #e2e8f0",
-  },
-  closeBtn: {
-    backgroundColor: "transparent",
-    border: "none",
-    fontSize: "24px",
-    cursor: "pointer",
-    color: "#64748b",
-  },
-  formGroup: {
-    marginBottom: "16px",
-  },
-  input: {
-    width: "100%",
-    padding: "10px 12px",
-    borderRadius: "6px",
-    border: "1px solid #e2e8f0",
-    fontSize: "14px",
-    boxSizing: "border-box",
-    fontFamily: "inherit",
-    marginTop: "4px",
-  },
-  textarea: {
-    width: "100%",
-    padding: "10px 12px",
-    borderRadius: "6px",
-    border: "1px solid #e2e8f0",
-    fontSize: "14px",
-    boxSizing: "border-box",
-    minHeight: "100px",
-    fontFamily: "inherit",
-    marginTop: "4px",
-  },
-  modalButtons: {
-    display: "flex",
-    gap: "12px",
-    marginTop: "20px",
-  },
-  saveBtn: {
-    flex: 1,
-    padding: "10px 16px",
-    backgroundColor: "#10b981",
-    color: "white",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "14px",
-  },
-  cancelBtn: {
-    flex: 1,
-    padding: "10px 16px",
-    backgroundColor: "#e2e8f0",
-    color: "#1e293b",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "14px",
-  },
 };
 
 export default AdminAgentsPage;
