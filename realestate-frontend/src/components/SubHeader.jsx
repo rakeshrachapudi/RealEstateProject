@@ -11,6 +11,9 @@ function SubHeader() {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const dropdownTimerRef = useRef(null);
 
+  // Add window size check for mobile
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
   // ⭐ ADDED: State to resolve the ReferenceError (Fix 2) ⭐
   // Although the profile dropdown UI isn't visible, the setter must be defined.
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -40,7 +43,16 @@ function SubHeader() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  if (!isAuthenticated) return null;
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  if (isMobile || !isAuthenticated) return null;
 
   const handleMouseEnter = (dropdown) => {
     if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current);
