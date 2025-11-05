@@ -1,0 +1,153 @@
+/* realestate-frontend/src/SignupModal.css */
+
+@keyframes sm-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Backdrop */
+.sm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.55);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+/* Modal */
+.sm-modal {
+  width: 100%;
+  max-width: 440px;
+  background: rgba(100, 60, 200, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f3e8ff;
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(70, 30, 120, 0.45);
+  backdrop-filter: blur(16px);
+  padding: 28px 24px;
+  position: relative;
+  animation: sm-fade-in 200ms ease-out;
+}
+
+/* Close */
+.sm-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  border: none;
+  background: transparent;
+  color: #e9d5ff;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+/* Title */
+.sm-title {
+  margin: 0 0 18px 0;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+}
+
+.sm-title.gradient {
+  background: linear-gradient(90deg, #b57aff, #845ec2, #9b5de5);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Alert */
+.sm-alert {
+  background: rgba(255, 0, 70, 0.15);
+  color: #ffb3b3;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255, 0, 70, 0.3);
+}
+
+/* Form */
+.sm-form {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Inputs */
+.sm-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(243, 232, 255, 0.25);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  margin-bottom: 12px;
+}
+
+.sm-input::placeholder {
+  color: rgba(243, 232, 255, 0.75);
+}
+
+.sm-input:focus {
+  border-color: #c4b5fd;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* Strength */
+.sm-strength {
+  font-size: 14px;
+  margin: 2px 0 12px 0;
+}
+
+/* Button */
+.sm-btn {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: none;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  margin-top: 4px;
+}
+
+.sm-btn:hover {
+  transform: translateY(-1px);
+}
+
+.sm-btn-primary {
+  background: linear-gradient(135deg, #9b5de5 0%, #845ec2 50%, #5c4b99 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(155, 93, 229, 0.35);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .sm-modal {
+    padding: 22px 18px;
+    border-radius: 16px;
+  }
+  .sm-title {
+    font-size: 22px;
+  }
+  .sm-btn {
+    font-size: 15px;
+    padding: 11px 12px;
+  }
+  .sm-input {
+    font-size: 16px;
+  } /* prevents iOS zoom */
+}

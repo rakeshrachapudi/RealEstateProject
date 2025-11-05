@@ -3,37 +3,32 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
 import PropertyCard from "../components/PropertyCard";
-import { styles } from "../styles.js";
 import { BACKEND_BASE_URL } from "../config/config";
+import "./MyPropertiesPage.css";
 
 function MyPropertiesPage({ onPostPropertyClick }) {
   const { user } = useAuth();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null); // Used for critical fetch errors (e.g., network down)
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!user?.id) {
-      console.log("❌ No user ID, redirecting to home");
       navigate("/");
       return;
     }
     fetchMyProperties();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, navigate]);
+  }, [user?.id]);
 
   const fetchMyProperties = async () => {
     if (!user?.id) {
-      console.log("❌ Cannot fetch: No user ID");
       setLoading(false);
       return;
     }
-
     setLoading(true);
     setError(null);
-
-    console.log("📥 Fetching properties for user ID:", user.id);
 
     try {
       const response = await fetch(
@@ -45,29 +40,17 @@ function MyPropertiesPage({ onPostPropertyClick }) {
         }
       );
 
-      console.log("Response status:", response.status);
-
       if (response.status === 404 || response.status === 204) {
-        // Handle common "No content" or "Not found" response for empty list gracefully
         setProperties([]);
         return;
       }
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const data = await response.json();
-      console.log("✅ Received data:", data);
-
       const propertiesArray = Array.isArray(data) ? data : data.data || [];
-
-      console.log(`✅ Found ${propertiesArray.length} properties for user`);
       setProperties(propertiesArray);
-
     } catch (err) {
-      // Only set error for non-recoverable issues like network problems
-      console.error("❌ Error fetching properties:", err);
       setError("Failed to load properties. Please check your connection.");
       setProperties([]);
     } finally {
@@ -76,34 +59,31 @@ function MyPropertiesPage({ onPostPropertyClick }) {
   };
 
   const handlePropertyUpdated = () => {
-    console.log("🔄 Property updated, refreshing list...");
     fetchMyProperties();
   };
 
   const handlePropertyDeleted = () => {
-    console.log("🔄 Property deleted, refreshing list...");
     fetchMyProperties();
   };
 
   if (loading) {
     return (
-      <div style={styles.container}>
-        <div style={styles.loadingContainer}>
-          <div style={styles.spinner}>⏳</div>
-          <h3>Loading your properties...</h3>
+      <div className="mp-container">
+        <div className="mp-state mp-loading" role="status" aria-live="polite">
+          <div className="mp-spinner" aria-hidden="true" />
+          <h3 className="mp-loading-title">Loading your properties...</h3>
         </div>
       </div>
     );
   }
 
-  // Display a critical error screen only for network/server failures
   if (error) {
     return (
-      <div style={styles.container}>
-        <div style={styles.errorContainer}>
-          <h2>❌ Loading Failed</h2>
-          <p>{error}</p>
-          <button onClick={fetchMyProperties} style={styles.retryBtn}>
+      <div className="mp-container">
+        <div className="mp-state mp-error">
+          <h2 className="mp-error-title">Loading Failed</h2>
+          <p className="mp-error-text">{error}</p>
+          <button onClick={fetchMyProperties} className="mp-btn mp-btn-primary">
             Try Again
           </button>
         </div>
@@ -111,64 +91,70 @@ function MyPropertiesPage({ onPostPropertyClick }) {
     );
   }
 
-  // --- Main Render Logic ---
+  const saleCount = properties.filter((p) => p.listingType === "sale").length;
+  const rentCount = properties.filter((p) => p.listingType === "rent").length;
+  const verifiedCount = properties.filter((p) => p.isVerified).length;
+
   return (
-    <div style={styles.container}>
-      <div style={styles.pageHeader}>
-        <h1 style={styles.pageTitle}>📁 My Posted Properties</h1>
-        <p style={styles.pageSubtitle}>
+    <div className="mp-container">
+      <header className="mp-header">
+        <h1 className="mp-title">My Posted Properties</h1>
+        <p className="mp-subtitle">
           Manage and track the properties you've listed
         </p>
-      </div>
+      </header>
 
       {properties.length > 0 ? (
         <>
-          <div style={styles.statsBar}>
-            <div style={styles.statItem}>
-              <span style={styles.statLabel}>Total Properties:</span>
-              <span style={styles.statValue}>{properties.length}</span>
+          <div className="mp-stats">
+            <div className="mp-stat">
+              <span className="mp-stat-label">Total Properties:</span>
+              <span className="mp-stat-value">{properties.length}</span>
             </div>
-            <div style={styles.statItem}>
-              <span style={styles.statLabel}>For Sale:</span>
-              <span style={styles.statValue}>
-                {properties.filter((p) => p.listingType === "sale").length}
-              </span>
+            <div className="mp-stat">
+              <span className="mp-stat-label">For Sale:</span>
+              <span className="mp-stat-value">{saleCount}</span>
             </div>
-            <div style={styles.statItem}>
-              <span style={styles.statLabel}>For Rent:</span>
-              <span style={styles.statValue}>
-                {properties.filter((p) => p.listingType === "rent").length}
-              </span>
+            <div className="mp-stat">
+              <span className="mp-stat-label">For Rent:</span>
+              <span className="mp-stat-value">{rentCount}</span>
             </div>
-            <div style={styles.statItem}>
-              <span style={styles.statLabel}>Verified:</span>
-              <span style={styles.statValue}>
-                {properties.filter((p) => p.isVerified).length}
-              </span>
+            <div className="mp-stat">
+              <span className="mp-stat-label">Verified:</span>
+              <span className="mp-stat-value">{verifiedCount}</span>
             </div>
           </div>
 
-          <div style={styles.grid}>
+          <div className="mp-grid" role="list">
             {properties.map((property) => (
-              <PropertyCard
+              <div
+                className="mp-grid-item"
+                role="listitem"
                 key={property.propertyId || property.id}
-                property={property}
-                onPropertyUpdated={handlePropertyUpdated}
-                onPropertyDeleted={handlePropertyDeleted}
-              />
+              >
+                <PropertyCard
+                  property={property}
+                  onPropertyUpdated={handlePropertyUpdated}
+                  onPropertyDeleted={handlePropertyDeleted}
+                />
+              </div>
             ))}
           </div>
         </>
       ) : (
-        // Simplified Empty State
-        <div style={styles.emptyState}>
-          <div style={styles.emptyIcon}>📭</div>
-          <h3 style={styles.emptyTitle}>No Properties Posted Yet</h3>
-          <p style={styles.emptyText}>
-            Start by posting your first property to see it here
+        <div className="mp-state mp-empty">
+          <div className="mp-empty-ic" aria-hidden="true">
+            📭
+          </div>
+          <h3 className="mp-empty-title">No Properties Posted Yet</h3>
+          <p className="mp-empty-text">
+            Start by posting your first property to see it here.
           </p>
-          <button onClick={onPostPropertyClick} style={styles.postBtn}>
-            <span style={styles.btnIcon}>📝</span> Post Your Property
+          <button
+            onClick={onPostPropertyClick}
+            className="mp-btn mp-btn-primary"
+          >
+            📝 Post Your Property
           </button>
         </div>
       )}
