@@ -1,0 +1,315 @@
+/* Container */
+.adm-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: clamp(14px, 3vw, 24px);
+}
+
+/* Header */
+.adm-header {
+  margin-bottom: 14px;
+}
+.adm-title {
+  font-size: clamp(22px, 4vw, 30px);
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+}
+.adm-subtitle {
+  color: #64748b;
+  margin: 0;
+}
+.adm-alert {
+  margin-top: 10px;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* State */
+.adm-state {
+  text-align: center;
+  padding: clamp(24px, 6vw, 48px);
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px dashed #e2e8f0;
+  border-radius: 12px;
+}
+
+/* KPI cards */
+.adm-kpis {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+  margin: 12px 0 18px;
+}
+.adm-kpi {
+  grid-column: span 3;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+}
+.adm-kpi-label {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.adm-kpi-value {
+  font-size: 22px;
+  font-weight: 900;
+  color: #1e293b;
+}
+
+/* Stage distribution */
+.adm-stage {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+}
+.adm-stage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.adm-h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+  color: #1e293b;
+}
+.adm-stage-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.adm-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 800;
+}
+.adm-select {
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  font-weight: 800;
+}
+.adm-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 10px;
+}
+.adm-stage-card {
+  grid-column: span 6;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+.adm-stage-name {
+  font-weight: 800;
+  color: #334155;
+  font-size: 14px;
+}
+.adm-stage-bar {
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 6px;
+  margin: 8px 0;
+  overflow: hidden;
+}
+.adm-stage-fill {
+  height: 100%;
+  background: #3b82f6;
+}
+
+/* Agents */
+.adm-agents {
+  margin: 14px 0 18px;
+}
+.adm-agents-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.adm-muted {
+  color: #94a3b8;
+  font-size: 12px;
+}
+.adm-agent-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+  margin-top: 10px;
+}
+.adm-agent-card {
+  grid-column: span 3;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+.adm-agent-name {
+  font-weight: 900;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+.adm-agent-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  padding: 4px 0;
+  border-top: 1px dashed #e2e8f0;
+}
+.adm-agent-row:first-of-type {
+  border-top: none;
+}
+
+/* Recent deals */
+.adm-recent {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+}
+.adm-recent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.adm-search {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+.adm-input {
+  width: min(420px, 100%);
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.adm-recent-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+}
+.adm-deal-card {
+  grid-column: span 4;
+  position: relative;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.adm-deal-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+}
+.adm-stage-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+}
+.stage-inquiry {
+  background: #3b82f6;
+}
+.stage-shortlist {
+  background: #8b5cf6;
+}
+.stage-negotiation {
+  background: #f59e0b;
+}
+.stage-agreement {
+  background: #10b981;
+}
+.stage-registration {
+  background: #06b6d4;
+}
+.stage-payment {
+  background: #ec4899;
+}
+.stage-completed {
+  background: #22c55e;
+}
+.adm-deal-title {
+  font-weight: 900;
+  color: #1e293b;
+  margin-bottom: 6px;
+  padding-right: 80px;
+}
+.adm-deal-price {
+  font-weight: 900;
+  color: #10b981;
+}
+.adm-deal-meta {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  color: #475569;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.adm-deal-date {
+  color: #94a3b8;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* Responsive */
+@media (max-width: 1023px) {
+  .adm-kpis .adm-kpi {
+    grid-column: span 6;
+  } /* 2 per row */
+  .adm-stage-card {
+    grid-column: span 12;
+  } /* 1 per row */
+  .adm-agent-card {
+    grid-column: span 6;
+  } /* 2 per row */
+  .adm-deal-card {
+    grid-column: span 6;
+  } /* 2 per row */
+}
+
+@media (max-width: 767px) {
+  .adm-recent-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .adm-search {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .adm-input {
+    width: 100%;
+  }
+  .adm-kpis .adm-kpi {
+    grid-column: span 12;
+  } /* 1 per row */
+  .adm-agent-card {
+    grid-column: span 12;
+  } /* 1 per row */
+  .adm-deal-card {
+    grid-column: span 12;
+  } /* 1 per row */
+}
