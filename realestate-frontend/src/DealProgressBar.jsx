@@ -37,7 +37,8 @@ const DealProgressBar = ({ deal, onStageChange, isEditable = false }) => {
       if (!deal.isAgreementUploaded && !deal.agreementUploaded) {
         return {
           allowed: false,
-          message: "⚠️ Please upload Agreement document before moving to Registration stage"
+          message:
+            "⚠️ Please upload Agreement document before moving to Registration stage",
         };
       }
     }
@@ -47,7 +48,8 @@ const DealProgressBar = ({ deal, onStageChange, isEditable = false }) => {
       if (!deal.isRegistrationUploaded && !deal.registrationUploaded) {
         return {
           allowed: false,
-          message: "⚠️ Please upload Registration document before moving to Payment stage"
+          message:
+            "⚠️ Please upload Registration document before moving to Payment stage",
         };
       }
     }
@@ -90,7 +92,9 @@ const DealProgressBar = ({ deal, onStageChange, isEditable = false }) => {
         alert("✅ Deal stage updated");
       } else {
         const errorData = await response.json();
-        alert("❌ Failed to update stage: " + (errorData.message || "Unknown error"));
+        alert(
+          "❌ Failed to update stage: " + (errorData.message || "Unknown error")
+        );
       }
     } catch (error) {
       console.error("Error updating stage:", error);
@@ -201,31 +205,45 @@ const DealProgressBar = ({ deal, onStageChange, isEditable = false }) => {
       </h3>
 
       {/* ✅ NEW: Document Status Indicators */}
-      <div style={{
-        display: "flex",
-        gap: "12px",
-        marginBottom: "16px",
-        padding: "12px",
-        backgroundColor: "#f1f5f9",
-        borderRadius: "8px",
-        fontSize: "13px",
-      }}>
-        <div style={{
+      <div
+        style={{
           display: "flex",
-          alignItems: "center",
-          gap: "6px",
-          color: deal.isAgreementUploaded || deal.agreementUploaded ? "#10b981" : "#6b7280"
-        }}>
+          gap: "12px",
+          marginBottom: "16px",
+          padding: "12px",
+          backgroundColor: "#f1f5f9",
+          borderRadius: "8px",
+          fontSize: "13px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            color:
+              deal.isAgreementUploaded || deal.agreementUploaded
+                ? "#10b981"
+                : "#6b7280",
+          }}
+        >
           {deal.isAgreementUploaded || deal.agreementUploaded ? "✅" : "⏳"}
           <span style={{ fontWeight: "600" }}>Agreement Doc</span>
         </div>
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-          color: deal.isRegistrationUploaded || deal.registrationUploaded ? "#10b981" : "#6b7280"
-        }}>
-          {deal.isRegistrationUploaded || deal.registrationUploaded ? "✅" : "⏳"}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            color:
+              deal.isRegistrationUploaded || deal.registrationUploaded
+                ? "#10b981"
+                : "#6b7280",
+          }}
+        >
+          {deal.isRegistrationUploaded || deal.registrationUploaded
+            ? "✅"
+            : "⏳"}
           <span style={{ fontWeight: "600" }}>Registration Doc</span>
         </div>
       </div>
@@ -308,12 +326,19 @@ const DealProgressBar = ({ deal, onStageChange, isEditable = false }) => {
                         width: "100%",
                         padding: "10px 16px",
                         backgroundColor:
-                          stage.stage === currentStage ? "#e0f2fe" :
-                          disabled ? "#f3f4f6" : "white",
-                        color:
-                          disabled ? "#9ca3af" :
-                          stage.stage === currentStage ? "#0369a1" : "#475569",
-                        border: disabled ? "1px solid #e5e7eb" : "1px solid #e2e8f0",
+                          stage.stage === currentStage
+                            ? "#e0f2fe"
+                            : disabled
+                            ? "#f3f4f6"
+                            : "white",
+                        color: disabled
+                          ? "#9ca3af"
+                          : stage.stage === currentStage
+                          ? "#0369a1"
+                          : "#475569",
+                        border: disabled
+                          ? "1px solid #e5e7eb"
+                          : "1px solid #e2e8f0",
                         borderRadius: "6px",
                         cursor: disabled ? "not-allowed" : "pointer",
                         fontWeight: "600",
@@ -326,12 +351,14 @@ const DealProgressBar = ({ deal, onStageChange, isEditable = false }) => {
                     </button>
                     {/* ✅ NEW: Show warning message under disabled buttons */}
                     {disabled && !validation.allowed && (
-                      <div style={{
-                        fontSize: "11px",
-                        color: "#dc2626",
-                        marginTop: "4px",
-                        marginLeft: "8px",
-                      }}>
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          color: "#dc2626",
+                          marginTop: "4px",
+                          marginLeft: "8px",
+                        }}
+                      >
                         {validation.message}
                       </div>
                     )}
