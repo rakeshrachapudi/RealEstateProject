@@ -1,5 +1,7 @@
+// src/components/PropertySearch.jsx
 import React, { useState, useEffect } from "react";
 import { BACKEND_BASE_URL } from "../config/config";
+import "./PropertySearch.css";
 
 const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
   const [searchParams, setSearchParams] = useState({
@@ -16,75 +18,42 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
   const [propertyTypes, setPropertyTypes] = useState([]);
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [debugInfo, setDebugInfo] = useState({
-    types: "loading...",
-    areas: "loading...",
-  });
 
+  // Prefetch filters
   useEffect(() => {
     loadPropertyTypes();
     loadAreas();
   }, []);
 
   const loadPropertyTypes = async () => {
-    console.log("🔍 Loading property types...");
     try {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/property-types`);
-      console.log("Response status:", response.status);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("✅ Property Types Response:", data);
-
-      if (data && data.success && data.data) {
-        console.log("✅ Setting", data.data.length, "property types");
+      const res = await fetch(`${BACKEND_BASE_URL}/api/property-types`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data?.success && Array.isArray(data?.data)) {
         setPropertyTypes(data.data);
-        setDebugInfo((prev) => ({
-          ...prev,
-          types: `Loaded ${data.data.length} types`,
-        }));
       } else {
-        console.error("❌ Invalid response structure:", data);
-        setDebugInfo((prev) => ({ ...prev, types: "Invalid response" }));
+        setPropertyTypes([]);
       }
-    } catch (error) {
-      console.error("❌ Error loading property types:", error);
-      setDebugInfo((prev) => ({ ...prev, types: `Error: ${error.message}` }));
+    } catch (e) {
+      console.error("Error loading property types:", e);
+      setPropertyTypes([]);
     }
   };
 
   const loadAreas = async () => {
-    console.log("🔍 Loading areas...");
     try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/areas?city=Hyderabad`
-      );
-      console.log("Response status:", response.status);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("✅ Areas Response:", data);
-
-      if (data && data.success && data.data) {
-        console.log("✅ Setting", data.data.length, "areas");
+      const res = await fetch(`${BACKEND_BASE_URL}/api/areas?city=Hyderabad`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data?.success && Array.isArray(data?.data)) {
         setAreas(data.data);
-        setDebugInfo((prev) => ({
-          ...prev,
-          areas: `Loaded ${data.data.length} areas`,
-        }));
       } else {
-        console.error("❌ Invalid response structure:", data);
-        setDebugInfo((prev) => ({ ...prev, areas: "Invalid response" }));
+        setAreas([]);
       }
-    } catch (error) {
-      console.error("❌ Error loading areas:", error);
-      setDebugInfo((prev) => ({ ...prev, areas: `Error: ${error.message}` }));
+    } catch (e) {
+      console.error("Error loading areas:", e);
+      setAreas([]);
     }
   };
 
@@ -96,27 +65,43 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
   const handleSearch = async (e) => {
     e.preventDefault();
     setLoading(true);
-    onSearchStart();
+    onSearchStart && onSearchStart();
 
     try {
       const params = {
         ...searchParams,
-        minPrice: searchParams.minPrice
-          ? parseFloat(searchParams.minPrice)
-          : null,
-        maxPrice: searchParams.maxPrice
-          ? parseFloat(searchParams.maxPrice)
-          : null,
+        minPrice: searchParams.minPrice ? Number(searchParams.minPrice) : null,
+        maxPrice: searchParams.maxPrice ? Number(searchParams.maxPrice) : null,
         minBedrooms: searchParams.minBedrooms
-          ? parseInt(searchParams.minBedrooms)
+          ? Number(searchParams.minBedrooms)
           : null,
         maxBedrooms: searchParams.maxBedrooms
-          ? parseInt(searchParams.maxBedrooms)
+          ? Number(searchParams.maxBedrooms)
           : null,
         propertyType: searchParams.propertyType || null,
         area: searchParams.area || null,
         listingType: searchParams.listingType || null,
       };
+
+      // Validate numeric ranges (basic)
+      if (
+        params.minPrice != null &&
+        params.maxPrice != null &&
+        params.minPrice > params.maxPrice
+      ) {
+        alert("Min Price cannot be greater than Max Price");
+        setLoading(false);
+        return;
+      }
+      if (
+        params.minBedrooms != null &&
+        params.maxBedrooms != null &&
+        params.minBedrooms > params.maxBedrooms
+      ) {
+        alert("Min Bedrooms cannot be greater than Max Bedrooms");
+        setLoading(false);
+        return;
+      }
 
       const response = await fetch(
         `${BACKEND_BASE_URL}/api/properties/search`,
@@ -127,17 +112,17 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const data = await response.json();
-      if (data.success) {
-        onSearchResults(data.data);
+      if (data?.success && Array.isArray(data?.data)) {
+        onSearchResults && onSearchResults(data.data);
+      } else {
+        onSearchResults && onSearchResults([]);
       }
     } catch (error) {
       console.error("Error searching properties:", error);
-      onSearchResults([]);
+      onSearchResults && onSearchResults([]);
     } finally {
       setLoading(false);
     }
@@ -154,36 +139,34 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
       minBedrooms: "",
       maxBedrooms: "",
     });
-    onReset();
+    onReset && onReset();
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h2 style={styles.title}>🔍 Find Your Perfect Property</h2>
-        <p style={styles.subtitle}>
-          Search through thousands of properties in Hyderabad
+    <section className="ps-container" aria-labelledby="ps-title">
+      <header className="ps-header">
+        <h2 id="ps-title" className="ps-title">
+          Find Your Perfect Property
+        </h2>
+        <p className="ps-subtitle">
+          Search thousands of properties in Hyderabad
         </p>
+      </header>
 
-        {/* Debug Info */}
-        {/*         <div style={styles.debugInfo}> */}
-        {/*           <small>Debug: {debugInfo.types} | {debugInfo.areas}</small> */}
-        {/*         </div> */}
-      </div>
-
-      <form onSubmit={handleSearch} style={styles.form}>
-        <div style={styles.grid}>
+      <form className="ps-form" onSubmit={handleSearch}>
+        <div className="ps-grid">
           {/* Property Type */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>
-              <span style={styles.labelIcon}>🏠</span>
-              Property Type ({propertyTypes.length} types loaded)
+          <div className="ps-group">
+            <label className="ps-label" htmlFor="ps-propertyType">
+              <span className="ps-label-ic">🏠</span> Property Type
+              {propertyTypes.length > 0 ? ` (${propertyTypes.length})` : ""}
             </label>
             <select
+              id="ps-propertyType"
               name="propertyType"
               value={searchParams.propertyType}
               onChange={handleInputChange}
-              style={styles.select}
+              className="ps-select"
             >
               <option value="">All Types</option>
               {propertyTypes.map((type) => (
@@ -195,16 +178,16 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
           </div>
 
           {/* Listing Type */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>
-              <span style={styles.labelIcon}>📋</span>
-              Listing Type
+          <div className="ps-group">
+            <label className="ps-label" htmlFor="ps-listingType">
+              <span className="ps-label-ic">📋</span> Listing Type
             </label>
             <select
+              id="ps-listingType"
               name="listingType"
               value={searchParams.listingType}
               onChange={handleInputChange}
-              style={styles.select}
+              className="ps-select"
             >
               <option value="">All Listings</option>
               <option value="sale">For Sale</option>
@@ -213,224 +196,129 @@ const PropertySearch = ({ onSearchResults, onSearchStart, onReset }) => {
           </div>
 
           {/* Area */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>
-              <span style={styles.labelIcon}>📍</span>
-              Area ({areas.length} areas loaded)
+          <div className="ps-group">
+            <label className="ps-label" htmlFor="ps-area">
+              <span className="ps-label-ic">📍</span> Area
+              {areas.length > 0 ? ` (${areas.length})` : ""}
             </label>
             <select
+              id="ps-area"
               name="area"
               value={searchParams.area}
               onChange={handleInputChange}
-              style={styles.select}
+              className="ps-select"
             >
               <option value="">All Areas</option>
               {areas.map((area) => (
                 <option key={area.areaId} value={area.areaName}>
-                  {area.areaName} ({area.pincode})
+                  {area.areaName} {area.pincode ? `(${area.pincode})` : ""}
                 </option>
               ))}
             </select>
           </div>
 
           {/* Min Price */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>
-              <span style={styles.labelIcon}>💰</span>
-              Min Price (₹)
+          <div className="ps-group">
+            <label className="ps-label" htmlFor="ps-minPrice">
+              <span className="ps-label-ic">💰</span> Min Price (₹)
             </label>
             <input
+              id="ps-minPrice"
               type="number"
               name="minPrice"
-              placeholder="Minimum Price"
+              placeholder="0"
               value={searchParams.minPrice}
               onChange={handleInputChange}
-              style={styles.input}
+              className="ps-input"
               min="0"
+              inputMode="numeric"
             />
           </div>
 
           {/* Max Price */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>
-              <span style={styles.labelIcon}>💰</span>
-              Max Price (₹)
+          <div className="ps-group">
+            <label className="ps-label" htmlFor="ps-maxPrice">
+              <span className="ps-label-ic">💰</span> Max Price (₹)
             </label>
             <input
+              id="ps-maxPrice"
               type="number"
               name="maxPrice"
-              placeholder="500000000"
+              placeholder="50000000"
               value={searchParams.maxPrice}
               onChange={handleInputChange}
-              style={styles.input}
+              className="ps-input"
               min="0"
+              inputMode="numeric"
             />
           </div>
 
           {/* Min Bedrooms */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>
-              <span style={styles.labelIcon}>🛏️</span>
-              Min Bedrooms
+          <div className="ps-group">
+            <label className="ps-label" htmlFor="ps-minBedrooms">
+              <span className="ps-label-ic">🛏️</span> Min Bedrooms
             </label>
             <input
+              id="ps-minBedrooms"
               type="number"
               name="minBedrooms"
               placeholder="1"
               value={searchParams.minBedrooms}
               onChange={handleInputChange}
-              style={styles.input}
+              className="ps-input"
               min="0"
               max="10"
+              inputMode="numeric"
             />
           </div>
 
           {/* Max Bedrooms */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>
-              <span style={styles.labelIcon}>🛏️</span>
-              Max Bedrooms
+          <div className="ps-group">
+            <label className="ps-label" htmlFor="ps-maxBedrooms">
+              <span className="ps-label-ic">🛏️</span> Max Bedrooms
             </label>
             <input
+              id="ps-maxBedrooms"
               type="number"
               name="maxBedrooms"
               placeholder="2"
               value={searchParams.maxBedrooms}
               onChange={handleInputChange}
-              style={styles.input}
+              className="ps-input"
               min="0"
               max="10"
+              inputMode="numeric"
             />
           </div>
         </div>
 
-        <div style={styles.actions}>
+        <div className="ps-actions">
           <button
             type="button"
             onClick={handleReset}
-            style={styles.resetButton}
+            className="ps-btn ps-btn-secondary"
           >
-            <span style={styles.buttonIcon}>🔄</span>
+            <span className="ps-btn-ic" aria-hidden="true">
+              🔄
+            </span>
             Reset Filters
           </button>
-          <button type="submit" style={styles.searchButton} disabled={loading}>
-            <span style={styles.buttonIcon}>{loading ? "⏳" : "🔍"}</span>
+
+          <button
+            type="submit"
+            className="ps-btn ps-btn-primary"
+            disabled={loading}
+            aria-busy={loading}
+          >
+            <span className="ps-btn-ic" aria-hidden="true">
+              {loading ? "⏳" : "🔍"}
+            </span>
             {loading ? "Searching..." : "Search Properties"}
           </button>
         </div>
       </form>
-    </div>
+    </section>
   );
-};
-
-const styles = {
-  container: {
-    background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
-    padding: "2.5rem",
-    borderRadius: "24px",
-    boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
-    marginBottom: "3rem",
-    border: "1px solid rgba(255,255,255,0.2)",
-  },
-  header: {
-    textAlign: "center",
-    marginBottom: "2rem",
-  },
-  title: {
-    fontSize: "2rem",
-    marginBottom: "0.5rem",
-    color: "#1e293b",
-    fontWeight: "800",
-  },
-  subtitle: {
-    fontSize: "1.1rem",
-    color: "#64748b",
-    fontWeight: "500",
-  },
-  debugInfo: {
-    marginTop: "0.5rem",
-    padding: "0.5rem",
-    background: "#fef3c7",
-    borderRadius: "8px",
-    color: "#92400e",
-  },
-  form: {
-    width: "100%",
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-    gap: "1.5rem",
-    marginBottom: "2rem",
-  },
-  formGroup: {
-    display: "flex",
-    flexDirection: "column",
-  },
-  label: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    marginBottom: "8px",
-    fontSize: "14px",
-    fontWeight: "700",
-    color: "#374151",
-  },
-  labelIcon: {
-    fontSize: "16px",
-  },
-  input: {
-    padding: "14px 16px",
-    borderRadius: "12px",
-    border: "2px solid #e2e8f0",
-    fontSize: "15px",
-    background: "white",
-    fontWeight: "500",
-  },
-  select: {
-    padding: "14px 16px",
-    borderRadius: "12px",
-    border: "2px solid #e2e8f0",
-    fontSize: "15px",
-    backgroundColor: "white",
-    cursor: "pointer",
-    fontWeight: "500",
-  },
-  actions: {
-    display: "flex",
-    gap: "16px",
-    justifyContent: "center",
-    flexWrap: "wrap",
-  },
-  resetButton: {
-    padding: "14px 28px",
-    borderRadius: "12px",
-    border: "none",
-    background: "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
-    color: "white",
-    fontSize: "15px",
-    fontWeight: "700",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  searchButton: {
-    padding: "14px 32px",
-    borderRadius: "12px",
-    border: "none",
-    background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
-    color: "white",
-    fontSize: "15px",
-    fontWeight: "700",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  buttonIcon: {
-    fontSize: "16px",
-  },
 };
 
 export default PropertySearch;
