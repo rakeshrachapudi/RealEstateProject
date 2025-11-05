@@ -1,938 +1,750 @@
-import React, { useState, useEffect } from "react";
+// realestate-frontend/src/pages/AdminUsersPage.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../AuthContext";
 import { BACKEND_BASE_URL } from "../config/config";
-import AdminPropertyEditModal from "./AdminPropertyEditModal";
+import "./AdminUsersPage.css";
 
 const AdminUsersPage = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [userDeals, setUserDeals] = useState([]);
-  const [userProperties, setUserProperties] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("details");
-  const [filterRole, setFilterRole] = useState("all");
+  const [error, setError] = useState(null);
+
+  // Filters and search
   const [searchQuery, setSearchQuery] = useState("");
-  const [propertySearchQuery, setPropertySearchQuery] = useState("");
-  const [deleteModal, setDeleteModal] = useState({ show: false, type: null, item: null });
-  const [editPropertyModal, setEditPropertyModal] = useState({ show: false, property: null });
+  const [roleFilter, setRoleFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
+
+  // Modals
+  const [deleteModal, setDeleteModal] = useState({ show: false, user: null });
+  const [editModal, setEditModal] = useState({ show: false, user: null });
+  const [createModal, setCreateModal] = useState({ show: false });
+
+  // Form data
+  const [editFormData, setEditFormData] = useState({});
+  const [createFormData, setCreateFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    mobileNumber: "",
+    role: "USER",
+    password: "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    state: "",
+    pincode: "",
+  });
+
+  const token = localStorage.getItem("authToken");
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  useEffect(() => {
-    if (selectedUser) {
-      fetchUserDeals(selectedUser.id);
-      fetchUserProperties(selectedUser.id);
+    if (!user || user.role !== "ADMIN") {
+      navigate("/");
+      return;
     }
-  }, [selectedUser]);
+    fetchAllUsers();
+  }, [user, navigate]);
 
-  // ==================== FETCH FUNCTIONS ====================
+  const fetchAllUsers = async () => {
+    setLoading(true);
+    setError(null);
 
-  const fetchUsers = async () => {
     try {
+      // Try to fetch all users from admin endpoint
       const response = await fetch(`${BACKEND_BASE_URL}/api/users`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
+
       if (response.ok) {
         const data = await response.json();
-        const usersList = data.success ? data.data : [];
+        const usersList = data.success
+          ? data.data || []
+          : Array.isArray(data)
+          ? data
+          : [];
         setUsers(usersList);
-        if (usersList.length > 0 && !selectedUser) {
-          setSelectedUser(usersList[0]);
-        }
+        console.log(`✅ Loaded ${usersList.length} users`);
+      } else {
+        throw new Error(`Failed to fetch users: HTTP ${response.status}`);
       }
     } catch (err) {
-      console.error("Error fetching users:", err);
+      console.error("❌ Error loading users:", err);
+      setError(`Failed to load users: ${err.message}`);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchUserDeals = async (userId) => {
-    try {
-      const user = users.find(u => u.id === userId);
-      if (!user) return;
-
-      const userRole = user.role;
-
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/deals/user/${userId}/role/${userRole}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setUserDeals(data.success ? data.data : []);
-      }
-    } catch (err) {
-      console.error("Error fetching user deals:", err);
-      setUserDeals([]);
-    }
-  };
-
-  const fetchUserProperties = async (userId) => {
-    try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/properties/user/${userId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        }
-      );
-      if (response.ok) {
-        const properties = await response.json();
-        setUserProperties(Array.isArray(properties) ? properties : []);
-      }
-    } catch (err) {
-      console.error("Error fetching user properties:", err);
-      setUserProperties([]);
-    }
-  };
-
-  // ==================== DELETE FUNCTIONS ====================
-
-  const handleDeleteDeal = async (dealId) => {
-    try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/deals/${dealId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        }
-      );
-      if (response.ok) {
-        showSuccessMessage("Deal deleted successfully");
-        fetchUserDeals(selectedUser.id);
-      } else {
-        showErrorMessage("Failed to delete deal");
-      }
-    } catch (err) {
-      console.error("Error deleting deal:", err);
-      showErrorMessage("Error deleting deal");
-    }
-    closeDeleteModal();
-  };
-
-  const handleDeleteProperty = async (propertyId) => {
-    try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/properties/${propertyId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        }
-      );
-      if (response.ok) {
-        showSuccessMessage("Property deleted successfully");
-        fetchUserProperties(selectedUser.id);
-        fetchUserDeals(selectedUser.id);
-      } else {
-        showErrorMessage("Failed to delete property");
-      }
-    } catch (err) {
-      console.error("Error deleting property:", err);
-      showErrorMessage("Error deleting property");
-    }
-    closeDeleteModal();
-  };
-
   const handleDeleteUser = async (userId) => {
     try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/users/${userId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        }
-      );
+      const response = await fetch(`${BACKEND_BASE_URL}/api/users/${userId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
       if (response.ok) {
-        showSuccessMessage("User deleted successfully (cascade delete applied)");
-        setSelectedUser(null);
-        fetchUsers();
+        alert("✅ User deleted successfully");
+        setUsers((prev) => prev.filter((u) => u.id !== userId));
+        if (selectedUser?.id === userId) {
+          setSelectedUser(null);
+        }
       } else {
-        showErrorMessage("Failed to delete user");
+        alert("❌ Failed to delete user");
       }
     } catch (err) {
-      console.error("Error deleting user:", err);
-      showErrorMessage("Error deleting user");
+      console.error("Delete error:", err);
+      alert("❌ Error deleting user");
     }
     closeDeleteModal();
   };
 
-  // ==================== PROPERTY EDIT FUNCTIONS ====================
+  const handleEditUser = async () => {
+    try {
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/users/${editFormData.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(editFormData),
+        }
+      );
 
-  const openEditPropertyModal = (property) => {
-    setEditPropertyModal({ show: true, property });
-  };
+      if (response.ok) {
+        const data = await response.json();
+        const updatedUser = data.data || editFormData;
 
-  const closeEditPropertyModal = () => {
-    setEditPropertyModal({ show: false, property: null });
-  };
+        setUsers((prev) =>
+          prev.map((u) => (u.id === updatedUser.id ? updatedUser : u))
+        );
+        if (selectedUser?.id === updatedUser.id) {
+          setSelectedUser(updatedUser);
+        }
 
-  const handlePropertyUpdated = () => {
-    fetchUserProperties(selectedUser.id);
-    fetchUserDeals(selectedUser.id);
-  };
-
-  // ==================== MODAL FUNCTIONS ====================
-
-  const openDeleteModal = (type, item) => {
-    setDeleteModal({ show: true, type, item });
-  };
-
-  const closeDeleteModal = () => {
-    setDeleteModal({ show: false, type: null, item: null });
-  };
-
-  const confirmDelete = () => {
-    const { type, item } = deleteModal;
-    if (type === "deal") {
-      handleDeleteDeal(item.dealId);
-    } else if (type === "property") {
-      handleDeleteProperty(item.propertyId);
-    } else if (type === "user") {
-      handleDeleteUser(item.id);
+        alert("✅ User updated successfully");
+        closeEditModal();
+      } else {
+        alert("❌ Failed to update user");
+      }
+    } catch (err) {
+      console.error("Update error:", err);
+      alert("❌ Error updating user");
     }
   };
 
-  // ==================== UTILITY FUNCTIONS ====================
+  const handleCreateUser = async () => {
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(createFormData),
+      });
 
-  const showSuccessMessage = (message) => {
-    alert(message);
+      if (response.ok) {
+        const data = await response.json();
+        const newUser = data.data || data.user;
+
+        if (newUser) {
+          setUsers((prev) => [newUser, ...prev]);
+        }
+
+        alert("✅ User created successfully");
+        closeCreateModal();
+        fetchAllUsers(); // Refresh to get complete data
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        alert(
+          `❌ Failed to create user: ${errorData.message || "Unknown error"}`
+        );
+      }
+    } catch (err) {
+      console.error("Create error:", err);
+      alert("❌ Error creating user");
+    }
   };
 
-  const showErrorMessage = (message) => {
-    alert(message);
+  // Modal handlers
+  const openDeleteModal = (user) => setDeleteModal({ show: true, user });
+  const closeDeleteModal = () => setDeleteModal({ show: false, user: null });
+
+  const openEditModal = (user) => {
+    setEditFormData({ ...user });
+    setEditModal({ show: true, user });
+  };
+  const closeEditModal = () => {
+    setEditModal({ show: false, user: null });
+    setEditFormData({});
   };
 
-  const getStageColor = (stage) => {
-    const colors = {
-      INQUIRY: "#3b82f6",
-      SHORTLIST: "#8b5cf6",
-      NEGOTIATION: "#f59e0b",
-      AGREEMENT: "#10b981",
-      REGISTRATION: "#06b6d4",
-      PAYMENT: "#ec4899",
-      COMPLETED: "#22c55e",
+  const openCreateModal = () => setCreateModal({ show: true });
+  const closeCreateModal = () => {
+    setCreateModal({ show: false });
+    setCreateFormData({
+      firstName: "",
+      lastName: "",
+      email: "",
+      mobileNumber: "",
+      role: "USER",
+      password: "",
+      addressLine1: "",
+      addressLine2: "",
+      city: "",
+      state: "",
+      pincode: "",
+    });
+  };
+
+  const updateEditForm = (field, value) => {
+    setEditFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateCreateForm = (field, value) => {
+    setCreateFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Filtering and sorting
+  const filteredAndSortedUsers = useMemo(() => {
+    let filtered = [...users];
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const needle = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter(
+        (user) =>
+          (user.firstName || "").toLowerCase().includes(needle) ||
+          (user.lastName || "").toLowerCase().includes(needle) ||
+          (user.email || "").toLowerCase().includes(needle) ||
+          (user.mobileNumber || "").includes(needle) ||
+          user.id?.toString().includes(needle)
+      );
+    }
+
+    // Role filter
+    if (roleFilter !== "ALL") {
+      filtered = filtered.filter((user) => user.role === roleFilter);
+    }
+
+    // Status filter (you can extend this based on your user model)
+    if (statusFilter !== "ALL") {
+      // Assuming users have an active/inactive status
+      if (statusFilter === "ACTIVE") {
+        filtered = filtered.filter(
+          (user) => !user.isDeleted && user.isActive !== false
+        );
+      } else if (statusFilter === "INACTIVE") {
+        filtered = filtered.filter(
+          (user) => user.isDeleted || user.isActive === false
+        );
+      }
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      let aVal, bVal;
+
+      switch (sortBy) {
+        case "name":
+          aVal = `${a.firstName || ""} ${a.lastName || ""}`.toLowerCase();
+          bVal = `${b.firstName || ""} ${b.lastName || ""}`.toLowerCase();
+          break;
+        case "email":
+          aVal = (a.email || "").toLowerCase();
+          bVal = (b.email || "").toLowerCase();
+          break;
+        case "role":
+          aVal = a.role || "";
+          bVal = b.role || "";
+          break;
+        case "createdAt":
+        default:
+          aVal = new Date(a.createdAt || 0).getTime();
+          bVal = new Date(b.createdAt || 0).getTime();
+          break;
+      }
+
+      if (typeof aVal === "string") {
+        return sortOrder === "asc"
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
+
+      return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+    });
+
+    return filtered;
+  }, [users, searchQuery, roleFilter, statusFilter, sortBy, sortOrder]);
+
+  // Stats calculation
+  const stats = useMemo(() => {
+    const total = users.length;
+    const byRole = users.reduce((acc, user) => {
+      acc[user.role] = (acc[user.role] || 0) + 1;
+      return acc;
+    }, {});
+
+    return {
+      total,
+      users: byRole.USER || 0,
+      agents: byRole.AGENT || 0,
+      admins: byRole.ADMIN || 0,
+      others:
+        total - (byRole.USER || 0) - (byRole.AGENT || 0) - (byRole.ADMIN || 0),
     };
-    return colors[stage] || "#6b7280";
-  };
+  }, [users]);
 
-  const formatPrice = (price) => {
-    if (!price) return "N/A";
-    return `₹${Number(price).toLocaleString("en-IN")}`;
-  };
-
-  const getRoleBadgeStyle = (role) => {
-    const roleColors = {
-      ADMIN: { bg: "#dc2626", text: "white" },
-      AGENT: { bg: "#10b981", text: "white" },
-      USER: { bg: "#3b82f6", text: "white" },
+  const getRoleBadgeClass = (role) => {
+    const classes = {
+      USER: "aup-badge-user",
+      AGENT: "aup-badge-agent",
+      ADMIN: "aup-badge-admin",
     };
-    return roleColors[role] || roleColors.USER;
-  };
-
-  // ==================== FILTER FUNCTIONS ====================
-
-  const filteredUsers = users.filter(user => {
-    const matchesRole = filterRole === "all" || user.role === filterRole;
-    const matchesSearch =
-      user.id?.toString().includes(searchQuery) ||
-      user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.mobileNumber?.includes(searchQuery);
-    return matchesRole && matchesSearch;
-  });
-
-  const filteredProperties = userProperties.filter(property => {
-    return (
-      property.propertyId?.toString().includes(propertySearchQuery) ||
-      property.title?.toLowerCase().includes(propertySearchQuery.toLowerCase()) ||
-      property.cityName?.toLowerCase().includes(propertySearchQuery.toLowerCase()) ||
-      property.areaName?.toLowerCase().includes(propertySearchQuery.toLowerCase())
-    );
-  });
-
-  // ==================== STYLES ====================
-
-  const styles = {
-    container: {
-      maxWidth: "1800px",
-      margin: "0 auto",
-      padding: "24px 32px",
-      backgroundColor: "#f9fafb",
-      minHeight: "100vh",
-    },
-    header: {
-      marginBottom: "32px",
-      paddingBottom: "24px",
-      borderBottom: "2px solid #e5e7eb",
-    },
-    title: {
-      fontSize: "36px",
-      fontWeight: "800",
-      color: "#1e293b",
-      margin: "0 0 8px 0",
-    },
-    subtitle: {
-      color: "#64748b",
-      margin: "0",
-      fontSize: "16px",
-    },
-    controls: {
-      marginBottom: "24px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "16px",
-    },
-    searchInput: {
-      width: "100%",
-      padding: "12px 16px",
-      border: "1px solid #e2e8f0",
-      borderRadius: "8px",
-      fontSize: "14px",
-      fontFamily: "inherit",
-    },
-    roleFilters: {
-      display: "flex",
-      gap: "8px",
-      flexWrap: "wrap",
-    },
-    roleFilterBtn: (isActive) => ({
-      padding: "8px 16px",
-      backgroundColor: isActive ? "#3b82f6" : "white",
-      color: isActive ? "white" : "#64748b",
-      border: `1px solid ${isActive ? "#3b82f6" : "#e2e8f0"}`,
-      borderRadius: "8px",
-      cursor: "pointer",
-      fontSize: "13px",
-      fontWeight: "600",
-      transition: "all 0.2s",
-    }),
-    mainGrid: {
-      display: "grid",
-      gridTemplateColumns: "350px 1fr",
-      gap: "24px",
-      alignItems: "start",
-    },
-    userList: {
-      backgroundColor: "white",
-      borderRadius: "12px",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-      border: "1px solid #e5e7eb",
-      maxHeight: "calc(100vh - 240px)",
-      overflowY: "auto",
-    },
-    userListHeader: {
-      padding: "16px",
-      backgroundColor: "#f8fafc",
-      borderBottom: "1px solid #e5e7eb",
-      fontWeight: "700",
-      position: "sticky",
-      top: 0,
-      zIndex: 1,
-    },
-    userItem: (isSelected) => ({
-      padding: "14px 16px",
-      borderBottom: "1px solid #e5e7eb",
-      cursor: "pointer",
-      backgroundColor: isSelected ? "#f0f9ff" : "white",
-      borderLeft: isSelected ? "4px solid #3b82f6" : "4px solid transparent",
-      transition: "all 0.2s",
-    }),
-    userItemName: {
-      fontSize: "14px",
-      fontWeight: "600",
-      color: "#1e293b",
-      marginBottom: "4px",
-    },
-    userItemEmail: {
-      fontSize: "12px",
-      color: "#64748b",
-      marginBottom: "8px",
-    },
-    userItemMeta: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      fontSize: "11px",
-      color: "#94a3b8",
-    },
-    roleBadge: (role) => {
-      const colors = getRoleBadgeStyle(role);
-      return {
-        display: "inline-block",
-        padding: "2px 6px",
-        backgroundColor: colors.bg,
-        color: colors.text,
-        borderRadius: "4px",
-        fontSize: "10px",
-        fontWeight: "700",
-      };
-    },
-    rightPanel: {
-      backgroundColor: "white",
-      borderRadius: "12px",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-      border: "1px solid #e5e7eb",
-      padding: "24px",
-      maxHeight: "calc(100vh - 240px)",
-      overflowY: "auto",
-    },
-    tabs: {
-      display: "flex",
-      gap: "8px",
-      marginBottom: "24px",
-      borderBottom: "2px solid #e5e7eb",
-      paddingBottom: "12px",
-    },
-    tab: (isActive) => ({
-      padding: "8px 16px",
-      backgroundColor: "transparent",
-      color: isActive ? "#3b82f6" : "#64748b",
-      border: "none",
-      borderBottom: isActive ? "2px solid #3b82f6" : "2px solid transparent",
-      cursor: "pointer",
-      fontSize: "14px",
-      fontWeight: "600",
-      transition: "all 0.2s",
-      marginBottom: "-14px",
-    }),
-    detailsGrid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-      gap: "16px",
-      marginBottom: "24px",
-    },
-    detailCard: {
-      padding: "12px",
-      backgroundColor: "#f8fafc",
-      borderRadius: "8px",
-      border: "1px solid #e2e8f0",
-    },
-    detailLabel: {
-      fontSize: "11px",
-      color: "#64748b",
-      marginBottom: "4px",
-      fontWeight: "600",
-      textTransform: "uppercase",
-    },
-    detailValue: {
-      fontSize: "14px",
-      color: "#1e293b",
-      fontWeight: "600",
-    },
-    actionButtons: {
-      display: "flex",
-      gap: "12px",
-      marginTop: "16px",
-      flexWrap: "wrap",
-    },
-    deleteBtn: {
-      padding: "10px 20px",
-      backgroundColor: "#ef4444",
-      color: "white",
-      border: "none",
-      borderRadius: "8px",
-      cursor: "pointer",
-      fontSize: "14px",
-      fontWeight: "600",
-      transition: "background 0.2s",
-    },
-    iconBtn: (color) => {
-      const colors = {
-        red: { bg: "#fee2e2", hover: "#fecaca", text: "#dc2626" },
-        blue: { bg: "#dbeafe", hover: "#bfdbfe", text: "#1e40af" },
-        green: { bg: "#d1fae5", hover: "#a7f3d0", text: "#047857" },
-      };
-      const c = colors[color] || colors.blue;
-      return {
-        padding: "8px 12px",
-        backgroundColor: c.bg,
-        color: c.text,
-        border: "none",
-        borderRadius: "6px",
-        cursor: "pointer",
-        fontSize: "12px",
-        fontWeight: "600",
-        transition: "background 0.2s",
-      };
-    },
-    emptyState: {
-      textAlign: "center",
-      padding: "60px 20px",
-      color: "#64748b",
-    },
-    emptyIcon: {
-      fontSize: "64px",
-      marginBottom: "16px",
-    },
-    propertiesGrid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-      gap: "16px",
-    },
-    propertyCard: {
-      backgroundColor: "#f8fafc",
-      borderRadius: "12px",
-      border: "1px solid #e2e8f0",
-      overflow: "hidden",
-      transition: "all 0.3s",
-    },
-    propertyImage: {
-      width: "100%",
-      height: "180px",
-      objectFit: "cover",
-    },
-    propertyContent: {
-      padding: "16px",
-    },
-    propertyTitle: {
-      fontSize: "16px",
-      fontWeight: "700",
-      color: "#1e293b",
-      marginBottom: "8px",
-    },
-    propertyPrice: {
-      fontSize: "18px",
-      fontWeight: "800",
-      color: "#10b981",
-      marginBottom: "12px",
-    },
-    propertyDetails: {
-      fontSize: "13px",
-      color: "#64748b",
-      marginBottom: "6px",
-    },
-    dealsGrid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-      gap: "16px",
-    },
-    dealCard: {
-      padding: "16px",
-      backgroundColor: "#f8fafc",
-      borderRadius: "12px",
-      border: "1px solid #e2e8f0",
-    },
-    dealContent: {
-      display: "flex",
-      flexDirection: "column",
-      gap: "8px",
-    },
-    dealTitle: {
-      fontSize: "16px",
-      fontWeight: "700",
-      color: "#1e293b",
-      marginBottom: "8px",
-    },
-    dealInfo: {
-      fontSize: "13px",
-      color: "#64748b",
-      marginBottom: "4px",
-    },
-    stageBadge: (stage) => ({
-      display: "inline-block",
-      padding: "4px 8px",
-      backgroundColor: getStageColor(stage),
-      color: "white",
-      borderRadius: "4px",
-      fontSize: "11px",
-      fontWeight: "700",
-    }),
-    modal: {
-      position: "fixed",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: "rgba(0,0,0,0.5)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 1000,
-    },
-    modalContent: {
-      backgroundColor: "white",
-      borderRadius: "12px",
-      padding: "24px",
-      maxWidth: "500px",
-      width: "90%",
-      maxHeight: "90vh",
-      overflowY: "auto",
-    },
-    modalTitle: {
-      fontSize: "22px",
-      fontWeight: "700",
-      color: "#1e293b",
-      marginBottom: "16px",
-    },
-    modalText: {
-      fontSize: "14px",
-      color: "#64748b",
-      lineHeight: "1.6",
-      marginBottom: "8px",
-    },
-    modalButtons: {
-      display: "flex",
-      gap: "12px",
-      marginTop: "24px",
-    },
-    modalBtn: (variant) => {
-      const variants = {
-        cancel: { bg: "#e2e8f0", color: "#1e293b", hover: "#cbd5e1" },
-        danger: { bg: "#ef4444", color: "white", hover: "#dc2626" },
-        primary: { bg: "#3b82f6", color: "white", hover: "#2563eb" },
-      };
-      const v = variants[variant] || variants.cancel;
-      return {
-        flex: 1,
-        padding: "10px 16px",
-        backgroundColor: v.bg,
-        color: v.color,
-        border: "none",
-        borderRadius: "8px",
-        cursor: "pointer",
-        fontSize: "14px",
-        fontWeight: "600",
-        transition: "background 0.2s",
-      };
-    },
-    propertySearchInput: {
-      width: "100%",
-      padding: "10px 14px",
-      border: "1px solid #e2e8f0",
-      borderRadius: "8px",
-      fontSize: "14px",
-      marginBottom: "16px",
-      fontFamily: "inherit",
-    },
+    return `aup-role-badge ${classes[role] || "aup-badge-other"}`;
   };
 
   if (loading) {
     return (
-      <div style={styles.container}>
-        <div style={{ textAlign: "center", padding: "60px 20px" }}>
-          <div style={{ fontSize: "48px", marginBottom: "16px" }}>⏳</div>
-          <h3>Loading users...</h3>
-        </div>
+      <div className="aup-container">
+        <div className="aup-loading">⏳ Loading users...</div>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
+    <div className="aup-container">
       {/* Header */}
-      <div style={styles.header}>
-        <h1 style={styles.title}>👥 User Management</h1>
-        <p style={styles.subtitle}>Manage all users - view, edit, and monitor user activities</p>
-      </div>
-
-      {/* Search & Filters */}
-      <div style={styles.controls}>
-        <input
-          type="text"
-          placeholder="🔍 Search by ID, name, email, or mobile..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={styles.searchInput}
-        />
-        <div style={styles.roleFilters}>
-          {["all", "ADMIN", "AGENT", "USER"].map((role) => (
-            <button
-              key={role}
-              onClick={() => setFilterRole(role)}
-              style={styles.roleFilterBtn(filterRole === role)}
-            >
-              {role === "all" ? "All Users" : role}
-            </button>
-          ))}
+      <header className="aup-header">
+        <div className="aup-header-content">
+          <h1 className="aup-title">User Management</h1>
+          <p className="aup-subtitle">Manage all users across the platform</p>
+          {error && <div className="aup-alert">⚠️ {error}</div>}
         </div>
-      </div>
+        <button className="aup-create-btn" onClick={openCreateModal}>
+          ➕ Create User
+        </button>
+      </header>
 
-      {/* Main Grid */}
-      <div style={styles.mainGrid}>
-        {/* User List */}
-        <div style={styles.userList}>
-          <div style={styles.userListHeader}>Users ({filteredUsers.length})</div>
-          {filteredUsers.map((user) => (
-            <div
-              key={user.id}
-              onClick={() => setSelectedUser(user)}
-              style={styles.userItem(selectedUser?.id === user.id)}
-            >
-              <div style={styles.userItemName}>
-                {user.firstName} {user.lastName}
-              </div>
-              <div style={styles.userItemEmail}>{user.email}</div>
-              <div style={styles.userItemMeta}>
-                <span style={styles.roleBadge(user.role)}>{user.role}</span>
-                <span>ID: {user.id}</span>
-              </div>
-            </div>
-          ))}
+      {/* Stats */}
+      <section className="aup-stats">
+        <div className="aup-stat">
+          <div className="aup-stat-value">{stats.total}</div>
+          <div className="aup-stat-label">Total Users</div>
+        </div>
+        <div className="aup-stat">
+          <div className="aup-stat-value">{stats.users}</div>
+          <div className="aup-stat-label">Regular Users</div>
+        </div>
+        <div className="aup-stat">
+          <div className="aup-stat-value">{stats.agents}</div>
+          <div className="aup-stat-label">Agents</div>
+        </div>
+        <div className="aup-stat">
+          <div className="aup-stat-value">{stats.admins}</div>
+          <div className="aup-stat-label">Admins</div>
+        </div>
+      </section>
+
+      {/* Controls */}
+      <section className="aup-controls">
+        <div className="aup-search">
+          <input
+            type="text"
+            className="aup-input"
+            placeholder="Search by name, email, phone, or ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
 
-        {/* Right Panel */}
-        <div style={styles.rightPanel}>
-          {selectedUser ? (
-            <>
-              {/* Tabs */}
-              <div style={styles.tabs}>
-                <button
-                  onClick={() => setActiveTab("details")}
-                  style={styles.tab(activeTab === "details")}
-                >
-                  Details
-                </button>
-                <button
-                  onClick={() => setActiveTab("deals")}
-                  style={styles.tab(activeTab === "deals")}
-                >
-                  Deals ({userDeals.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab("properties")}
-                  style={styles.tab(activeTab === "properties")}
-                >
-                  Properties ({userProperties.length})
-                </button>
-              </div>
+        <div className="aup-filters">
+          <div className="aup-filter-group">
+            <label className="aup-label">Role</label>
+            <select
+              className="aup-select"
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+            >
+              <option value="ALL">All Roles</option>
+              <option value="USER">Users</option>
+              <option value="AGENT">Agents</option>
+              <option value="ADMIN">Admins</option>
+            </select>
+          </div>
 
-              {/* Details Tab */}
-              {activeTab === "details" && (
-                <>
-                  <div style={styles.detailsGrid}>
-                    <div style={styles.detailCard}>
-                      <div style={styles.detailLabel}>User ID</div>
-                      <div style={styles.detailValue}>{selectedUser.id}</div>
-                    </div>
-                    <div style={styles.detailCard}>
-                      <div style={styles.detailLabel}>Full Name</div>
-                      <div style={styles.detailValue}>
-                        {selectedUser.firstName} {selectedUser.lastName}
-                      </div>
-                    </div>
-                    <div style={styles.detailCard}>
-                      <div style={styles.detailLabel}>Email</div>
-                      <div style={styles.detailValue}>{selectedUser.email}</div>
-                    </div>
-                    <div style={styles.detailCard}>
-                      <div style={styles.detailLabel}>Mobile</div>
-                      <div style={styles.detailValue}>{selectedUser.mobileNumber || "N/A"}</div>
-                    </div>
-                    <div style={styles.detailCard}>
-                      <div style={styles.detailLabel}>Role</div>
-                      <div style={styles.detailValue}>{selectedUser.role}</div>
-                    </div>
-                    <div style={styles.detailCard}>
-                      <div style={styles.detailLabel}>Joined</div>
-                      <div style={styles.detailValue}>
-                        {new Date(selectedUser.createdAt).toLocaleDateString()}
-                      </div>
+          <div className="aup-filter-group">
+            <label className="aup-label">Sort By</label>
+            <select
+              className="aup-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="createdAt">Join Date</option>
+              <option value="name">Name</option>
+              <option value="email">Email</option>
+              <option value="role">Role</option>
+            </select>
+          </div>
+
+          <div className="aup-filter-group">
+            <label className="aup-label">Order</label>
+            <select
+              className="aup-select"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+            >
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+          </div>
+        </div>
+
+        <button
+          className="aup-refresh-btn"
+          onClick={fetchAllUsers}
+          disabled={loading}
+        >
+          {loading ? "⏳" : "↻"} Refresh
+        </button>
+      </section>
+
+      {/* User Grid */}
+      <section className="aup-users">
+        <div className="aup-users-header">
+          <h2 className="aup-users-title">
+            {filteredAndSortedUsers.length} User
+            {filteredAndSortedUsers.length !== 1 ? "s" : ""}
+          </h2>
+        </div>
+
+        {filteredAndSortedUsers.length === 0 ? (
+          <div className="aup-empty-state">
+            {searchQuery.trim() || roleFilter !== "ALL"
+              ? "No users match your current filters."
+              : "No users found in the system."}
+          </div>
+        ) : (
+          <div className="aup-user-grid">
+            {filteredAndSortedUsers.map((userItem) => (
+              <div
+                key={userItem.id}
+                className={`aup-user-card ${
+                  selectedUser?.id === userItem.id ? "selected" : ""
+                }`}
+                onClick={() =>
+                  setSelectedUser(
+                    selectedUser?.id === userItem.id ? null : userItem
+                  )
+                }
+              >
+                <div className="aup-user-header">
+                  <div className="aup-user-avatar">
+                    {(userItem.firstName ||
+                      userItem.email ||
+                      "?")[0].toUpperCase()}
+                  </div>
+                  <div className="aup-user-info">
+                    <h3 className="aup-user-name">
+                      {userItem.firstName || "Unknown"}{" "}
+                      {userItem.lastName || ""}
+                    </h3>
+                    <div className={getRoleBadgeClass(userItem.role)}>
+                      {userItem.role || "USER"}
                     </div>
                   </div>
+                </div>
 
-                  <div style={styles.actionButtons}>
+                <div className="aup-user-details">
+                  <div className="aup-detail-row">
+                    <span className="aup-detail-icon">📧</span>
+                    <span className="aup-detail-text">
+                      {userItem.email || "No email"}
+                    </span>
+                  </div>
+                  {userItem.mobileNumber && (
+                    <div className="aup-detail-row">
+                      <span className="aup-detail-icon">📞</span>
+                      <span className="aup-detail-text">
+                        {userItem.mobileNumber}
+                      </span>
+                    </div>
+                  )}
+                  <div className="aup-detail-row">
+                    <span className="aup-detail-icon">📅</span>
+                    <span className="aup-detail-text">
+                      Joined{" "}
+                      {userItem.createdAt
+                        ? new Date(userItem.createdAt).toLocaleDateString()
+                        : "Unknown"}
+                    </span>
+                  </div>
+                  <div className="aup-detail-row">
+                    <span className="aup-detail-icon">🆔</span>
+                    <span className="aup-detail-text">ID: {userItem.id}</span>
+                  </div>
+                </div>
+
+                {selectedUser?.id === userItem.id && (
+                  <div className="aup-user-actions">
                     <button
-                      style={styles.deleteBtn}
-                      onClick={() => openDeleteModal("user", selectedUser)}
+                      className="aup-action-btn aup-action-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditModal(userItem);
+                      }}
                     >
-                      🗑️ Delete User
+                      ✏️ Edit
+                    </button>
+                    <button
+                      className="aup-action-btn aup-action-danger"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openDeleteModal(userItem);
+                      }}
+                      disabled={userItem.id === user?.id} // Prevent self-deletion
+                    >
+                      🗑️ Delete
                     </button>
                   </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
-                  <div style={{ marginTop: "16px", padding: "12px", backgroundColor: "#fef3c7", borderRadius: "8px", fontSize: "13px", color: "#92400e" }}>
-                    ⚠️ This will delete the user and all associated properties and deals
-                  </div>
-                </>
-              )}
-
-              {/* Deals Tab */}
-              {activeTab === "deals" && (
-                <>
-                  {userDeals.length > 0 ? (
-                    <div style={styles.dealsGrid}>
-                      {userDeals.map((deal) => (
-                        <div key={deal.dealId} style={styles.dealCard}>
-                          <div style={styles.dealContent}>
-                            <div style={styles.dealTitle}>
-                              Deal #{deal.dealId}
-                            </div>
-                            <div style={styles.dealInfo}>
-                              <strong>Property:</strong> {deal.property?.title || "N/A"}
-                            </div>
-                            <div style={styles.dealInfo}>
-                              <strong>Amount:</strong> {formatPrice(deal.dealAmount)}
-                            </div>
-                            <div style={styles.dealInfo}>
-                              <strong>Stage:</strong>{" "}
-                              <span style={styles.stageBadge(deal.stage)}>{deal.stage}</span>
-                            </div>
-                            <div style={{ marginTop: "12px" }}>
-                              <button
-                                style={styles.iconBtn("red")}
-                                onClick={() => openDeleteModal("deal", deal)}
-                              >
-                                🗑️ Delete
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={styles.emptyState}>
-                      <div style={styles.emptyIcon}>📋</div>
-                      <h3>No deals found</h3>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* Properties Tab */}
-              {activeTab === "properties" && (
-                <>
-                  <input
-                    type="text"
-                    placeholder="🔍 Search properties..."
-                    value={propertySearchQuery}
-                    onChange={(e) => setPropertySearchQuery(e.target.value)}
-                    style={styles.propertySearchInput}
-                  />
-                  {filteredProperties.length > 0 ? (
-                    <div style={styles.propertiesGrid}>
-                      {filteredProperties.map((property) => (
-                        <div key={property.propertyId} style={styles.propertyCard}>
-                          <img
-                            src={property.imageUrl || "https://via.placeholder.com/300x200"}
-                            alt={property.title}
-                            style={styles.propertyImage}
-                          />
-                          <div style={styles.propertyContent}>
-                            <div style={styles.propertyTitle}>{property.title}</div>
-                            <div style={styles.propertyPrice}>
-                              {property.priceDisplay || formatPrice(property.price)}
-                            </div>
-                            <div style={styles.propertyDetails}>
-                              🆔 ID: {property.propertyId}
-                            </div>
-                            <div style={styles.propertyDetails}>
-                              📍 {property.areaName || property.cityName}
-                            </div>
-                            <div style={styles.propertyDetails}>
-                              🏠 {property.propertyType} • {property.listingType}
-                            </div>
-                            <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
-                              <button
-                                style={styles.iconBtn("blue")}
-                                onClick={() => openEditPropertyModal(property)}
-                              >
-                                ✏️ Edit
-                              </button>
-                              <button
-                                style={styles.iconBtn("red")}
-                                onClick={() => openDeleteModal("property", property)}
-                              >
-                                🗑️ Delete
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={styles.emptyState}>
-                      <div style={styles.emptyIcon}>🏠</div>
-                      <h3>No properties found</h3>
-                    </div>
-                  )}
-                </>
-              )}
-            </>
-          ) : (
-            <div style={styles.emptyState}>
-              <div style={styles.emptyIcon}>👤</div>
-              <h3>Select a user to view details</h3>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Delete Confirmation Modal */}
+      {/* Delete Modal */}
       {deleteModal.show && (
-        <div style={styles.modal} onClick={closeDeleteModal}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h3 style={styles.modalTitle}>⚠️ Confirm Deletion</h3>
-
-            {deleteModal.type === "user" && (
-              <>
-                <p style={styles.modalText}>
-                  Are you sure you want to delete user{" "}
-                  <strong>{deleteModal.item.firstName} {deleteModal.item.lastName}</strong>?
-                </p>
-                <p style={styles.modalText}>
-                  This will also delete:
-                </p>
-                <ul style={{ paddingLeft: "20px", marginTop: "8px" }}>
-                  <li style={styles.modalText}>All properties owned by this user</li>
-                  <li style={styles.modalText}>All deals associated with this user</li>
-                </ul>
-              </>
-            )}
-
-            {deleteModal.type === "property" && (
-              <p style={styles.modalText}>
-                Are you sure you want to delete property{" "}
-                <strong>{deleteModal.item.title}</strong>?
-              </p>
-            )}
-
-            {deleteModal.type === "deal" && (
-              <p style={styles.modalText}>
-                Are you sure you want to delete deal{" "}
-                <strong>#{deleteModal.item.dealId}</strong>?
-              </p>
-            )}
-
-            <div style={styles.modalButtons}>
+        <div className="aup-modal" onClick={closeDeleteModal}>
+          <div
+            className="aup-modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="aup-modal-title">⚠️ Confirm Delete</h3>
+            <p className="aup-modal-text">
+              Are you sure you want to delete user{" "}
+              <strong>
+                {deleteModal.user.firstName} {deleteModal.user.lastName}
+              </strong>
+              ?
+              <br />
+              <br />
+              This action cannot be undone and will remove all user data.
+            </p>
+            <div className="aup-modal-buttons">
               <button
+                className="aup-modal-btn aup-modal-btn-cancel"
                 onClick={closeDeleteModal}
-                style={styles.modalBtn("cancel")}
               >
                 Cancel
               </button>
               <button
-                onClick={confirmDelete}
-                style={styles.modalBtn("danger")}
+                className="aup-modal-btn aup-modal-btn-danger"
+                onClick={() => handleDeleteUser(deleteModal.user.id)}
               >
-                Delete
+                Delete User
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Property Edit Modal */}
-      {editPropertyModal.show && (
-        <AdminPropertyEditModal
-          property={editPropertyModal.property}
-          onClose={closeEditPropertyModal}
-          onPropertyUpdated={handlePropertyUpdated}
-        />
+      {/* Edit Modal */}
+      {editModal.show && (
+        <div className="aup-modal" onClick={closeEditModal}>
+          <div
+            className="aup-modal-content aup-modal-large"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="aup-modal-title">✏️ Edit User</h3>
+
+            <div className="aup-form-grid">
+              <div className="aup-form-group">
+                <label className="aup-form-label">First Name</label>
+                <input
+                  className="aup-form-input"
+                  value={editFormData.firstName || ""}
+                  onChange={(e) => updateEditForm("firstName", e.target.value)}
+                />
+              </div>
+
+              <div className="aup-form-group">
+                <label className="aup-form-label">Last Name</label>
+                <input
+                  className="aup-form-input"
+                  value={editFormData.lastName || ""}
+                  onChange={(e) => updateEditForm("lastName", e.target.value)}
+                />
+              </div>
+
+              <div className="aup-form-group">
+                <label className="aup-form-label">Email</label>
+                <input
+                  type="email"
+                  className="aup-form-input"
+                  value={editFormData.email || ""}
+                  onChange={(e) => updateEditForm("email", e.target.value)}
+                />
+              </div>
+
+              <div className="aup-form-group">
+                <label className="aup-form-label">Mobile Number</label>
+                <input
+                  className="aup-form-input"
+                  value={editFormData.mobileNumber || ""}
+                  onChange={(e) =>
+                    updateEditForm("mobileNumber", e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="aup-form-group">
+                <label className="aup-form-label">Role</label>
+                <select
+                  className="aup-form-input"
+                  value={editFormData.role || "USER"}
+                  onChange={(e) => updateEditForm("role", e.target.value)}
+                >
+                  <option value="USER">User</option>
+                  <option value="AGENT">Agent</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+
+              <div className="aup-form-group">
+                <label className="aup-form-label">City</label>
+                <input
+                  className="aup-form-input"
+                  value={editFormData.city || ""}
+                  onChange={(e) => updateEditForm("city", e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="aup-modal-buttons">
+              <button
+                className="aup-modal-btn aup-modal-btn-cancel"
+                onClick={closeEditModal}
+              >
+                Cancel
+              </button>
+              <button
+                className="aup-modal-btn aup-modal-btn-primary"
+                onClick={handleEditUser}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Modal */}
+      {createModal.show && (
+        <div className="aup-modal" onClick={closeCreateModal}>
+          <div
+            className="aup-modal-content aup-modal-large"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="aup-modal-title">➕ Create New User</h3>
+
+            <div className="aup-form-grid">
+              <div className="aup-form-group">
+                <label className="aup-form-label">First Name *</label>
+                <input
+                  className="aup-form-input"
+                  value={createFormData.firstName}
+                  onChange={(e) =>
+                    updateCreateForm("firstName", e.target.value)
+                  }
+                  required
+                />
+              </div>
+
+              <div className="aup-form-group">
+                <label className="aup-form-label">Last Name *</label>
+                <input
+                  className="aup-form-input"
+                  value={createFormData.lastName}
+                  onChange={(e) => updateCreateForm("lastName", e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="aup-form-group">
+                <label className="aup-form-label">Email *</label>
+                <input
+                  type="email"
+                  className="aup-form-input"
+                  value={createFormData.email}
+                  onChange={(e) => updateCreateForm("email", e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="aup-form-group">
+                <label className="aup-form-label">Password *</label>
+                <input
+                  type="password"
+                  className="aup-form-input"
+                  value={createFormData.password}
+                  onChange={(e) => updateCreateForm("password", e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="aup-form-group">
+                <label className="aup-form-label">Mobile Number</label>
+                <input
+                  className="aup-form-input"
+                  value={createFormData.mobileNumber}
+                  onChange={(e) =>
+                    updateCreateForm("mobileNumber", e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="aup-form-group">
+                <label className="aup-form-label">Role</label>
+                <select
+                  className="aup-form-input"
+                  value={createFormData.role}
+                  onChange={(e) => updateCreateForm("role", e.target.value)}
+                >
+                  <option value="USER">User</option>
+                  <option value="AGENT">Agent</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="aup-modal-buttons">
+              <button
+                className="aup-modal-btn aup-modal-btn-cancel"
+                onClick={closeCreateModal}
+              >
+                Cancel
+              </button>
+              <button
+                className="aup-modal-btn aup-modal-btn-primary"
+                onClick={handleCreateUser}
+              >
+                Create User
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
