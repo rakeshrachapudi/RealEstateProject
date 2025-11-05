@@ -1,0 +1,498 @@
+/* Container */
+.rap-container {
+  max-width: 900px;
+  margin: clamp(20px, 4vw, 40px) auto;
+  padding: 0 clamp(16px, 4vw, 20px);
+}
+
+/* Page Header */
+.rap-page-title {
+  font-size: clamp(24px, 5vw, 32px);
+  font-weight: 800;
+  color: #1e293b;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.rap-page-subtitle {
+  font-size: clamp(14px, 3vw, 16px);
+  color: #667eea;
+  font-weight: 600;
+  text-align: center;
+  margin: 0 0 16px 0;
+}
+
+/* Introduction */
+.rap-intro-text {
+  font-size: clamp(16px, 3.5vw, 18px);
+  line-height: 1.6;
+  color: #64748b;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+/* Form Container */
+.rap-form-container {
+  background: #fff;
+  padding: clamp(20px, 5vw, 32px);
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  margin-top: 32px;
+}
+
+/* Section Titles */
+.rap-section-title {
+  font-size: clamp(18px, 4vw, 22px);
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 20px 0;
+}
+
+.rap-step-title {
+  font-size: clamp(18px, 4vw, 22px);
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 24px 0;
+}
+
+.rap-subsection-title {
+  font-size: clamp(14px, 3vw, 16px);
+  font-weight: 700;
+  color: #334155;
+  margin: 0 0 16px 0;
+}
+
+/* Features List */
+.rap-features-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: clamp(14px, 3.5vw, 16px);
+  line-height: 1.7;
+  color: #334155;
+}
+
+.rap-feature-item {
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+}
+
+.rap-feature-icon {
+  margin-right: 12px;
+  font-size: clamp(16px, 4vw, 20px);
+}
+
+/* Form Elements */
+.rap-form-group {
+  margin-bottom: 20px;
+}
+
+.rap-form-label {
+  display: block;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 8px;
+  font-size: clamp(12px, 3vw, 14px);
+}
+
+.rap-form-input,
+.rap-form-select {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: clamp(14px, 3.5vw, 16px);
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  box-sizing: border-box;
+  color: #334155;
+  background: #fff;
+}
+
+.rap-form-input:focus,
+.rap-form-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.rap-error-input {
+  border: 1px solid #ef4444;
+  box-shadow: 0 0 0 2px #fecaca;
+}
+
+.rap-error-message {
+  color: #dc2626;
+  font-size: clamp(11px, 2.5vw, 12px);
+  font-weight: 500;
+  margin-top: 4px;
+  display: block;
+}
+
+.rap-disabled-input {
+  background: #f8fafc;
+  color: #334155;
+  font-weight: bold;
+}
+
+/* ID Group */
+.rap-id-group {
+  display: flex;
+  gap: 12px;
+}
+
+.rap-id-type {
+  flex: 1 1 30%;
+}
+
+.rap-id-number {
+  flex: 1 1 70%;
+}
+
+/* Rent and Deposit Group */
+.rap-rent-deposit-group {
+  display: flex;
+  gap: 12px;
+}
+
+.rap-flex-1 {
+  flex: 1;
+}
+
+/* Separator */
+.rap-separator {
+  border: 0;
+  border-top: 1px solid #eee;
+  margin: 24px 0;
+}
+
+/* Info Box */
+.rap-info-box {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: clamp(12px, 3vw, 14px);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.rap-info-box-title {
+  margin: 0 0 10px 0;
+  color: #0369a1;
+  font-size: clamp(14px, 3.5vw, 16px);
+  font-weight: 700;
+}
+
+.rap-info-box p {
+  margin: 0;
+}
+
+/* Buttons */
+.rap-primary-button {
+  background: #667eea;
+  color: #fff;
+  padding: 12px 24px;
+  font-size: clamp(14px, 3.5vw, 16px);
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rap-primary-button:hover {
+  background: #5a67d8;
+  transform: translateY(-1px);
+}
+
+.rap-secondary-button {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 12px 24px;
+  font-size: clamp(14px, 3.5vw, 16px);
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rap-secondary-button:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+.rap-disabled-button {
+  background: #94a3b8;
+  color: #fff;
+  padding: 12px 24px;
+  font-size: clamp(14px, 3.5vw, 16px);
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.rap-full-width {
+  width: 100%;
+  margin-top: 30px;
+}
+
+.rap-print-button {
+  background: #10b981;
+  color: #fff;
+  border: 1px solid #10b981;
+}
+
+.rap-print-button:hover {
+  background: #059669;
+}
+
+/* Button Group */
+.rap-button-group {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.rap-back-button {
+  flex: 0 1 auto;
+}
+
+.rap-next-button {
+  flex: 1 1 auto;
+}
+
+/* Review */
+.rap-review-subtitle {
+  color: #64748b;
+  margin: -16px 0 24px 0;
+  font-size: clamp(12px, 3vw, 14px);
+}
+
+/* Preview Container */
+.rap-preview-container {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  padding: clamp(30px, 6vw, 60px) clamp(20px, 5vw, 50px);
+  font-family: "Times New Roman", Times, serif;
+  color: #000;
+  line-height: 1.6;
+  margin: 20px 0;
+}
+
+.rap-preview-header {
+  text-align: center;
+  font-size: clamp(12px, 2.5vw, 14px);
+  color: #555;
+  border-bottom: 1px dashed #ccc;
+  padding-bottom: 10px;
+  margin-bottom: 30px;
+}
+
+.rap-preview-title {
+  text-align: center;
+  font-size: clamp(20px, 5vw, 24px);
+  font-weight: bold;
+  text-transform: uppercase;
+  text-decoration: underline;
+  margin-bottom: 40px;
+}
+
+.rap-preview-subtitle {
+  font-size: clamp(16px, 4vw, 20px);
+  text-decoration: none;
+  margin: 40px 0 30px 0;
+  text-align: center;
+}
+
+.rap-preview-paragraph {
+  font-size: clamp(14px, 3vw, 16px);
+  margin-bottom: 20px;
+  text-align: justify;
+}
+
+.rap-preview-indented {
+  padding-left: 20px;
+}
+
+.rap-preview-witness {
+  margin-top: 50px;
+}
+
+.rap-preview-data {
+  font-weight: bold;
+}
+
+.rap-preview-clause {
+  margin-bottom: 25px;
+}
+
+.rap-preview-clause-title {
+  font-size: clamp(15px, 3.5vw, 17px);
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.rap-preview-subparagraph {
+  font-size: clamp(14px, 3vw, 16px);
+  margin-bottom: 10px;
+  text-align: justify;
+  padding-left: 20px;
+}
+
+.rap-preview-signature-block {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 60px;
+  gap: 20px;
+}
+
+.rap-preview-witness-block {
+  margin-top: 70px;
+  font-size: clamp(13px, 3vw, 15px);
+}
+
+.rap-preview-signature {
+  flex: 1;
+  border-top: 1px solid #000;
+  padding-top: 8px;
+  font-size: clamp(14px, 3vw, 16px);
+  min-height: 80px;
+}
+
+/* Success */
+.rap-success-message {
+  background: #f0fdf4;
+  border: 2px solid #10b981;
+  color: #065f46;
+  padding: clamp(30px, 6vw, 50px);
+  border-radius: 16px;
+  text-align: center;
+  margin: 32px 0;
+}
+
+.rap-success-icon {
+  font-size: clamp(40px, 8vw, 48px);
+  margin-bottom: 16px;
+}
+
+.rap-success-title {
+  font-size: clamp(20px, 4vw, 24px);
+  font-weight: 700;
+  color: inherit;
+  margin-bottom: 16px;
+}
+
+.rap-success-text {
+  color: inherit;
+  max-width: 550px;
+  margin: 0 auto 24px auto;
+  line-height: 1.6;
+  font-size: clamp(14px, 3vw, 16px);
+}
+
+.rap-success-name {
+  color: #047857;
+}
+
+.rap-success-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.rap-success-primary {
+  background: #059669;
+}
+
+.rap-success-primary:hover {
+  background: #047857;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .rap-id-group {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .rap-id-type,
+  .rap-id-number {
+    flex: 1 1 100%;
+  }
+
+  .rap-rent-deposit-group {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .rap-button-group {
+    flex-direction: column;
+  }
+
+  .rap-back-button,
+  .rap-next-button {
+    flex: 1 1 auto;
+  }
+
+  .rap-success-buttons {
+    flex-direction: column;
+    max-width: 100%;
+  }
+
+  .rap-preview-signature-block {
+    flex-direction: column;
+    gap: 30px;
+  }
+
+  .rap-preview-signature {
+    min-height: 60px;
+  }
+}
+
+@media (max-width: 480px) {
+  .rap-container {
+    padding: 0 12px;
+  }
+
+  .rap-form-container {
+    padding: 16px;
+  }
+
+  .rap-preview-container {
+    padding: 20px 16px;
+  }
+
+  .rap-form-input,
+  .rap-form-select {
+    font-size: 16px; /* Prevent iOS zoom */
+  }
+}
+
+/* Print Styles */
+@media print {
+  .rap-preview-container {
+    padding: 40px;
+    margin: 0;
+    font-size: 14px;
+  }
+
+  .rap-preview-title {
+    font-size: 20px;
+  }
+
+  .rap-preview-paragraph,
+  .rap-preview-subparagraph {
+    font-size: 14px;
+  }
+
+  .rap-preview-clause-title {
+    font-size: 15px;
+  }
+}
