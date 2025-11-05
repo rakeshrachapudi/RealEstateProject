@@ -1,0 +1,177 @@
+/* realestate-frontend/src/UserProfileModal.css */
+
+@keyframes upm-overlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes upm-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Backdrop */
+.upm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(2, 6, 23, 0.55),
+    rgba(2, 6, 23, 0.35)
+  );
+  backdrop-filter: blur(6px);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  padding: 16px;
+  animation: upm-overlay 180ms ease-out;
+}
+
+/* Card */
+.upm-card {
+  width: min(520px, 92vw);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 50px rgba(2, 6, 23, 0.18), 0 6px 18px rgba(2, 6, 23, 0.08);
+  overflow: hidden;
+  animation: upm-pop 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Header */
+.upm-header {
+  background: linear-gradient(135deg, #5b7cfa 0%, #7a52c9 50%, #a66df1 100%);
+  color: #fff;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.upm-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.upm-close {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+
+.upm-close:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Content */
+.upm-content {
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.upm-row {
+  display: grid;
+  gap: 6px;
+}
+
+.upm-label {
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.upm-value {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Footer */
+.upm-footer {
+  padding: 14px 18px 18px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.upm-btn {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 14px;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease,
+    color 0.16s ease;
+}
+
+.upm-btn:hover {
+  transform: translateY(-1px);
+}
+
+.upm-btn-secondary {
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+}
+
+.upm-btn-secondary:hover {
+  background: #e2e8f0;
+}
+
+.upm-btn-danger {
+  flex: 1;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(239, 68, 68, 0.25);
+}
+
+.upm-btn-danger:hover {
+  box-shadow: 0 16px 36px rgba(239, 68, 68, 0.35);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .upm-title {
+    font-size: 17px;
+  }
+  .upm-close {
+    width: 34px;
+    height: 34px;
+  }
+  .upm-value {
+    font-size: 15px;
+  } /* prevent iOS zoom need */
+}
