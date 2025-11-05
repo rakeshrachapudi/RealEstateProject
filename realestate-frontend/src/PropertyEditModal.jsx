@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "./AuthContext.jsx";
 import { BACKEND_BASE_URL } from "./config/config";
+import "./PropertyEditModal.css";
 
 function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
   const { user, isAuthenticated } = useAuth();
@@ -20,16 +21,16 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
     areaId: property?.area?.areaId || "",
     address: property?.address || "",
     imageUrl: property?.imageUrl || "",
-    bedrooms: property?.bedrooms || "",
-    bathrooms: property?.bathrooms || "",
-    balconies: property?.balconies || "",
-    areaSqft: property?.areaSqft || "",
-    price: property?.price || "",
+    bedrooms: property?.bedrooms ?? "",
+    bathrooms: property?.bathrooms ?? "",
+    balconies: property?.balconies ?? "",
+    areaSqft: property?.areaSqft ?? "",
+    price: property?.price ?? "",
     amenities: property?.amenities || "",
     description: property?.description || "",
     ownerType: property?.ownerType || "owner",
-    isReadyToMove: property?.isReadyToMove || false,
-    isVerified: property?.isVerified || false,
+    isReadyToMove: !!property?.isReadyToMove,
+    isVerified: !!property?.isVerified,
   });
 
   useEffect(() => {
@@ -43,7 +44,6 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
         `${BACKEND_BASE_URL}/api/areas?city=Hyderabad`
       );
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
       const data = await response.json();
       if (data.success && Array.isArray(data.data)) {
         setAreas(data.data);
@@ -61,14 +61,12 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
 
   if (!isAuthenticated || !user) {
     return (
-      <div style={styles.backdrop} onClick={onClose}>
-        <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-          <button onClick={onClose} style={styles.closeBtn}>
+      <div className="pem-backdrop" onClick={onClose}>
+        <div className="pem-modal" onClick={(e) => e.stopPropagation()}>
+          <button className="pem-close" onClick={onClose}>
             ×
           </button>
-          <h2 style={{ color: "#dc3545", textAlign: "center" }}>
-            Please Login First
-          </h2>
+          <h2 className="pem-auth-title">Please Login First</h2>
         </div>
       </div>
     );
@@ -84,52 +82,48 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
   };
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/"))
-      return alert("Please select an image file");
-    if (file.size > 10 * 1024 * 1024) return alert("File too large (max 10MB)");
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File too large (max 10MB)");
+      return;
+    }
 
     setImageUploading(true);
     setUploadProgress(10);
 
     try {
       const propertyId = property.id || property.propertyId;
-
-      if (!propertyId) {
+      if (!propertyId)
         throw new Error("Property ID is required for image upload");
-      }
 
       const fd = new FormData();
       fd.append("file", file);
-
       setUploadProgress(30);
 
-      // ⭐ Upload to S3 with propertyId for organized folder structure
       const res = await fetch(
         `${BACKEND_BASE_URL}/api/upload/property-image?propertyId=${propertyId}`,
-        {
-          method: "POST",
-          body: fd,
-        }
+        { method: "POST", body: fd }
       );
-
       setUploadProgress(70);
 
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(
-          errorData.message || `Upload failed: ${res.statusText}`
-        );
+        let msg = "";
+        try {
+          msg = (await res.json())?.message || "";
+        } catch {}
+        throw new Error(msg || `Upload failed: ${res.statusText}`);
       }
 
       const data = await res.json();
-
-      if (data.success) {
+      if (data.success && data.url) {
         setUploadProgress(100);
         setFormData((p) => ({ ...p, imageUrl: data.url }));
-        setTimeout(() => setUploadProgress(0), 2000);
-        console.log("✅ Image uploaded to S3:", data.url);
+        setTimeout(() => setUploadProgress(0), 1200);
       } else {
         throw new Error(data.message || "Upload failed");
       }
@@ -150,8 +144,8 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
       !formData.title ||
       !formData.areaId ||
       !formData.imageUrl ||
-      !formData.bedrooms ||
-      !formData.bathrooms ||
+      formData.bedrooms === "" ||
+      formData.bathrooms === "" ||
       !formData.price ||
       !formData.description
     ) {
@@ -160,8 +154,8 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
       return;
     }
 
-    const numericPrice = parseFloat(formData.price);
-    if (isNaN(numericPrice) || numericPrice <= 0) {
+    const numericPrice = Number(formData.price);
+    if (!isFinite(numericPrice) || numericPrice <= 0) {
       setError("Please enter a valid price");
       setLoading(false);
       return;
@@ -175,15 +169,16 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
     } else {
       priceDisplay = `₹${numericPrice.toLocaleString("en-IN")}`;
     }
-    const selectedAreaObject = areas.find(
-      (area) => area.areaId.toString() === formData.areaId
-    );
 
+    const selectedAreaObject = areas.find(
+      (a) => String(a.areaId) === String(formData.areaId)
+    );
     if (!selectedAreaObject) {
       setError("Invalid area selected. Please try again.");
       setLoading(false);
       return;
     }
+
     const propertyData = {
       title: formData.title,
       type: formData.type,
@@ -193,11 +188,11 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
       imageUrl: formData.imageUrl,
       description: formData.description,
       price: numericPrice,
-      priceDisplay: priceDisplay,
-      areaSqft: formData.areaSqft ? parseFloat(formData.areaSqft) : null,
-      bedrooms: parseInt(formData.bedrooms),
-      bathrooms: parseInt(formData.bathrooms),
-      balconies: parseInt(formData.balconies || "0"),
+      priceDisplay,
+      areaSqft: formData.areaSqft ? Number(formData.areaSqft) : null,
+      bedrooms: Number(formData.bedrooms),
+      bathrooms: Number(formData.bathrooms),
+      balconies: formData.balconies ? Number(formData.balconies) : 0,
       amenities: formData.amenities || null,
       listingType: formData.listingType,
       status: "available",
@@ -205,12 +200,10 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
       isActive: true,
       ownerType: formData.ownerType,
       isReadyToMove: formData.isReadyToMove,
-      isVerified: formData.isVerified || false, // Can be updated if user is admin
+      isVerified: formData.isVerified || false,
       area: selectedAreaObject,
       user: { id: user.id },
     };
-
-    console.log("📤 Updating property data:", propertyData);
 
     try {
       const response = await fetch(
@@ -225,56 +218,68 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
       );
 
       if (!response.ok) {
-        const errorText = await response.text();
+        const errorText = await response.text().catch(() => "");
         throw new Error("Failed to update property: " + errorText);
       }
 
-      const result = await response.json();
-      console.log("✅ Property updated successfully:", result);
+      await response.json().catch(() => null);
 
       alert("✅ Property updated successfully!");
-      if (onPropertyUpdated) onPropertyUpdated();
-      onClose();
+      onPropertyUpdated && onPropertyUpdated();
+      onClose && onClose();
     } catch (err) {
-      console.error("❌ Error updating property:", err);
       setError(err.message || "Failed to update property. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleBackdropClick = (e) => {
+    if (e.target.classList.contains("pem-backdrop")) {
+      onClose && onClose();
+    }
+  };
+
   return (
-    <div style={styles.backdrop} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} style={styles.closeBtn}>
+    <div className="pem-backdrop" onClick={handleBackdropClick}>
+      <div
+        className="pem-modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pem-title"
+      >
+        <button className="pem-close" onClick={onClose} aria-label="Close">
           ×
         </button>
-        <h2 style={styles.title}>✏️ Edit Your Property</h2>
+        <h2 id="pem-title" className="pem-title">
+          ✏️ Edit Your Property
+        </h2>
 
-        {error && <div style={styles.error}>❌ {error}</div>}
+        {error && <div className="pem-alert">❌ {error}</div>}
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.field}>
-            <label style={styles.label}>Property Title *</label>
+        <form onSubmit={handleSubmit} className="pem-form">
+          <div className="pem-field">
+            <label className="pem-label">Property Title *</label>
             <input
               type="text"
               name="title"
               value={formData.title}
               onChange={handleChange}
               placeholder="e.g., Spacious 2BHK Apartment"
-              style={styles.input}
+              className="pem-input"
               required
             />
           </div>
 
-          <div style={styles.row}>
-            <div style={styles.field}>
-              <label style={styles.label}>Property Type *</label>
+          <div className="pem-row">
+            <div className="pem-field">
+              <label className="pem-label">Property Type *</label>
               <select
                 name="type"
                 value={formData.type}
                 onChange={handleChange}
-                style={styles.select}
+                className="pem-select"
                 required
               >
                 <option>Apartment</option>
@@ -287,13 +292,13 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
                 <option>Duplex</option>
               </select>
             </div>
-            <div style={styles.field}>
-              <label style={styles.label}>Listing Type *</label>
+            <div className="pem-field">
+              <label className="pem-label">Listing Type *</label>
               <select
                 name="listingType"
                 value={formData.listingType}
                 onChange={handleChange}
-                style={styles.select}
+                className="pem-select"
                 required
               >
                 <option value="sale">🏠 For Sale</option>
@@ -302,76 +307,71 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
             </div>
           </div>
 
-          {/* Owner Type and Ready to Move */}
-          <div style={styles.row}>
-            <div style={styles.field}>
-              <label style={styles.label}>👤 Posted By *</label>
+          <div className="pem-row">
+            <div className="pem-field">
+              <label className="pem-label">👤 Posted By *</label>
               <select
                 name="ownerType"
                 value={formData.ownerType}
                 onChange={handleChange}
-                style={styles.select}
+                className="pem-select"
                 required
               >
                 <option value="owner">Owner</option>
                 <option value="broker">Broker/Agent</option>
               </select>
             </div>
-            <div style={styles.field}>
-              <label style={styles.checkboxLabel}>
+            <div className="pem-field">
+              <label className="pem-checkbox">
                 <input
                   type="checkbox"
                   name="isReadyToMove"
                   checked={formData.isReadyToMove}
                   onChange={handleChange}
-                  style={styles.checkbox}
                 />
-                <span style={styles.checkboxText}>✅ Ready to Move</span>
+                <span className="pem-checkbox-text">✅ Ready to Move</span>
               </label>
             </div>
           </div>
 
-          {/* Admin Only: Verification Status */}
           {user && user.role === "ADMIN" && (
-            <div style={styles.field}>
-              <label style={styles.checkboxLabel}>
+            <div className="pem-field">
+              <label className="pem-checkbox">
                 <input
                   type="checkbox"
                   name="isVerified"
                   checked={formData.isVerified}
                   onChange={handleChange}
-                  style={styles.checkbox}
                 />
-                <span style={styles.checkboxText}>
+                <span className="pem-checkbox-text">
                   ✅ Verified Property (Admin Only)
                 </span>
               </label>
             </div>
           )}
-          <div style={styles.row}>
-            <div style={styles.field}>
-              <label style={styles.label}>City *</label>
+
+          <div className="pem-row">
+            <div className="pem-field">
+              <label className="pem-label">City *</label>
               <input
                 type="text"
                 name="city"
                 value={formData.city}
                 onChange={handleChange}
-                style={styles.input}
+                className="pem-input"
                 required
               />
             </div>
-            <div style={styles.field}>
-              <label style={styles.label}>
+            <div className="pem-field">
+              <label className="pem-label">
                 📍 Area *{" "}
-                {areasLoading && (
-                  <span style={{ color: "#f59e0b" }}> (Loading...)</span>
-                )}
+                {areasLoading && <span className="pem-hint">(Loading...)</span>}
               </label>
               <select
                 name="areaId"
                 value={formData.areaId}
                 onChange={handleChange}
-                style={styles.select}
+                className="pem-select"
                 required
                 disabled={areasLoading || areas.length === 0}
               >
@@ -385,114 +385,67 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
             </div>
           </div>
 
-          <div style={styles.field}>
-            <label style={styles.label}>Complete Address (Optional)</label>
+          <div className="pem-field">
+            <label className="pem-label">Complete Address (Optional)</label>
             <input
               type="text"
               name="address"
               value={formData.address}
               onChange={handleChange}
               placeholder="House/Plot number, Street name"
-              style={styles.input}
+              className="pem-input"
             />
           </div>
 
-          <div
-            style={{
-              ...styles.imageSection,
-              border: "2px solid #3b82f6",
-              background: "#f0f9ff",
-            }}
-          >
-            <h3
-              style={{
-                margin: "0 0 12px 0",
-                fontSize: "16px",
-                color: "#1e40af",
-                fontWeight: "700",
-              }}
-            >
-              📁 Property Image *
-            </h3>
+          <div className="pem-images">
+            <h3 className="pem-images-title">📁 Property Image *</h3>
+
             {formData.imageUrl && (
-              <div style={{ textAlign: "center", marginBottom: "12px" }}>
+              <div className="pem-image-preview-wrap">
                 <img
                   src={formData.imageUrl}
                   alt="Current"
-                  style={styles.imagePreview}
+                  className="pem-image-preview"
                 />
               </div>
             )}
+
             <input
               type="file"
               accept="image/*"
               onChange={handleImageUpload}
               disabled={imageUploading}
-              style={{
-                display: "block",
-                width: "100%",
-                padding: "16px",
-                border: "3px dashed #3b82f6",
-                borderRadius: "8px",
-                backgroundColor: "white",
-                cursor: "pointer",
-                fontSize: "14px",
-                fontWeight: "600",
-                color: "#1e40af",
-              }}
+              className="pem-file"
             />
+
             {imageUploading && (
-              <div style={{ marginTop: "12px" }}>
-                <div
-                  style={{
-                    width: "100%",
-                    height: "10px",
-                    background: "#e0e7ff",
-                    borderRadius: "5px",
-                  }}
-                >
+              <div className="pem-progress">
+                <div className="pem-progress-bar">
                   <div
-                    style={{
-                      width: `${uploadProgress}%`,
-                      height: "100%",
-                      background: "#3b82f6",
-                      borderRadius: "5px",
-                      transition: "width 0.3s",
-                    }}
-                  ></div>
+                    className="pem-progress-fill"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
                 </div>
-                <p
-                  style={{
-                    margin: "8px 0 0 0",
-                    color: "#3b82f6",
-                    fontWeight: "600",
-                  }}
-                >
-                  Uploading {uploadProgress}%
-                </p>
+                <p className="pem-progress-text">Uploading {uploadProgress}%</p>
               </div>
             )}
           </div>
 
-          <div style={styles.field}>
-            <label style={styles.label}>Description *</label>
+          <div className="pem-field">
+            <label className="pem-label">Description *</label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleChange}
               placeholder="Describe your property..."
-              style={{
-                ...styles.input,
-                minHeight: "100px",
-                resize: "vertical",
-              }}
+              className="pem-textarea"
               required
             />
           </div>
 
-          <div style={styles.row3}>
-            <div style={styles.field}>
-              <label style={styles.label}>🛏️ Bedrooms *</label>
+          <div className="pem-row3">
+            <div className="pem-field">
+              <label className="pem-label">🛏️ Bedrooms *</label>
               <input
                 type="number"
                 name="bedrooms"
@@ -500,12 +453,13 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
                 onChange={handleChange}
                 min="0"
                 max="20"
-                style={styles.input}
+                className="pem-input"
                 required
+                inputMode="numeric"
               />
             </div>
-            <div style={styles.field}>
-              <label style={styles.label}>🚿 Bathrooms *</label>
+            <div className="pem-field">
+              <label className="pem-label">🚿 Bathrooms *</label>
               <input
                 type="number"
                 name="bathrooms"
@@ -513,12 +467,13 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
                 onChange={handleChange}
                 min="0"
                 max="20"
-                style={styles.input}
+                className="pem-input"
                 required
+                inputMode="numeric"
               />
             </div>
-            <div style={styles.field}>
-              <label style={styles.label}>🏠 Balconies</label>
+            <div className="pem-field">
+              <label className="pem-label">🏠 Balconies</label>
               <input
                 type="number"
                 name="balconies"
@@ -526,61 +481,64 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
                 onChange={handleChange}
                 min="0"
                 max="10"
-                style={styles.input}
+                className="pem-input"
+                inputMode="numeric"
               />
             </div>
           </div>
 
-          <div style={styles.row}>
-            <div style={styles.field}>
-              <label style={styles.label}>📐 Area (sqft)</label>
+          <div className="pem-row">
+            <div className="pem-field">
+              <label className="pem-label">📐 Area (sqft)</label>
               <input
                 type="number"
                 name="areaSqft"
                 value={formData.areaSqft}
                 onChange={handleChange}
                 placeholder="1200"
-                style={styles.input}
+                className="pem-input"
+                inputMode="numeric"
               />
             </div>
-            <div style={styles.field}>
-              <label style={styles.label}>💰 Expected Price (₹) *</label>
+            <div className="pem-field">
+              <label className="pem-label">💰 Expected Price (₹) *</label>
               <input
                 type="number"
                 name="price"
                 value={formData.price}
                 onChange={handleChange}
                 placeholder="5000000"
-                style={styles.input}
+                className="pem-input"
                 required
+                inputMode="numeric"
               />
             </div>
           </div>
 
-          <div style={styles.field}>
-            <label style={styles.label}>✨ Amenities (comma-separated)</label>
+          <div className="pem-field">
+            <label className="pem-label">✨ Amenities (comma-separated)</label>
             <input
               type="text"
               name="amenities"
               value={formData.amenities}
               onChange={handleChange}
               placeholder="Parking, Gym, Swimming Pool"
-              style={styles.input}
+              className="pem-input"
             />
           </div>
 
-          <div style={{ display: "flex", gap: "12px" }}>
-            <button type="button" onClick={onClose} style={styles.cancelBtn}>
+          <div className="pem-actions">
+            <button
+              type="button"
+              onClick={onClose}
+              className="pem-btn pem-btn-secondary"
+            >
               Cancel
             </button>
             <button
               type="submit"
+              className="pem-btn pem-btn-primary"
               disabled={loading || imageUploading}
-              style={{
-                ...styles.submitBtn,
-                opacity: loading || imageUploading ? 0.6 : 1,
-                cursor: loading || imageUploading ? "not-allowed" : "pointer",
-              }}
             >
               {loading ? "⏳ Updating..." : "✅ Update Property"}
             </button>
@@ -590,136 +548,5 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
     </div>
   );
 }
-
-const styles = {
-  backdrop: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    background: "rgba(0, 0, 0, 0.75)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1000,
-    backdropFilter: "blur(4px)",
-  },
-  modal: {
-    background: "white",
-    padding: "2rem",
-    borderRadius: "16px",
-    width: "750px",
-    maxHeight: "90vh",
-    overflowY: "auto",
-    position: "relative",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-  },
-  closeBtn: {
-    position: "absolute",
-    top: "15px",
-    right: "15px",
-    background: "#ef4444",
-    color: "white",
-    border: "none",
-    fontSize: "24px",
-    cursor: "pointer",
-    width: "40px",
-    height: "40px",
-    borderRadius: "8px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "bold",
-  },
-  title: {
-    textAlign: "center",
-    marginBottom: "1rem",
-    fontSize: "28px",
-    color: "#1e293b",
-    fontWeight: "800",
-  },
-  form: { display: "flex", flexDirection: "column", gap: "1rem" },
-  field: { display: "flex", flexDirection: "column" },
-  row: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" },
-  row3: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" },
-  label: {
-    marginBottom: "6px",
-    fontWeight: "700",
-    fontSize: "14px",
-    color: "#1e293b",
-  },
-  checkboxLabel: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "12px 16px",
-    background: "#f0f9ff",
-    borderRadius: "8px",
-    cursor: "pointer",
-    border: "2px solid #bfdbfe",
-  },
-  checkbox: { width: "20px", height: "20px", cursor: "pointer" },
-  checkboxText: { fontSize: "14px", fontWeight: "600", color: "#1e40af" },
-  input: {
-    padding: "12px 16px",
-    border: "2px solid #e2e8f0",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontFamily: "inherit",
-    transition: "border-color 0.3s",
-  },
-  select: {
-    padding: "12px 16px",
-    border: "2px solid #e2e8f0",
-    borderRadius: "8px",
-    fontSize: "14px",
-    cursor: "pointer",
-    fontFamily: "inherit",
-    backgroundColor: "white",
-  },
-  imageSection: { padding: "16px", borderRadius: "12px" },
-  imagePreview: {
-    marginTop: "12px",
-    maxWidth: "100%",
-    maxHeight: "200px",
-    borderRadius: "8px",
-    border: "2px solid #e2e8f0",
-  },
-  error: {
-    background: "#fee2e2",
-    border: "2px solid #fecaca",
-    borderRadius: "8px",
-    padding: "12px",
-    marginBottom: "1rem",
-    textAlign: "center",
-    color: "#dc3545",
-    fontWeight: "600",
-    fontSize: "14px",
-  },
-  submitBtn: {
-    padding: "16px",
-    background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-    color: "white",
-    border: "none",
-    borderRadius: "10px",
-    fontSize: "16px",
-    fontWeight: "700",
-    cursor: "pointer",
-    flex: 1,
-    boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
-  },
-  cancelBtn: {
-    padding: "16px",
-    background: "#6b7280",
-    color: "white",
-    border: "none",
-    borderRadius: "10px",
-    fontSize: "16px",
-    fontWeight: "700",
-    cursor: "pointer",
-    flex: 1,
-  },
-};
 
 export default PropertyEditModal;
