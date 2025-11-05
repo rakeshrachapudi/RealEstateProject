@@ -488,7 +488,8 @@
 
 /* Desktop only - hide on mobile */
 .adp-desktop-only {
-  display: block;
+  display: flex;
+  justify-content: space-between;
 }
 
 /* Responsive */
