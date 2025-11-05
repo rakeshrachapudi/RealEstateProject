@@ -3,9 +3,29 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
 import "./MobileNav.css";
 
-const MobileNav = ({ isOpen, onClose }) => {
-  const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
+const MobileNav = ({
+  isOpen,
+  onClose,
+  user: userProp,
+  isAuthenticated: isAuthenticatedProp,
+  onLoginClick,
+  onSignupClick,
+  onPostPropertyClick,
+  onProfileClick,
+  onLogout,
+  onMyPropertiesClick,
+  onMyDealsClick,
+  onMyAgreementsClick,
+  onDashboardClick,
+  navigate: navigateProp,
+}) => {
+  const navigateHook = useNavigate();
+  const navigate = navigateProp || navigateHook;
+
+  const authCtx = useAuth();
+  const isAuthed = isAuthenticatedProp ?? authCtx?.isAuthenticated ?? false;
+  const user = userProp ?? authCtx?.user ?? null;
+
   const [activeSubmenu, setActiveSubmenu] = useState(null);
 
   useEffect(() => {
@@ -14,16 +34,17 @@ const MobileNav = ({ isOpen, onClose }) => {
     } else {
       document.body.style.overflow = "unset";
     }
-
     return () => {
       document.body.style.overflow = "unset";
     };
   }, [isOpen]);
 
+  if (!isOpen) return null;
+
   const handleNavClick = (path) => {
     navigate(path);
-    onClose();
     setActiveSubmenu(null);
+    onClose?.();
   };
 
   const handleSubmenuToggle = (menu) => {
@@ -33,8 +54,18 @@ const MobileNav = ({ isOpen, onClose }) => {
   const handleSearchNavigation = (params) => {
     const searchParams = new URLSearchParams(params);
     navigate(`/search?${searchParams.toString()}`);
-    onClose();
     setActiveSubmenu(null);
+    onClose?.();
+  };
+
+  const handleAction = (fn, fallbackPath) => {
+    if (fn) {
+      fn();
+    } else if (fallbackPath) {
+      handleNavClick(fallbackPath);
+    }
+    setActiveSubmenu(null);
+    onClose?.();
   };
 
   const buyOptions = [
@@ -57,6 +88,10 @@ const MobileNav = ({ isOpen, onClose }) => {
     { label: "Villas", params: { listingType: "sale", propertyType: "Villa" } },
     { label: "Houses", params: { listingType: "sale", propertyType: "House" } },
     { label: "Plots", params: { listingType: "sale", propertyType: "Plot" } },
+    {
+      label: "Commercial",
+      params: { listingType: "sale", propertyType: "Commercial" },
+    },
   ];
 
   const rentOptions = [
@@ -88,16 +123,24 @@ const MobileNav = ({ isOpen, onClose }) => {
     { label: "Home Interior/Renovation", path: "/home-renovation" },
   ];
 
-  if (!isOpen) return null;
-
   return (
-    <div className="mobile-nav-overlay">
-      <div className="mobile-nav-container">
+    <div className="mobile-nav-overlay" onClick={onClose}>
+      <div
+        className="mobile-nav-container"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Mobile navigation"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="mobile-nav-header">
           <div className="mobile-nav-logo">
             <span>PropertyDealz</span>
           </div>
-          <button className="mobile-nav-close" onClick={onClose}>
+          <button
+            className="mobile-nav-close"
+            onClick={onClose}
+            aria-label="Close menu"
+          >
             ✕
           </button>
         </div>
@@ -120,6 +163,7 @@ const MobileNav = ({ isOpen, onClose }) => {
                 activeSubmenu === "buy" ? "active" : ""
               }`}
               onClick={() => handleSubmenuToggle("buy")}
+              aria-expanded={activeSubmenu === "buy"}
             >
               🏢 Buy{" "}
               <span className="toggle-icon">
@@ -148,6 +192,7 @@ const MobileNav = ({ isOpen, onClose }) => {
                 activeSubmenu === "rent" ? "active" : ""
               }`}
               onClick={() => handleSubmenuToggle("rent")}
+              aria-expanded={activeSubmenu === "rent"}
             >
               🏠 Rent{" "}
               <span className="toggle-icon">
@@ -176,6 +221,7 @@ const MobileNav = ({ isOpen, onClose }) => {
                 activeSubmenu === "sell" ? "active" : ""
               }`}
               onClick={() => handleSubmenuToggle("sell")}
+              aria-expanded={activeSubmenu === "sell"}
             >
               💰 Sell{" "}
               <span className="toggle-icon">
@@ -201,14 +247,19 @@ const MobileNav = ({ isOpen, onClose }) => {
             )}
           </div>
 
-          {/* Authenticated User Options */}
-          {isAuthenticated && (
+          {/* Authenticated route group */}
+          {isAuthed ? (
             <>
               <div className="mobile-nav-divider"></div>
+
               <div className="mobile-nav-item">
                 <button
                   className="mobile-nav-link"
-                  onClick={() => handleNavClick("/my-properties")}
+                  onClick={() =>
+                    onMyPropertiesClick
+                      ? handleAction(onMyPropertiesClick, "/my-properties")
+                      : handleNavClick("/my-properties")
+                  }
                 >
                   📋 My Properties
                 </button>
@@ -218,7 +269,11 @@ const MobileNav = ({ isOpen, onClose }) => {
                 <div className="mobile-nav-item">
                   <button
                     className="mobile-nav-link"
-                    onClick={() => handleNavClick("/my-deals")}
+                    onClick={() =>
+                      onMyDealsClick
+                        ? handleAction(onMyDealsClick, "/my-deals")
+                        : handleNavClick("/my-deals")
+                    }
                   >
                     🤝 My Deals
                   </button>
@@ -229,7 +284,11 @@ const MobileNav = ({ isOpen, onClose }) => {
                 <div className="mobile-nav-item">
                   <button
                     className="mobile-nav-link"
-                    onClick={() => handleNavClick("/agent-dashboard")}
+                    onClick={() =>
+                      onDashboardClick
+                        ? handleAction(onDashboardClick, "/agent-dashboard")
+                        : handleNavClick("/agent-dashboard")
+                    }
                   >
                     📊 Agent Dashboard
                   </button>
@@ -254,15 +313,98 @@ const MobileNav = ({ isOpen, onClose }) => {
                       👥 View Agents
                     </button>
                   </div>
+                  {/* FIX: Add Users for ADMIN to match SubHeader */}
+                  <div className="mobile-nav-item">
+                    <button
+                      className="mobile-nav-link"
+                      onClick={() => handleNavClick("/admin-users")}
+                    >
+                      🧑‍💼 Users
+                    </button>
+                  </div>
                 </>
               )}
 
               <div className="mobile-nav-item">
                 <button
                   className="mobile-nav-link"
-                  onClick={() => handleNavClick("/my-agreements")}
+                  onClick={() =>
+                    onMyAgreementsClick
+                      ? handleAction(onMyAgreementsClick, "/my-agreements")
+                      : handleNavClick("/my-agreements")
+                  }
                 >
                   📄 My Agreements
+                </button>
+              </div>
+
+              <div className="mobile-nav-divider"></div>
+
+              {/* Profile & Post buttons for quick access */}
+              <div className="mobile-nav-item">
+                <button
+                  className="mobile-nav-link"
+                  onClick={() =>
+                    onProfileClick
+                      ? handleAction(onProfileClick)
+                      : handleNavClick("/profile")
+                  }
+                >
+                  👤 Profile
+                </button>
+              </div>
+
+              <div className="mobile-nav-item">
+                <button
+                  className="mobile-nav-link"
+                  onClick={() =>
+                    onPostPropertyClick
+                      ? handleAction(onPostPropertyClick, "/post-property")
+                      : handleNavClick("/post-property")
+                  }
+                >
+                  📝 Post Property
+                </button>
+              </div>
+
+              <div className="mobile-nav-item">
+                <button
+                  className="mobile-nav-link danger"
+                  onClick={() =>
+                    onLogout
+                      ? handleAction(onLogout)
+                      : handleNavClick("/logout")
+                  }
+                >
+                  🚪 Logout
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mobile-nav-divider"></div>
+              <div className="mobile-nav-item">
+                <button
+                  className="mobile-nav-link"
+                  onClick={() =>
+                    onLoginClick
+                      ? handleAction(onLoginClick, "/login")
+                      : handleNavClick("/login")
+                  }
+                >
+                  🔐 Login
+                </button>
+              </div>
+              <div className="mobile-nav-item">
+                <button
+                  className="mobile-nav-link"
+                  onClick={() =>
+                    onSignupClick
+                      ? handleAction(onSignupClick, "/signup")
+                      : handleNavClick("/signup")
+                  }
+                >
+                  ✨ Sign Up
                 </button>
               </div>
             </>

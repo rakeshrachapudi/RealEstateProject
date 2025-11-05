@@ -9,22 +9,27 @@ function SubHeader() {
   const [isHidden, setIsHidden] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
   const dropdownTimerRef = useRef(null);
+  const subHeaderRef = useRef(null);
 
-  // Add window size check for mobile
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  // Check screen size and update responsive states
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const width = window.innerWidth;
+      setIsMobile(width <= 768);
+      setIsTablet(width > 768 && width <= 1024);
+    };
 
-  // ⭐ ADDED: State to resolve the ReferenceError (Fix 2) ⭐
-  // Although the profile dropdown UI isn't visible, the setter must be defined.
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
 
-  const handleMyPropertiesClick = () => {
-    navigate("/my-properties");
-    setActiveDropdown(null);
-    // ⭐ FIXED: setProfileDropdownOpen is now in scope ⭐
-    setProfileDropdownOpen(false);
-  };
-
+  // Handle scroll behavior for hiding/showing subheader
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -32,6 +37,8 @@ function SubHeader() {
 
       if (diff > 5 && currentScrollY > 100) {
         setIsHidden(true);
+        setActiveDropdown(null);
+        setShowMobileMenu(false);
       } else if (diff < -10) {
         setIsHidden(false);
       }
@@ -43,23 +50,33 @@ function SubHeader() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
+  // Close dropdowns when clicking outside
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
+    const handleClickOutside = (event) => {
+      if (
+        subHeaderRef.current &&
+        !subHeaderRef.current.contains(event.target)
+      ) {
+        setActiveDropdown(null);
+        setShowMobileMenu(false);
+      }
     };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (isMobile || !isAuthenticated) return null;
+  // Don't render if not authenticated
+  if (!isAuthenticated) return null;
 
   const handleMouseEnter = (dropdown) => {
+    if (isMobile) return; // Disable hover on mobile
     if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current);
     setActiveDropdown(dropdown);
   };
 
   const handleMouseLeave = () => {
+    if (isMobile) return; // Disable hover on mobile
     dropdownTimerRef.current = setTimeout(() => setActiveDropdown(null), 200);
   };
 
@@ -67,10 +84,16 @@ function SubHeader() {
     if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current);
   };
 
+  const handleMobileDropdownToggle = (dropdown) => {
+    if (!isMobile) return;
+    setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
+  };
+
   const handlePropertyTypeClick = (type, listingType) => {
     const params = new URLSearchParams({ propertyType: type, listingType });
     navigate(`/search?${params.toString()}`);
     setActiveDropdown(null);
+    setShowMobileMenu(false);
   };
 
   const handleBudgetClick = (budget, listingType) => {
@@ -81,17 +104,32 @@ function SubHeader() {
     });
     navigate(`/search?${params.toString()}`);
     setActiveDropdown(null);
+    setShowMobileMenu(false);
   };
 
   const handleChoiceClick = (choice) => {
     const params = new URLSearchParams(choice.params || {});
     navigate(`/search?${params.toString()}`);
     setActiveDropdown(null);
+    setShowMobileMenu(false);
   };
 
   const handleSellClick = (path) => {
     navigate(path);
     setActiveDropdown(null);
+    setShowMobileMenu(false);
+  };
+
+  const handleNavigation = (path) => {
+    navigate(path);
+    setActiveDropdown(null);
+    setShowMobileMenu(false);
+  };
+
+  const handleMyPropertiesClick = () => {
+    navigate("/my-properties");
+    setActiveDropdown(null);
+    setShowMobileMenu(false);
   };
 
   const dropdownData = {
@@ -100,79 +138,125 @@ function SubHeader() {
         {
           label: "Owner Properties",
           params: { listingType: "sale", ownerType: "owner" },
+          icon: "🏠",
         },
         {
           label: "Verified Properties",
           params: { listingType: "sale", isVerified: true },
+          icon: "✅",
         },
         {
           label: "Ready to Move",
           params: { listingType: "sale", isReadyToMove: true },
+          icon: "🔑",
         },
         {
           label: "Broker Properties",
           params: { listingType: "sale", ownerType: "broker" },
+          icon: "🏢",
         },
       ],
       propertyTypes: [
-        { label: "Apartments", value: "Apartment" },
-        { label: "Villas", value: "Villa" },
-        { label: "Houses", value: "House" },
-        { label: "Plots", value: "Plot" },
-        { label: "Commercial", value: "Commercial" },
+        { label: "Apartments", value: "Apartment", icon: "🏢" },
+        { label: "Villas", value: "Villa", icon: "🏖" },
+        { label: "Houses", value: "House", icon: "🏠" },
+        { label: "Plots", value: "Plot", icon: "📐" },
+        { label: "Commercial", value: "Commercial", icon: "🏢" },
       ],
       budget: [
-        { label: "Under ₹50 Lac", min: 0, max: 5000000 },
-        { label: "₹50 Lac - ₹1 Cr", min: 5000000, max: 10000000 },
-        { label: "₹1 Cr - ₹2 Cr", min: 10000000, max: 20000000 },
-        { label: "Above ₹2 Cr", min: 20000000, max: 999999999 },
+        { label: "Under ₹50 Lac", min: 0, max: 5000000, icon: "💰" },
+        { label: "₹50 Lac - ₹1 Cr", min: 5000000, max: 10000000, icon: "💰" },
+        { label: "₹1 Cr - ₹2 Cr", min: 10000000, max: 20000000, icon: "💰" },
+        { label: "Above ₹2 Cr", min: 20000000, max: 999999999, icon: "💰" },
       ],
     },
     rent: {
       popularChoices: [
-        { label: "Owner Properties", params: { listingType: "rent" } },
-        { label: "Verified Properties", params: { listingType: "rent" } },
-        { label: "Furnished Homes", params: { listingType: "rent" } },
-        { label: "Bachelor Friendly", params: { listingType: "rent" } },
+        {
+          label: "Owner Properties",
+          params: { listingType: "rent" },
+          icon: "🏠",
+        },
+        {
+          label: "Verified Properties",
+          params: { listingType: "rent" },
+          icon: "✅",
+        },
+        {
+          label: "Furnished Homes",
+          params: { listingType: "rent" },
+          icon: "🛋",
+        },
+        {
+          label: "Bachelor Friendly",
+          params: { listingType: "rent" },
+          icon: "👤",
+        },
       ],
       propertyTypes: [
-        { label: "Apartments", value: "Apartment" },
-        { label: "Houses", value: "House" },
-        { label: "Villas", value: "Villa" },
-        { label: "PG", value: "PG" },
+        { label: "Apartments", value: "Apartment", icon: "🏢" },
+        { label: "Houses", value: "House", icon: "🏠" },
+        { label: "Villas", value: "Villa", icon: "🏖" },
+        { label: "PG", value: "PG", icon: "🛏" },
       ],
       budget: [
-        { label: "Under ₹10,000", min: 0, max: 10000 },
-        { label: "₹10,000 - ₹20,000", min: 10000, max: 20000 },
-        { label: "₹20,000 - ₹40,000", min: 20000, max: 40000 },
-        { label: "Above ₹40,000", min: 40000, max: 999999 },
+        { label: "Under ₹10,000", min: 0, max: 10000, icon: "💰" },
+        { label: "₹10,000 - ₹20,000", min: 10000, max: 20000, icon: "💰" },
+        { label: "₹20,000 - ₹40,000", min: 20000, max: 40000, icon: "💰" },
+        { label: "Above ₹40,000", min: 40000, max: 999999, icon: "💰" },
       ],
     },
     sell: {
       options: [
-        { label: "Post Free Property Ad", path: "/post-property" },
-        { label: "Owner Plans", path: "/owner-plans" },
-        { label: "Rental Agreement", path: "/rental-agreement" },
-        { label: "Home Interior/Renovation", path: "/home-renovation" },
+        { label: "Post Free Property Ad", path: "/post-property", icon: "✍️" },
+        { label: "Owner Plans", path: "/owner-plans", icon: "📋" },
+        { label: "Rental Agreement", path: "/rental-agreement", icon: "📄" },
+        {
+          label: "Home Interior/Renovation",
+          path: "/home-renovation",
+          icon: "🔨",
+        },
       ],
     },
   };
 
   return (
-    <div className={`subheader-wrapper ${isHidden ? "hidden" : ""}`}>
+    <div
+      className={`subheader-wrapper ${isHidden ? "hidden" : ""} ${
+        isMobile ? "mobile" : ""
+      } ${isTablet ? "tablet" : ""}`}
+      ref={subHeaderRef}
+    >
       <div className="subheader-inner">
-        <div className="dropdowns-tab">
-          {/* HOME */}
-          <div
-            className="subheader-item"
-            onMouseEnter={() => handleMouseEnter("home")}
-            onMouseLeave={handleMouseLeave}
+        {/* Mobile Menu Toggle */}
+        {isMobile && (
+          <button
+            className="mobile-menu-toggle"
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+            aria-label="Toggle navigation menu"
           >
+            <span className={`hamburger ${showMobileMenu ? "active" : ""}`}>
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
+            <span className="menu-text">Menu</span>
+          </button>
+        )}
+
+        {/* Navigation Dropdowns */}
+        <div
+          className={`dropdowns-tab ${
+            isMobile && showMobileMenu ? "mobile-open" : ""
+          }`}
+        >
+          {/* HOME */}
+          <div className="subheader-item">
             <button
-              onClick={() => navigate("/")}
-              className="subheader-dropdown-btn"
+              onClick={() => handleNavigation("/")}
+              className="subheader-dropdown-btn home-btn"
             >
-              Home
+              🏠 <span className="btn-text">Home</span>
             </button>
           </div>
 
@@ -182,10 +266,18 @@ function SubHeader() {
             onMouseEnter={() => handleMouseEnter("buy")}
             onMouseLeave={handleMouseLeave}
           >
-            <button className="subheader-dropdown-btn">Buy ▾</button>
+            <button
+              className="subheader-dropdown-btn"
+              onClick={() => handleMobileDropdownToggle("buy")}
+            >
+              🛒 <span className="btn-text">Buy</span>
+              <span className="dropdown-arrow">▾</span>
+            </button>
             {activeDropdown === "buy" && (
               <div
-                className="subheader-dropdown wide"
+                className={`subheader-dropdown wide ${
+                  isMobile ? "mobile" : ""
+                }`}
                 onMouseEnter={handleDropdownEnter}
                 onMouseLeave={handleMouseLeave}
               >
@@ -197,7 +289,8 @@ function SubHeader() {
                       className="dropdown-item"
                       onClick={() => handleChoiceClick(item)}
                     >
-                      {item.label}
+                      <span className="item-icon">{item.icon}</span>
+                      <span className="item-label">{item.label}</span>
                     </div>
                   ))}
                 </div>
@@ -211,7 +304,8 @@ function SubHeader() {
                         handlePropertyTypeClick(item.value, "sale")
                       }
                     >
-                      {item.label}
+                      <span className="item-icon">{item.icon}</span>
+                      <span className="item-label">{item.label}</span>
                     </div>
                   ))}
                 </div>
@@ -223,7 +317,8 @@ function SubHeader() {
                       className="dropdown-item"
                       onClick={() => handleBudgetClick(item, "sale")}
                     >
-                      {item.label}
+                      <span className="item-icon">{item.icon}</span>
+                      <span className="item-label">{item.label}</span>
                     </div>
                   ))}
                 </div>
@@ -237,10 +332,18 @@ function SubHeader() {
             onMouseEnter={() => handleMouseEnter("rent")}
             onMouseLeave={handleMouseLeave}
           >
-            <button className="subheader-dropdown-btn">Rent ▾</button>
+            <button
+              className="subheader-dropdown-btn"
+              onClick={() => handleMobileDropdownToggle("rent")}
+            >
+              🏠 <span className="btn-text">Rent</span>
+              <span className="dropdown-arrow">▾</span>
+            </button>
             {activeDropdown === "rent" && (
               <div
-                className="subheader-dropdown wide"
+                className={`subheader-dropdown wide ${
+                  isMobile ? "mobile" : ""
+                }`}
                 onMouseEnter={handleDropdownEnter}
                 onMouseLeave={handleMouseLeave}
               >
@@ -252,7 +355,8 @@ function SubHeader() {
                       className="dropdown-item"
                       onClick={() => handleChoiceClick(item)}
                     >
-                      {item.label}
+                      <span className="item-icon">{item.icon}</span>
+                      <span className="item-label">{item.label}</span>
                     </div>
                   ))}
                 </div>
@@ -266,7 +370,8 @@ function SubHeader() {
                         handlePropertyTypeClick(item.value, "rent")
                       }
                     >
-                      {item.label}
+                      <span className="item-icon">{item.icon}</span>
+                      <span className="item-label">{item.label}</span>
                     </div>
                   ))}
                 </div>
@@ -278,7 +383,8 @@ function SubHeader() {
                       className="dropdown-item"
                       onClick={() => handleBudgetClick(item, "rent")}
                     >
-                      {item.label}
+                      <span className="item-icon">{item.icon}</span>
+                      <span className="item-label">{item.label}</span>
                     </div>
                   ))}
                 </div>
@@ -292,10 +398,16 @@ function SubHeader() {
             onMouseEnter={() => handleMouseEnter("sell")}
             onMouseLeave={handleMouseLeave}
           >
-            <button className="subheader-dropdown-btn">Sell ▾</button>
+            <button
+              className="subheader-dropdown-btn"
+              onClick={() => handleMobileDropdownToggle("sell")}
+            >
+              💰 <span className="btn-text">Sell</span>
+              <span className="dropdown-arrow">▾</span>
+            </button>
             {activeDropdown === "sell" && (
               <div
-                className="subheader-dropdown"
+                className={`subheader-dropdown ${isMobile ? "mobile" : ""}`}
                 onMouseEnter={handleDropdownEnter}
                 onMouseLeave={handleMouseLeave}
               >
@@ -305,7 +417,8 @@ function SubHeader() {
                     className="dropdown-item"
                     onClick={() => handleSellClick(item.path)}
                   >
-                    {item.label}
+                    <span className="item-icon">{item.icon}</span>
+                    <span className="item-label">{item.label}</span>
                   </div>
                 ))}
               </div>
@@ -313,56 +426,67 @@ function SubHeader() {
           </div>
         </div>
 
-        <div className="subheader-btns-tab">
+        {/* Action Buttons */}
+        <div
+          className={`subheader-btns-tab ${
+            isMobile && showMobileMenu ? "mobile-open" : ""
+          }`}
+        >
           <button
             onClick={handleMyPropertiesClick}
-            style={{
-              color: "white",
-              backgroundColor: "rgba(255, 255, 255, 0.2)",
-              padding: "12px 20px",
-              borderRadius: "12px",
-              border: "none",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: "14px",
-            }}
+            className="subheader-btn my-properties-btn"
           >
-            My Properties
+            <span className="btn-icon">🏠</span>
+            <span className="btn-text">My Properties</span>
           </button>
-          {/* ADMIN / AGENT BUTTONS */}
+
+          {/* ADMIN BUTTONS */}
           {user?.role === "ADMIN" && (
             <>
               <button
-                onClick={() => navigate("/admin-deals")}
+                onClick={() => handleNavigation("/admin-deals")}
                 className="subheader-btn green"
               >
-                📋 View Deals
+                <span className="btn-icon">📋</span>
+                <span className="btn-text">Deals</span>
               </button>
               <button
-                onClick={() => navigate("/admin-agents")}
+                onClick={() => handleNavigation("/admin-agents")}
                 className="subheader-btn blue"
               >
-                👥 View Agents
+                <span className="btn-icon">👥</span>
+                <span className="btn-text">Agents</span>
               </button>
               <button
-                onClick={() => navigate("/admin-users")}
+                onClick={() => handleNavigation("/admin-users")}
                 className="subheader-btn purple"
               >
-                👨‍💼 View Users
+                <span className="btn-icon">👨‍💼</span>
+                <span className="btn-text">Users</span>
               </button>
             </>
           )}
 
+          {/* AGENT BUTTON */}
           {user?.role === "AGENT" && (
             <button
-              onClick={() => navigate("/agent-dashboard")}
+              onClick={() => handleNavigation("/agent-dashboard")}
               className="subheader-btn green"
             >
-              📊 Agent Dashboard
+              <span className="btn-icon">📊</span>
+              <span className="btn-text">Dashboard</span>
             </button>
           )}
         </div>
       </div>
+
+      {/* Mobile Overlay */}
+      {isMobile && showMobileMenu && (
+        <div
+          className="mobile-overlay"
+          onClick={() => setShowMobileMenu(false)}
+        />
+      )}
     </div>
   );
 }
