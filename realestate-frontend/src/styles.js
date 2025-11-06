@@ -1,4 +1,4 @@
-// src/styles.js
+// src/styles.js - COMPLETE PERFECT VERSION
 
 export const styles = {
   breakpoints: {
@@ -40,6 +40,210 @@ export const styles = {
     transform: "translateY(0)",
   },
 
+  // ✅ PERFECT HEADER STYLES
+  header: {
+    position: "sticky",
+    top: 0,
+    left: 0,
+    right: 0,
+    width: "100%",
+    zIndex: 1000,
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    color: "white",
+    backdropFilter: "blur(10px)",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    boxShadow: "0 4px 20px rgba(102, 126, 234, 0.25)",
+  },
+
+  headerContent: {
+    maxWidth: "1200px",
+    margin: "0 auto",
+    padding: "12px 20px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "nowrap",
+    gap: "16px",
+    width: "100%",
+    boxSizing: "border-box",
+  },
+
+  logo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    fontSize: "20px",
+    color: "white",
+    fontWeight: 800,
+    cursor: "pointer",
+    transition: "transform 0.3s ease",
+    flexShrink: 0,
+  },
+
+  logoIcon: {
+    fontSize: "24px",
+  },
+
+  logoIconImg: {
+    height: "45px",
+    width: "auto",
+  },
+
+  logoText: {
+    fontSize: "18px",
+    letterSpacing: "-0.4px",
+    whiteSpace: "nowrap",
+  },
+
+  nav: {
+    display: "flex",
+    gap: "16px",
+    alignItems: "center",
+    flexWrap: "nowrap",
+  },
+
+  authSection: {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: "14px",
+    flexWrap: "nowrap",
+  },
+
+  authButtons: {
+    display: "flex",
+    gap: "10px",
+    alignItems: "center",
+    flexWrap: "nowrap",
+  },
+
+  loginBtn: {
+    backgroundColor: "rgba(255,255,255,0.15)",
+    color: "white",
+    padding: "8px 16px",
+    borderRadius: "20px",
+    border: "1px solid rgba(255,255,255,0.3)",
+    cursor: "pointer",
+    fontWeight: 600,
+    fontSize: "13px",
+    display: "flex",
+    alignItems: "center",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    backdropFilter: "blur(10px)",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+  },
+
+  signupBtn: {
+    background: "white",
+    color: "#667eea",
+    padding: "8px 16px",
+    borderRadius: "20px",
+    border: "none",
+    cursor: "pointer",
+    fontWeight: 600,
+    fontSize: "13px",
+    display: "flex",
+    alignItems: "center",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    boxShadow: "0 2px 8px rgba(255,255,255,0.2)",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+  },
+
+  btnIcon: {
+    marginRight: "6px",
+    fontSize: "12px",
+  },
+
+  postBtn: {
+    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    color: "white",
+    padding: "8px 16px",
+    borderRadius: "20px",
+    border: "none",
+    cursor: "pointer",
+    fontWeight: 600,
+    fontSize: "13px",
+    display: "flex",
+    alignItems: "center",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    position: "relative",
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+  },
+
+  userSection: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "rgba(255,255,255,0.15)",
+    padding: "6px 12px",
+    borderRadius: "20px",
+    backdropFilter: "blur(10px)",
+    transition: "all 0.3s ease",
+    cursor: "pointer",
+    flexShrink: 0,
+  },
+
+  userIcon: {
+    fontSize: "14px",
+  },
+
+  userName: {
+    fontWeight: 600,
+    fontSize: "13px",
+    color: "white",
+    whiteSpace: "nowrap",
+  },
+
+  roleBadge: {
+    fontSize: "10px",
+    background: "rgba(255, 255, 255, 0.2)",
+    padding: "2px 6px",
+    borderRadius: "8px",
+    color: "white",
+    fontWeight: 600,
+    whiteSpace: "nowrap",
+  },
+
+  mobileMenuBtn: {
+    display: "none",
+    background: "rgba(255, 255, 255, 0.15)",
+    border: "none",
+    cursor: "pointer",
+    flexDirection: "column",
+    padding: "6px",
+    borderRadius: "8px",
+    transition: "all 0.2s ease",
+  },
+
+  hamburgerLine: {
+    width: "22px",
+    height: "2px",
+    backgroundColor: "white",
+    marginBottom: "3px",
+    borderRadius: "1px",
+    transition: "all 0.3s ease",
+  },
+
+  mobileProfileBtn: {
+    display: "none",
+    background: "rgba(255, 255, 255, 0.15)",
+    border: "none",
+    color: "white",
+    width: "36px",
+    height: "36px",
+    borderRadius: "50%",
+    cursor: "pointer",
+    fontSize: "16px",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "all 0.2s ease",
+  },
+
+  // ✅ DROPDOWN STYLES
   profileDropdown: {
     position: "absolute",
     top: "calc(100% + 8px)",
@@ -60,7 +264,7 @@ export const styles = {
   profileDropdownItem: {
     padding: "12px 16px",
     cursor: "pointer",
-    fontSize: "clamp(13px, 1.5vw, 14px)",
+    fontSize: "14px",
     color: "#475569",
     fontWeight: 500,
     transition: "all 0.2s ease",
@@ -79,6 +283,7 @@ export const styles = {
     fontWeight: 600,
   },
 
+  // REST OF YOUR EXISTING STYLES
   noPropertiesContainer: {
     textAlign: "center",
     padding: "clamp(40px, 6vw, 60px) clamp(16px, 3vw, 20px)",
@@ -102,268 +307,6 @@ export const styles = {
     minHeight: "100vh",
     background: "#ffffff",
     position: "relative",
-  },
-
-  header: {
-    position: "sticky",
-    top: 0,
-    left: 0,
-    right: 0,
-    width: "100%",
-    zIndex: 1000,
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    color: "white",
-    backdropFilter: "blur(10px)",
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    boxShadow: "0 4px 20px rgba(102, 126, 234, 0.25)",
-  },
-
-  headerContent: {
-    maxWidth: "1425px",
-    margin: "0 auto",
-    padding: "clamp(8px, 1.5vw, 16px) clamp(16px, 3vw, 24px)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: "16px",
-    width: "100%",
-    boxSizing: "border-box",
-  },
-
-  logo: {
-    display: "flex",
-    alignItems: "center",
-    gap: "clamp(8px, 1.5vw, 12px)",
-    fontSize: "clamp(20px, 3vw, 28px)",
-    color: "white",
-    fontWeight: 800,
-    cursor: "pointer",
-    transition: "transform 0.3s ease",
-  },
-
-  logoIcon: {
-    fontSize: "clamp(24px, 4vw, 32px)",
-  },
-
-  logoIconImg: {
-    height: "60px",
-  },
-
-  logoText: {
-    fontSize: "clamp(16px, 4vw, 24px)",
-  },
-
-  nav: {
-    display: "flex",
-    gap: "clamp(16px, 2.5vw, 28px)",
-    alignItems: "center",
-    flexWrap: "wrap",
-  },
-
-  navItem: {
-    position: "relative",
-    cursor: "pointer",
-    padding: "12px 0",
-    transition: "transform 0.2s ease",
-  },
-
-  navText: {
-    fontSize: "clamp(14px, 1.8vw, 16px)",
-    fontWeight: 600,
-    color: "white",
-    transition: "all 0.3s ease",
-    position: "relative",
-  },
-
-  dropdowns: {
-    display: "flex",
-    gap: "clamp(16px, 2vw, 32px)",
-  },
-
-  dropdown: {
-    position: "absolute",
-    top: "calc(100% + 8px)",
-    left: "50%",
-    transform: "translateX(-50%)",
-    backgroundColor: "white",
-    boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
-    borderRadius: "16px",
-    padding: "clamp(16px, 2vw, 24px)",
-    marginTop: "2px",
-    minWidth: "min(650px, 90vw)",
-    display: "flex",
-    gap: "clamp(16px, 2vw, 32px)",
-    zIndex: 1000,
-    animation: "dropdownSlide 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    flexWrap: "wrap",
-  },
-
-  dropdownSection: {
-    flex: "1 1 200px",
-    minWidth: "150px",
-  },
-
-  dropdownTitle: {
-    fontSize: "clamp(12px, 1.5vw, 14px)",
-    fontWeight: 700,
-    color: "#4f46e5",
-    marginBottom: "clamp(12px, 2vw, 16px)",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
-  },
-
-  dropdownItem: {
-    padding: "10px 16px",
-    cursor: "pointer",
-    borderRadius: "8px",
-    fontSize: "clamp(13px, 1.6vw, 14px)",
-    color: "#475569",
-    fontWeight: 500,
-    marginBottom: "4px",
-    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-    position: "relative",
-    overflow: "hidden",
-  },
-
-  authSection: {
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: "clamp(8px, 1.5vw, 16px)",
-    flexWrap: "wrap",
-  },
-
-  loginSignup: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-  },
-
-  userSection: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    background: "rgba(255,255,255,0.1)",
-    padding: "clamp(6px, 1vw, 8px) clamp(12px, 2vw, 16px)",
-    borderRadius: "12px",
-    backdropFilter: "blur(10px)",
-    transition: "all 0.3s ease",
-    cursor: "pointer",
-  },
-
-  userIcon: {
-    fontSize: "clamp(16px, 2vw, 18px)",
-  },
-
-  userName: {
-    fontWeight: 600,
-    fontSize: "clamp(12px, 1.6vw, 14px)",
-    color: "white",
-  },
-
-  roleBadge: {
-    fontSize: "clamp(10px, 1.4vw, 12px)",
-    background: "rgba(255, 255, 255, 0.2)",
-    padding: "2px 6px",
-    borderRadius: "8px",
-    color: "white",
-    fontWeight: 600,
-  },
-
-  authButtons: {
-    display: "flex",
-    gap: "clamp(8px, 1.5vw, 12px)",
-    flexWrap: "wrap",
-  },
-
-  btnIcon: {
-    marginRight: "8px",
-    fontSize: "clamp(14px, 1.8vw, 16px)",
-  },
-
-  postBtn: {
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-    color: "white",
-    padding: "clamp(10px, 1.5vw, 12px) clamp(16px, 2.5vw, 24px)",
-    borderRadius: "12px",
-    border: "none",
-    cursor: "pointer",
-    fontWeight: 600,
-    fontSize: "clamp(14px, 1.8vw, 16px)",
-    display: "flex",
-    alignItems: "center",
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    position: "relative",
-    overflow: "hidden",
-    whiteSpace: "nowrap",
-  },
-
-  loginBtn: {
-    backgroundColor: "transparent",
-    color: "white",
-    padding: "clamp(10px, 1.5vw, 12px) clamp(16px, 2vw, 20px)",
-    borderRadius: "12px",
-    border: "2px solid rgba(255,255,255,0.3)",
-    cursor: "pointer",
-    fontWeight: 600,
-    fontSize: "clamp(12px, 1.6vw, 14px)",
-    display: "flex",
-    alignItems: "center",
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    backdropFilter: "blur(10px)",
-    whiteSpace: "nowrap",
-  },
-
-  signupBtn: {
-    background: "white",
-    color: "#667eea",
-    padding: "clamp(10px, 1.5vw, 12px) clamp(16px, 2vw, 20px)",
-    borderRadius: "12px",
-    border: "none",
-    cursor: "pointer",
-    fontWeight: 600,
-    fontSize: "clamp(12px, 1.6vw, 14px)",
-    display: "flex",
-    alignItems: "center",
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    boxShadow: "0 2px 8px rgba(255,255,255,0.2)",
-    whiteSpace: "nowrap",
-  },
-
-  mobileMenuBtn: {
-    display: "none",
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    flexDirection: "column",
-    padding: "8px",
-    borderRadius: "8px",
-    transition: "all 0.2s ease",
-  },
-
-  hamburgerLine: {
-    width: "24px",
-    height: "3px",
-    backgroundColor: "white",
-    marginBottom: "4px",
-    borderRadius: "2px",
-    transition: "all 0.3s ease",
-  },
-
-  mobileProfileBtn: {
-    display: "none",
-    background: "rgba(255, 255, 255, 0.2)",
-    border: "none",
-    color: "white",
-    width: "40px",
-    height: "40px",
-    borderRadius: "50%",
-    cursor: "pointer",
-    fontSize: "16px",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.2s ease",
   },
 
   container: {
@@ -529,9 +472,6 @@ export const styles = {
     overflowX: "auto",
     scrollbarWidth: "none",
     msOverflowStyle: "none",
-    WebkitScrollbar: {
-      display: "none",
-    },
     gap: "clamp(8px, 1vw, 12px)",
     paddingBottom: "2px",
   },
@@ -774,62 +714,73 @@ export const styles = {
     animation: "gridReveal 0.8s ease-out",
   },
 
-  mobileMenu: {
-    position: "fixed",
-    top: 0,
-    left: "-100%",
-    width: "80%",
-    maxWidth: "320px",
-    height: "100vh",
-    backgroundColor: "white",
-    boxShadow: "4px 0 20px rgba(0,0,0,0.1)",
-    transition: "left 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    zIndex: 2000,
-    overflowY: "auto",
-    padding: "20px",
+  navItem: {
+    position: "relative",
+    cursor: "pointer",
+    padding: "12px 0",
+    transition: "transform 0.2s ease",
   },
 
-  mobileMenuOpen: {
-    left: 0,
-  },
-
-  mobileOverlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    zIndex: 1999,
-    opacity: 0,
-    visibility: "hidden",
+  navText: {
+    fontSize: "clamp(14px, 1.8vw, 16px)",
+    fontWeight: 600,
+    color: "white",
     transition: "all 0.3s ease",
+    position: "relative",
   },
 
-  mobileOverlayVisible: {
-    opacity: 1,
-    visibility: "visible",
+  dropdowns: {
+    display: "flex",
+    gap: "clamp(16px, 2vw, 32px)",
   },
 
-  "@media (max-width: 1200px)": {
-    headerContent: {
-      maxWidth: "1000px",
-      padding: "clamp(8px, 1.5vw, 12px) clamp(12px, 3vw, 20px)",
-    },
-    container: {
-      maxWidth: "1000px",
-    },
+  dropdown: {
+    position: "absolute",
+    top: "calc(100% + 8px)",
+    left: "50%",
+    transform: "translateX(-50%)",
+    backgroundColor: "white",
+    boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+    borderRadius: "16px",
+    padding: "clamp(16px, 2vw, 24px)",
+    marginTop: "2px",
+    minWidth: "min(650px, 90vw)",
+    display: "flex",
+    gap: "clamp(16px, 2vw, 32px)",
+    zIndex: 1000,
+    animation: "dropdownSlide 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    flexWrap: "wrap",
   },
 
-  "@media (max-width: 992px)": {
-    headerContent: {
-      maxWidth: "100%",
-      padding: "clamp(8px, 1.5vw, 12px) clamp(16px, 3vw, 20px)",
-    },
-    container: {
-      maxWidth: "100%",
-      padding: "clamp(12px, 3vw, 20px)",
-    },
+  dropdownSection: {
+    flex: "1 1 200px",
+    minWidth: "150px",
+  },
+
+  dropdownTitle: {
+    fontSize: "clamp(12px, 1.5vw, 14px)",
+    fontWeight: 700,
+    color: "#4f46e5",
+    marginBottom: "clamp(12px, 2vw, 16px)",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  },
+
+  dropdownItem: {
+    padding: "10px 16px",
+    cursor: "pointer",
+    borderRadius: "8px",
+    fontSize: "clamp(13px, 1.6vw, 14px)",
+    color: "#475569",
+    fontWeight: 500,
+    marginBottom: "4px",
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+    position: "relative",
+    overflow: "hidden",
+  },
+
+  // ✅ RESPONSIVE MEDIA QUERIES
+  "@media (max-width: 768px)": {
     nav: {
       display: "none",
     },
@@ -839,31 +790,14 @@ export const styles = {
     mobileProfileBtn: {
       display: "flex",
     },
-    dropdown: {
-      position: "fixed",
-      top: "auto",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      transform: "none",
-      borderRadius: "16px 16px 0 0",
-      maxHeight: "70vh",
-      overflowY: "auto",
-    },
-    heroSection: {
-      padding: "30px 20px",
-    },
-    statsGrid: {
-      gridTemplateColumns: "repeat(2, 1fr)",
-    },
-  },
-
-  "@media (max-width: 768px)": {
     headerContent: {
-      padding: "12px 16px",
+      padding: "10px 16px",
     },
-    container: {
-      padding: "16px",
+    logoText: {
+      fontSize: "16px",
+    },
+    logoIconImg: {
+      height: "35px",
     },
   },
 
@@ -871,20 +805,11 @@ export const styles = {
     headerContent: {
       padding: "8px 12px",
     },
-    container: {
-      padding: "12px",
+    logoText: {
+      fontSize: "14px",
     },
-    grid: {
-      gridTemplateColumns: "1fr",
-    },
-    statsGrid: {
-      gridTemplateColumns: "1fr",
-    },
-    areasGrid: {
-      flexDirection: "column",
-    },
-    areaButton: {
-      width: "100%",
+    logoIconImg: {
+      height: "30px",
     },
   },
 };
