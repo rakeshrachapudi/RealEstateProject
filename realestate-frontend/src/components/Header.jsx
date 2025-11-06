@@ -1,10 +1,10 @@
-// Header.jsx - Updated with Mobile Burger Menu
+// Header.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
 import { styles } from "../styles.js";
 import logo from "../assets/logo-black.png";
-import MobileNav from "./MobileNav.jsx"; // Import the new mobile nav component
+import MobileNav from "./MobileNav.jsx";
 
 function Header({
   onLoginClick,
@@ -14,16 +14,15 @@ function Header({
 }) {
   const { isAuthenticated, user, logout } = useAuth();
   const [isProfileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false); // New state for mobile nav
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   const leaveTimeout = useRef(null);
 
-  // Close dropdown on navigation
   useEffect(() => {
     setProfileDropdownOpen(false);
-    setIsMobileNavOpen(false); // Close mobile nav on route change
+    setIsMobileNavOpen(false);
   }, [location.pathname]);
 
   const handleMouseEnter = () => {
@@ -62,7 +61,6 @@ function Header({
     <>
       <header style={styles.header}>
         <div style={styles.headerContent}>
-          {/* Mobile Burger Menu Button */}
           <button
             style={styles.mobileMenuBtn}
             className="mobile-only"
@@ -83,7 +81,6 @@ function Header({
           <nav style={styles.nav}>
             {isAuthenticated ? (
               <div style={styles.authSection}>
-                {/* Post Property Button - Hide on mobile */}
                 {onPostPropertyClick && (
                   <button
                     onClick={onPostPropertyClick}
@@ -94,7 +91,6 @@ function Header({
                   </button>
                 )}
 
-                {/* Profile Dropdown - Hide on mobile */}
                 <div
                   style={{ position: "relative" }}
                   className="desktop-only"
@@ -170,7 +166,6 @@ function Header({
                   )}
                 </div>
 
-                {/* Mobile Profile Button */}
                 <button
                   style={styles.mobileProfileBtn}
                   className="mobile-only"
@@ -180,16 +175,15 @@ function Header({
                 </button>
               </div>
             ) : (
-              // Logged Out State
               <div style={styles.authButtons}>
                 {onLoginClick && (
                   <button onClick={onLoginClick} style={styles.loginBtn}>
-                    <span style={styles.btnIcon}>🔐Login</span>
+                    <span style={styles.btnIcon}>🔐</span>Login
                   </button>
                 )}
                 {onSignupClick && (
                   <button onClick={onSignupClick} style={styles.signupBtn}>
-                    <span style={styles.btnIcon}>✨Signup</span>
+                    <span style={styles.btnIcon}>✨</span>Signup
                   </button>
                 )}
               </div>
@@ -198,7 +192,6 @@ function Header({
         </div>
       </header>
 
-      {/* Mobile Navigation */}
       <MobileNav
         isOpen={isMobileNavOpen}
         onClose={() => setIsMobileNavOpen(false)}
@@ -206,45 +199,5 @@ function Header({
     </>
   );
 }
-
-// Add mobile-specific styles to your existing styles
-styles.mobileMenuBtn = {
-  display: "none",
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  flexDirection: "column",
-  padding: "8px",
-  borderRadius: "8px",
-  transition: "all 0.2s ease",
-};
-
-styles.hamburgerLine = {
-  width: "24px",
-  height: "3px",
-  backgroundColor: "white",
-  marginBottom: "4px",
-  borderRadius: "2px",
-  transition: "all 0.3s ease",
-};
-
-styles.logoText = {
-  fontSize: "clamp(16px, 4vw, 24px)",
-};
-
-styles.mobileProfileBtn = {
-  display: "none",
-  background: "rgba(255, 255, 255, 0.2)",
-  border: "none",
-  color: "white",
-  width: "40px",
-  height: "40px",
-  borderRadius: "50%",
-  cursor: "pointer",
-  fontSize: "16px",
-  alignItems: "center",
-  justifyContent: "center",
-  transition: "all 0.2s ease",
-};
 
 export default Header;

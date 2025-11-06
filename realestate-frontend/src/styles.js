@@ -1,7 +1,6 @@
 // src/styles.js
 
 export const styles = {
-  // Responsive breakpoints
   breakpoints: {
     xs: "320px",
     sm: "640px",
@@ -69,6 +68,17 @@ export const styles = {
     overflow: "hidden",
   },
 
+  dropdownSeparator: {
+    border: "none",
+    borderTop: "1px solid #e2e8f0",
+    margin: "8px 0",
+  },
+
+  logoutItem: {
+    color: "#dc2626",
+    fontWeight: 600,
+  },
+
   noPropertiesContainer: {
     textAlign: "center",
     padding: "clamp(40px, 6vw, 60px) clamp(16px, 3vw, 20px)",
@@ -91,7 +101,6 @@ export const styles = {
     fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
     minHeight: "100vh",
     background: "#ffffff",
-    // overflow: "hidden",
     position: "relative",
   },
 
@@ -106,19 +115,20 @@ export const styles = {
     color: "white",
     backdropFilter: "blur(10px)",
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    // borderRadius: "25px",
-    // boxShadow: "0 4px 20px rgba(0,0,0,1)",
+    boxShadow: "0 4px 20px rgba(102, 126, 234, 0.25)",
   },
 
   headerContent: {
-    maxWidth: "1700px",
+    maxWidth: "1425px",
     margin: "0 auto",
-    padding: " clamp(4px, 0.8vw, 8px) clamp(6px, 1.5vw, 12px)",
+    padding: "clamp(8px, 1.5vw, 16px) clamp(16px, 3vw, 24px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     flexWrap: "wrap",
     gap: "16px",
+    width: "100%",
+    boxSizing: "border-box",
   },
 
   logo: {
@@ -135,8 +145,13 @@ export const styles = {
   logoIcon: {
     fontSize: "clamp(24px, 4vw, 32px)",
   },
+
   logoIconImg: {
     height: "60px",
+  },
+
+  logoText: {
+    fontSize: "clamp(16px, 4vw, 24px)",
   },
 
   nav: {
@@ -214,14 +229,14 @@ export const styles = {
   authSection: {
     display: "flex",
     flexDirection: "row",
-    alignItems: "end",
+    alignItems: "center",
     gap: "clamp(8px, 1.5vw, 16px)",
     flexWrap: "wrap",
   },
 
   loginSignup: {
     display: "flex",
-    alignItems: "right",
+    alignItems: "center",
     gap: "10px",
   },
 
@@ -234,18 +249,26 @@ export const styles = {
     borderRadius: "12px",
     backdropFilter: "blur(10px)",
     transition: "all 0.3s ease",
-    animation: "slideInRight 0.5s ease-out",
+    cursor: "pointer",
   },
 
   userIcon: {
     fontSize: "clamp(16px, 2vw, 18px)",
-    // animation: "bounce 2s ease-in-out infinite",
   },
 
   userName: {
     fontWeight: 600,
     fontSize: "clamp(12px, 1.6vw, 14px)",
     color: "white",
+  },
+
+  roleBadge: {
+    fontSize: "clamp(10px, 1.4vw, 12px)",
+    background: "rgba(255, 255, 255, 0.2)",
+    padding: "2px 6px",
+    borderRadius: "8px",
+    color: "white",
+    fontWeight: 600,
   },
 
   authButtons: {
@@ -308,13 +331,47 @@ export const styles = {
     whiteSpace: "nowrap",
   },
 
+  mobileMenuBtn: {
+    display: "none",
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    flexDirection: "column",
+    padding: "8px",
+    borderRadius: "8px",
+    transition: "all 0.2s ease",
+  },
+
+  hamburgerLine: {
+    width: "24px",
+    height: "3px",
+    backgroundColor: "white",
+    marginBottom: "4px",
+    borderRadius: "2px",
+    transition: "all 0.3s ease",
+  },
+
+  mobileProfileBtn: {
+    display: "none",
+    background: "rgba(255, 255, 255, 0.2)",
+    border: "none",
+    color: "white",
+    width: "40px",
+    height: "40px",
+    borderRadius: "50%",
+    cursor: "pointer",
+    fontSize: "16px",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "all 0.2s ease",
+  },
+
   container: {
-    maxWidth: "1700px",
+    maxWidth: "1200px",
     margin: "0 auto",
-    padding: "clamp(16px, 3vw, 24px) clamp(16px, 3vw, 32px)",
+    padding: "clamp(16px, 3vw, 24px)",
     minHeight: "80vh",
     animation: "fadeIn 0.6s ease-out",
-    // marginTop: "120px",
   },
 
   heroSection: {
@@ -605,7 +662,6 @@ export const styles = {
     color: "#64748b",
   },
 
-  // Utility responsive styles
   backButton: {
     backgroundColor: "transparent",
     border: "none",
@@ -718,18 +774,6 @@ export const styles = {
     animation: "gridReveal 0.8s ease-out",
   },
 
-  // Mobile menu styles
-  mobileMenuBtn: {
-    display: "none",
-    backgroundColor: "transparent",
-    border: "none",
-    color: "white",
-    fontSize: "24px",
-    cursor: "pointer",
-    padding: "8px",
-    transition: "transform 0.3s ease",
-  },
-
   mobileMenu: {
     position: "fixed",
     top: 0,
@@ -767,16 +811,33 @@ export const styles = {
     visibility: "visible",
   },
 
-  // Responsive media queries
-  "@media (max-width: 768px)": {
+  "@media (max-width: 1200px)": {
     headerContent: {
-      padding: "12px 16px",
+      maxWidth: "1000px",
+      padding: "clamp(8px, 1.5vw, 12px) clamp(12px, 3vw, 20px)",
+    },
+    container: {
+      maxWidth: "1000px",
+    },
+  },
+
+  "@media (max-width: 992px)": {
+    headerContent: {
+      maxWidth: "100%",
+      padding: "clamp(8px, 1.5vw, 12px) clamp(16px, 3vw, 20px)",
+    },
+    container: {
+      maxWidth: "100%",
+      padding: "clamp(12px, 3vw, 20px)",
     },
     nav: {
       display: "none",
     },
     mobileMenuBtn: {
-      display: "block",
+      display: "flex",
+    },
+    mobileProfileBtn: {
+      display: "flex",
     },
     dropdown: {
       position: "fixed",
@@ -797,7 +858,22 @@ export const styles = {
     },
   },
 
+  "@media (max-width: 768px)": {
+    headerContent: {
+      padding: "12px 16px",
+    },
+    container: {
+      padding: "16px",
+    },
+  },
+
   "@media (max-width: 480px)": {
+    headerContent: {
+      padding: "8px 12px",
+    },
+    container: {
+      padding: "12px",
+    },
     grid: {
       gridTemplateColumns: "1fr",
     },
