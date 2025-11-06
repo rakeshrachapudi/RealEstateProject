@@ -185,13 +185,11 @@ function Header({
                 {onLoginClick && (
                   <button onClick={onLoginClick} style={styles.loginBtn}>
                     <span style={styles.btnIcon}>🔐Login</span>
-                    <span className="desktop-only">Login</span>
                   </button>
                 )}
                 {onSignupClick && (
                   <button onClick={onSignupClick} style={styles.signupBtn}>
                     <span style={styles.btnIcon}>✨Signup</span>
-                    <span className="desktop-only">Sign Up</span>
                   </button>
                 )}
               </div>
