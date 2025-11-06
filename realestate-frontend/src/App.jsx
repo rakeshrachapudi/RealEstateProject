@@ -16,8 +16,8 @@ import PropertyEditModal from "./PropertyEditModal.jsx";
 import AdminDealPanel from "./AdminDealPanel.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 
-import AdminUsersPage from "./pages/AdminUsersPage";
-import CreateSaleAgreementPage from "./pages/CreateSaleAgreementPage";
+import AdminUsersPage from "./pages/AdminUsersPage.jsx";
+import CreateSaleAgreementPage from "./pages/CreateSaleAgreementPage.jsx";
 import EmiCalculatorPage from "./pages/EmiCalculatorPage.jsx";
 
 import Header from "./components/Header.jsx";
@@ -35,7 +35,7 @@ import PlaceholderPage from "./pages/PlaceholderPage.jsx";
 import AgentDashboard from "./pages/AgentDashboard.jsx";
 import BuyerDeals from "./BuyerDeals.jsx";
 import MyDealsPage from "./pages/MyDealsPage.jsx";
-import AdminAgentsPage from "./pages/AdminAgentsPage";
+import AdminAgentsPage from "./pages/AdminAgentsPage.jsx";
 import SellerDealsPage from "./pages/SellerDealsPage.jsx";
 import RentalAgreementPage from "./pages/RentalAgreementPage.jsx";
 import MyAgreementsPage from "./pages/MyAgreementsPage.jsx";
