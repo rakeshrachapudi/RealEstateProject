@@ -271,7 +271,7 @@ function Footer() {
       <div className="footer-copy">
         &copy; {new Date().getFullYear()} PropertyDealz. All rights reserved. |
         Serving Hyderabad.
-        <div className="footer-time">Current Time: {currentDateTime} IST</div>
+        {/* <div className="footer-time">Current Time: {currentDateTime} IST</div> */}
       </div>
     </footer>
   );
