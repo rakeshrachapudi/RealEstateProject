@@ -1,0 +1,113 @@
+/* src/components/PropertyList.css */
+
+/* Grid container */
+.pl-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 24px;
+  width: 100%;
+}
+
+/* Item wrapper to control column spans responsively */
+.pl-grid-item {
+  grid-column: span 4; /* 3 per row on desktop by default (12/4) */
+  display: flex;
+  min-width: 0; /* prevent overflow from long titles */
+}
+
+/* Loading and Empty states */
+.pl-state {
+  width: 100%;
+  text-align: center;
+  padding: 48px 20px;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px dashed #e2e8f0;
+  border-radius: 12px;
+}
+
+.pl-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.pl-loading-icon {
+  font-size: 32px;
+}
+
+.pl-loading-text {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.pl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.pl-empty-icon {
+  font-size: 40px;
+  margin-bottom: 8px;
+}
+
+.pl-empty-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.pl-empty-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* Responsive grid breakpoints */
+
+/* Large desktop (>= 1280px): 3 per row (default via span 4) */
+
+/* Desktop (1024px - 1279px): 3 per row (keep span 4) */
+@media (max-width: 1279px) {
+  .pl-grid {
+    gap: 20px;
+  }
+}
+
+/* Tablet (768px - 1023px): 2 per row */
+@media (max-width: 1023px) {
+  .pl-grid-item {
+    grid-column: span 6; /* 2 per row */
+  }
+}
+
+/* Mobile (<= 767px): 1 per row */
+@media (max-width: 767px) {
+  .pl-grid {
+    gap: 16px;
+  }
+  .pl-grid-item {
+    grid-column: span 12; /* 1 per row */
+  }
+
+  .pl-state {
+    padding: 36px 16px;
+  }
+
+  .pl-empty-subtitle,
+  .pl-loading-text {
+    font-size: 15px;
+  }
+}
+
+/* Small Mobile (<= 480px): tighter spacing */
+@media (max-width: 480px) {
+  .pl-grid {
+    gap: 12px;
+  }
+  .pl-state {
+    padding: 28px 12px;
+  }
+}

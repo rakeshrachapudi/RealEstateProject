@@ -1,0 +1,93 @@
+/* src/pages/BuyerDeals.css */
+
+/* Container */
+.bd-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: clamp(12px, 3vw, 24px);
+}
+
+/* Header */
+.bd-header {
+  margin-bottom: 12px;
+}
+
+.bd-title {
+  font-size: clamp(22px, 4vw, 30px);
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+}
+
+.bd-subtitle {
+  font-size: clamp(14px, 2vw, 16px);
+  color: #64748b;
+  margin: 0;
+}
+
+/* Alert */
+.bd-alert {
+  padding: 12px 14px;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  margin: 12px 0 16px;
+  text-align: center;
+}
+
+/* States */
+.bd-state {
+  text-align: center;
+  padding: clamp(32px, 6vw, 60px);
+  background: linear-gradient(135deg, #fefefe 0%, #f8fafc 100%);
+  border-radius: 16px;
+  border: 1px dashed #e2e8f0;
+  color: #64748b;
+}
+
+.bd-empty-ic {
+  font-size: clamp(40px, 8vw, 56px);
+  margin-bottom: 8px;
+}
+
+.bd-empty-title {
+  margin: 0 0 6px 0;
+  font-size: 20px;
+  font-weight: 900;
+  color: #1e293b;
+}
+
+.bd-empty-text {
+  margin: 0;
+  color: #64748b;
+}
+
+/* Grid */
+.bd-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 24px;
+}
+
+.bd-grid-item {
+  grid-column: span 4; /* 3 per row default */
+  display: flex;
+  min-width: 0;
+}
+
+/* Responsive */
+@media (max-width: 1023px) {
+  .bd-grid-item {
+    grid-column: span 6;
+  } /* 2 per row */
+}
+
+@media (max-width: 767px) {
+  .bd-grid {
+    gap: 16px;
+  }
+  .bd-grid-item {
+    grid-column: span 12;
+  } /* 1 per row */
+}

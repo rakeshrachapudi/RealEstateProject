@@ -1,540 +1,469 @@
-// src/pages/EmiCalculatorPage.jsx
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import "./EmiCalculatorPage.css";
 
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+const EmiCalculatorPage = () => {
+  const [loanAmount, setLoanAmount] = useState("5000000");
+  const [interestRate, setInterestRate] = useState("8.5");
+  const [loanTenure, setLoanTenure] = useState("20");
+  const [tenureType, setTenureType] = useState("years");
+  const [results, setResults] = useState({
+    emi: 0,
+    totalAmount: 0,
+    totalInterest: 0,
+    principalAmount: 0,
+  });
+  const [amortizationSchedule, setAmortizationSchedule] = useState([]);
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [error, setError] = useState("");
 
-// Recommended DTI limit used by lenders
-const DTI_LIMIT = 0.38;
-const MAX_LOAN_TENURE = 30; // Maximum tenure in years for pre-qualification
+  const navigate = useNavigate();
 
-// ===================================
-// Define styles globally
-// ===================================
-const styles = {
-    pageContainer: {
-        maxWidth: '1200px',
-        margin: '3rem auto',
-        padding: '0 24px',
-        minHeight: '60vh',
-        position: 'relative',
-    },
-    header: {
-        fontSize: '2.5rem',
-        fontWeight: '700',
-        color: '#1e293b',
-        textAlign: 'center',
-        marginBottom: '2rem',
-    },
-    contentWrapper: {
-        // Main container for the 3 columns (2 small, 1 wide)
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '20px', // Reduced gap for tighter horizontal flow
-        justifyContent: 'center', // Center content when there's space
-        alignItems: 'stretch', // Ensures all panels have the same height
-        margin: '0 auto 40px',
-    },
-    container: {
-        backgroundColor: '#ffffff',
-        padding: '30px',
-        borderRadius: '10px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-        flex: '1 1 48%',
-        minWidth: '350px',
-        margin: '0',
-    },
-    fullWidthSection: {
-        // Container for the Affordability Check (occupies one row)
-        flex: '1 1 100%',
-        marginTop: '0',
-        padding: '20px 0',
-        borderTop: '1px solid #e2e8f0',
-    },
-    title: {
-        fontSize: '1.5rem',
-        fontWeight: '700',
-        color: '#1e293b',
-        marginBottom: '20px',
-        borderBottom: '2px solid #e2e8f0',
-        paddingBottom: '10px',
-        textAlign: 'center',
-    },
-    inputGroup: {
-        marginBottom: '15px',
-    },
-    label: {
-        display: 'block',
-        marginBottom: '5px',
-        fontWeight: '600',
-        fontSize: '0.9rem',
-        color: '#475569',
-    },
-    input: {
-        width: '100%',
-        padding: '10px',
-        border: '1px solid #cbd5e1',
-        borderRadius: '6px',
-        fontSize: '1rem',
-        boxSizing: 'border-box',
-    },
-    resultBox: {
-        marginTop: '25px',
-        padding: '20px',
-        backgroundColor: '#f1f5f9',
-        borderRadius: '8px',
-    },
-    resultItem: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginBottom: '10px',
-        fontSize: '1rem',
-    },
-    resultLabel: {
-        color: '#475569',
-    },
-    resultValue: {
-        fontWeight: '700',
-        color: '#1e293b',
-    },
-    emiValue: {
-        fontSize: '1.6rem',
-        fontWeight: '800',
-        color: '#10b981',
-    },
-    chartLegend: {
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '20px',
-        marginTop: '15px',
-    },
-    legendItem: {
-        display: 'flex',
-        alignItems: 'center',
-        fontSize: '0.9rem',
-    },
-    legendColor: {
-        width: '10px',
-        height: '10px',
-        borderRadius: '50%',
-        marginRight: '5px',
-    },
-    pieContainer: {
-        position: 'relative',
-        width: '150px',
-        height: '150px',
-        margin: '0 auto 20px',
-        transform: 'rotate(-90deg)',
-    },
-    circle: {
-        transition: 'stroke-dashoffset 0.8s ease-in-out',
-    },
-    qualificationBox: {
-        marginTop: '20px',
-        padding: '15px',
-        backgroundColor: '#fef3c7',
-        borderRadius: '8px',
-        border: '1px solid #fde68a',
-        color: '#92400e',
-        fontWeight: '600',
-    },
-    successBox: {
-        backgroundColor: '#d1fae5',
-        border: '1px solid #a7f3d0',
-        color: '#065f46',
-    },
-    autofillButton: {
-        marginTop: '10px',
-        padding: '8px 15px',
-        backgroundColor: '#667eea',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '0.85rem',
-        fontWeight: '600',
-        transition: 'background-color 0.2s',
-        display: 'block',
-        width: '100%',
-    },
-    backButton: {
-        padding: '8px 15px',
-        backgroundColor: '#f1f5f9',
-        color: '#475569',
-        border: '1px solid #cbd5e1',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontWeight: '600',
-        fontSize: '0.85rem',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '8px',
-        zIndex: 10,
-        transition: 'background-color 0.2s, transform 0.2s',
-        textDecoration: 'none',
-        float: 'right',
-        marginLeft: '20px',
+  // Calculate EMI whenever inputs change
+  useEffect(() => {
+    calculateEMI();
+  }, [loanAmount, interestRate, loanTenure, tenureType]);
+
+  const calculateEMI = () => {
+    setError("");
+
+    // Input validation
+    const principal = parseFloat(loanAmount);
+    const rate = parseFloat(interestRate);
+    const tenure = parseFloat(loanTenure);
+
+    if (!principal || principal <= 0) {
+      setError("Please enter a valid loan amount");
+      return;
     }
-};
 
-// ===================================
-// Core Calculator Logic Components
-// ===================================
-
-const PieChart = ({ principalShare, interestShare }) => {
-    if (principalShare + interestShare <= 0.001) {
-         return (
-             <svg viewBox="0 0 120 120" style={styles.pieContainer}>
-                 <circle cx="60" cy="60" r="50" fill="transparent" stroke="#d1d5db" strokeWidth="20" />
-                 <text x="60" y="65" textAnchor="middle" fill="#475569" fontSize="12" fontWeight="600" transform="rotate(90 60 60)">
-                     No Loan
-                 </text>
-             </svg>
-         );
+    if (!rate || rate <= 0 || rate > 50) {
+      setError("Interest rate should be between 0.1% and 50%");
+      return;
     }
-    const circumference = 2 * Math.PI * 50;
-    const principalDash = circumference * principalShare;
-    const interestDash = circumference * interestShare;
 
-    return (
-        <svg viewBox="0 0 120 120" style={styles.pieContainer}>
-            <circle cx="60" cy="60" r="50" fill="transparent" stroke="#f093fb" strokeWidth="20"
-                style={styles.circle}
-                strokeDasharray={`${interestDash} ${circumference}`}
-                strokeDashoffset={circumference}
-            />
-            <circle
-                cx="60" cy="60" r="50" fill="transparent" stroke="#667eea" strokeWidth="20"
-                style={styles.circle}
-                strokeDasharray={`${principalDash} ${circumference}`}
-                strokeDashoffset={0}
-            />
-            <text x="60" y="65" textAnchor="middle" fill="#1e293b" fontSize="14" fontWeight="600" transform="rotate(90 60 60)">
-                Breakdown
-            </text>
-        </svg>
-    );
-};
+    if (!tenure || tenure <= 0) {
+      setError("Please enter a valid loan tenure");
+      return;
+    }
 
-const EmiCalculatorCore = () => {
-    // EMI Calculation State
-    const [principal, setPrincipal] = useState('');
-    const [rate, setRate] = useState('');
-    const [years, setYears] = useState('');
+    // Convert tenure to months if needed
+    const tenureInMonths = tenureType === "years" ? tenure * 12 : tenure;
 
-    // DTI Calculation State
-    const [monthlyIncome, setMonthlyIncome] = useState('');
-    const [monthlyDebt, setMonthlyDebt] = useState('');
+    // Monthly interest rate
+    const monthlyRate = rate / (12 * 100);
 
-    // Helper to format currency
-    const formatCurrency = (amount) => {
-        if (amount <= 0 || isNaN(amount) || amount === '') {
-            return '₹ 0';
-        }
-        return Number(amount).toLocaleString('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            maximumFractionDigits: 0,
-        }).replace('₹', '₹ ');
-    };
+    // EMI calculation using formula: EMI = P × r × (1 + r)^n / ((1 + r)^n - 1)
+    const emi =
+      (principal * monthlyRate * Math.pow(1 + monthlyRate, tenureInMonths)) /
+      (Math.pow(1 + monthlyRate, tenureInMonths) - 1);
 
-    // ===============================================
-    // 1. EMI Calculation Logic
-    // ===============================================
-    const emiDetails = useMemo(() => {
-        const p = Number(principal) || 0;
-        const r = Number(rate) || 0;
-        const y = Number(years) || 0;
+    const totalAmount = emi * tenureInMonths;
+    const totalInterest = totalAmount - principal;
 
-        const monthlyRate = r / 100 / 12;
-        const tenureMonths = y * 12;
+    setResults({
+      emi: Math.round(emi),
+      totalAmount: Math.round(totalAmount),
+      totalInterest: Math.round(totalInterest),
+      principalAmount: Math.round(principal),
+    });
 
-        const results = { emi: 0, totalPayment: 0, totalInterest: 0, principalShare: 0, interestShare: 0 };
+    // Generate amortization schedule
+    generateAmortizationSchedule(principal, monthlyRate, tenureInMonths, emi);
+  };
 
-        if (p > 0 && monthlyRate > 0 && tenureMonths > 0) {
-            const powerFactor = Math.pow(1 + monthlyRate, tenureMonths);
-            const emiValue = p * monthlyRate * powerFactor / (powerFactor - 1);
+  const generateAmortizationSchedule = (
+    principal,
+    monthlyRate,
+    tenureInMonths,
+    emi
+  ) => {
+    const schedule = [];
+    let remainingPrincipal = principal;
 
-            const totalPayment = emiValue * tenureMonths;
-            const totalInterest = totalPayment - p;
-            const total = p + totalInterest;
+    for (let month = 1; month <= tenureInMonths; month++) {
+      const interestPayment = remainingPrincipal * monthlyRate;
+      const principalPayment = emi - interestPayment;
+      remainingPrincipal -= principalPayment;
 
-            results.emi = Math.round(emiValue);
-            results.totalPayment = Math.round(totalPayment);
-            results.totalInterest = Math.round(totalInterest);
-            results.principalShare = p / total;
-            results.interestShare = totalInterest / total;
-        } else if (p > 0 && r === 0 && y > 0) {
-            // 0% interest
-            results.emi = Math.round(p / tenureMonths);
-            results.totalPayment = p;
-            results.principalShare = 1;
-            results.interestShare = 0;
-        }
+      // Avoid negative remaining balance due to rounding
+      if (remainingPrincipal < 0) remainingPrincipal = 0;
 
-        return results;
+      schedule.push({
+        month,
+        emi: Math.round(emi),
+        principal: Math.round(principalPayment),
+        interest: Math.round(interestPayment),
+        balance: Math.round(remainingPrincipal),
+      });
 
-    }, [principal, rate, years]);
+      // Break if balance becomes 0
+      if (remainingPrincipal <= 0) break;
+    }
 
-    // ===============================================
-    // 2. DTI Pre-Qualification Logic
-    // ===============================================
-    const dtiDetails = useMemo(() => {
-        const income = Number(monthlyIncome) || 0;
-        const debt = Number(monthlyDebt) || 0;
-        const r = Number(rate) || 0; // Use the same interest rate
-        const tenureMonths = MAX_LOAN_TENURE * 12;
+    setAmortizationSchedule(schedule);
+  };
 
-        if (income <= 0 || r <= 0) {
-            return { maxLoan: 0, maxEmi: 0, dti: 0, status: 'INSUFFICIENT' };
-        }
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
-        // 1. Calculate Maximum Allowed Monthly Payment based on DTI limit
-        const maxAllowedDebt = income * DTI_LIMIT;
-        const maxEmiAllowed = maxAllowedDebt - debt;
+  const formatNumber = (num) => {
+    return new Intl.NumberFormat("en-IN").format(num);
+  };
 
-        if (maxEmiAllowed <= 0) {
-            return { maxLoan: 0, maxEmi: 0, dti: maxAllowedDebt < 0 ? 1 : debt / income, status: 'TOO_MUCH_DEBT' };
-        }
+  const handleInputChange = (setter, value) => {
+    // Remove non-numeric characters except decimal point
+    const numericValue = value.replace(/[^0-9.]/g, "");
+    setter(numericValue);
+  };
 
-        // 2. Reverse EMI Formula to find Principal (Max Loan Amount)
-        // P = EMI * [ (1 - (1 + r)^(-n)) / r ]
-        const monthlyRate = r / 100 / 12;
-        const factor = (1 - Math.pow(1 + monthlyRate, -tenureMonths)) / monthlyRate;
-        const maxLoan = maxEmiAllowed * factor;
+  const resetCalculator = () => {
+    setLoanAmount("5000000");
+    setInterestRate("8.5");
+    setLoanTenure("20");
+    setTenureType("years");
+    setShowSchedule(false);
+    setError("");
+  };
 
-        const currentDTI = (debt + (maxEmiAllowed > 0 ? maxEmiAllowed : 0)) / income;
+  const downloadSchedule = () => {
+    if (amortizationSchedule.length === 0) return;
 
-        return {
-            maxLoan: Math.round(maxLoan),
-            maxEmi: Math.round(maxEmiAllowed),
-            dti: currentDTI,
-            status: currentDTI <= DTI_LIMIT ? 'QUALIFIED' : 'FAILED',
-        };
+    // Create CSV content
+    let csvContent = "Month,EMI,Principal,Interest,Balance\n";
+    amortizationSchedule.forEach((row) => {
+      csvContent += `${row.month},${row.emi},${row.principal},${row.interest},${row.balance}\n`;
+    });
 
-    }, [monthlyIncome, monthlyDebt, rate]);
+    // Create and download file
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `EMI_Schedule_${Date.now()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
 
-    // 🎯 NEW HANDLER: Autofills the principal loan amount
-    const handleAutoFillPrincipal = (maxLoanAmount) => {
-        if (maxLoanAmount > 0) {
-            setPrincipal(String(maxLoanAmount));
-            if (!years) {
-                setYears(String(MAX_LOAN_TENURE));
-            }
-        }
-    };
+  // Chart data for visualization (simplified representation)
+  const chartData = {
+    principal: results.principalAmount,
+    interest: results.totalInterest,
+  };
 
+  const principalPercentage =
+    results.totalAmount > 0
+      ? (results.principalAmount / results.totalAmount) * 100
+      : 50;
+  const interestPercentage = 100 - principalPercentage;
 
-    return (
-        <>
-            {/* ----------------- 1. EMI CALCULATOR PANEL ----------------- */}
-            <div style={styles.container}>
-                <h2 style={styles.title}>Loan Parameters</h2>
-
-                <div style={styles.inputGroup}>
-                    <label style={styles.label}>Loan Amount (₹)</label>
-                    <input
-                        type="number"
-                        style={styles.input}
-                        value={principal}
-                        onChange={(e) => setPrincipal(e.target.value)}
-                        min="0"
-                        placeholder="e.g., 5000000"
-                    />
-                </div>
-
-                <div style={styles.inputGroup}>
-                    <label style={styles.label}>Interest Rate (Annual %)</label>
-                    <input
-                        type="number"
-                        style={styles.input}
-                        value={rate}
-                        onChange={(e) => setRate(e.target.value)}
-                        step="0.05"
-                        min="0"
-                        placeholder="e.g., 8.5"
-                    />
-                </div>
-
-                <div style={styles.inputGroup}>
-                    <label style={styles.label}>Loan Tenure (Years)</label>
-                    <input
-                        type="number"
-                        style={styles.input}
-                        value={years}
-                        onChange={(e) => setYears(e.target.value)}
-                        min="0"
-                        max="30"
-                        placeholder="e.g., 20"
-                    />
-                </div>
-
-                <div style={styles.resultBox}>
-                    <h3 style={{...styles.title, marginBottom: '10px'}}>Monthly EMI</h3>
-                    <div style={styles.resultItem}>
-                        <span style={styles.resultLabel}>Calculated EMI:</span>
-                        <span style={styles.emiValue}>{formatCurrency(emiDetails.emi)}</span>
-                    </div>
-                    <hr style={{margin: '10px 0', border: '0', borderTop: '1px solid #d1d5db'}} />
-                    <div style={styles.resultItem}>
-                        <span style={styles.resultLabel}>Total Payable Amount:</span>
-                        <span style={styles.resultValue}>{formatCurrency(emiDetails.totalPayment)}</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* ----------------- 2. LOAN BREAKDOWN PANEL ----------------- */}
-            <div style={styles.container}>
-                <h2 style={styles.title}>Loan Breakdown & Visualization</h2>
-
-                <PieChart
-                    principalShare={emiDetails.principalShare}
-                    interestShare={emiDetails.interestShare}
-                />
-
-                <div style={styles.chartLegend}>
-                    <div style={styles.legendItem}>
-                        <span style={{...styles.legendColor, backgroundColor: '#667eea'}}></span> Principal Share
-                    </div>
-                    <div style={styles.legendItem}>
-                        <span style={{...styles.legendColor, backgroundColor: '#f093fb'}}></span> Interest Share
-                    </div>
-                </div>
-
-                <div style={styles.resultBox}>
-                    <div style={styles.resultItem}>
-                        <span style={styles.resultLabel}>Principal Amount:</span>
-                        <span style={styles.resultValue}>{formatCurrency(principal || 0)}</span>
-                    </div>
-                    <div style={styles.resultItem}>
-                        <span style={styles.resultLabel}>Total Interest Paid:</span>
-                        <span style={styles.resultValue}>{formatCurrency(emiDetails.totalInterest)}</span>
-                    </div>
-                    <div style={styles.resultItem}>
-                        <span style={styles.resultLabel}>Total Tenure:</span>
-                        <span style={styles.resultValue}>{(Number(years) || 0) * 12} months</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* ----------------- 3. DTI PRE-QUALIFICATION PANEL (Full Width) ----------------- */}
-            <div style={styles.fullWidthSection}>
-                <h2 style={{...styles.title, textAlign: 'left', borderBottom: 'none'}}>Max Loan Affordability Check</h2>
-
-                <div style={styles.contentWrapper}>
-                    <div style={{flex: '1 1 45%', minWidth: '300px'}}>
-                        <div style={styles.inputGroup}>
-                            <label style={styles.label}>Gross Monthly Income (₹)</label>
-                            <input
-                                type="number"
-                                style={styles.input}
-                                value={monthlyIncome}
-                                onChange={(e) => setMonthlyIncome(e.target.value)}
-                                min="0"
-                                placeholder="e.g., 100000"
-                            />
-                        </div>
-
-                        <div style={styles.inputGroup}>
-                            <label style={styles.label}>Other Monthly Debts (₹) - Car, Credit Cards, etc.</label>
-                            <input
-                                type="number"
-                                style={styles.input}
-                                value={monthlyDebt}
-                                onChange={(e) => setMonthlyDebt(e.target.value)}
-                                min="0"
-                                placeholder="e.g., 15000"
-                            />
-                        </div>
-                        <p style={{fontSize: '0.8rem', color: '#64748b', margin: '10px 0'}}>
-                            *Uses the Interest Rate entered above and a max tenure of {MAX_LOAN_TENURE} years.
-                        </p>
-                    </div>
-
-                    {/* Qualification Results Box */}
-                    <div style={{flex: '1 1 45%', minWidth: '350px'}}>
-                        <div style={{...styles.qualificationBox, ...(dtiDetails.maxLoan > 0 ? styles.successBox : {})}}>
-                            <h3 style={{fontSize: '1.2rem', margin: 0, paddingBottom: '10px', borderBottom: '1px solid rgba(0,0,0,0.1)'}}>
-                                Loan Qualification Estimate
-                            </h3>
-                            {dtiDetails.maxLoan > 0 ? (
-                                <>
-                                    <p style={{margin: '10px 0 0', fontWeight: '700', fontSize: '1.3rem'}}>
-                                        ✅ Max Affordable Loan: {formatCurrency(dtiDetails.maxLoan)}
-                                    </p>
-                                    {/* 🎯 FIX: Corrected syntax error on the line below */}
-                                    <p style={{margin: '5px 0 0', fontSize: '0.9rem', color: dtiDetails.maxLoan > 0 ? '#065f46' : 'inherit'}}>
-                                        Your maximum monthly mortgage payment is {formatCurrency(dtiDetails.maxEmi)}.
-                                    </p>
-
-                                    {/* 🎯 NEW AUTO-FILL BUTTON 🎯 */}
-                                    <button
-                                        onClick={() => handleAutoFillPrincipal(dtiDetails.maxLoan)}
-                                        style={{...styles.autofillButton, backgroundColor: '#10b981'}}
-                                    >
-                                        Use this as Loan Amount for EMI Calculation
-                                    </button>
-                                </>
-                            ) : (
-                                <p style={{margin: 0}}>
-                                    {(!monthlyIncome || !monthlyDebt || !rate) ? (
-                                        'Enter income, debt, and interest rate to see your maximum pre-qualified loan amount.'
-                                    ) : dtiDetails.status === 'TOO_MUCH_DEBT' ? (
-                                        '❌ High Existing Debt. Max affordable payment is ₹0.'
-                                    ) : (
-                                        'Interest rate or tenure is required for qualification calculation.'
-                                    )}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </>
-    );
-};
-
-function EmiCalculatorPage() {
-    const navigate = useNavigate(); // Initialize useNavigate hook
-
-    return (
-        <div style={styles.pageContainer}>
-            {/* 🎯 BACK BUTTON INTEGRATION (RIGHT ALIGNED BELOW HEADING) */}
-            <div style={{display: 'flex', justifyContent: 'flex-end', marginBottom: '10px'}}>
-                <button
-                    onClick={() => navigate(-1)}
-                    style={styles.backButton}
-                    onMouseEnter={e => e.target.style.backgroundColor = '#e2e8f0'}
-                    onMouseLeave={e => e.target.style.backgroundColor = '#f1f5f9'}
-                >
-                    <span role="img" aria-label="back">⬅️</span> Back to Homepage
-                </button>
-            </div>
-            {/* END BACK BUTTON */}
-
-            <h1 style={styles.header}>💰 Home Loan EMI and Affordability Calculator</h1>
-
-            <div style={styles.contentWrapper}>
-                <EmiCalculatorCore />
-            </div>
-
-            {/* Informational Section */}
-            <div style={{marginTop: '3rem', maxWidth: '800px', margin: '3rem auto', padding: '20px', backgroundColor: '#f8fafc', borderRadius: '8px'}}>
-                <h2 style={{fontSize: '1.5rem', marginBottom: '10px', color: '#3b82f6'}}>About This Tool</h2>
-
-                <p style={{color: '#475569', marginBottom: '15px'}}>
-                    The tool above provides two key financial insights:
-                </p>
-
-                <p style={{color: '#475569'}}>
-                    1. **Loan Parameters (EMI Calculation):** Calculate your monthly installment based on a loan amount, rate, and tenure you input.
-                </p>
-                <p style={{color: '#475569', marginTop: '10px'}}>
-                    2. **Max Loan Affordability Check (DTI):** This crucial section estimates your **Max Affordable Loan Amount**. It uses your **Income** and **Debt** against a standard **Debt-to-Income (DTI)** ratio to determine the maximum loan amount banks would likely pre-qualify you for, helping you set a realistic property budget.
-                </p>
-
-            </div>
+  return (
+    <div className="ecp-container">
+      {/* Header */}
+      <header className="ecp-header">
+        <button className="ecp-back-btn" onClick={() => navigate(-1)}>
+          ← Back
+        </button>
+        <div className="ecp-header-content">
+          <h1 className="ecp-title">EMI Calculator</h1>
+          <p className="ecp-subtitle">
+            Calculate your home loan EMI and plan your finances
+          </p>
         </div>
-    );
-}
+        <button className="ecp-reset-btn" onClick={resetCalculator}>
+          🔄 Reset
+        </button>
+      </header>
+
+      <div className="ecp-content">
+        {/* Calculator Form */}
+        <section className="ecp-calculator">
+          <div className="ecp-form-container">
+            <h2 className="ecp-section-title">Loan Details</h2>
+
+            {error && <div className="ecp-error-message">⚠️ {error}</div>}
+
+            <div className="ecp-form-grid">
+              <div className="ecp-form-group">
+                <label className="ecp-form-label">Loan Amount</label>
+                <div className="ecp-input-container">
+                  <span className="ecp-input-prefix">₹</span>
+                  <input
+                    type="text"
+                    className="ecp-form-input"
+                    value={loanAmount}
+                    onChange={(e) =>
+                      handleInputChange(setLoanAmount, e.target.value)
+                    }
+                    placeholder="5000000"
+                  />
+                </div>
+                <div className="ecp-input-hint">
+                  {loanAmount && `₹ ${formatNumber(loanAmount)}`}
+                </div>
+              </div>
+
+              <div className="ecp-form-group">
+                <label className="ecp-form-label">
+                  Interest Rate (% per annum)
+                </label>
+                <div className="ecp-input-container">
+                  <input
+                    type="text"
+                    className="ecp-form-input"
+                    value={interestRate}
+                    onChange={(e) =>
+                      handleInputChange(setInterestRate, e.target.value)
+                    }
+                    placeholder="8.5"
+                  />
+                  <span className="ecp-input-suffix">%</span>
+                </div>
+              </div>
+
+              <div className="ecp-form-group">
+                <label className="ecp-form-label">Loan Tenure</label>
+                <div className="ecp-tenure-group">
+                  <input
+                    type="text"
+                    className="ecp-form-input ecp-tenure-input"
+                    value={loanTenure}
+                    onChange={(e) =>
+                      handleInputChange(setLoanTenure, e.target.value)
+                    }
+                    placeholder="20"
+                  />
+                  <select
+                    className="ecp-form-select ecp-tenure-select"
+                    value={tenureType}
+                    onChange={(e) => setTenureType(e.target.value)}
+                  >
+                    <option value="years">Years</option>
+                    <option value="months">Months</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Preset Buttons */}
+            <div className="ecp-presets">
+              <h3 className="ecp-presets-title">Quick Presets</h3>
+              <div className="ecp-preset-buttons">
+                <button
+                  className="ecp-preset-btn"
+                  onClick={() => {
+                    setLoanAmount("2500000");
+                    setInterestRate("8.0");
+                    setLoanTenure("15");
+                  }}
+                >
+                  ₹25L | 8% | 15Y
+                </button>
+                <button
+                  className="ecp-preset-btn"
+                  onClick={() => {
+                    setLoanAmount("5000000");
+                    setInterestRate("8.5");
+                    setLoanTenure("20");
+                  }}
+                >
+                  ₹50L | 8.5% | 20Y
+                </button>
+                <button
+                  className="ecp-preset-btn"
+                  onClick={() => {
+                    setLoanAmount("10000000");
+                    setInterestRate("9.0");
+                    setLoanTenure("25");
+                  }}
+                >
+                  ₹1Cr | 9% | 25Y
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Results */}
+          <div className="ecp-results-container">
+            <h2 className="ecp-section-title">EMI Breakdown</h2>
+
+            <div className="ecp-results-grid">
+              <div className="ecp-result-card ecp-result-emi">
+                <div className="ecp-result-icon">💰</div>
+                <div className="ecp-result-content">
+                  <div className="ecp-result-label">Monthly EMI</div>
+                  <div className="ecp-result-value">
+                    {formatCurrency(results.emi)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="ecp-result-card ecp-result-total">
+                <div className="ecp-result-icon">📊</div>
+                <div className="ecp-result-content">
+                  <div className="ecp-result-label">Total Amount</div>
+                  <div className="ecp-result-value">
+                    {formatCurrency(results.totalAmount)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="ecp-result-card ecp-result-interest">
+                <div className="ecp-result-icon">📈</div>
+                <div className="ecp-result-content">
+                  <div className="ecp-result-label">Total Interest</div>
+                  <div className="ecp-result-value">
+                    {formatCurrency(results.totalInterest)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pie Chart Visualization */}
+            <div className="ecp-chart-container">
+              <h3 className="ecp-chart-title">Principal vs Interest</h3>
+              <div className="ecp-pie-chart">
+                <div
+                  className="ecp-pie-slice ecp-principal-slice"
+                  style={{ "--percentage": `${principalPercentage}%` }}
+                ></div>
+                <div
+                  className="ecp-pie-slice ecp-interest-slice"
+                  style={{ "--percentage": `${interestPercentage}%` }}
+                ></div>
+              </div>
+              <div className="ecp-chart-legend">
+                <div className="ecp-legend-item">
+                  <div className="ecp-legend-color ecp-principal-color"></div>
+                  <span>Principal ({principalPercentage.toFixed(1)}%)</span>
+                </div>
+                <div className="ecp-legend-item">
+                  <div className="ecp-legend-color ecp-interest-color"></div>
+                  <span>Interest ({interestPercentage.toFixed(1)}%)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Amortization Schedule */}
+        <section className="ecp-schedule">
+          <div className="ecp-schedule-header">
+            <h2 className="ecp-section-title">Payment Schedule</h2>
+            <div className="ecp-schedule-actions">
+              <button
+                className="ecp-toggle-btn"
+                onClick={() => setShowSchedule(!showSchedule)}
+              >
+                {showSchedule ? "📁 Hide" : "📂 Show"} Schedule
+              </button>
+              {showSchedule && amortizationSchedule.length > 0 && (
+                <button className="ecp-download-btn" onClick={downloadSchedule}>
+                  📥 Download CSV
+                </button>
+              )}
+            </div>
+          </div>
+
+          {showSchedule && amortizationSchedule.length > 0 && (
+            <div className="ecp-schedule-table-container">
+              <table className="ecp-schedule-table">
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>EMI</th>
+                    <th>Principal</th>
+                    <th>Interest</th>
+                    <th>Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {amortizationSchedule.slice(0, 12).map((payment, index) => (
+                    <tr key={index}>
+                      <td>{payment.month}</td>
+                      <td>{formatCurrency(payment.emi)}</td>
+                      <td className="ecp-principal-amount">
+                        {formatCurrency(payment.principal)}
+                      </td>
+                      <td className="ecp-interest-amount">
+                        {formatCurrency(payment.interest)}
+                      </td>
+                      <td>{formatCurrency(payment.balance)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {amortizationSchedule.length > 12 && (
+                <div className="ecp-table-footer">
+                  <p>
+                    Showing first 12 months. Download CSV for complete schedule.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* Tips & Information */}
+        <section className="ecp-info">
+          <h2 className="ecp-section-title">Helpful Tips</h2>
+          <div className="ecp-tips-grid">
+            <div className="ecp-tip-card">
+              <div className="ecp-tip-icon">💡</div>
+              <div className="ecp-tip-content">
+                <h4>Lower Interest Rates</h4>
+                <p>
+                  Compare rates from different banks to get the best deal. Even
+                  0.5% difference can save lakhs over loan tenure.
+                </p>
+              </div>
+            </div>
+
+            <div className="ecp-tip-card">
+              <div className="ecp-tip-icon">⏱️</div>
+              <div className="ecp-tip-content">
+                <h4>Shorter Tenure</h4>
+                <p>
+                  Opt for shorter tenure if possible. Higher EMI but
+                  significantly lower total interest payment.
+                </p>
+              </div>
+            </div>
+
+            <div className="ecp-tip-card">
+              <div className="ecp-tip-icon">🎯</div>
+              <div className="ecp-tip-content">
+                <h4>Prepayment Strategy</h4>
+                <p>
+                  Make prepayments towards principal to reduce interest burden
+                  and loan tenure effectively.
+                </p>
+              </div>
+            </div>
+
+            <div className="ecp-tip-card">
+              <div className="ecp-tip-icon">📋</div>
+              <div className="ecp-tip-content">
+                <h4>EMI to Income Ratio</h4>
+                <p>
+                  Keep your EMI within 35-40% of your monthly income for
+                  comfortable repayment.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+};
 
 export default EmiCalculatorPage;

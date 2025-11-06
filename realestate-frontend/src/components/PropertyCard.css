@@ -1,0 +1,351 @@
+/* src/components/PropertyCard.css */
+
+/* Card wrapper */
+.pc-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+  position: relative;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pc-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+}
+
+/* Badges */
+.pc-badges {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 2;
+}
+
+.pc-badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  backdrop-filter: blur(4px);
+}
+
+.pc-badge.featured {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+.pc-badge.verified {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+.pc-badge.ready {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+/* Image */
+.pc-image-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
+.pc-image {
+  display: block;
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.pc-card:hover .pc-image {
+  transform: scale(1.03);
+}
+
+.pc-image-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.12) 100%
+  );
+}
+
+/* Stage badge on image */
+.pc-stage-badge {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  text-transform: uppercase;
+}
+
+.stage-inquiry {
+  background: #3b82f6;
+} /* Blue */
+.stage-shortlist {
+  background: #8b5cf6;
+} /* Violet */
+.stage-negotiation {
+  background: #f97316;
+} /* Orange */
+.stage-agreement {
+  background: #10b981;
+} /* Emerald */
+.stage-registration {
+  background: #06b6d4;
+} /* Cyan */
+.stage-payment {
+  background: #ec4899;
+} /* Pink */
+.stage-completed {
+  background: #22c55e;
+} /* Green */
+.stage-default {
+  background: #6b7280;
+} /* Gray */
+
+/* Content */
+.pc-content {
+  padding: 20px;
+}
+
+/* Type tag */
+.pc-type-tag {
+  display: inline-block;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+/* Title */
+.pc-title {
+  font-size: 20px;
+  margin-bottom: 10px;
+  font-weight: 800;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Location */
+.pc-location {
+  color: #64748b;
+  font-size: 14px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+/* Price */
+.pc-price {
+  font-size: 28px;
+  font-weight: 900;
+  color: #059669;
+  margin-bottom: 12px;
+}
+
+.pc-per-month {
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  margin-left: 4px;
+}
+
+/* Property type box */
+.pc-type {
+  background: #f1f5f9;
+  padding: 12px 14px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #475569;
+  font-weight: 700;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Details row */
+.pc-details {
+  display: flex;
+  gap: 18px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+  color: #475569;
+  font-size: 14px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.pc-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.pc-detail-icon {
+  font-size: 16px;
+  color: #667eea;
+}
+
+/* Amenities */
+.pc-amenities {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+/* Posted By */
+.pc-posted-by {
+  font-size: 13px;
+  color: #475569;
+  margin-top: 12px;
+  font-weight: 700;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+/* IDs row */
+.pc-ids {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.pc-id-tag {
+  display: inline-block;
+  background: #eff6ff;
+  color: #2563eb;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border: 1px solid #93c5fd;
+}
+
+.pc-deal-tag {
+  display: inline-block;
+  background: #f0fdf4;
+  color: #059669;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border: 1px solid #6ee7b7;
+}
+
+/* Deal actions */
+.pc-deal-actions {
+  display: flex;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* Owner Actions */
+.pc-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* Buttons */
+.pc-btn {
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  color: white;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 42px;
+  flex: 1;
+}
+
+.pc-btn:hover {
+  transform: translateY(-1px);
+}
+
+.pc-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.pc-btn-view {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.pc-btn-edit {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.pc-btn-delete {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .pc-image {
+    height: 200px;
+  }
+  .pc-title {
+    font-size: 18px;
+  }
+  .pc-price {
+    font-size: 24px;
+  }
+  .pc-details {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pc-image {
+    height: 180px;
+  }
+  .pc-content {
+    padding: 16px;
+  }
+  .pc-btn {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}

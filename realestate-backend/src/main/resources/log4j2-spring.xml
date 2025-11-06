@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+    <Appenders>
+        <!-- Console Appender -->
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n"/>
+        </Console>
+
+        <!-- Splunk HTTP Event Collector Appender -->
+        <SplunkHttp name="splunkHttp">
+            <url>https://your-splunk-host:8088</url>
+            <token>your-hec-token</token>
+            <host>your-application-host</host>
+            <index>your-splunk-index</index>
+            <source>realestate-backend</source>
+            <sourcetype>spring-boot</sourcetype>
+            <messageFormat>text</messageFormat>
+            <disableCertificateValidation>true</disableCertificateValidation>
+        </SplunkHttp>
+    </Appenders>
+
+    <Loggers>
+        <!-- Root logger -->
+        <Root level="INFO">
+            <AppenderRef ref="console"/>
+            <AppenderRef ref="splunkHttp"/>
+        </Root>
+
+        <!-- Application specific loggers -->
+        <Logger name="com.example.realestate" level="DEBUG" additivity="false">
+            <AppenderRef ref="console"/>
+            <AppenderRef ref="splunkHttp"/>
+        </Logger>
+    </Loggers>
+</Configuration>

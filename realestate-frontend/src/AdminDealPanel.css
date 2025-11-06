@@ -1,0 +1,597 @@
+/* Container */
+.adp-container {
+  max-width: 1700px;
+  margin: 0 auto;
+  padding: clamp(16px, 3vw, 32px);
+  background: #f9fafb;
+  min-height: 100vh;
+}
+
+/* Header */
+.adp-header {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.adp-title {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.adp-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 8px 0 0 0;
+}
+
+/* Loading and Error */
+.adp-loading {
+  text-align: center;
+  padding-top: 80px;
+  font-size: 18px;
+  color: #64748b;
+}
+
+.adp-error {
+  text-align: center;
+  padding-top: 80px;
+  font-size: 18px;
+  color: #ef4444;
+  margin-bottom: 16px;
+}
+
+.adp-retry-btn {
+  padding: 12px 24px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Tabs - Desktop */
+.adp-tabs-desktop {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.adp-tabs-mobile {
+  display: none;
+}
+
+.adp-tab {
+  padding: 10px 14px;
+  background: #fff;
+  color: #64748b;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.adp-tab.active {
+  background: #3b82f6;
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+.adp-sort-btn {
+  padding: 10px 14px;
+  background: #fff;
+  color: #64748b;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.adp-sort-btn.active {
+  background: #10b981;
+  color: #fff;
+  border-color: #10b981;
+}
+
+/* Mobile Dropdown */
+.adp-mobile-select {
+  flex: 1;
+  padding: 12px 16px;
+  background: #fff;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+}
+
+.adp-mobile-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+/* No deals */
+.adp-no-deals {
+  text-align: center;
+  padding: 60px 20px;
+  color: #64748b;
+}
+
+.adp-no-deals-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.adp-no-deals-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.adp-no-deals-text {
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+/* Agent sections */
+.adp-agents {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.adp-agent-section {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.adp-agent-header {
+  padding: 20px 24px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.adp-agent-info-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.adp-agent-details {
+  flex: 1;
+}
+
+.adp-agent-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+}
+
+.adp-agent-info {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Mobile toggle button */
+.adp-toggle-btn-mobile {
+  display: none;
+  background: #f0f9ff;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  color: #3b82f6;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+
+.adp-toggle-btn-mobile.open {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1e3a8a;
+}
+
+.adp-toggle-text {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.adp-toggle-icon {
+  font-size: 14px;
+}
+
+/* Financial stats */
+.adp-financial-stats {
+  padding: 20px 24px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.adp-stat {
+  grid-column: span 2;
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.adp-stat-positive {
+  background: #dcfce7;
+  border: 1px solid #10b981;
+}
+
+.adp-stat-neutral {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+}
+
+.adp-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.adp-stat-value {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.adp-stat-positive .adp-stat-value {
+  color: #065f46;
+}
+
+.adp-stat-neutral .adp-stat-value {
+  color: #475569;
+}
+
+.adp-stat-sub {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+  color: #3b82f6;
+}
+
+.adp-stat-positive .adp-stat-sub {
+  color: #10b981;
+}
+
+.adp-toggle-btn {
+  grid-column: span 2;
+  padding: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+  background: #f0f9ff;
+  border: 1px solid #93c5fd;
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.adp-toggle-btn.open {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1e3a8a;
+}
+
+.adp-toggle-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.adp-toggle-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Deals grid */
+.adp-deals-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 20px;
+  padding: 24px;
+}
+
+.adp-deal-card {
+  grid-column: span 4;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.adp-deal-card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Stage badges */
+.adp-stage-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.adp-stage-inquiry {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.adp-stage-shortlist {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.adp-stage-negotiation {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.adp-stage-agreement {
+  background: #dcfce7;
+  color: #065f46;
+}
+
+.adp-stage-registration {
+  background: #dbeafe;
+  color: #075985;
+}
+
+.adp-stage-payment {
+  background: #fce7f3;
+  color: #9f1239;
+}
+
+.adp-stage-completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.adp-deal-title {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  padding-right: 100px;
+}
+
+/* Price */
+.adp-price {
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.adp-price.agreed {
+  background: #dcfce7;
+  border: 1px solid #10b981;
+}
+
+.adp-price.listing {
+  background: #e0f2fe;
+  border: 1px solid #93c5fd;
+}
+
+.adp-price-value {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.adp-price.agreed .adp-price-value {
+  color: #065f46;
+}
+
+.adp-price.listing .adp-price-value {
+  color: #1e3a8a;
+}
+
+.adp-price-type {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* Person details */
+.adp-person {
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.adp-person-name {
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 2px;
+}
+
+.adp-person-contact {
+  color: #64748b;
+  font-size: 11px;
+}
+
+/* Deal date */
+.adp-deal-date {
+  margin: 8px 0 12px 0;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.adp-deal-age {
+  margin-left: 8px;
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+/* View button */
+.adp-view-btn {
+  width: 100%;
+  padding: 10px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.adp-view-btn.completed {
+  background: #10b981;
+}
+
+.adp-view-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Desktop only - hide on mobile */
+.adp-desktop-only {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Responsive */
+@media (max-width: 1400px) {
+  .adp-deal-card {
+    grid-column: span 6;
+  } /* 2 per row */
+  .adp-stat {
+    grid-column: span 3;
+  } /* 4 per row */
+}
+
+@media (max-width: 1023px) {
+  .adp-deal-card {
+    grid-column: span 12;
+  } /* 1 per row */
+  .adp-stat {
+    grid-column: span 6;
+  } /* 2 per row */
+  .adp-sort-btn {
+    margin-left: 0;
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 767px) {
+  /* Show mobile tabs, hide desktop tabs */
+  .adp-tabs-desktop {
+    display: none;
+  }
+
+  .adp-tabs-mobile {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: center;
+  }
+
+  /* Hide financial stats on mobile */
+  .adp-desktop-only {
+    display: none;
+  }
+
+  /* Show mobile toggle button */
+  .adp-toggle-btn-mobile {
+    display: block;
+  }
+
+  /* Adjust agent header layout for mobile */
+  .adp-agent-header {
+    padding: 16px;
+  }
+
+  .adp-agent-info-wrapper {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .adp-agent-name {
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+
+  .adp-agent-info {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .adp-sort-btn {
+    padding: 12px 14px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .adp-container {
+    padding: 12px;
+  }
+
+  .adp-deals-grid {
+    padding: 16px;
+  }
+
+  .adp-title {
+    font-size: 20px;
+  }
+
+  .adp-agent-header {
+    padding: 12px;
+  }
+
+  .adp-mobile-select {
+    font-size: 16px; /* Prevent iOS zoom */
+  }
+
+  .adp-toggle-btn-mobile {
+    min-width: 100px;
+    padding: 10px 12px;
+  }
+
+  .adp-toggle-text {
+    font-size: 11px;
+  }
+}

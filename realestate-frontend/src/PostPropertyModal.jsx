@@ -1,10 +1,9 @@
 ﻿// realestate-frontend/src/PostPropertyModal.jsx
-// ⭐ ENHANCED VERSION - Includes user selection for Agents/Admins
-
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "./AuthContext.jsx";
 import { BACKEND_BASE_URL } from "./config/config";
 import UserCreationModal from "./components/UserCreationModal";
+import "./PostPropertyModal.css";
 
 function PostPropertyModal({ onClose, onPropertyPosted }) {
   const { user, isAuthenticated } = useAuth();
@@ -16,12 +15,12 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [priceInWords, setPriceInWords] = useState("");
 
-  // ⭐ NEW: User selection state for agents/admins
+  // User selection for agents/admins
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [showUserCreation, setShowUserCreation] = useState(false);
 
-  // ⭐ State for multiple images
+  // Multiple images
   const [selectedImages, setSelectedImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
 
@@ -60,13 +59,11 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     "Community Hall",
   ];
 
-  // ⭐ Check if property type is plot, land, or villa
   const isPlotOrLandOrVilla =
     formData.type?.toLowerCase() === "plot" ||
     formData.type?.toLowerCase() === "land" ||
     formData.type?.toLowerCase() === "villa";
 
-  // ⭐ Check if user is Agent or Admin
   const isAgentOrAdmin = user?.role === "AGENT" || user?.role === "ADMIN";
 
   useEffect(() => {
@@ -81,7 +78,6 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     loadAreas();
   }, []);
 
-  // ⭐ NEW: Load users for agent/admin to select from
   useEffect(() => {
     if (isAgentOrAdmin) {
       loadUsers();
@@ -110,7 +106,6 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     }
   };
 
-  // ⭐ NEW: Load users for selection
   const loadUsers = async () => {
     try {
       const response = await fetch(`${BACKEND_BASE_URL}/api/users`, {
@@ -130,7 +125,6 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     }
   };
 
-  // ⭐ NEW: Handle user creation callback
   const handleUserCreated = (newUser) => {
     setUsers((prev) => [...prev, newUser]);
     setSelectedUserId(newUser.id);
@@ -217,14 +211,9 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
   const handlePriceChange = (e) => {
     const priceValue = e.target.value;
     setFormData((prev) => ({ ...prev, price: priceValue }));
-    if (priceValue) {
-      setPriceInWords(convertToIndianWords(priceValue));
-    } else {
-      setPriceInWords("");
-    }
+    setPriceInWords(priceValue ? convertToIndianWords(priceValue) : "");
   };
 
-  // ⭐ Handle multiple image selection
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -252,11 +241,6 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
     setSelectedImages((prev) => [...prev, ...validFiles]);
     setImagePreviews((prev) => [...prev, ...newPreviews]);
-    console.log(
-      `📸 ${validFiles.length} image(s) selected. Total: ${
-        selectedImages.length + validFiles.length
-      }`
-    );
   };
 
   const removeImage = (index) => {
@@ -297,7 +281,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    let processedValue = type === "checkbox" ? checked : value;
+    const processedValue = type === "checkbox" ? checked : value;
     setFormData((prev) => ({ ...prev, [name]: processedValue }));
     if (name === "price") {
       setPriceInWords(convertToIndianWords(processedValue));
@@ -305,11 +289,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     setError(null);
   };
 
-  // ⭐ FIXED: Upload images to S3 with propertyId
   const uploadImagesToS3 = async (propertyId) => {
-    console.log(
-      `🚀 Starting upload of ${selectedImages.length} images for property ${propertyId}`
-    );
     const uploadedUrls = [];
 
     for (let i = 0; i < selectedImages.length; i++) {
@@ -318,9 +298,6 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       formDataImage.append("file", file);
       formDataImage.append("propertyId", propertyId);
 
-      console.log(
-        `📤 Uploading image ${i + 1}/${selectedImages.length}: ${file.name}`
-      );
       setUploadProgress(Math.round(((i + 1) / selectedImages.length) * 100));
 
       try {
@@ -336,26 +313,18 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
         if (data.success && data.url) {
           uploadedUrls.push(data.url);
-          console.log(`✅ Image ${i + 1} uploaded: ${data.url}`);
         } else {
           throw new Error(data.message || "Upload failed");
         }
       } catch (err) {
-        console.error(`❌ Error uploading image ${i + 1}:`, err);
         throw new Error(`Failed to upload image ${i + 1}: ${err.message}`);
       }
     }
 
-    console.log(`✅ All ${uploadedUrls.length} images uploaded successfully`);
     return uploadedUrls;
   };
 
-  // ⭐ Save image URLs to database
   const saveImageUrlsToDatabase = async (propertyId, imageUrls) => {
-    console.log(
-      `💾 Saving ${imageUrls.length} image URLs to database for property ${propertyId}`
-    );
-
     const imageRequests = imageUrls.map((url, index) => ({
       imageUrl: url,
       isPrimary: index === 0,
@@ -372,25 +341,17 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to save images to database");
-      }
-
-      const savedImages = await response.json();
-      console.log(`✅ ${savedImages.length} images saved to database`);
-      return savedImages;
+      if (!response.ok) throw new Error("Failed to save images to database");
+      return await response.json();
     } catch (err) {
-      console.error("❌ Error saving images to database:", err);
       throw err;
     }
   };
 
-  // ⭐ FIXED: Submit handler with correct flow
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
 
-    // ⭐ Validate user selection for agents/admins
     if (isAgentOrAdmin && !selectedUserId) {
       alert("Please select a user to post this property under");
       return;
@@ -405,10 +366,6 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     setImageUploading(true);
 
     try {
-      // Step 1: Create property WITHOUT images
-      console.log("📝 Step 1: Creating property...");
-
-      // ⭐ Use selected user ID for agents/admins, own ID for regular users
       const ownerUserId = isAgentOrAdmin ? selectedUserId : user.id;
 
       const propertyPayload = {
@@ -455,18 +412,10 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
       const result = await propertyResponse.json();
       const propertyId = result.data ? result.data.id : result.id;
-      console.log(`✅ Property created with ID: ${propertyId}`);
 
-      // Step 2: Upload images to S3
-      console.log("📤 Step 2: Uploading images to S3...");
       const uploadedImageUrls = await uploadImagesToS3(propertyId);
-
-      // Step 3: Save image URLs to database
-      console.log("💾 Step 3: Saving image URLs to database...");
       await saveImageUrlsToDatabase(propertyId, uploadedImageUrls);
 
-      // Step 4: Update property with primary image URL
-      console.log("🔄 Step 4: Updating property with primary image...");
       const updatedProperty = result.data || result;
       await fetch(`${BACKEND_BASE_URL}/api/properties/${propertyId}`, {
         method: "PUT",
@@ -480,15 +429,12 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         }),
       });
 
-      console.log("🎉 Property posted successfully with all images!");
       alert(
         `Property posted successfully with ${uploadedImageUrls.length} images!`
       );
-
-      if (onPropertyPosted) onPropertyPosted();
-      onClose();
+      onPropertyPosted && onPropertyPosted();
+      onClose && onClose();
     } catch (err) {
-      console.error("❌ Error posting property:", err);
       setError(err.message || "Failed to post property");
       alert(`Failed to post property: ${err.message}`);
     } finally {
@@ -498,17 +444,21 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     }
   };
 
+  const handleBackdropClick = (e) => {
+    if (e.target.classList.contains("ppm-backdrop")) {
+      onClose && onClose();
+    }
+  };
+
   if (!isAuthenticated || !user) {
     return (
-      <div style={styles.backdrop} onClick={onClose}>
-        <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-          <button onClick={onClose} style={styles.closeBtn}>
+      <div className="ppm-backdrop" onClick={handleBackdropClick}>
+        <div className="ppm-modal auth-required">
+          <button className="ppm-close" onClick={onClose}>
             ×
           </button>
-          <h2 style={{ color: "#dc3545", textAlign: "center" }}>
-            Please Login First
-          </h2>
-          <p style={{ textAlign: "center" }}>
+          <h2 className="ppm-auth-title">Please Login First</h2>
+          <p className="ppm-auth-text">
             You need to be logged in to post a property.
           </p>
         </div>
@@ -518,33 +468,40 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
   return (
     <>
-      <div style={styles.backdrop} onClick={onClose}>
-        <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-          <button onClick={onClose} style={styles.closeBtn}>
+      <div
+        className="ppm-backdrop"
+        onClick={handleBackdropClick}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ppm-title"
+      >
+        <div className="ppm-modal" onClick={(e) => e.stopPropagation()}>
+          <button className="ppm-close" onClick={onClose} aria-label="Close">
             ×
           </button>
-          <h2 style={styles.title}>🏡 Post New Property</h2>
+          <h2 id="ppm-title" className="ppm-title">
+            🏡 Post New Property
+          </h2>
 
-          {error && <div style={styles.error}>{error}</div>}
+          {error && <div className="ppm-alert">{error}</div>}
 
-          <form onSubmit={handleSubmit} style={styles.form}>
-            {/* ⭐ NEW: User selection for Agents/Admins */}
+          <form onSubmit={handleSubmit} className="ppm-form">
+            {/* User selection for agents/admins */}
             {isAgentOrAdmin && (
-              <div style={styles.userSelectionSection}>
-                <div style={styles.userSelectionHeader}>
-                  <label style={styles.requiredLabel}>
-                    <span style={{ color: "#dc3545" }}>*</span> Select Property
-                    Owner
+              <div className="ppm-user-section">
+                <div className="ppm-user-header">
+                  <label className="ppm-label required">
+                    Select Property Owner
                   </label>
                   <button
                     type="button"
                     onClick={() => setShowUserCreation(true)}
-                    style={styles.createUserButton}
+                    className="ppm-btn ppm-btn-small"
                   >
                     + Create New User
                   </button>
                 </div>
-                <p style={styles.infoText}>
+                <p className="ppm-info">
                   As an {user?.role?.toLowerCase()}, you need to select which
                   user this property belongs to.
                 </p>
@@ -555,7 +512,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                       e.target.value ? parseInt(e.target.value) : null
                     )
                   }
-                  style={styles.select}
+                  className="ppm-select"
                   required
                 >
                   <option value="">-- Select User --</option>
@@ -569,28 +526,28 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
             )}
 
             {/* Title */}
-            <div style={styles.field}>
-              <label style={styles.label}>Property Title *</label>
+            <div className="ppm-field">
+              <label className="ppm-label">Property Title *</label>
               <input
                 type="text"
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
                 placeholder="e.g., Spacious 2BHK Apartment"
-                style={styles.input}
+                className="ppm-input"
                 required
               />
             </div>
 
             {/* Property Type & Listing Type */}
-            <div style={styles.row}>
-              <div style={styles.field}>
-                <label style={styles.label}>Property Type *</label>
+            <div className="ppm-row">
+              <div className="ppm-field">
+                <label className="ppm-label">Property Type *</label>
                 <select
                   name="type"
                   value={formData.type}
                   onChange={handleChange}
-                  style={styles.select}
+                  className="ppm-select"
                   required
                 >
                   <option value="Apartment">🏢 Apartment</option>
@@ -602,13 +559,13 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                   <option value="Commercial">🏪 Commercial</option>
                 </select>
               </div>
-              <div style={styles.field}>
-                <label style={styles.label}>Listing Type *</label>
+              <div className="ppm-field">
+                <label className="ppm-label">Listing Type *</label>
                 <select
                   name="listingType"
                   value={formData.listingType}
                   onChange={handleChange}
-                  style={styles.select}
+                  className="ppm-select"
                   required
                 >
                   <option value="sale">🏘️ For Sale</option>
@@ -618,13 +575,13 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
             </div>
 
             {/* Posted By */}
-            <div style={styles.field}>
-              <label style={styles.label}>👤 Posted By *</label>
+            <div className="ppm-field">
+              <label className="ppm-label">👤 Posted By *</label>
               <select
                 name="ownerType"
                 value={formData.ownerType}
                 onChange={handleChange}
-                style={styles.select}
+                className="ppm-select"
                 required
               >
                 <option value="owner">Owner</option>
@@ -633,26 +590,26 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
             </div>
 
             {/* City & Area */}
-            <div style={styles.row}>
-              <div style={styles.field}>
-                <label style={styles.label}>City *</label>
+            <div className="ppm-row">
+              <div className="ppm-field">
+                <label className="ppm-label">City *</label>
                 <input
                   type="text"
                   name="city"
                   value={formData.city}
                   readOnly
-                  style={styles.input}
+                  className="ppm-input readonly"
                 />
               </div>
-              <div style={styles.field}>
-                <label style={styles.label}>
+              <div className="ppm-field">
+                <label className="ppm-label">
                   📍 Area * ({areas.length} available)
                 </label>
                 <select
                   name="areaId"
                   value={formData.areaId}
                   onChange={handleChange}
-                  style={styles.select}
+                  className="ppm-select"
                   required
                   disabled={areasLoading}
                 >
@@ -667,33 +624,32 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
             </div>
 
             {/* Address */}
-            <div style={styles.field}>
-              <label style={styles.label}>Complete Address (Optional)</label>
+            <div className="ppm-field">
+              <label className="ppm-label">Complete Address (Optional)</label>
               <input
                 type="text"
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
                 placeholder="House/Plot number, Street name"
-                style={styles.input}
+                className="ppm-input"
               />
             </div>
 
-            {/* Ready to Move Checkbox */}
-            <label style={styles.checkboxLabel}>
+            {/* Ready to Move */}
+            <label className="ppm-checkbox">
               <input
                 type="checkbox"
                 name="isReadyToMove"
                 checked={formData.isReadyToMove}
                 onChange={handleChange}
-                style={styles.checkbox}
               />
-              <span style={styles.checkboxText}>✅ Ready to Move</span>
+              <span className="ppm-checkbox-text">✅ Ready to Move</span>
             </label>
 
-            {/* ⭐ Multiple Image Upload Section */}
-            <div style={styles.imageSection}>
-              <label style={styles.label}>
+            {/* Multiple Image Upload */}
+            <div className="ppm-images">
+              <label className="ppm-label">
                 📷 Upload Property Images * (Max 10)
               </label>
 
@@ -702,69 +658,66 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                 accept="image/*"
                 multiple
                 onChange={handleImageUpload}
-                style={styles.fileInput}
+                className="ppm-file"
               />
 
-              {/* Image Previews */}
               {imagePreviews.length > 0 && (
-                <div style={styles.imagePreviewContainer}>
+                <div className="ppm-previews">
                   {imagePreviews.map((preview, index) => (
-                    <div key={index} style={styles.imagePreviewWrapper}>
+                    <div key={index} className="ppm-preview-wrap">
                       <img
                         src={preview}
                         alt={`Preview ${index + 1}`}
-                        style={styles.imagePreview}
+                        className="ppm-preview"
                       />
 
                       {index === 0 && (
-                        <div style={styles.primaryBadge}>Primary</div>
+                        <div className="ppm-primary">Primary</div>
                       )}
 
-                      <div style={styles.imageControls}>
+                      <div className="ppm-controls">
                         {index !== 0 && (
                           <button
                             type="button"
                             onClick={() => setPrimaryImage(index)}
-                            style={styles.setPrimaryBtn}
+                            className="ppm-control ppm-control-primary"
                             title="Set as primary image"
                           >
-                            ⭐ Set Primary
+                            ⭐
                           </button>
                         )}
                         <button
                           type="button"
                           onClick={() => removeImage(index)}
-                          style={styles.removeImageBtn}
+                          className="ppm-control ppm-control-remove"
                           title="Remove image"
                         >
-                          ❌ Remove
+                          ❌
                         </button>
                       </div>
 
-                      <div style={styles.imageNumber}>{index + 1}</div>
+                      <div className="ppm-num">{index + 1}</div>
                     </div>
                   ))}
                 </div>
               )}
 
               {selectedImages.length > 0 && (
-                <p style={styles.imageCount}>
+                <p className="ppm-img-count">
                   {selectedImages.length} image(s) selected (First image will be
                   the primary image)
                 </p>
               )}
 
               {imageUploading && (
-                <div style={styles.progressContainer}>
-                  <div style={styles.progressBar}>
+                <div className="ppm-progress">
+                  <div className="ppm-progress-bar">
                     <div
-                      style={{
-                        ...styles.progressFill,
-                        width: `${uploadProgress}%`,
-                      }}
+                      className="ppm-progress-fill"
+                      style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
-                  <p style={styles.progressText}>
+                  <p className="ppm-progress-text">
                     Uploading... {uploadProgress}%
                   </p>
                 </div>
@@ -772,108 +725,106 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
             </div>
 
             {/* Description */}
-            <div style={styles.field}>
-              <label style={styles.label}>Description *</label>
+            <div className="ppm-field">
+              <label className="ppm-label">Description *</label>
               <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
                 placeholder="Describe your property..."
-                style={{
-                  ...styles.input,
-                  minHeight: "100px",
-                  resize: "vertical",
-                }}
+                className="ppm-textarea"
                 required
               />
             </div>
 
+            {/* Bedrooms, Bathrooms, Balconies (not for plots/land/villa) */}
             {!isPlotOrLandOrVilla && (
-              <>
-                {/* Bedrooms, Bathrooms, Balconies */}
-
-                <div style={styles.row3}>
-                  <div style={styles.field}>
-                    <label style={styles.label}>🛏️ Bedrooms *</label>
-                    <input
-                      type="number"
-                      name="bedrooms"
-                      value={formData.bedrooms}
-                      onChange={handleChange}
-                      min="0"
-                      max="10"
-                      style={styles.input}
-                      placeholder="2"
-                      required
-                    />
-                  </div>
-                  <div style={styles.field}>
-                    <label style={styles.label}>🚿 Bathrooms *</label>
-                    <input
-                      type="number"
-                      name="bathrooms"
-                      value={formData.bathrooms}
-                      onChange={handleChange}
-                      min="0"
-                      max="10"
-                      style={styles.input}
-                      placeholder="2"
-                      required
-                    />
-                  </div>
-                  <div style={styles.field}>
-                    <label style={styles.label}>🏠 Balconies</label>
-                    <input
-                      type="number"
-                      name="balconies"
-                      value={formData.balconies}
-                      onChange={handleChange}
-                      min="0"
-                      max="10"
-                      style={styles.input}
-                      placeholder="1"
-                    />
-                  </div>
+              <div className="ppm-row3">
+                <div className="ppm-field">
+                  <label className="ppm-label">🛏️ Bedrooms *</label>
+                  <input
+                    type="number"
+                    name="bedrooms"
+                    value={formData.bedrooms}
+                    onChange={handleChange}
+                    min="0"
+                    max="10"
+                    className="ppm-input"
+                    placeholder="2"
+                    required
+                    inputMode="numeric"
+                  />
                 </div>
-              </>
+                <div className="ppm-field">
+                  <label className="ppm-label">🚿 Bathrooms *</label>
+                  <input
+                    type="number"
+                    name="bathrooms"
+                    value={formData.bathrooms}
+                    onChange={handleChange}
+                    min="0"
+                    max="10"
+                    className="ppm-input"
+                    placeholder="2"
+                    required
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="ppm-field">
+                  <label className="ppm-label">🏠 Balconies</label>
+                  <input
+                    type="number"
+                    name="balconies"
+                    value={formData.balconies}
+                    onChange={handleChange}
+                    min="0"
+                    max="10"
+                    className="ppm-input"
+                    placeholder="1"
+                    inputMode="numeric"
+                  />
+                </div>
+              </div>
             )}
 
             {/* Area & Price */}
-            <div style={styles.row}>
-              <div style={styles.field}>
-                <label style={styles.label}>📐 Area (sqft)</label>
+            <div className="ppm-row">
+              <div className="ppm-field">
+                <label className="ppm-label">📐 Area (sqft)</label>
                 <input
                   type="number"
                   name="areaSqft"
                   value={formData.areaSqft}
                   onChange={handleChange}
                   placeholder="1200"
-                  style={styles.input}
+                  className="ppm-input"
                   max="9999"
+                  inputMode="numeric"
                 />
               </div>
-              <div style={styles.field}>
-                <label style={styles.label}>💰 Expected Price (₹) *</label>
+              <div className="ppm-field">
+                <label className="ppm-label">💰 Expected Price (₹) *</label>
                 <input
                   type="number"
                   name="price"
                   value={formData.price}
                   onChange={handlePriceChange}
-                  placeholder="e.g..,5000000"
-                  style={styles.input}
+                  placeholder="e.g., 5000000"
+                  className="ppm-input"
                   required
-                  max="1.0e+09"
+                  max="1000000000"
+                  inputMode="numeric"
                 />
                 {priceInWords && (
-                  <p style={styles.priceInWords}>{priceInWords}</p>
+                  <p className="ppm-price-words">{priceInWords}</p>
                 )}
               </div>
             </div>
 
             {/* Amenities */}
-            <div style={styles.field}>
-              <label style={styles.label}>✨ Amenities</label>
-              <div style={styles.amenitiesGrid}>
+            <div className="ppm-field">
+              <label className="ppm-label">✨ Amenities</label>
+              <div className="ppm-amenities">
                 {commonAmenities.map((amenity) => {
                   const selectedAmenities = formData.amenities
                     ? formData.amenities.split(",").map((a) => a.trim())
@@ -885,12 +836,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                       key={amenity}
                       type="button"
                       onClick={() => handleAmenityChange(amenity)}
-                      style={{
-                        ...styles.amenityBtn,
-                        backgroundColor: isSelected ? "#10b981" : "#f1f5f9",
-                        color: isSelected ? "white" : "#475569",
-                        borderColor: isSelected ? "#059669" : "#e2e8f0",
-                      }}
+                      className={`ppm-amenity ${isSelected ? "selected" : ""}`}
                     >
                       {amenity}
                     </button>
@@ -899,17 +845,13 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
               </div>
             </div>
 
-            {/* Submit Button */}
+            {/* Submit */}
             <button
               type="submit"
               disabled={
                 loading || imageUploading || (isAgentOrAdmin && !selectedUserId)
               }
-              style={{
-                ...styles.submitBtn,
-                opacity: loading || imageUploading ? 0.6 : 1,
-                cursor: loading || imageUploading ? "not-allowed" : "pointer",
-              }}
+              className="ppm-submit"
             >
               {loading
                 ? "⏳ Posting..."
@@ -918,21 +860,11 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                 : "📤 Post Property"}
             </button>
 
-            <p
-              style={{
-                textAlign: "center",
-                fontSize: "12px",
-                color: "#9ca3af",
-                margin: "8px 0 0 0",
-              }}
-            >
-              * Required fields
-            </p>
+            <p className="ppm-required">* Required fields</p>
           </form>
         </div>
       </div>
 
-      {/* ⭐ NEW: User Creation Modal */}
       {showUserCreation && (
         <UserCreationModal
           onClose={() => setShowUserCreation(false)}
@@ -942,290 +874,5 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     </>
   );
 }
-
-const styles = {
-  backdrop: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    background: "rgba(0, 0, 0, 0.75)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1000,
-    backdropFilter: "blur(4px)",
-  },
-  modal: {
-    background: "white",
-    padding: "2rem",
-    borderRadius: "16px",
-    width: "750px",
-    maxHeight: "90vh",
-    overflowY: "auto",
-    position: "relative",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-  },
-  closeBtn: {
-    position: "absolute",
-    top: "15px",
-    right: "15px",
-    background: "#ef4444",
-    color: "white",
-    border: "none",
-    fontSize: "24px",
-    cursor: "pointer",
-    width: "40px",
-    height: "40px",
-    borderRadius: "8px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "bold",
-  },
-  title: {
-    textAlign: "center",
-    marginBottom: "1rem",
-    fontSize: "28px",
-    color: "#1e293b",
-    fontWeight: "800",
-  },
-  form: { display: "flex", flexDirection: "column", gap: "1rem" },
-  field: { display: "flex", flexDirection: "column" },
-  row: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" },
-  row3: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" },
-  label: {
-    marginBottom: "6px",
-    fontWeight: "700",
-    fontSize: "14px",
-    color: "#1e293b",
-  },
-  checkboxLabel: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "12px 16px",
-    background: "#f0f9ff",
-    borderRadius: "8px",
-    cursor: "pointer",
-    border: "2px solid #bfdbfe",
-  },
-  checkbox: { width: "20px", height: "20px", cursor: "pointer" },
-  checkboxText: { fontSize: "14px", fontWeight: "600", color: "#1e40af" },
-  input: {
-    padding: "12px 16px",
-    border: "2px solid #e2e8f0",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontFamily: "inherit",
-    transition: "border-color 0.3s",
-  },
-  select: {
-    padding: "12px 16px",
-    border: "2px solid #e2e8f0",
-    borderRadius: "8px",
-    fontSize: "14px",
-    cursor: "pointer",
-    fontFamily: "inherit",
-    backgroundColor: "white",
-  },
-  imageSection: {
-    padding: "16px",
-    borderRadius: "12px",
-    background: "#f8fafc",
-    border: "2px dashed #cbd5e1",
-  },
-  fileInput: {
-    padding: "12px",
-    border: "2px solid #e2e8f0",
-    borderRadius: "8px",
-    backgroundColor: "white",
-    cursor: "pointer",
-    width: "100%",
-    fontSize: "14px",
-  },
-  imagePreviewContainer: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-    gap: "12px",
-    marginTop: "16px",
-  },
-  imagePreviewWrapper: {
-    position: "relative",
-    borderRadius: "8px",
-    overflow: "hidden",
-    border: "2px solid #e2e8f0",
-    backgroundColor: "white",
-  },
-  imagePreview: {
-    width: "100%",
-    height: "150px",
-    objectFit: "cover",
-    display: "block",
-  },
-  imageControls: {
-    position: "absolute",
-    bottom: "0",
-    left: "0",
-    right: "0",
-    background: "rgba(0, 0, 0, 0.7)",
-    padding: "8px",
-    display: "flex",
-    gap: "4px",
-    justifyContent: "center",
-  },
-  setPrimaryBtn: {
-    padding: "4px 8px",
-    fontSize: "11px",
-    background: "#10b981",
-    color: "white",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontWeight: "600",
-  },
-  removeImageBtn: {
-    padding: "4px 8px",
-    fontSize: "11px",
-    background: "#ef4444",
-    color: "white",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontWeight: "600",
-  },
-  primaryBadge: {
-    position: "absolute",
-    top: "8px",
-    left: "8px",
-    background: "#10b981",
-    color: "white",
-    padding: "4px 8px",
-    borderRadius: "4px",
-    fontSize: "11px",
-    fontWeight: "700",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-  },
-  imageNumber: {
-    position: "absolute",
-    top: "8px",
-    right: "8px",
-    background: "rgba(0, 0, 0, 0.7)",
-    color: "white",
-    width: "24px",
-    height: "24px",
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "12px",
-    fontWeight: "700",
-  },
-  imageCount: {
-    marginTop: "12px",
-    fontSize: "13px",
-    color: "#64748b",
-    textAlign: "center",
-    fontWeight: "600",
-  },
-  progressContainer: { marginTop: "12px" },
-  progressBar: {
-    width: "100%",
-    height: "8px",
-    background: "#e2e8f0",
-    borderRadius: "4px",
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    background: "linear-gradient(90deg, #10b981, #059669)",
-    transition: "width 0.3s ease",
-  },
-  progressText: {
-    textAlign: "center",
-    fontSize: "12px",
-    color: "#64748b",
-    marginTop: "4px",
-    fontWeight: "600",
-  },
-  error: {
-    background: "#fee2e2",
-    border: "2px solid #fecaca",
-    borderRadius: "8px",
-    padding: "12px",
-    marginBottom: "1rem",
-    textAlign: "center",
-    color: "#dc3545",
-    fontWeight: "600",
-    fontSize: "14px",
-  },
-  submitBtn: {
-    padding: "16px",
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-    color: "white",
-    border: "none",
-    borderRadius: "10px",
-    fontSize: "16px",
-    fontWeight: "700",
-    cursor: "pointer",
-    marginTop: "1rem",
-    boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
-  },
-  priceInWords: {
-    margin: "6px 0 0 4px",
-    fontSize: "12px",
-    color: "#64748b",
-    fontStyle: "italic",
-  },
-  amenitiesGrid: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-    marginTop: "4px",
-  },
-  amenityBtn: {
-    padding: "8px 16px",
-    borderRadius: "20px",
-    border: "1px solid",
-    cursor: "pointer",
-    fontSize: "13px",
-    fontWeight: "600",
-    transition: "all 0.2s",
-  },
-  userSelectionSection: {
-    backgroundColor: "#f0f9ff",
-    padding: "16px",
-    borderRadius: "12px",
-    marginBottom: "16px",
-    border: "2px solid #bfdbfe",
-  },
-  userSelectionHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "10px",
-  },
-  requiredLabel: {
-    fontSize: "14px",
-    fontWeight: "700",
-    color: "#1e293b",
-  },
-  createUserButton: {
-    padding: "8px 16px",
-    backgroundColor: "#10b981",
-    color: "white",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontSize: "13px",
-    fontWeight: "600",
-  },
-  infoText: {
-    fontSize: "13px",
-    color: "#64748b",
-    marginBottom: "12px",
-  },
-};
 
 export default PostPropertyModal;

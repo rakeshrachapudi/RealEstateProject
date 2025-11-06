@@ -1,370 +1,389 @@
-import React, { useState, useEffect } from "react";
+// realestate-frontend/src/pages/AdminDashboard.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../AuthContext.jsx";
 import { BACKEND_BASE_URL } from "../config/config";
+import DealDetailModal from "../DealDetailModal.jsx";
+import "./AdminDashboard.css";
 
-// ==================== ADMIN DASHBOARD ====================
-const AdminDashboard = () => {
-  const [agents, setAgents] = useState([]);
-  const [selectedAgent, setSelectedAgent] = useState(null);
-  const [agentDeals, setAgentDeals] = useState([]);
-  const [stats, setStats] = useState({});
+export default function AdminDashboard() {
+  const { user } = useAuth();
+
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
+
+  // Summary cards
+  const [stats, setStats] = useState({
+    totalDeals: 0,
+    inquiryCount: 0,
+    shortlistCount: 0,
+    negotiationCount: 0,
+    agreementCount: 0,
+    registrationCount: 0,
+    paymentCount: 0,
+    completedCount: 0,
+  });
+
+  // Agent leaderboard and recent deals
+  const [agents, setAgents] = useState([]); // [{ agentId, agentName, totalDeals, completedDeals, ... }]
+  const [recentDeals, setRecentDeals] = useState([]); // flat list across agents, sorted by createdAt desc
+
+  // UI state
+  const [stageFilter, setStageFilter] = useState("ALL");
+  const [search, setSearch] = useState("");
+  const [selectedDeal, setSelectedDeal] = useState(null);
+
+  const token = localStorage.getItem("authToken");
 
   useEffect(() => {
-    fetchAgents();
-  }, []);
-
-  useEffect(() => {
-    if (selectedAgent) {
-      fetchAgentDeals(selectedAgent);
+    if (!user?.id || user?.role !== "ADMIN") {
+      setErr("Only admins can access this dashboard.");
+      setLoading(false);
+      return;
     }
-  }, [selectedAgent]);
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.role]);
 
-  const fetchAgents = async () => {
+  const safeParse = async (res) => {
     try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/deals/admin/agents-performance`,
+      const ct = res.headers.get("content-type");
+      if (ct && ct.includes("application/json")) return await res.json();
+      await res.text();
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  const load = async () => {
+    setLoading(true);
+    setErr(null);
+
+    try {
+      // 1) Dashboard stats
+      const statsRes = await fetch(
+        `${BACKEND_BASE_URL}/api/deals/admin/dashboard`,
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
-      if (response.ok) {
-        const data = await response.json();
-        const agentsList = data.success ? data.data : [];
-        setAgents(agentsList);
 
-        // Calculate stats
-        const totalDeals = agentsList.reduce(
-          (sum, a) => sum + (a.totalDeals || 0),
-          0
-        );
-        const completedDeals = agentsList.reduce(
-          (sum, a) => sum + (a.completedDeals || 0),
-          0
-        );
-        setStats({ totalDeals, completedDeals });
+      if (statsRes.ok) {
+        const data = await safeParse(statsRes);
+        const s = data?.data || data || {};
+        setStats({
+          totalDeals: s.totalDeals ?? 0,
+          inquiryCount: s.inquiryCount ?? 0,
+          shortlistCount: s.shortlistCount ?? 0,
+          negotiationCount: s.negotiationCount ?? 0,
+          agreementCount: s.agreementCount ?? 0,
+          registrationCount: s.registrationCount ?? 0,
+          paymentCount: s.paymentCount ?? 0,
+          completedCount: s.completedCount ?? 0,
+        });
       }
-    } catch (err) {
-      console.error("Error fetching agents:", err);
+
+      // 2) Agents performance (leaderboard)
+      const perfRes = await fetch(
+        `${BACKEND_BASE_URL}/api/deals/admin/agents-performance`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      let perf = [];
+      if (perfRes.ok) {
+        const p = await safeParse(perfRes);
+        if (Array.isArray(p)) perf = p;
+        else if (Array.isArray(p?.data)) perf = p.data;
+      }
+      setAgents(perf);
+
+      // 3) Recent deals: pull last N per top agents (or all agents) and flatten
+      const topAgentIds = perf.slice(0, 6).map((a) => a.agentId);
+      const dealLists = await Promise.allSettled(
+        topAgentIds.map((id) =>
+          fetch(`${BACKEND_BASE_URL}/api/deals/admin/agent/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+            .then((r) => (r.ok ? r.json() : []))
+            .then((d) => (Array.isArray(d) ? d : d?.data || []))
+        )
+      );
+      const flat = dealLists
+        .filter((r) => r.status === "fulfilled")
+        .flatMap((r) => r.value);
+      // dedupe by dealId/id and sort newest first
+      const seen = new Set();
+      const unique = [];
+      for (const d of flat) {
+        const id = d.dealId || d.id;
+        if (id && !seen.has(id)) {
+          seen.add(id);
+          unique.push(d);
+        }
+      }
+      unique.sort(
+        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+      );
+      setRecentDeals(unique.slice(0, 20));
+    } catch (e) {
+      console.error(e);
+      setErr("Failed to load dashboard data.");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchAgentDeals = async (agentId) => {
-    try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/deals/admin/agent/${agentId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setAgentDeals(data.success ? data.data : []);
+  const stageMap = useMemo(
+    () => ({
+      ALL: stats.totalDeals,
+      INQUIRY: stats.inquiryCount,
+      SHORTLIST: stats.shortlistCount,
+      NEGOTIATION: stats.negotiationCount,
+      AGREEMENT: stats.agreementCount,
+      REGISTRATION: stats.registrationCount,
+      PAYMENT: stats.paymentCount,
+      COMPLETED: stats.completedCount,
+    }),
+    [stats]
+  );
+
+  const filteredRecent = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return recentDeals.filter((d) => {
+      if (
+        stageFilter !== "ALL" &&
+        (d.stage || d.currentStage) !== stageFilter
+      ) {
+        return false;
       }
-    } catch (err) {
-      console.error("Error fetching agent deals:", err);
-    }
+      if (!needle) return true;
+      const txt = [
+        d.propertyTitle || d.property?.title || "",
+        d.buyerName || `${d.buyer?.firstName || ""} ${d.buyer?.lastName || ""}`,
+        d.sellerName ||
+          `${d.property?.user?.firstName || ""} ${
+            d.property?.user?.lastName || ""
+          }`,
+        d.agentName || `${d.agent?.firstName || ""} ${d.agent?.lastName || ""}`,
+        d.propertyCity || d.property?.city || "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return txt.includes(needle);
+    });
+  }, [recentDeals, stageFilter, search]);
+
+  const pct = (num, den) => {
+    if (!den) return "0%";
+    const p = Math.round((num / den) * 100);
+    return `${p}%`;
   };
 
-  const getStageColor = (stage) => {
-    const colors = {
-      INQUIRY: "#3b82f6",
-      SHORTLIST: "#8b5cf6",
-      NEGOTIATION: "#f59e0b",
-      AGREEMENT: "#10b981",
-      REGISTRATION: "#06b6d4",
-      PAYMENT: "#ec4899",
-      COMPLETED: "#22c55e",
-    };
-    return colors[stage] || "#6b7280";
+  const k = (n) => {
+    const num = Number(n || 0);
+    if (num >= 1_00_00_000) return `${(num / 1_00_00_000).toFixed(2)} Cr`;
+    if (num >= 1_00_000) return `${(num / 1_00_000).toFixed(2)} L`;
+    return num.toLocaleString("en-IN");
   };
-
-  const containerStyle = {
-    maxWidth: "1700px",
-    margin: "0 auto",
-    padding: "24px 32px",
-    backgroundColor: "#f9fafb",
-    minHeight: "100vh",
-  };
-
-  const headerStyle = {
-    marginBottom: "32px",
-    paddingBottom: "24px",
-    borderBottom: "2px solid #e5e7eb",
-  };
-
-  const titleStyle = {
-    fontSize: "36px",
-    fontWeight: "800",
-    color: "#1e293b",
-    margin: "0 0 8px 0",
-  };
-
-  const statsGridStyle = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-    gap: "16px",
-    marginBottom: "32px",
-  };
-
-  const statCardStyle = {
-    backgroundColor: "white",
-    padding: "24px",
-    borderRadius: "12px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-    border: "1px solid #e5e7eb",
-    textAlign: "center",
-  };
-
-  const gridStyle = {
-    display: "grid",
-    gridTemplateColumns: "1fr 2fr",
-    gap: "24px",
-  };
-
-  const agentListStyle = {
-    backgroundColor: "white",
-    borderRadius: "12px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-    border: "1px solid #e5e7eb",
-    overflow: "hidden",
-  };
-
-  const agentItemStyle = (isSelected) => ({
-    padding: "16px",
-    borderBottom: "1px solid #e5e7eb",
-    cursor: "pointer",
-    backgroundColor: isSelected ? "#f0f9ff" : "white",
-    borderLeft: isSelected ? "4px solid #3b82f6" : "4px solid transparent",
-    transition: "all 0.2s",
-  });
-
-  const dealsContainerStyle = {
-    backgroundColor: "white",
-    borderRadius: "12px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-    border: "1px solid #e5e7eb",
-    padding: "24px",
-  };
-
-  if (loading) {
-    return (
-      <div
-        style={{ ...containerStyle, textAlign: "center", paddingTop: "80px" }}
-      >
-        Loading agents...
-      </div>
-    );
-  }
 
   return (
-    <div style={containerStyle}>
-      <div style={headerStyle}>
-        <h1 style={titleStyle}>Admin Dashboard</h1>
-        <p style={{ color: "#64748b", margin: "0", fontSize: "16px" }}>
-          Manage agents and monitor all deals
+    <div className="adm-container">
+      <header className="adm-header">
+        <h1 className="adm-title">Admin Dashboard</h1>
+        <p className="adm-subtitle">
+          Insights across deals and agent performance
         </p>
-      </div>
+        {err && <div className="adm-alert">⚠️ {err}</div>}
+      </header>
 
-      {/* Stats */}
-      <div style={statsGridStyle}>
-        <div style={statCardStyle}>
-          <div style={{ fontSize: "32px", marginBottom: "8px" }}>📊</div>
-          <div
-            style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}
-          >
-            Total Deals
-          </div>
-          <div
-            style={{ fontSize: "28px", fontWeight: "700", color: "#1e293b" }}
-          >
-            {stats.totalDeals || 0}
-          </div>
-        </div>
-        <div style={statCardStyle}>
-          <div style={{ fontSize: "32px", marginBottom: "8px" }}>✅</div>
-          <div
-            style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}
-          >
-            Completed
-          </div>
-          <div
-            style={{ fontSize: "28px", fontWeight: "700", color: "#10b981" }}
-          >
-            {stats.completedDeals || 0}
-          </div>
-        </div>
-        <div style={statCardStyle}>
-          <div style={{ fontSize: "32px", marginBottom: "8px" }}>👥</div>
-          <div
-            style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}
-          >
-            Active Agents
-          </div>
-          <div
-            style={{ fontSize: "28px", fontWeight: "700", color: "#1e293b" }}
-          >
-            {agents.length}
-          </div>
-        </div>
-      </div>
-
-      {/* Main Grid */}
-      <div style={gridStyle}>
-        {/* Agent List */}
-        <div style={agentListStyle}>
-          <div
-            style={{
-              padding: "16px",
-              backgroundColor: "#f8fafc",
-              borderBottom: "1px solid #e5e7eb",
-              fontWeight: "700",
-            }}
-          >
-            Agents ({agents.length})
-          </div>
-          {agents.map((agent) => (
-            <div
-              key={agent.agentId}
-              style={agentItemStyle(selectedAgent === agent.agentId)}
-              onClick={() => setSelectedAgent(agent.agentId)}
-            >
-              <h3
-                style={{
-                  margin: "0 0 8px 0",
-                  fontSize: "16px",
-                  color: "#1e293b",
-                }}
-              >
-                {agent.agentName}
-              </h3>
-              <div style={{ fontSize: "12px", color: "#64748b" }}>
-                <p style={{ margin: "2px 0" }}>Deals: {agent.totalDeals}</p>
-                <p style={{ margin: "2px 0" }}>
-                  Completed: {agent.completedDeals}
-                </p>
-                <p style={{ margin: "2px 0" }}>Rate: {agent.conversionRate}</p>
+      {loading ? (
+        <div className="adm-state">⏳ Loading dashboard...</div>
+      ) : (
+        <>
+          {/* KPI cards */}
+          <section className="adm-kpis">
+            <div className="adm-kpi">
+              <div className="adm-kpi-label">Total deals</div>
+              <div className="adm-kpi-value">{stats.totalDeals}</div>
+            </div>
+            <div className="adm-kpi">
+              <div className="adm-kpi-label">In progress</div>
+              <div className="adm-kpi-value">
+                {stats.totalDeals - stats.completedCount}
               </div>
             </div>
-          ))}
-        </div>
+            <div className="adm-kpi">
+              <div className="adm-kpi-label">Completed</div>
+              <div className="adm-kpi-value">{stats.completedCount}</div>
+            </div>
+            <div className="adm-kpi">
+              <div className="adm-kpi-label">Completion rate</div>
+              <div className="adm-kpi-value">
+                {pct(stats.completedCount, stats.totalDeals)}
+              </div>
+            </div>
+          </section>
 
-        {/* Agent Deals */}
-        <div style={dealsContainerStyle}>
-          {selectedAgent ? (
-            <>
-              <h2
-                style={{
-                  margin: "0 0 16px 0",
-                  fontSize: "20px",
-                  fontWeight: "700",
-                  color: "#1e293b",
-                }}
-              >
-                Deals by{" "}
-                {agents.find((a) => a.agentId === selectedAgent)?.agentName}
-              </h2>
-              {agentDeals.length > 0 ? (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "12px",
-                  }}
+          {/* Stage distribution */}
+          <section className="adm-stage">
+            <div className="adm-stage-head">
+              <h2 className="adm-h2">Deals by stage</h2>
+              <div className="adm-stage-filter">
+                <label htmlFor="stage" className="adm-label">
+                  Stage
+                </label>
+                <select
+                  id="stage"
+                  className="adm-select"
+                  value={stageFilter}
+                  onChange={(e) => setStageFilter(e.target.value)}
                 >
-                  {agentDeals.map((deal) => (
+                  {Object.keys(stageMap).map((s) => (
+                    <option key={s} value={s}>
+                      {s} ({stageMap[s]})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="adm-stage-grid">
+              {[
+                ["INQUIRY", stats.inquiryCount],
+                ["SHORTLIST", stats.shortlistCount],
+                ["NEGOTIATION", stats.negotiationCount],
+                ["AGREEMENT", stats.agreementCount],
+                ["REGISTRATION", stats.registrationCount],
+                ["PAYMENT", stats.paymentCount],
+                ["COMPLETED", stats.completedCount],
+              ].map(([name, val]) => (
+                <div key={name} className="adm-stage-card">
+                  <div className="adm-stage-name">{name}</div>
+                  <div className="adm-stage-bar">
                     <div
-                      key={deal.dealId}
+                      className="adm-stage-fill"
                       style={{
-                        padding: "12px",
-                        backgroundColor: "#f8fafc",
-                        borderRadius: "8px",
-                        border: "1px solid #e2e8f0",
+                        width: `${Math.min(
+                          100,
+                          stats.totalDeals ? (val / stats.totalDeals) * 100 : 0
+                        )}%`,
                       }}
+                    />
+                  </div>
+                  <div className="adm-stage-val">{val}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Agent leaderboard */}
+          <section className="adm-agents">
+            <div className="adm-agents-head">
+              <h2 className="adm-h2">Top agents</h2>
+              <span className="adm-muted">{agents.length} total</span>
+            </div>
+            <div className="adm-agent-grid">
+              {agents.map((a) => (
+                <div key={a.agentId} className="adm-agent-card">
+                  <div className="adm-agent-name">{a.agentName}</div>
+                  <div className="adm-agent-row">
+                    <span>Total</span>
+                    <span>{a.totalDeals ?? 0}</span>
+                  </div>
+                  <div className="adm-agent-row">
+                    <span>Completed</span>
+                    <span>{a.completedDeals ?? 0}</span>
+                  </div>
+                  <div className="adm-agent-row">
+                    <span>Success</span>
+                    <span>{pct(a.completedDeals ?? 0, a.totalDeals ?? 0)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Recent deals list */}
+          <section className="adm-recent">
+            <div className="adm-recent-head">
+              <h2 className="adm-h2">Recent deals</h2>
+              <div className="adm-search">
+                <input
+                  className="adm-input"
+                  placeholder="Search property, buyer, seller, agent..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {filteredRecent.length === 0 ? (
+              <div className="adm-state">No deals match current filters.</div>
+            ) : (
+              <div className="adm-recent-grid">
+                {filteredRecent.map((d) => {
+                  const id = d.dealId || d.id;
+                  const stage = d.stage || d.currentStage || "INQUIRY";
+                  const price = d.agreedPrice || d.propertyPrice;
+                  const buyer =
+                    d.buyerName ||
+                    `${d.buyer?.firstName || ""} ${
+                      d.buyer?.lastName || ""
+                    }`.trim();
+                  const seller =
+                    d.sellerName ||
+                    `${d.property?.user?.firstName || ""} ${
+                      d.property?.user?.lastName || ""
+                    }`.trim();
+
+                  return (
+                    <div
+                      key={id}
+                      className="adm-deal-card"
+                      onClick={() => setSelectedDeal(d)}
                     >
                       <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "start",
-                        }}
+                        className={`adm-stage-badge stage-${stage.toLowerCase()}`}
                       >
-                        <div>
-                          <h4
-                            style={{
-                              margin: "0 0 4px 0",
-                              fontSize: "14px",
-                              fontWeight: "600",
-                              color: "#1e293b",
-                            }}
-                          >
-                            {deal.propertyTitle}
-                          </h4>
-                          <p
-                            style={{
-                              margin: "0 0 8px 0",
-                              fontSize: "12px",
-                              color: "#64748b",
-                            }}
-                          >
-                            Buyer: {deal.buyerName}
-                          </p>
-                          <p
-                            style={{
-                              margin: "0",
-                              fontSize: "12px",
-                              color: "#64748b",
-                            }}
-                          >
-                            Price: ₹
-                            {deal.agreedPrice?.toLocaleString("en-IN") || "N/A"}
-                          </p>
-                        </div>
-                        <span
-                          style={{
-                            display: "inline-block",
-                            padding: "4px 8px",
-                            backgroundColor: getStageColor(deal.stage),
-                            color: "white",
-                            fontSize: "11px",
-                            fontWeight: "600",
-                            borderRadius: "4px",
-                          }}
-                        >
-                          {deal.stage}
-                        </span>
+                        {stage}
+                      </div>
+                      <div className="adm-deal-title">
+                        {d.propertyTitle || d.property?.title || "Property"}
+                      </div>
+                      {price && (
+                        <div className="adm-deal-price">₹{k(price)}</div>
+                      )}
+                      <div className="adm-deal-meta">
+                        <span>Buyer: {buyer || "N/A"}</span>
+                        <span>Seller: {seller || "N/A"}</span>
+                      </div>
+                      <div className="adm-deal-date">
+                        {new Date(
+                          d.createdAt || Date.now()
+                        ).toLocaleDateString()}
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "40px",
-                    color: "#64748b",
-                  }}
-                >
-                  No deals found
-                </div>
-              )}
-            </>
-          ) : (
-            <div
-              style={{ textAlign: "center", padding: "40px", color: "#64748b" }}
-            >
-              Select an agent to view deals
-            </div>
-          )}
-        </div>
-      </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      {selectedDeal && (
+        <DealDetailModal
+          deal={selectedDeal}
+          onClose={() => setSelectedDeal(null)}
+          onUpdate={(u) => {
+            setSelectedDeal(null);
+            load();
+          }}
+          userRole="ADMIN"
+        />
+      )}
     </div>
   );
-};
-
-export default AdminDashboard;
+}

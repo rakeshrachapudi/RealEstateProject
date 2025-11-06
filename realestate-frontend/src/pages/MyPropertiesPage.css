@@ -1,0 +1,196 @@
+/* realestate-frontend/src/pages/MyPropertiesPage.css */
+
+/* Container */
+.mp-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: clamp(12px, 3vw, 24px);
+}
+
+/* Header */
+.mp-header {
+  margin-bottom: 12px;
+}
+
+.mp-title {
+  font-size: clamp(22px, 4vw, 30px);
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+}
+
+.mp-subtitle {
+  font-size: clamp(14px, 2vw, 16px);
+  color: #64748b;
+  margin: 0;
+}
+
+/* Stats bar */
+.mp-stats {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  margin: 12px 0 16px 0;
+}
+
+.mp-stat {
+  grid-column: span 3;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+}
+
+.mp-stat-label {
+  color: #6b7280;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.mp-stat-value {
+  color: #111827;
+  font-weight: 900;
+  font-size: 16px;
+}
+
+/* Grid */
+.mp-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 24px;
+}
+
+.mp-grid-item {
+  grid-column: span 4; /* 3 per row default */
+  display: flex;
+  min-width: 0;
+}
+
+/* States */
+.mp-state {
+  text-align: center;
+  padding: clamp(32px, 6vw, 60px);
+  background: linear-gradient(135deg, #fefefe 0%, #f8fafc 100%);
+  border-radius: 16px;
+  border: 1px dashed #e2e8f0;
+}
+
+.mp-loading .mp-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e7eb;
+  border-top: 3px solid #667eea;
+  border-radius: 50%;
+  animation: mp-spin 1s linear infinite;
+  margin: 0 auto 12px;
+}
+
+@keyframes mp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mp-loading-title {
+  margin: 0;
+  font-weight: 800;
+  color: #475569;
+}
+
+.mp-error-title {
+  margin: 0 0 6px 0;
+  font-size: 20px;
+  font-weight: 900;
+  color: #b91c1c;
+}
+
+.mp-error-text {
+  margin: 0 0 12px 0;
+  color: #7f1d1d;
+}
+
+.mp-empty-ic {
+  font-size: clamp(40px, 8vw, 56px);
+  margin-bottom: 8px;
+}
+
+.mp-empty-title {
+  margin: 0 0 6px 0;
+  font-size: 20px;
+  font-weight: 900;
+  color: #1e293b;
+}
+
+.mp-empty-text {
+  margin: 0 0 12px 0;
+  color: #64748b;
+}
+
+/* Buttons */
+.mp-btn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mp-btn:hover {
+  transform: translateY(-2px);
+}
+
+.mp-btn-primary {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+/* Responsive */
+@media (max-width: 1279px) {
+  .mp-grid {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .mp-grid-item {
+    grid-column: span 6;
+  } /* 2 per row */
+  .mp-stat {
+    grid-column: span 6;
+  }
+}
+
+@media (max-width: 767px) {
+  .mp-stats {
+    gap: 10px;
+  }
+  .mp-grid {
+    gap: 16px;
+  }
+  .mp-grid-item {
+    grid-column: span 12;
+  } /* 1 per row */
+  .mp-stat {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 479px) {
+  .mp-container {
+    padding: 12px;
+  }
+  .mp-btn {
+    padding: 10px 14px;
+  }
+}

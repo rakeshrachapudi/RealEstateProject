@@ -1,0 +1,616 @@
+/* Container */
+.aap-container {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: clamp(16px, 3vw, 32px);
+  background: #f9fafb;
+  min-height: 100vh;
+}
+
+/* Loading */
+.aap-loading {
+  text-align: center;
+  padding-top: 80px;
+  font-size: 18px;
+  color: #64748b;
+}
+
+/* Header */
+.aap-header {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.aap-title {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+}
+
+.aap-subtitle {
+  color: #64748b;
+  margin: 0;
+  font-size: 16px;
+}
+
+/* Controls */
+.aap-controls {
+  margin-bottom: 20px;
+}
+
+.aap-search-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+}
+
+.aap-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Main grid */
+.aap-main-grid {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* Agent list */
+.aap-agent-list {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  max-height: calc(100vh - 240px);
+  overflow-y: auto;
+}
+
+.aap-agent-list-header {
+  padding: 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.aap-agent-item {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  cursor: pointer;
+  background: #fff;
+  border-left: 4px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.aap-agent-item:hover {
+  background: #f8fafc;
+}
+
+.aap-agent-item.selected {
+  background: #f0f9ff;
+  border-left-color: #3b82f6;
+}
+
+.aap-agent-item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.aap-agent-item-email {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.aap-agent-item-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.aap-role-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: #10b981;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* Right panel */
+.aap-right-panel {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  padding: 24px;
+  max-height: calc(100vh - 240px);
+  overflow-y: auto;
+}
+
+/* Tabs */
+.aap-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 12px;
+}
+
+.aap-tab {
+  padding: 8px 16px;
+  background: transparent;
+  color: #64748b;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  margin-bottom: -14px;
+}
+
+.aap-tab.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+}
+
+.aap-tab:hover {
+  color: #3b82f6;
+}
+
+/* Tab content */
+.aap-tab-content {
+  min-height: 200px;
+}
+
+.aap-section-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #1e293b;
+}
+
+/* Details grid */
+.aap-details-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.aap-detail-card {
+  grid-column: span 6;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.aap-detail-label {
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.aap-detail-value {
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+/* Address card */
+.aap-address-card {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.aap-address-text {
+  font-size: 14px;
+  color: #1e293b;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* Action buttons */
+.aap-action-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.aap-edit-btn {
+  padding: 10px 20px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.aap-edit-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.aap-delete-btn {
+  padding: 10px 20px;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.aap-delete-btn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.aap-warning-text {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 12px;
+}
+
+/* Stats grid */
+.aap-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.aap-stat-card {
+  grid-column: span 4;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  text-align: center;
+}
+
+.aap-stat-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.aap-stat-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.aap-stat-value.aap-stat-success {
+  color: #10b981;
+}
+
+.aap-stat-value.aap-stat-primary {
+  color: #3b82f6;
+}
+
+.aap-stat-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Performance summary */
+.aap-performance-summary {
+  margin-top: 24px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.aap-summary-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #1e293b;
+}
+
+.aap-summary-text {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+/* Deals grid */
+.aap-deals-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+.aap-deal-card {
+  grid-column: span 6;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.aap-deal-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.aap-deal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+.aap-deal-info {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.aap-stage-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.aap-deal-actions {
+  margin-top: 12px;
+}
+
+.aap-icon-btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.aap-icon-btn-red {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.aap-icon-btn-red:hover {
+  background: #fecaca;
+  transform: translateY(-1px);
+}
+
+/* Empty state */
+.aap-empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #64748b;
+}
+
+.aap-empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+/* Modal */
+.aap-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.aap-modal-content {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.aap-modal-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 16px;
+}
+
+.aap-modal-text {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.aap-modal-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.aap-modal-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.aap-modal-btn-cancel {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.aap-modal-btn-cancel:hover {
+  background: #cbd5e1;
+}
+
+.aap-modal-btn-danger {
+  background: #ef4444;
+  color: #fff;
+}
+
+.aap-modal-btn-danger:hover {
+  background: #dc2626;
+}
+
+.aap-modal-btn-primary {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.aap-modal-btn-primary:hover {
+  background: #2563eb;
+}
+
+/* Form */
+.aap-form-group {
+  margin-bottom: 16px;
+}
+
+.aap-form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 6px;
+}
+
+.aap-form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.aap-form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 1279px) {
+  .aap-main-grid {
+    grid-template-columns: 300px 1fr;
+  }
+  .aap-deal-card {
+    grid-column: span 12;
+  } /* 1 per row */
+}
+
+@media (max-width: 1023px) {
+  .aap-main-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .aap-agent-list {
+    max-height: 300px;
+    order: 2;
+  }
+
+  .aap-right-panel {
+    order: 1;
+    max-height: none;
+  }
+
+  .aap-detail-card {
+    grid-column: span 12;
+  }
+  .aap-stat-card {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 767px) {
+  .aap-tabs {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .aap-tab {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .aap-action-buttons {
+    flex-direction: column;
+  }
+
+  .aap-edit-btn,
+  .aap-delete-btn {
+    width: 100%;
+  }
+
+  .aap-modal-buttons {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .aap-container {
+    padding: 12px;
+  }
+  .aap-right-panel {
+    padding: 16px;
+  }
+  .aap-modal-content {
+    padding: 16px;
+  }
+
+  .aap-search-input,
+  .aap-form-input {
+    font-size: 16px; /* Prevent iOS zoom */
+  }
+}

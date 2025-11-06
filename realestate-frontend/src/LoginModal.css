@@ -1,0 +1,163 @@
+/* realestate-frontend/src/LoginModal.css */
+
+@keyframes lm-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes lm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Backdrop */
+.lm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.55);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+/* Modal */
+.lm-modal {
+  width: 100%;
+  max-width: 440px;
+  background: rgba(120, 70, 200, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f3e8ff;
+  border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(70, 30, 120, 0.45);
+  backdrop-filter: blur(16px);
+  padding: 28px 24px;
+  position: relative;
+  animation: lm-fade-in 200ms ease-out;
+}
+
+/* Close button */
+.lm-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  border: none;
+  background: transparent;
+  color: #e9d5ff;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+/* Form */
+.lm-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.lm-title {
+  margin: 0 0 16px 0;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+}
+
+.lm-title.gradient {
+  background: linear-gradient(90deg, #b57aff, #845ec2, #9b5de5);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Inputs */
+.lm-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(243, 232, 255, 0.25);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  margin-bottom: 12px;
+}
+
+.lm-input::placeholder {
+  color: rgba(243, 232, 255, 0.75);
+}
+
+.lm-input:focus {
+  border-color: #c4b5fd;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* Strength */
+.lm-strength {
+  font-size: 14px;
+  margin: 2px 0 12px 0;
+}
+
+/* Buttons */
+.lm-btn {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: none;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  margin-bottom: 12px;
+}
+
+.lm-btn:hover {
+  transform: translateY(-1px);
+}
+
+.lm-btn-primary {
+  background: linear-gradient(135deg, #9b5de5 0%, #845ec2 50%, #5c4b99 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(155, 93, 229, 0.35);
+}
+
+.lm-btn-secondary {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  color: #fff;
+}
+
+/* Alert */
+.lm-alert {
+  background: rgba(255, 0, 70, 0.15);
+  color: #ffb3b3;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255, 0, 70, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .lm-modal {
+    padding: 22px 18px;
+    border-radius: 16px;
+  }
+  .lm-title {
+    font-size: 22px;
+  }
+  .lm-btn {
+    font-size: 15px;
+    padding: 11px 12px;
+  }
+  .lm-input {
+    font-size: 16px;
+  } /* prevent iOS zoom */
+}
