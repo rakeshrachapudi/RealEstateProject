@@ -1,437 +1,406 @@
-import React, { useState, useEffect } from "react";
-import { BACKEND_BASE_URL } from "../config/config";
-import "./BrokerSubscriptionModal.css";
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import './BrokerSubscriptionModal.css';
 
-const BrokerSubscriptionModal = ({ brokerId, onClose, onSubscriptionActivated }) => {
-  const [view, setView] = useState("check"); // check, coupon, plans, active
-  const [couponCode, setCouponCode] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [validating, setValidating] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [couponInfo, setCouponInfo] = useState(null);
-  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
-  const [plans, setPlans] = useState(null);
+const BrokerSubscriptionModal = ({ isOpen, onClose, brokerId, onSubscriptionSuccess }) => {
+  const [activeTab, setActiveTab] = useState('plans'); // 'plans' or 'coupon'
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponValidation, setCouponValidation] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+
+  // Subscription plans
+  const plans = {
+    MONTHLY: {
+      name: 'Monthly Plan',
+      price: 499,
+      duration: '1 month',
+      features: [
+        'Post up to 50 properties',
+        'Direct buyer contact',
+        'Priority support',
+        'Analytics dashboard'
+      ],
+      savings: null
+    },
+    QUARTERLY: {
+      name: 'Quarterly Plan',
+      price: 1299,
+      duration: '3 months',
+      features: [
+        'Post up to 50 properties per month',
+        'Direct buyer contact',
+        'Priority support',
+        'Analytics dashboard',
+        'Save ₹198'
+      ],
+      savings: '13% OFF'
+    },
+    YEARLY: {
+      name: 'Yearly Plan',
+      price: 4999,
+      duration: '12 months',
+      features: [
+        'Post up to 50 properties per month',
+        'Direct buyer contact',
+        'Priority support',
+        'Analytics dashboard',
+        'Save ₹1,000'
+      ],
+      savings: '17% OFF'
+    }
+  };
 
   useEffect(() => {
-    fetchSubscriptionStatus();
-  }, [brokerId]);
+    if (isOpen && brokerId) {
+      fetchSubscriptionStatus();
+    }
+  }, [isOpen, brokerId]);
 
+  // Fetch current subscription status
   const fetchSubscriptionStatus = async () => {
     try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/broker-subscription/status/${brokerId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        }
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/api/broker-subscription/status/${brokerId}`
       );
-      const data = await response.json();
-      if (data.success) {
-        setSubscriptionStatus(data.data);
-        if (data.data.hasActiveSubscription) {
-          setView("active");
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching subscription status:", err);
+      setSubscriptionStatus(response.data.data);
+    } catch (error) {
+      console.error('Error fetching subscription status:', error);
     }
   };
 
-  const fetchPlans = async () => {
-    try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/broker-subscription/plans`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        }
-      );
-      const data = await response.json();
-      if (data.success) {
-        setPlans(data.data);
-      }
-    } catch (err) {
-      console.error("Error fetching plans:", err);
-    }
-  };
-
-  const handleValidateCoupon = async () => {
+  // Validate coupon code
+  const validateCoupon = async () => {
     if (!couponCode.trim()) {
-      setError("Please enter a coupon code");
-      return;
-    }
-
-    setValidating(true);
-    setError(null);
-    setCouponInfo(null);
-
-    try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/broker-subscription/validate-coupon`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-          body: JSON.stringify({
-            brokerId: brokerId,
-            couponCode: couponCode.trim().toUpperCase(),
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success && data.data.valid) {
-        setCouponInfo(data.data.coupon);
-        setSuccess("✅ Coupon is valid!");
-      } else {
-        setError(data.data.message || "Invalid coupon code");
-      }
-    } catch (err) {
-      setError("Error validating coupon. Please try again.");
-    } finally {
-      setValidating(false);
-    }
-  };
-
-  const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) {
-      setError("Please enter a coupon code");
+      setError('Please enter a coupon code');
       return;
     }
 
     setLoading(true);
-    setError(null);
+    setError('');
+    setCouponValidation(null);
 
     try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/broker-subscription/apply-coupon`,
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/broker-subscription/validate-coupon`,
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-          body: JSON.stringify({
-            brokerId: brokerId,
-            couponCode: couponCode.trim().toUpperCase(),
-          }),
+          brokerId: brokerId,
+          couponCode: couponCode.trim()
         }
       );
 
-      const data = await response.json();
-
-      if (data.success) {
-        setSuccess("🎉 Subscription activated successfully!");
-        setTimeout(() => {
-          onSubscriptionActivated && onSubscriptionActivated();
-          onClose && onClose();
-        }, 2000);
+      if (response.data.data.valid) {
+        setCouponValidation({
+          valid: true,
+          message: response.data.data.message,
+          coupon: response.data.data.coupon
+        });
       } else {
-        setError(data.message || "Failed to apply coupon");
+        setError(response.data.data.message);
       }
-    } catch (err) {
-      setError("Error applying coupon. Please try again.");
+    } catch (error) {
+      setError(error.response?.data?.message || 'Failed to validate coupon');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectPlan = async (planType) => {
+  // Apply coupon and activate free trial (NO PAYMENT GATEWAY CALL - AMOUNT IS ZERO)
+  const applyCoupon = async () => {
+    if (!couponValidation?.valid) {
+      setError('Please validate the coupon first');
+      return;
+    }
+
     setLoading(true);
-    setError(null);
+    setError('');
 
     try {
-      // Create subscription and get Razorpay order
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/broker-subscription/create-paid`,
+      // ✅ FREE TRIAL - Direct activation without Razorpay
+      // Amount is ₹0, so we skip payment gateway entirely
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/broker-subscription/apply-coupon`,
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-          body: JSON.stringify({
-            brokerId: brokerId,
-            planType: planType,
-          }),
+          brokerId: brokerId,
+          couponCode: couponCode.trim()
         }
       );
 
-      const data = await response.json();
+      // Success - Free trial activated!
+      alert('🎉 ' + response.data.data.message + '\n\n✅ No payment required - Your free trial is active!');
 
-      if (data.success) {
-        const orderData = data.data;
+      if (onSubscriptionSuccess) {
+        onSubscriptionSuccess(response.data.data.subscription);
+      }
 
-        // Initialize Razorpay checkout
-        const options = {
-          key: orderData.razorpayKeyId,
-          amount: orderData.amount * 100, // Convert to paise
-          currency: orderData.currency,
-          name: "PropertyDealz",
-          description: `${planType} Subscription`,
-          order_id: orderData.razorpayOrderId,
-          handler: async function (response) {
-            await verifyPayment(response);
-          },
-          prefill: {
-            name: orderData.brokerName,
-            email: orderData.brokerEmail,
-            contact: orderData.brokerPhone,
-          },
-          theme: {
-            color: "#667eea",
-          },
-          modal: {
-            ondismiss: function() {
-              setLoading(false);
-              setError("Payment cancelled");
-            }
+      onClose();
+    } catch (error) {
+      setError(error.response?.data?.message || 'Failed to apply coupon');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle PAID subscription purchase (Amount > ₹0 - Razorpay payment gateway)
+  const handlePurchase = async (planType) => {
+    setLoading(true);
+    setError('');
+
+    try {
+      // Step 1: Create subscription order with Razorpay
+      // ✅ This is ONLY called for PAID plans (Monthly/Quarterly/Yearly)
+      // ❌ FREE trials with coupons skip this entirely
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/broker-subscription/create-paid`,
+        {
+          brokerId: brokerId,
+          planType: planType
+        }
+      );
+
+      const orderData = response.data.data;
+
+      // Step 2: Initialize Razorpay
+      const options = {
+        key: orderData.razorpayKeyId,
+        amount: orderData.amount * 100, // Amount in paise
+        currency: orderData.currency,
+        name: 'PropertyDealz',
+        description: `${plans[planType].name} Subscription`,
+        order_id: orderData.razorpayOrderId,
+        prefill: {
+          name: orderData.brokerName,
+          email: orderData.brokerEmail,
+          contact: orderData.brokerPhone
+        },
+        theme: {
+          color: '#3399cc'
+        },
+        handler: async function (response) {
+          // Payment successful - verify on backend
+          await verifyPayment(
+            response.razorpay_order_id,
+            response.razorpay_payment_id,
+            response.razorpay_signature
+          );
+        },
+        modal: {
+          ondismiss: function() {
+            setLoading(false);
+            setError('Payment cancelled by user');
           }
-        };
+        }
+      };
 
-        const razorpay = new window.Razorpay(options);
-        razorpay.open();
-      } else {
-        setError(data.message || "Failed to create subscription");
-      }
-    } catch (err) {
-      setError("Error creating subscription. Please try again.");
-    } finally {
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+
+    } catch (error) {
+      setError(error.response?.data?.message || 'Failed to create payment order');
       setLoading(false);
     }
   };
 
-  const verifyPayment = async (paymentResponse) => {
-    setLoading(true);
+  // Verify payment with backend
+  const verifyPayment = async (orderId, paymentId, signature) => {
     try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/broker-subscription/verify-payment`,
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/broker-subscription/verify-payment`,
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-          body: JSON.stringify(paymentResponse),
+          razorpay_order_id: orderId,
+          razorpay_payment_id: paymentId,
+          razorpay_signature: signature
         }
       );
 
-      const data = await response.json();
+      // Payment verified successfully!
+      alert('🎉 ' + response.data.data.message);
 
-      if (data.success) {
-        setSuccess("🎉 Payment successful! Your subscription is now active.");
-        setTimeout(() => {
-          onSubscriptionActivated && onSubscriptionActivated();
-          onClose && onClose();
-        }, 2000);
-      } else {
-        setError(data.message || "Payment verification failed");
+      if (onSubscriptionSuccess) {
+        onSubscriptionSuccess(response.data.data.subscription);
       }
-    } catch (err) {
-      setError("Error verifying payment. Please contact support.");
-    } finally {
+
+      setLoading(false);
+      onClose();
+
+    } catch (error) {
+      setError(error.response?.data?.message || 'Payment verification failed');
       setLoading(false);
     }
   };
 
-  const handleBackdropClick = (e) => {
-    if (e.target.classList.contains("bsm-backdrop")) {
-      onClose && onClose();
-    }
-  };
-
-  const renderCheckView = () => (
-    <>
-      <h2 className="bsm-title">🏢 Broker Subscription Required</h2>
-      <p className="bsm-desc">
-        To post properties, you need an active broker subscription.
-        Choose how you'd like to proceed:
-      </p>
-
-      {error && <div className="bsm-alert error">{error}</div>}
-
-      <div className="bsm-options">
-        <button
-          onClick={() => setView("coupon")}
-          className="bsm-option-card"
-          disabled={loading}
-        >
-          <div className="bsm-option-icon">🎟️</div>
-          <h3>Have a Coupon?</h3>
-          <p>Get 3 months free trial</p>
-        </button>
-
-        <button
-          onClick={() => {
-            fetchPlans();
-            setView("plans");
-          }}
-          className="bsm-option-card"
-          disabled={loading}
-        >
-          <div className="bsm-option-icon">💳</div>
-          <h3>Buy Subscription</h3>
-          <p>View pricing plans</p>
-        </button>
-      </div>
-    </>
-  );
-
-  const renderCouponView = () => (
-    <>
-      <button onClick={() => setView("check")} className="bsm-back">
-        ← Back
-      </button>
-
-      <h2 className="bsm-title">🎟️ Apply Coupon Code</h2>
-      <p className="bsm-desc">
-        Enter your coupon code to activate your free trial subscription.
-      </p>
-
-      {error && <div className="bsm-alert error">{error}</div>}
-      {success && <div className="bsm-alert success">{success}</div>}
-
-      {couponInfo && (
-        <div className="bsm-coupon-info">
-          <h4>✅ {couponInfo.description}</h4>
-          <p>
-            You will get <strong>{couponInfo.trialMonths} months</strong> free trial!
-          </p>
-        </div>
-      )}
-
-      <div className="bsm-input-group">
-        <input
-          type="text"
-          value={couponCode}
-          onChange={(e) => {
-            setCouponCode(e.target.value.toUpperCase());
-            setError(null);
-            setSuccess(null);
-            setCouponInfo(null);
-          }}
-          placeholder="Enter Coupon Code (e.g., BROKER3FREE)"
-          className="bsm-input"
-          disabled={loading}
-        />
-        <button
-          onClick={handleValidateCoupon}
-          className="bsm-btn bsm-btn-secondary"
-          disabled={validating || loading}
-        >
-          {validating ? "⏳" : "Validate"}
-        </button>
-      </div>
-
-      <button
-        onClick={handleApplyCoupon}
-        className="bsm-btn bsm-btn-primary"
-        disabled={loading || !couponInfo}
-      >
-        {loading ? "⏳ Activating..." : "🎉 Activate Free Trial"}
-      </button>
-
-      <div className="bsm-footer">
-        <p className="bsm-hint">
-          💡 <strong>Pro Tip:</strong> Use code <code>BROKER3FREE</code> for 3 months free!
-        </p>
-      </div>
-    </>
-  );
-
-  const renderPlansView = () => (
-    <>
-      <button onClick={() => setView("check")} className="bsm-back">
-        ← Back
-      </button>
-
-      <h2 className="bsm-title">💎 Choose Your Plan</h2>
-      <p className="bsm-desc">Select the subscription plan that works best for you</p>
-
-      {error && <div className="bsm-alert error">{error}</div>}
-
-      <div className="bsm-plans">
-        {plans && Object.entries(plans).map(([key, plan]) => (
-          <div key={key} className="bsm-plan-card">
-            {plan.savings && (
-              <div className="bsm-plan-badge">{plan.savings}</div>
-            )}
-            <h3>{plan.name}</h3>
-            <div className="bsm-plan-price">
-              ₹{plan.price}
-              <span>/{plan.duration}</span>
-            </div>
-            <ul className="bsm-plan-features">
-              {plan.features.map((feature, idx) => (
-                <li key={idx}>✓ {feature}</li>
-              ))}
-            </ul>
-            <button
-              onClick={() => handleSelectPlan(key)}
-              className="bsm-btn bsm-btn-primary"
-              disabled={loading}
-            >
-              {loading ? "⏳ Processing..." : "Select Plan"}
-            </button>
-          </div>
-        ))}
-      </div>
-    </>
-  );
-
-  const renderActiveView = () => (
-    <>
-      <h2 className="bsm-title">✅ Active Subscription</h2>
-
-      <div className="bsm-active-info">
-        <div className="bsm-badge success">Active</div>
-
-        <div className="bsm-info">
-          <div className="bsm-info-row">
-            <span>Plan:</span>
-            <strong>{subscriptionStatus?.planType}</strong>
-          </div>
-          <div className="bsm-info-row">
-            <span>Properties Posted:</span>
-            <strong>
-              {subscriptionStatus?.propertiesPosted} / {subscriptionStatus?.maxProperties}
-            </strong>
-          </div>
-          <div className="bsm-info-row">
-            <span>Remaining:</span>
-            <strong>{subscriptionStatus?.remainingProperties} properties</strong>
-          </div>
-          <div className="bsm-info-row">
-            <span>Expires In:</span>
-            <strong>{subscriptionStatus?.daysRemaining} days</strong>
-          </div>
-        </div>
-      </div>
-
-      <button className="bsm-btn bsm-btn-primary" onClick={onClose}>
-        Continue Posting
-      </button>
-    </>
-  );
+  if (!isOpen) return null;
 
   return (
-    <div className="bsm-backdrop" onClick={handleBackdropClick}>
-      <div className="bsm-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="bsm-close" onClick={onClose}>
-          ×
-        </button>
+    <div className="subscription-modal-overlay" onClick={onClose}>
+      <div className="subscription-modal" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="subscription-modal-header">
+          <h2>Choose Your Subscription Plan</h2>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
 
-        {view === "check" && renderCheckView()}
-        {view === "coupon" && renderCouponView()}
-        {view === "plans" && renderPlansView()}
-        {view === "active" && renderActiveView()}
+        {/* Current Status */}
+        {subscriptionStatus?.hasActiveSubscription && (
+          <div className="current-subscription-banner">
+            <div className="subscription-info">
+              <span className="status-badge active">Active</span>
+              <span className="plan-name">{subscriptionStatus.planType} Plan</span>
+              <span className="days-remaining">
+                {subscriptionStatus.daysRemaining} days remaining
+              </span>
+            </div>
+            <div className="usage-info">
+              {subscriptionStatus.propertiesPosted} / {subscriptionStatus.maxProperties} properties posted
+            </div>
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="subscription-tabs">
+          <button
+            className={`tab-btn ${activeTab === 'plans' ? 'active' : ''}`}
+            onClick={() => setActiveTab('plans')}
+          >
+            📋 Subscription Plans
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'coupon' ? 'active' : ''}`}
+            onClick={() => setActiveTab('coupon')}
+          >
+            🎟️ Have a Coupon?
+          </button>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="error-message">
+            <span className="error-icon">⚠️</span>
+            {error}
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="subscription-modal-content">
+          {activeTab === 'plans' ? (
+            // Subscription Plans
+            <div className="plans-grid">
+              {Object.entries(plans).map(([key, plan]) => (
+                <div
+                  key={key}
+                  className={`plan-card ${selectedPlan === key ? 'selected' : ''} ${
+                    key === 'YEARLY' ? 'popular' : ''
+                  }`}
+                >
+                  {key === 'YEARLY' && <div className="popular-badge">Most Popular</div>}
+                  {plan.savings && <div className="savings-badge">{plan.savings}</div>}
+
+                  <h3 className="plan-name">{plan.name}</h3>
+                  <div className="plan-price">
+                    <span className="currency">₹</span>
+                    <span className="amount">{plan.price}</span>
+                    <span className="duration">/{plan.duration}</span>
+                  </div>
+
+                  <ul className="plan-features">
+                    {plan.features.map((feature, index) => (
+                      <li key={index}>
+                        <span className="check-icon">✓</span>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <button
+                    className="plan-btn"
+                    onClick={() => handlePurchase(key)}
+                    disabled={loading}
+                  >
+                    {loading ? 'Processing...' : 'Choose Plan'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // Coupon Section
+            <div className="coupon-section">
+              <div className="coupon-info-box">
+                <h3>🎁 Activate Free Trial with Coupon</h3>
+                <p>Have a coupon code? Enter it below to activate your free trial subscription!</p>
+              </div>
+
+              <div className="coupon-input-group">
+                <input
+                  type="text"
+                  placeholder="Enter coupon code"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  disabled={loading || couponValidation?.valid}
+                  className="coupon-input"
+                />
+                <button
+                  onClick={validateCoupon}
+                  disabled={loading || couponValidation?.valid || !couponCode.trim()}
+                  className="validate-btn"
+                >
+                  {loading ? 'Validating...' : 'Validate'}
+                </button>
+              </div>
+
+              {/* Coupon Validation Result */}
+              {couponValidation?.valid && (
+                <div className="coupon-valid-box">
+                  <div className="valid-header">
+                    <span className="success-icon">✓</span>
+                    <span className="valid-text">Coupon Valid!</span>
+                  </div>
+
+                  <div className="coupon-details">
+                    <p className="coupon-description">
+                      {couponValidation.coupon.description}
+                    </p>
+
+                    {/* ✅ FREE TRIAL INDICATOR */}
+                    <div className="free-trial-badge">
+                      <span className="badge-icon">🎁</span>
+                      <span className="badge-text">100% FREE - No Payment Required</span>
+                    </div>
+
+                    <div className="trial-info">
+                      <strong>Free Trial Duration:</strong> {couponValidation.coupon.trialMonths} months
+                    </div>
+                    <div className="valid-until">
+                      <strong>Coupon Valid Until:</strong>{' '}
+                      {new Date(couponValidation.coupon.validUntil).toLocaleDateString()}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={applyCoupon}
+                    disabled={loading}
+                    className="apply-coupon-btn"
+                  >
+                    {loading ? 'Activating...' : '🎉 Activate Free Trial (No Payment)'}
+                  </button>
+                </div>
+              )}
+
+              <div className="coupon-help">
+                <p>💡 <strong>Don't have a coupon?</strong></p>
+                <p>Contact our team or check your email for exclusive offers!</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="subscription-modal-footer">
+          <p className="footer-note">
+            🔒 Secure payment powered by Razorpay • Cancel anytime
+          </p>
+        </div>
       </div>
     </div>
   );

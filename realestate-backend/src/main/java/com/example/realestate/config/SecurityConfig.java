@@ -53,7 +53,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.disable())
+                .cors(withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

@@ -153,9 +153,8 @@ public class PropertyService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Helper method to convert Property Entity to PropertyDTO
-     */
+    // In PropertyService.java, update this method:
+
     private PropertyDTO convertToDTO(Property property) {
         PropertyDTO dto = new PropertyDTO();
 
@@ -167,6 +166,7 @@ public class PropertyService {
         dto.setAreaSqft(property.getAreaSqft());
         dto.setBedrooms(property.getBedrooms());
         dto.setBathrooms(property.getBathrooms());
+        dto.setBalconies(property.getBalconies());
         dto.setAddress(property.getAddress());
         dto.setStatus(property.getStatus());
         dto.setListingType(property.getListingType());
@@ -179,6 +179,7 @@ public class PropertyService {
         dto.setOwnerType(property.getOwnerType());
         dto.setIsVerified(property.getIsVerified());
 
+        // ✅ UPDATED: Include role in user DTO
         if (property.getUser() != null) {
             PropertyDTO.UserDTO userDTO = new PropertyDTO.UserDTO();
             userDTO.setId(property.getUser().getId());
@@ -186,9 +187,11 @@ public class PropertyService {
             userDTO.setLastName(property.getUser().getLastName());
             userDTO.setEmail(property.getUser().getEmail());
             userDTO.setMobileNumber(property.getUser().getMobileNumber());
+            userDTO.setRole(property.getUser().getRole().name()); // ✅ ADDED
             dto.setUser(userDTO);
 
-            logger.debug("Set user info for property {}: User ID {}", property.getId(), userDTO.getId());
+            logger.debug("Set user info for property {}: User ID {} (Role: {})",
+                    property.getId(), userDTO.getId(), userDTO.getRole());
         } else {
             logger.warn("Property {} has no user associated!", property.getId());
         }

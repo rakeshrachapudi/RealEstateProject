@@ -27,6 +27,7 @@ public interface BrokerSubscriptionRepository extends JpaRepository<BrokerSubscr
     // Find by Razorpay subscription ID
     Optional<BrokerSubscription> findByRazorpaySubscriptionId(String razorpaySubscriptionId);
 
+    Optional<BrokerSubscription> findByRazorpayOrderId(String orderId);
     // Find expired subscriptions
     @Query("SELECT s FROM BrokerSubscription s WHERE s.status = 'ACTIVE' AND s.endDate < :now")
     List<BrokerSubscription> findExpiredSubscriptions(@Param("now") LocalDateTime now);

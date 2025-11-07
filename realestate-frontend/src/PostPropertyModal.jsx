@@ -4,9 +4,11 @@ import { useAuth } from "./AuthContext.jsx";
 import { BACKEND_BASE_URL } from "./config/config";
 import UserCreationModal from "./components/UserCreationModal";
 import "./PostPropertyModal.css";
+import BrokerSubscriptionModal from './components/BrokerSubscriptionModal';
 
 function PostPropertyModal({ onClose, onPropertyPosted }) {
   const { user, isAuthenticated } = useAuth();
+  const authToken = localStorage.getItem("authToken");
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -14,6 +16,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
   const [imageUploading, setImageUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [priceInWords, setPriceInWords] = useState("");
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   // User selection for agents/admins
   const [users, setUsers] = useState([]);
@@ -301,13 +304,14 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       setUploadProgress(Math.round(((i + 1) / selectedImages.length) * 100));
 
       try {
-        const response = await fetch(
-          `${BACKEND_BASE_URL}/api/upload/property-image`,
-          {
-            method: "POST",
-            body: formDataImage,
-          }
-        );
+       const response = await fetch(
+         `${BACKEND_BASE_URL}/api/upload/property-image`,
+         {
+           method: "POST",
+           headers: { 'Authorization': `Bearer ${authToken}` },
+           body: formDataImage,
+         }
+       );
 
         const data = await response.json();
 
@@ -348,101 +352,100 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
 
-    if (isAgentOrAdmin && !selectedUserId) {
-      alert("Please select a user to post this property under");
+  try {
+    // ✅ Check login
+    if (!isAuthenticated || !user) {
+      setError("Please login to post.");
+      setLoading(false);
       return;
     }
 
-    if (selectedImages.length === 0) {
-      alert("Please select at least one image");
+    // ✅ Ensure token exists
+    if (!authToken) {
+      setError("Authentication missing. Please login again.");
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setImageUploading(true);
-
-    try {
-      const ownerUserId = isAgentOrAdmin ? selectedUserId : user.id;
-
-      const propertyPayload = {
-        title: formData.title,
-        type: formData.type,
-        listingType: formData.listingType,
-        city: formData.city,
-        area: { id: parseInt(formData.areaId) },
-        user: { id: ownerUserId },
-        address: formData.address,
-        imageUrl: "",
-        priceDisplay: priceInWords,
-        bedrooms: isPlotOrLandOrVilla ? 0 : parseInt(formData.bedrooms) || 0,
-        bathrooms: isPlotOrLandOrVilla ? 0 : parseInt(formData.bathrooms) || 0,
-        balconies: isPlotOrLandOrVilla ? 0 : parseInt(formData.balconies) || 0,
-        areaSqft: parseFloat(formData.areaSqft) || 0,
-        price: parseFloat(formData.price),
-        amenities: formData.amenities,
-        description: formData.description,
-        ownerType: formData.ownerType,
-        isReadyToMove: formData.isReadyToMove,
-        status: "available",
-        isFeatured: false,
-        isActive: true,
-        isVerified: false,
-      };
-
-      const propertyResponse = await fetch(
-        `${BACKEND_BASE_URL}/api/properties`,
+    // ✅ BROKER subscription check
+    if (user?.role === 'BROKER') {
+      const subscriptionCheckResponse = await fetch(
+        `${BACKEND_BASE_URL}/api/broker-subscription/can-post/${user.id}`,
         {
-          method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            'Authorization': `Bearer ${authToken}`,
           },
-          body: JSON.stringify(propertyPayload),
         }
       );
 
-      if (!propertyResponse.ok) {
-        const errorText = await propertyResponse.text();
-        throw new Error(errorText || "Failed to create property");
+      const subscriptionCheck = await subscriptionCheckResponse.json();
+
+      if (!subscriptionCheck?.success || !subscriptionCheck?.data?.canPost) {
+        setShowSubscriptionModal(true);
+        setLoading(false);
+        return;
       }
-
-      const result = await propertyResponse.json();
-      const propertyId = result.data ? result.data.id : result.id;
-
-      const uploadedImageUrls = await uploadImagesToS3(propertyId);
-      await saveImageUrlsToDatabase(propertyId, uploadedImageUrls);
-
-      const updatedProperty = result.data || result;
-      await fetch(`${BACKEND_BASE_URL}/api/properties/${propertyId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-        body: JSON.stringify({
-          ...updatedProperty,
-          imageUrl: uploadedImageUrls[0],
-        }),
-      });
-
-      alert(
-        `Property posted successfully with ${uploadedImageUrls.length} images!`
-      );
-      onPropertyPosted && onPropertyPosted();
-      onClose && onClose();
-    } catch (err) {
-      setError(err.message || "Failed to post property");
-      alert(`Failed to post property: ${err.message}`);
-    } finally {
-      setLoading(false);
-      setImageUploading(false);
-      setUploadProgress(0);
     }
-  };
+
+    // ✅ Validate required fields (include areaId too)
+    if (!formData.title || !formData.price || !formData.areaId || !formData.description) {
+      setError("Please fill in Title, Price, Area, and Description");
+      setLoading(false);
+      return;
+    }
+
+    // ✅ Create the property first (so we get propertyId)
+    const propertyPayload = {
+      ...formData,
+      // imageUrl will be set via images table; keep null for now
+      imageUrl: null,
+      user: { id: (user?.role === "AGENT" || user?.role === "ADMIN") ? selectedUserId : user.id },
+      area: { id: formData.areaId },
+    };
+
+    const createResponse = await fetch(`${BACKEND_BASE_URL}/api/properties`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+      },
+      body: JSON.stringify(propertyPayload),
+    });
+
+    const createJson = await createResponse.json();
+    if (!createResponse.ok || !createJson?.success || !createJson?.data?.id) {
+      setError(createJson?.message || 'Failed to create property');
+      setLoading(false);
+      return;
+    }
+
+    const propertyId = createJson.data.id;
+
+    // ✅ Upload images using your existing helper (correct endpoint)
+    const uploadedImageUrls = await uploadImagesToS3(propertyId);
+
+    // ✅ Persist image metadata
+    if (uploadedImageUrls.length > 0) {
+      await saveImageUrlsToDatabase(propertyId, uploadedImageUrls);
+    }
+
+    alert('✅ Property posted successfully!');
+    onPropertyPosted && onPropertyPosted();
+    onClose && onClose();
+
+  } catch (err) {
+    console.error('Error posting property:', err);
+    setError(err?.message || 'An error occurred. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleBackdropClick = (e) => {
     if (e.target.classList.contains("ppm-backdrop")) {
@@ -524,7 +527,17 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                 </select>
               </div>
             )}
-
+{/* ✅ Subscription Modal for Brokers */}
+{showSubscriptionModal && (
+  <BrokerSubscriptionModal
+    brokerId={user?.id}
+    onClose={() => setShowSubscriptionModal(false)}
+    onSubscriptionActivated={() => {
+      setShowSubscriptionModal(false);
+      alert('✅ Subscription activated! You can now post properties.');
+    }}
+  />
+)}
             {/* Title */}
             <div className="ppm-field">
               <label className="ppm-label">Property Title *</label>

@@ -20,7 +20,7 @@ const getPasswordStrength = (password) => {
 function LoginModal({ onClose }) {
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [isSigningUp, setIsSigningUp] = useState(false);
-  const [isBroker, setIsBroker] = useState(false); // ✅ NEW
+  const [isBroker, setIsBroker] = useState(false); // ✅ Broker checkbox state
   const [registerData, setRegisterData] = useState({
     firstName: "",
     lastName: "",
@@ -28,8 +28,9 @@ function LoginModal({ onClose }) {
     email: "",
     password: "",
     mobileNumber: "",
-    role: "USER", // ✅ NEW
+    role: "USER", // ✅ Default role
   });
+
   const strength = useMemo(
     () => getPasswordStrength(registerData.password),
     [registerData.password]
@@ -51,7 +52,7 @@ function LoginModal({ onClose }) {
     setError(null);
   };
 
-  // ✅ NEW: Handle broker checkbox
+  // ✅ Handle broker checkbox
   const handleBrokerChange = (e) => {
     const checked = e.target.checked;
     setIsBroker(checked);
@@ -62,13 +63,16 @@ function LoginModal({ onClose }) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
     try {
       const response = await fetch(`${BACKEND_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
+
       const data = await response.json();
+
       if (response.ok && data?.data?.token) {
         login(data.data.user, data.data.token);
         onClose && onClose();
@@ -84,19 +88,26 @@ function LoginModal({ onClose }) {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+
     if ((registerData.password || "").length < 6) {
       setError("Password must be at least 6 characters");
       return;
     }
+
     setLoading(true);
     setError(null);
+
     try {
+      console.log("Registering with role:", registerData.role); // Debug log
+
       const response = await fetch(`${BACKEND_BASE_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(registerData), // ✅ Now includes role
+        body: JSON.stringify(registerData), // ✅ Includes role
       });
+
       const data = await response.json();
+
       if (response.ok && data?.data?.token) {
         login(data.data.user, data.data.token);
         onClose && onClose();
@@ -129,12 +140,12 @@ function LoginModal({ onClose }) {
           ×
         </button>
 
-        {error && <div className="lm-alert">❌ {error}</div>}
+        {error && <div className="lm-alert">⚠ {error}</div>}
 
         {!isSigningUp ? (
           <form onSubmit={handleLogin} className="lm-form">
             <h2 id="lm-title" className="lm-title">
-              🔑 Login
+              🔒 Login
             </h2>
 
             <input
@@ -251,14 +262,17 @@ function LoginModal({ onClose }) {
               </div>
             )}
 
-            {/* ✅ NEW: Broker/Agent Checkbox */}
-            <label className="lm-checkbox" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              marginBottom: '12px',
-              cursor: 'pointer'
-            }}>
+            {/* ✅ Broker/Agent Checkbox */}
+            <label
+              className="lm-checkbox"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '12px',
+                cursor: 'pointer'
+              }}
+            >
               <input
                 type="checkbox"
                 checked={isBroker}
@@ -287,7 +301,7 @@ function LoginModal({ onClose }) {
               }}
               className="lm-btn lm-btn-secondary"
             >
-              🔑 Back to Login
+              🔒 Back to Login
             </button>
           </form>
         )}

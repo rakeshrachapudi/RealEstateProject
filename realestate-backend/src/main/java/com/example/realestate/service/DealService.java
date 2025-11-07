@@ -642,4 +642,5 @@ public class DealService {
 
         logger.info("✅ Successfully deleted deal {}", dealId);
     }
+
 }

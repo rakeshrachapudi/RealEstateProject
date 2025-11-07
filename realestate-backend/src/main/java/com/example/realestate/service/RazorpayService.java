@@ -74,7 +74,7 @@ public class RazorpayService {
             orderData.put("status", order.get("status"));
             orderData.put("created_at", order.get("created_at"));
 
-            logger.info("✅ Razorpay order created successfully - Order ID: {}", order.get("id"));
+            logger.info("✅ Razorpay order created successfully - Order ID:");
             return orderData;
 
         } catch (RazorpayException e) {
@@ -225,8 +225,8 @@ public class RazorpayService {
             refundData.put("amount", refund.get("amount"));
             refundData.put("payment_id", refund.get("payment_id"));
             refundData.put("status", refund.get("status"));
-
-            logger.info("✅ Payment refunded successfully - Refund ID: {}", refund.get("id"));
+            String refundId = refund.get("id");
+            logger.info("✅ Payment refunded successfully - Refund ID: {}", refundId);
             return refundData;
 
         } catch (RazorpayException e) {
