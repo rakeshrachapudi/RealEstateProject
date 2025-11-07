@@ -20,6 +20,7 @@ const getPasswordStrength = (password) => {
 function LoginModal({ onClose }) {
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isBroker, setIsBroker] = useState(false); // ✅ NEW
   const [registerData, setRegisterData] = useState({
     firstName: "",
     lastName: "",
@@ -27,6 +28,7 @@ function LoginModal({ onClose }) {
     email: "",
     password: "",
     mobileNumber: "",
+    role: "USER", // ✅ NEW
   });
   const strength = useMemo(
     () => getPasswordStrength(registerData.password),
@@ -47,6 +49,13 @@ function LoginModal({ onClose }) {
     const { name, value } = e.target;
     setRegisterData((s) => ({ ...s, [name]: value }));
     setError(null);
+  };
+
+  // ✅ NEW: Handle broker checkbox
+  const handleBrokerChange = (e) => {
+    const checked = e.target.checked;
+    setIsBroker(checked);
+    setRegisterData((s) => ({ ...s, role: checked ? "BROKER" : "USER" }));
   };
 
   const handleLogin = async (e) => {
@@ -85,7 +94,7 @@ function LoginModal({ onClose }) {
       const response = await fetch(`${BACKEND_BASE_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(registerData),
+        body: JSON.stringify(registerData), // ✅ Now includes role
       });
       const data = await response.json();
       if (response.ok && data?.data?.token) {
@@ -241,6 +250,25 @@ function LoginModal({ onClose }) {
                 </span>
               </div>
             )}
+
+            {/* ✅ NEW: Broker/Agent Checkbox */}
+            <label className="lm-checkbox" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px',
+              cursor: 'pointer'
+            }}>
+              <input
+                type="checkbox"
+                checked={isBroker}
+                onChange={handleBrokerChange}
+                style={{ cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '14px', color: '#f3e8ff' }}>
+                🏢 I am an Agent/Broker
+              </span>
+            </label>
 
             <button
               type="submit"

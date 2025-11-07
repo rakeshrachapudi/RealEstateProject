@@ -21,6 +21,7 @@ const SignupModal = ({ onClose, onSignupSuccess }) => {
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isBroker, setIsBroker] = useState(false); // ✅ NEW: Broker checkbox state
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -29,6 +30,7 @@ const SignupModal = ({ onClose, onSignupSuccess }) => {
     email: "",
     password: "",
     mobileNumber: "",
+    role: "USER", // ✅ NEW: Default role
   });
 
   const strength = useMemo(
@@ -50,6 +52,13 @@ const SignupModal = ({ onClose, onSignupSuccess }) => {
     setError(null);
   };
 
+  // ✅ NEW: Handle broker checkbox
+  const handleBrokerChange = (e) => {
+    const checked = e.target.checked;
+    setIsBroker(checked);
+    setFormData((s) => ({ ...s, role: checked ? "BROKER" : "USER" }));
+  };
+
   const handleRegister = async (e) => {
     e.preventDefault();
 
@@ -64,7 +73,7 @@ const SignupModal = ({ onClose, onSignupSuccess }) => {
       const response = await fetch(`${BACKEND_BASE_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formData), // ✅ Now includes role
       });
       const data = await response.json();
 
@@ -180,6 +189,25 @@ const SignupModal = ({ onClose, onSignupSuccess }) => {
               </span>
             </div>
           )}
+
+          {/* ✅ NEW: Broker/Agent Checkbox */}
+          <label className="sm-checkbox" style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '12px',
+            cursor: 'pointer'
+          }}>
+            <input
+              type="checkbox"
+              checked={isBroker}
+              onChange={handleBrokerChange}
+              style={{ cursor: 'pointer' }}
+            />
+            <span style={{ fontSize: '14px' }}>
+              🏢 I am an Agent/Broker
+            </span>
+          </label>
 
           <button
             type="submit"
