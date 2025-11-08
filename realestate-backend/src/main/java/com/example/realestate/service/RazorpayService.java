@@ -4,11 +4,14 @@ import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.razorpay.Utils;
+import jakarta.annotation.PostConstruct;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -29,15 +32,21 @@ public class RazorpayService {
     private String keySecret;
 
     private RazorpayClient razorpayClient;
+    @PostConstruct
+    public void init() {
+        try {
+            razorpayClient = new RazorpayClient(keyId, keySecret);
+            logger.info("✅ Razorpay client initialized with key: {}", maskKey(keyId));
+        } catch (Exception e) {
+            logger.error("❌ Failed to initialize Razorpay client: {}", e.getMessage());
+        }
+    }
 
     /**
      * Initialize Razorpay client
      */
     private RazorpayClient getRazorpayClient() throws RazorpayException {
-        if (razorpayClient == null) {
-            razorpayClient = new RazorpayClient(keyId, keySecret);
-            logger.info("✅ Razorpay client initialized with key: {}", maskKey(keyId));
-        }
+
         return razorpayClient;
     }
 

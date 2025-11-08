@@ -203,33 +203,32 @@ const BrokerSubscriptionModal = ({ isOpen, onClose, brokerId, onSubscriptionSucc
     }
   };
 
-  // Verify payment with backend
-  const verifyPayment = async (orderId, paymentId, signature) => {
-    try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_BASE_URL}/api/broker-subscription/verify-payment`,
-        {
-          razorpay_order_id: orderId,
-          razorpay_payment_id: paymentId,
-          razorpay_signature: signature
-        }
-      );
 
-      // Payment verified successfully!
-      alert('🎉 ' + response.data.data.message);
 
-      if (onSubscriptionSuccess) {
-        onSubscriptionSuccess(response.data.data.subscription);
+const verifyPayment = async (orderId, paymentId, signature) => {
+  try {
+    const response = await axios.post(
+      `${import.meta.env.VITE_BACKEND_BASE_URL}/api/broker-subscription/verify-payment`,
+      {
+        orderId: orderId,
+        paymentId: paymentId,
+        signature: signature
       }
+    );
 
-      setLoading(false);
-      onClose();
+    alert('🎉 ' + response.data.data.message);
 
-    } catch (error) {
-      setError(error.response?.data?.message || 'Payment verification failed');
-      setLoading(false);
+    if (onSubscriptionSuccess) {
+      onSubscriptionSuccess(response.data.data.subscription);
     }
-  };
+
+    setLoading(false);
+    onClose();
+  } catch (error) {
+    setError(error.response?.data?.message || 'Payment verification failed');
+    setLoading(false);
+  }
+};
 
   if (!isOpen) return null;
 
