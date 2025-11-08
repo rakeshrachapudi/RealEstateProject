@@ -63,7 +63,7 @@ const BrokerSubscriptionModal = ({ isOpen, onClose, brokerId, onSubscriptionSucc
   const fetchSubscriptionStatus = async () => {
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/api/broker-subscription/status/${brokerId}`
+        `${import.meta.env.VITE_BACKEND_BASE_URL}/api/broker-subscription/status/${brokerId}`
       );
       setSubscriptionStatus(response.data.data);
     } catch (error) {
@@ -84,7 +84,7 @@ const BrokerSubscriptionModal = ({ isOpen, onClose, brokerId, onSubscriptionSucc
 
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/broker-subscription/validate-coupon`,
+        `${import.meta.env.VITE_BACKEND_BASE_URL}/api/broker-subscription/validate-coupon`,
         {
           brokerId: brokerId,
           couponCode: couponCode.trim()
@@ -121,7 +121,7 @@ const BrokerSubscriptionModal = ({ isOpen, onClose, brokerId, onSubscriptionSucc
       // ✅ FREE TRIAL - Direct activation without Razorpay
       // Amount is ₹0, so we skip payment gateway entirely
       const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/broker-subscription/apply-coupon`,
+        `${import.meta.env.VITE_BACKEND_BASE_URL}/api/broker-subscription/apply-coupon`,
         {
           brokerId: brokerId,
           couponCode: couponCode.trim()
@@ -153,7 +153,7 @@ const BrokerSubscriptionModal = ({ isOpen, onClose, brokerId, onSubscriptionSucc
       // ✅ This is ONLY called for PAID plans (Monthly/Quarterly/Yearly)
       // ❌ FREE trials with coupons skip this entirely
       const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/broker-subscription/create-paid`,
+        `${import.meta.env.VITE_BACKEND_BASE_URL}/api/broker-subscription/create-paid`,
         {
           brokerId: brokerId,
           planType: planType
@@ -207,7 +207,7 @@ const BrokerSubscriptionModal = ({ isOpen, onClose, brokerId, onSubscriptionSucc
   const verifyPayment = async (orderId, paymentId, signature) => {
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/broker-subscription/verify-payment`,
+        `${import.meta.env.VITE_BACKEND_BASE_URL}/api/broker-subscription/verify-payment`,
         {
           razorpay_order_id: orderId,
           razorpay_payment_id: paymentId,
