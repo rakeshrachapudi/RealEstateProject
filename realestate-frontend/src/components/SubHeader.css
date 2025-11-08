@@ -702,3 +702,12 @@
     display: none;
   }
 }
+
+/* Orange button style for Properties management */
+.subheader-btn.orange {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+.subheader-btn.orange:hover {
+  background: linear-gradient(135deg, #ea580c, #c2410c);
+}

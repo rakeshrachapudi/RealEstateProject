@@ -37,6 +37,7 @@ public class AuthController {
         public String getPassword() { return password; }
     }
 
+    // ✅ FIXED: Added role field to support broker registration
     static class RegisterRequest {
         public String username;
         public String password;
@@ -44,6 +45,7 @@ public class AuthController {
         public String firstName;
         public String lastName;
         public String mobileNumber;
+        public String role; // ✅ NEW FIELD
 
         public String getUsername() { return username; }
         public String getPassword() { return password; }
@@ -51,6 +53,7 @@ public class AuthController {
         public String getFirstName() { return firstName; }
         public String getLastName() { return lastName; }
         public String getMobileNumber() { return mobileNumber; }
+        public String getRole() { return role; } // ✅ NEW GETTER
     }
 
     // ==================== LOGIN ENDPOINT ====================
@@ -93,7 +96,8 @@ public class AuthController {
             response.put("token", token);
             response.put("user", user);
 
-            LOGGER.info("✅ User logged in successfully: {}", user.getUsername());
+            LOGGER.info("✅ User logged in successfully: {} (Role: {})",
+                    user.getUsername(), user.getRole());
             return ResponseEntity.ok(ApiResponse.success(response));
 
         } catch (Exception e) {
@@ -105,10 +109,11 @@ public class AuthController {
         }
     }
 
-    // ==================== REGISTER ENDPOINT ====================
+    // ==================== REGISTER ENDPOINT (FIXED) ====================
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
-        LOGGER.info("Register attempt for username: {}", request.getUsername());
+        LOGGER.info("Register attempt for username: {} with role: {}",
+                request.getUsername(), request.getRole());
 
         try {
             // Validation
@@ -144,7 +149,29 @@ public class AuthController {
             newUser.setFirstName(request.getFirstName());
             newUser.setLastName(request.getLastName());
             newUser.setMobileNumber(request.getMobileNumber());
-            newUser.setRole(User.UserRole.USER);
+
+            // ✅ FIXED: Set role from request, default to USER if not provided or invalid
+            if (request.getRole() != null && !request.getRole().trim().isEmpty()) {
+                try {
+                    User.UserRole roleEnum = User.UserRole.valueOf(request.getRole().toUpperCase());
+                    // Allow USER, BROKER, AGENT roles through registration
+                    // ADMIN role should only be created manually
+                    if (roleEnum == User.UserRole.ADMIN) {
+                        LOGGER.warn("⚠️ Attempted to register as ADMIN, defaulting to USER");
+                        newUser.setRole(User.UserRole.USER);
+                    } else {
+                        newUser.setRole(roleEnum);
+                        LOGGER.info("✅ Setting user role to: {}", roleEnum);
+                    }
+                } catch (IllegalArgumentException e) {
+                    LOGGER.warn("⚠️ Invalid role '{}' provided, defaulting to USER", request.getRole());
+                    newUser.setRole(User.UserRole.USER);
+                }
+            } else {
+                newUser.setRole(User.UserRole.USER);
+                LOGGER.info("ℹ️ No role specified, defaulting to USER");
+            }
+
             newUser.setIsActive(true);
 
             User savedUser = userRepository.save(newUser);
@@ -155,7 +182,8 @@ public class AuthController {
             response.put("token", token);
             response.put("user", savedUser);
 
-            LOGGER.info("✅ User registered successfully: {}", savedUser.getUsername());
+            LOGGER.info("✅ User registered successfully: {} with role: {}",
+                    savedUser.getUsername(), savedUser.getRole());
             return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.CREATED);
 
         } catch (Exception e) {

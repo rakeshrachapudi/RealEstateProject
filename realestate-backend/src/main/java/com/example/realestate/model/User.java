@@ -37,7 +37,7 @@ public class User {
     private LocalDateTime updatedAt;
 
     public enum UserRole {
-        USER, AGENT, ADMIN
+        USER, AGENT, ADMIN , BROKER
     }
 
     @PrePersist

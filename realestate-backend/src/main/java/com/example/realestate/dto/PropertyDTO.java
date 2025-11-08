@@ -29,50 +29,47 @@ public class PropertyDTO {
     private String ownerType;
     private Boolean isVerified;
 
-    // ⭐ NEW: User information
-    private UserDTO user;
+    private UserDTO user; // ✅ Contact information (broker or owner)
 
-    // ⭐ NEW: Nested UserDTO class
+    // ✅ Nested UserDTO class
     public static class UserDTO {
         private Long id;
         private String firstName;
         private String lastName;
         private String email;
         private String mobileNumber;
+        private String role; // ✅ IMPORTANT: To identify if BROKER or USER
 
-        // Constructors
         public UserDTO() {}
 
-        public UserDTO(Long id, String firstName, String lastName, String email, String mobileNumber) {
+        public UserDTO(Long id, String firstName, String lastName, String email, String mobileNumber, String role) {
             this.id = id;
             this.firstName = firstName;
             this.lastName = lastName;
             this.email = email;
             this.mobileNumber = mobileNumber;
+            this.role = role;
         }
 
         // Getters and Setters
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
-
         public String getFirstName() { return firstName; }
         public void setFirstName(String firstName) { this.firstName = firstName; }
-
         public String getLastName() { return lastName; }
         public void setLastName(String lastName) { this.lastName = lastName; }
-
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
-
         public String getMobileNumber() { return mobileNumber; }
         public void setMobileNumber(String mobileNumber) { this.mobileNumber = mobileNumber; }
+        public String getRole() { return role; }
+        public void setRole(String role) { this.role = role; }
     }
 
-    // ⭐ User getter and setter
+    // Getters and Setters for all fields
     public UserDTO getUser() { return user; }
     public void setUser(UserDTO user) { this.user = user; }
 
-    // Existing getters and setters
     public Boolean getIsReadyToMove() { return isReadyToMove; }
     public void setIsReadyToMove(Boolean isReadyToMove) { this.isReadyToMove = isReadyToMove; }
 
@@ -105,6 +102,9 @@ public class PropertyDTO {
 
     public Integer getBathrooms() { return bathrooms; }
     public void setBathrooms(Integer bathrooms) { this.bathrooms = bathrooms; }
+
+    public Integer getBalconies() { return balconies; }
+    public void setBalconies(Integer balconies) { this.balconies = balconies; }
 
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }

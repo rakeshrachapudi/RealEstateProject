@@ -233,14 +233,13 @@ function SubHeader() {
           <button
             className="mobile-menu-toggle"
             onClick={() => setShowMobileMenu(!showMobileMenu)}
-            aria-label="Toggle navigation menu"
           >
-            <span className={`hamburger ${showMobileMenu ? "active" : ""}`}>
+            <div className={`hamburger ${showMobileMenu ? "active" : ""}`}>
               <span></span>
               <span></span>
               <span></span>
-            </span>
-            <span className="menu-text">Menu</span>
+            </div>
+            <span>Menu</span>
           </button>
         )}
 
@@ -253,8 +252,8 @@ function SubHeader() {
           {/* HOME */}
           <div className="subheader-item">
             <button
-              onClick={() => handleNavigation("/")}
               className="subheader-dropdown-btn home-btn"
+              onClick={() => handleNavigation("/")}
             >
               🏠 <span className="btn-text">Home</span>
             </button>
@@ -440,9 +439,11 @@ function SubHeader() {
             <span className="btn-text">My Properties</span>
           </button>
 
+
           {/* ADMIN BUTTONS */}
           {user?.role === "ADMIN" && (
             <>
+
               <button
                 onClick={() => handleNavigation("/admin-deals")}
                 className="subheader-btn green"
@@ -450,6 +451,16 @@ function SubHeader() {
                 <span className="btn-icon">📋</span>
                 <span className="btn-text">Deals</span>
               </button>
+
+              {/* NEW: Properties Management Button */}
+              <button
+                onClick={() => handleNavigation("/admin/properties")}
+                className="subheader-btn orange"
+              >
+                <span className="btn-icon">🏘️</span>
+                <span className="btn-text">Properties</span>
+              </button>
+
               <button
                 onClick={() => handleNavigation("/admin-agents")}
                 className="subheader-btn blue"

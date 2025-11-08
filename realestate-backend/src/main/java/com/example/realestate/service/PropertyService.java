@@ -12,6 +12,7 @@ import com.example.realestate.dto.PropertyPostRequestDto;
 import com.example.realestate.dto.PropertyDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,19 +27,121 @@ import java.util.Optional;
 public class PropertyService {
 
     private static final Logger logger = LoggerFactory.getLogger(PropertyService.class);
+
     private final PropertyRepository repo;
     private final UserRepository userRepository;
     private final AreaRepository areaRepository;
     private final PropertyTypeRepository propertyTypeRepository;
 
-    public PropertyService(PropertyRepository repo, UserRepository userRepository, AreaRepository areaRepository, PropertyTypeRepository propertyTypeRepository) {
+    // ✅ NEW: Add BrokerSubscriptionService dependency
+    @Autowired
+    private BrokerSubscriptionService brokerSubscriptionService;
+
+    public PropertyService(PropertyRepository repo, UserRepository userRepository,
+                           AreaRepository areaRepository, PropertyTypeRepository propertyTypeRepository) {
         this.repo = repo;
         this.userRepository = userRepository;
         this.areaRepository = areaRepository;
         this.propertyTypeRepository = propertyTypeRepository;
     }
 
-    // ==================== ⭐ CASCADE DELETE METHOD (NEW) ====================
+    // ==================== ⭐ UPDATED: PROPERTY CREATION WITH BROKER CHECKS ====================
+
+    /**
+     * Create new property from DTO with broker subscription enforcement.
+     * ✅ FIXED: Now checks broker subscription before allowing property creation
+     */
+    public Property postProperty(PropertyPostRequestDto dto) {
+        Long areaId = dto.getArea().getId();
+        Long userId = dto.getUser().getId();
+
+        Area area = areaRepository.findById(areaId.intValue())
+                .orElseThrow(() -> new EntityNotFoundException("Area not found with ID: " + areaId));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
+
+        // ✅ NEW: ENFORCE BROKER SUBSCRIPTION
+        if (user.getRole() == User.UserRole.BROKER) {
+            logger.info("🔍 User {} is a BROKER - checking subscription status", userId);
+
+            // Check #1: Does broker have active subscription?
+            if (!brokerSubscriptionService.hasActiveSubscription(userId)) {
+                logger.error("❌ Broker {} has NO active subscription", userId);
+                throw new RuntimeException(
+                        "Subscription required. Please activate a subscription or use a trial coupon to post properties."
+                );
+            }
+
+            // Check #2: Has broker reached property limit?
+            if (!brokerSubscriptionService.canPostProperty(userId)) {
+                logger.error("❌ Broker {} has reached property posting limit", userId);
+
+                // Get current subscription info for detailed message
+                var status = brokerSubscriptionService.getSubscriptionStatus(userId);
+                throw new RuntimeException(
+                        String.format("Property limit reached (%s/%s). Please upgrade your subscription to post more properties.",
+                                status.get("propertiesPosted"),
+                                status.get("maxProperties"))
+                );
+            }
+
+            // ✅ Auto-set ownerType to "broker" for broker users
+            dto.setOwnerType("broker");
+            logger.info("✅ Broker subscription check passed - auto-setting ownerType='broker'");
+        }
+
+        // Fetch or default property type
+        PropertyType propertyType = propertyTypeRepository.findByTypeName(dto.getType())
+                .orElseGet(() -> {
+                    logger.warn("PropertyType '{}' not found. Defaulting to 'Apartment'.", dto.getType());
+                    return propertyTypeRepository.findByTypeName("Apartment").orElse(null);
+                });
+
+        // Create property entity
+        Property property = new Property();
+        property.setTitle(dto.getTitle());
+        property.setDescription(dto.getDescription());
+        property.setImageUrl(dto.getImageUrl());
+        property.setPrice(BigDecimal.valueOf(dto.getPrice()));
+        property.setPriceDisplay(dto.getPriceDisplay());
+        property.setBedrooms(dto.getBedrooms());
+        property.setBathrooms(dto.getBathrooms());
+        property.setBalconies(dto.getBalconies());
+        property.setAreaSqft(dto.getAreaSqft() != null ? BigDecimal.valueOf(dto.getAreaSqft()) : null);
+
+        property.setArea(area);
+        property.setUser(user);
+        property.setPropertyType(propertyType);
+
+        property.setType(dto.getType());
+        property.setListingType(dto.getListingType());
+        property.setCity(dto.getCity());
+        property.setAddress(dto.getAddress());
+        property.setAmenities(dto.getAmenities());
+        property.setStatus(dto.getStatus());
+        property.setIsFeatured(dto.getIsFeatured());
+        property.setIsActive(dto.getIsActive());
+
+        property.setOwnerType(dto.getOwnerType()); // Already set to "broker" above if broker
+        property.setIsReadyToMove(dto.getIsReadyToMove());
+        property.setIsVerified(dto.getIsVerified());
+
+        // Save property
+        Property savedProperty = repo.save(property);
+        logger.info("✅ Property {} created successfully by user {} (Role: {})",
+                savedProperty.getId(), userId, user.getRole());
+
+        // ✅ NEW: Increment broker's property count after successful save
+        if (user.getRole() == User.UserRole.BROKER) {
+            brokerSubscriptionService.incrementPropertiesPosted(userId);
+            logger.info("✅ Incremented property count for broker {}", userId);
+        }
+
+        return savedProperty;
+    }
+
+    // ==================== ⭐ CASCADE DELETE METHOD ====================
 
     /**
      * ⭐ SOFT DELETE ALL PROPERTIES FOR A USER (CASCADE DELETE)
@@ -70,7 +173,7 @@ public class PropertyService {
         logger.info("✅ Successfully soft-deleted {} properties for user {}", userProperties.size(), userId);
     }
 
-    // ==================== EXISTING METHODS ====================
+    // ==================== OTHER METHODS ====================
 
     public List<String> getPropertyTypes() {
         return repo.findDistinctPropertyTypes();
@@ -79,9 +182,7 @@ public class PropertyService {
     public List<Property> findByType(String type) {
         return repo.findByTypeIgnoreCaseAndIsActiveTrue(type);
     }
-    /**
-     * Get properties by area name and convert to DTOs
-     */
+
     public List<PropertyDTO> findByAreaNameAsDTO(String areaName) {
         logger.info("Finding properties by area name as DTOs: {}", areaName);
         List<Property> properties = repo.findByAreaNameAndIsActiveTrue(areaName);
@@ -90,60 +191,6 @@ public class PropertyService {
                 .collect(Collectors.toList());
     }
 
-
-    /**
-     * Create new property from DTO.
-     */
-    public Property postProperty(PropertyPostRequestDto dto) {
-        Long areaId = dto.getArea().getId();
-        Long userId = dto.getUser().getId();
-
-        Area area = areaRepository.findById(areaId.intValue())
-                .orElseThrow(() -> new EntityNotFoundException("Area not found with ID: " + areaId));
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
-
-        PropertyType propertyType = propertyTypeRepository.findByTypeName(dto.getType())
-                .orElseGet(() -> {
-                    logger.warn("PropertyType '{}' not found. Defaulting to 'Apartment'.", dto.getType());
-                    return propertyTypeRepository.findByTypeName("Apartment").orElse(null);
-                });
-
-        Property property = new Property();
-        property.setTitle(dto.getTitle());
-        property.setDescription(dto.getDescription());
-        property.setImageUrl(dto.getImageUrl());
-        property.setPrice(BigDecimal.valueOf(dto.getPrice()));
-        property.setPriceDisplay(dto.getPriceDisplay());
-        property.setBedrooms(dto.getBedrooms());
-        property.setBathrooms(dto.getBathrooms());
-        property.setBalconies(dto.getBalconies());
-        property.setAreaSqft(dto.getAreaSqft() != null ? BigDecimal.valueOf(dto.getAreaSqft()) : null);
-
-        property.setArea(area);
-        property.setUser(user);
-        property.setPropertyType(propertyType);
-
-        property.setType(dto.getType());
-        property.setListingType(dto.getListingType());
-        property.setCity(dto.getCity());
-        property.setAddress(dto.getAddress());
-        property.setAmenities(dto.getAmenities());
-        property.setStatus(dto.getStatus());
-        property.setIsFeatured(dto.getIsFeatured());
-        property.setIsActive(dto.getIsActive());
-
-        property.setOwnerType(dto.getOwnerType());
-        property.setIsReadyToMove(dto.getIsReadyToMove());
-        property.setIsVerified(dto.getIsVerified());
-
-        return repo.save(property);
-    }
-
-    /**
-     * Get properties by user and convert to DTOs
-     */
     public List<PropertyDTO> getPropertiesByUser(Long userId) {
         logger.info("Fetching properties for user ID: {}", userId);
         List<Property> properties = repo.findByUserId(userId);
@@ -153,9 +200,6 @@ public class PropertyService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Helper method to convert Property Entity to PropertyDTO
-     */
     private PropertyDTO convertToDTO(Property property) {
         PropertyDTO dto = new PropertyDTO();
 
@@ -167,6 +211,7 @@ public class PropertyService {
         dto.setAreaSqft(property.getAreaSqft());
         dto.setBedrooms(property.getBedrooms());
         dto.setBathrooms(property.getBathrooms());
+        dto.setBalconies(property.getBalconies());
         dto.setAddress(property.getAddress());
         dto.setStatus(property.getStatus());
         dto.setListingType(property.getListingType());
@@ -179,6 +224,7 @@ public class PropertyService {
         dto.setOwnerType(property.getOwnerType());
         dto.setIsVerified(property.getIsVerified());
 
+        // ✅ Include role in user DTO
         if (property.getUser() != null) {
             PropertyDTO.UserDTO userDTO = new PropertyDTO.UserDTO();
             userDTO.setId(property.getUser().getId());
@@ -186,9 +232,11 @@ public class PropertyService {
             userDTO.setLastName(property.getUser().getLastName());
             userDTO.setEmail(property.getUser().getEmail());
             userDTO.setMobileNumber(property.getUser().getMobileNumber());
+            userDTO.setRole(property.getUser().getRole().name());
             dto.setUser(userDTO);
 
-            logger.debug("Set user info for property {}: User ID {}", property.getId(), userDTO.getId());
+            logger.debug("Set user info for property {}: User ID {} (Role: {})",
+                    property.getId(), userDTO.getId(), userDTO.getRole());
         } else {
             logger.warn("Property {} has no user associated!", property.getId());
         }
@@ -222,17 +270,11 @@ public class PropertyService {
         return repo.findByAreaNameAndIsActiveTrue(areaName);
     }
 
-    /**
-     * Get all active properties
-     */
     public List<Property> getAllActiveProperties() {
         logger.info("Fetching all active properties");
         return repo.findByIsActiveTrueOrderByCreatedAtDesc();
     }
 
-    /**
-     * Get all active properties and convert to DTOs
-     */
     public List<PropertyDTO> getAllActivePropertiesAsDTO() {
         logger.info("Fetching all active properties as DTOs");
         List<Property> properties = repo.findByIsActiveTrueOrderByCreatedAtDesc();
@@ -242,9 +284,6 @@ public class PropertyService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Get properties by type and convert to DTOs
-     */
     public List<PropertyDTO> getPropertiesByTypeAsDTO(String type) {
         logger.info("Fetching properties of type: {} as DTOs", type);
         List<Property> properties = repo.findByTypeIgnoreCaseAndIsActiveTrue(type);
@@ -254,9 +293,6 @@ public class PropertyService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Update property
-     */
     public Property updateProperty(Long id, Property propertyDetails) {
         Property property = repo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Property not found with id: " + id));
@@ -303,14 +339,10 @@ public class PropertyService {
         return repo.save(property);
     }
 
-    /**
-     * Soft delete property
-     */
     public void deleteProperty(Long id) {
         Property property = repo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Property not found with id: " + id));
         property.setIsActive(false);
         repo.save(property);
     }
-
 }

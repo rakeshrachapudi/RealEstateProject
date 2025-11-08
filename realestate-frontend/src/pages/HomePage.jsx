@@ -183,7 +183,9 @@ function HomePage() {
     setLoadingMyDeals(true);
     setMyDeals([]);
 
-    const actualUserRole = user.role.toUpperCase();
+   const actualUserRole = user.role === "BROKER" || user.role === "AGENT"
+     ? user.role
+     : "USER";
     const endpoint = `${BACKEND_BASE_URL}/api/deals/user/${user.id}/role/${actualUserRole}`;
     const token = localStorage.getItem("authToken");
 
