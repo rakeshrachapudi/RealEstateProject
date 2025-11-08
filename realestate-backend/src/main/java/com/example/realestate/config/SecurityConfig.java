@@ -64,10 +64,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/deals/**").permitAll()
                         .requestMatchers("/api/upload/image/**").permitAll()
                         .requestMatchers("/api/upload/property-image/**").permitAll()
-                        .requestMatchers("/api/upload/document/**").permitAll() // ✅ NEW
-                        .requestMatchers("/api/upload/deal-document/**").permitAll() // ✅ NEW
                         .requestMatchers("/api/property-types/**").permitAll()
                         .requestMatchers("/api/property-images/**").permitAll()
+                        .requestMatchers("/api/upload/document/**").permitAll() // ✅ NEW
+                        .requestMatchers("/api/upload/deal-document/**").permitAll() // ✅ NEW
+
 
                         .requestMatchers("/api/agents/**").authenticated()
                         .anyRequest().authenticated()
