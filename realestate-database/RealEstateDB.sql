@@ -258,3 +258,90 @@ VALUES
 ('buyer1',"4444444444", '$2a$12$oolzoLw6dMMN8ouCCXHDjeJldCOu2pi8HU1NyacUFBjYYKeb7oQTe', 'buyer1@realestate.com', 'buyer', '1', 'USER');
 
 UPDATE users SET role = 'AGENT' WHERE username='agent1';
+
+
+
+-- 1. Update users table role enum (if not done already)
+ALTER TABLE propertydealzdb.users 
+MODIFY COLUMN role ENUM('USER', 'ADMIN', 'AGENT', 'BROKER') NOT NULL DEFAULT 'USER';
+
+-- 2. Create broker_subscriptions table
+CREATE TABLE propertydealzdb.broker_subscriptions (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    broker_id BIGINT NOT NULL,
+    plan_type ENUM('FREE_TRIAL', 'MONTHLY', 'QUARTERLY', 'YEARLY') NOT NULL DEFAULT 'FREE_TRIAL',
+    start_date DATETIME NOT NULL,
+    end_date DATETIME NOT NULL,
+    status ENUM('ACTIVE', 'EXPIRED', 'CANCELLED', 'PENDING') NOT NULL DEFAULT 'PENDING',
+    razorpay_subscription_id VARCHAR(100),
+    razorpay_payment_id VARCHAR(100),
+    razorpay_order_id VARCHAR(100),
+    amount DECIMAL(10, 2) DEFAULT 0.00,
+    properties_posted INT DEFAULT 0,
+    max_properties INT DEFAULT 50,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (broker_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_broker_status (broker_id, status),
+    INDEX idx_end_date (end_date)
+);
+
+INSERT INTO propertydealzdb.broker_coupons (code, description, discount_type, trial_months, valid_from, valid_until, max_uses, is_active)
+VALUES 
+('BROKER3FREE', '3 Months Free Trial for New Brokers', 'FREE_TRIAL', 3, NOW(), DATE_ADD(NOW(), INTERVAL 1 YEAR), 1000, TRUE),
+('WELCOME2024', 'Welcome Offer - 3 Months Free', 'FREE_TRIAL', 3, NOW(), DATE_ADD(NOW(), INTERVAL 6 MONTH), 500, TRUE);
+
+
+CREATE TABLE propertydealzdb.broker_coupon_usage (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    broker_id BIGINT NOT NULL,
+    coupon_id BIGINT NOT NULL,
+    subscription_id BIGINT,
+    used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (broker_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (coupon_id) REFERENCES broker_coupons(id) ON DELETE CASCADE,
+    FOREIGN KEY (subscription_id) REFERENCES broker_subscriptions(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_broker_coupon (broker_id, coupon_id)
+);
+
+-- 3. Create broker_coupons table
+CREATE TABLE propertydealzdb.broker_coupons (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT,
+    discount_type ENUM('FREE_TRIAL', 'PERCENTAGE', 'FIXED_AMOUNT') NOT NULL,
+    discount_value DECIMAL(10, 2) DEFAULT 0.00,
+    trial_months INT DEFAULT 3,
+    valid_from DATETIME NOT NULL,
+    valid_until DATETIME NOT NULL,
+    max_uses INT DEFAULT 100,
+    used_count INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_code_active (code, is_active)
+);
+
+-- 4. Create broker_coupon_usage table
+CREATE TABLE broker_coupon_usage (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    broker_id BIGINT NOT NULL,
+    coupon_id BIGINT NOT NULL,
+    subscription_id BIGINT,
+    used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (broker_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (coupon_id) REFERENCES broker_coupons(id) ON DELETE CASCADE,
+    FOREIGN KEY (subscription_id) REFERENCES broker_subscriptions(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_broker_coupon (broker_id, coupon_id)
+);
+
+-- 5. Insert default 3-month free trial coupon
+INSERT INTO broker_coupons (code, description, discount_type, trial_months, valid_from, valid_until, max_uses, is_active)
+VALUES 
+('BROKER3FREE', '3 Months Free Trial for New Brokers', 'FREE_TRIAL', 3, NOW(), DATE_ADD(NOW(), INTERVAL 1 YEAR), 1000, TRUE),
+('WELCOME2024', 'Welcome Offer - 3 Months Free', 'FREE_TRIAL', 3, NOW(), DATE_ADD(NOW(), INTERVAL 6 MONTH), 500, TRUE);
+
+
+
+
+

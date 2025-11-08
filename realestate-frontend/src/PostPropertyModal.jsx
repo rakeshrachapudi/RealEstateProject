@@ -468,7 +468,24 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         return;
       }
 
-      const propertyId = createJson.data.id;
+      // ✅ Extract property ID from response (handles both formats)
+      // Format 1: ApiResponse wrapper {success: true, data: {id: ...}}
+      // Format 2: Direct entity {id: ..., title: ...}
+      let propertyId = null;
+
+      if (createJson?.data?.id) {
+        // ApiResponse format
+        propertyId = createJson.data.id;
+      } else if (createJson?.id) {
+        // Direct entity format
+        propertyId = createJson.id;
+      }
+
+      if (!propertyId) {
+        setError("Invalid response from server. Please try again.");
+        setLoading(false);
+        return;
+      }
 
       // ✅ Upload images
       const uploadedImageUrls = await uploadImagesToS3(propertyId);

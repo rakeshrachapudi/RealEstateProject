@@ -255,6 +255,7 @@ public class DealService {
 
         switch (normalizedRole) {
             case "USER":
+            case "BROKER":
                 logger.info("Processing as USER role for user {}", userId);
                 List<DealStatus> buyerDeals = dealStatusRepository.findByBuyerId(userId);
                 logger.info("Found {} deals where user {} is BUYER", buyerDeals.size(), userId);
