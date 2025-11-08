@@ -51,6 +51,21 @@ function HomePage() {
     { name: "Jubilee Hills", emoji: "🏙️" },
   ];
 
+  const ownerFeatures = [
+    "No Subscription Required — Post your property for free",
+    "Buyer connects to our Agent — Direct communication",
+    "Dedicated Agent Support — From enquiry to site visit",
+    "End-to-End Documentation — Agent handles paperwork till registration",
+    "Only 0.5% Service Fee — Split equally between buyer & seller",
+  ];
+
+  const brokerFeatures = [
+    "Subscription-Based Access",
+    "Get Direct Buyer Contact Numbers",
+    "Unlimited Listings",
+    "Instant Lead Access — No middle agent involved",
+  ];
+
   useEffect(() => {
     getPropertyTypes()
       .then((types) => {
@@ -240,171 +255,162 @@ function HomePage() {
     setShowSearchResults(false);
     setSearchResults([]);
     setSelectedArea(null);
-    setActiveTab("featured");
+    setSearchLoading(false);
   };
 
-  const handleAreaClick = async (area) => {
+  const handleAreaClick = (area) => {
     setSelectedArea(area.name);
     setShowSearchResults(false);
+    setSearchResults([]);
     setActiveTab("featured");
-    setSearchLoading(true);
-    setFetchError(null);
+  };
 
-    try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/properties/byArea/${encodeURIComponent(
-          area.name
-        )}`,
-        { method: "GET", headers: { "Content-Type": "application/json" } }
-      );
-      if (!response.ok) throw new Error(`Failed to fetch for ${area.name}`);
-      const data = await response.json();
-      setSearchResults(Array.isArray(data) ? data : []);
-      setShowSearchResults(true);
-    } catch (error) {
-      console.error(`Error fetching properties for area ${area.name}:`, error);
-      setFetchError(`Could not load properties for ${area.name}`);
-      setSearchResults([]);
-      setShowSearchResults(true);
-    } finally {
-      setSearchLoading(false);
+  const handleCreateDealClick = () => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
     }
+    setShowBrowseDeals(true);
   };
 
-  const handlePropertyUpdated = () => {
-    fetchFeaturedProperties();
-    if (isAuthenticated && user?.id) {
-      fetchMyProperties();
-      fetchMyDeals();
-    }
+  const handleViewDealDetails = (deal) => {
+    setSelectedDealForModal(deal);
   };
 
-  const handlePropertyDeleted = (deletedPropertyId) => {
-    setFeaturedPropsList((prev) =>
-      prev.filter((p) => (p.id || p.propertyId) !== deletedPropertyId)
-    );
-    setMyProperties((prev) =>
-      prev.filter((p) => (p.id || p.propertyId) !== deletedPropertyId)
-    );
-    if (isAuthenticated && user?.id) fetchMyDeals();
-  };
-
-  const handleCreateDealClick = () => setShowBrowseDeals(true);
-  const handleViewDealDetails = (deal) => setSelectedDealForModal(deal);
-  const handleCloseDealModal = () => setSelectedDealForModal(null);
-  const handleDealUpdatedInModal = () => {
+  const handleCloseDealModal = () => {
     setSelectedDealForModal(null);
+  };
+
+  const handleDealUpdatedInModal = () => {
     fetchMyDeals();
+  };
+
+  const handlePropertyUpdated = (updatedProperty) => {
+    setMyProperties((prev) =>
+      prev.map((p) => (p.id === updatedProperty.id ? updatedProperty : p))
+    );
+  };
+
+  const handlePropertyDeleted = (deletedId) => {
+    setMyProperties((prev) => prev.filter((p) => p.id !== deletedId));
   };
 
   const handleOpenEmiCalculatorPage = () => navigate("/emi-calculator");
 
-  const propertiesForList = useMemo(() => {
-    if (showSearchResults) return searchResults;
-    if (selectedArea) {
-      return featuredPropsList.filter((property) => {
-        const propertyArea = (
-          property?.areaName ||
-          property?.area?.areaName ||
-          property?.area?.name ||
-          property?.locality ||
-          property?.location?.area ||
-          ""
-        )
-          .toLowerCase()
-          .trim();
-        return propertyArea.includes(selectedArea.toLowerCase());
+  const propertiesWithDeals = useMemo(() => {
+    let baseProperties = [];
+    if (showSearchResults) baseProperties = searchResults;
+    else if (selectedArea) {
+      const areaLower = selectedArea.toLowerCase();
+      baseProperties = featuredPropsList.filter((prop) => {
+        const locLower = (prop.location || "").toLowerCase();
+        return locLower.includes(areaLower);
       });
+    } else {
+      if (activeTab === "featured") baseProperties = featuredPropsList;
+      else if (activeTab === "my-properties") baseProperties = myProperties;
+      else if (activeTab === "browse-by-type") baseProperties = properties;
+      else baseProperties = [];
     }
-    if (activeTab === "browse-by-type") return properties;
-    if (activeTab === "my-properties") return myProperties;
-    if (activeTab === "my-deals") return [];
-    return featuredPropsList;
+
+    return baseProperties.map((property) => {
+      const relatedDeals = myDeals.filter(
+        (deal) =>
+          deal.property?.id === property.id ||
+          deal.propertyId === property.id
+      );
+      return { ...property, relatedDeals };
+    });
   }, [
     showSearchResults,
     searchResults,
     selectedArea,
-    activeTab,
-    myProperties,
     featuredPropsList,
+    myProperties,
     properties,
+    activeTab,
+    myDeals,
   ]);
 
-  let sectionTitle = "";
-  let isLoading = searchLoading;
-  const isDisplayingDeals =
-    activeTab === "my-deals" && !showSearchResults && !selectedArea;
+  const sectionTitle = showSearchResults
+    ? `🔍 Search Results (${propertiesWithDeals.length})`
+    : selectedArea
+    ? `📍 Properties in ${selectedArea} (${propertiesWithDeals.length})`
+    : activeTab === "featured"
+    ? `⭐ Featured Properties (${propertiesWithDeals.length})`
+    : activeTab === "browse-by-type"
+    ? `🏘️ ${selectedType} Properties (${propertiesWithDeals.length})`
+    : activeTab === "my-properties"
+    ? `📄 My Properties (${propertiesWithDeals.length})`
+    : activeTab === "my-deals"
+    ? `📊 My Deals (${propertiesWithDeals.length})`
+    : "Properties";
 
-  if (showSearchResults) {
-    sectionTitle =
-      activeTab === "all-properties"
-        ? `🏠 All Properties (${allProperties.length} found)`
-        : `🔎 Search Results (${propertiesForList.length} found)`;
-  } else if (selectedArea) {
-    sectionTitle = `📍 Properties in ${selectedArea} (${propertiesForList.length} found)`;
-    isLoading = false;
-  } else if (activeTab === "browse-by-type") {
-    sectionTitle = `🏘️ ${selectedType} Properties (${propertiesForList.length} found)`;
-    isLoading = false;
-  } else if (activeTab === "my-properties") {
-    sectionTitle = `📄 My Properties (${propertiesForList.length} found)`;
-    isLoading = loadingMyProperties;
-  } else if (isDisplayingDeals) {
-    sectionTitle = `📊 My Deals (${myDeals.length} found)`;
-    isLoading = loadingMyDeals;
-  } else {
-    sectionTitle = `⭐ Featured Properties (${propertiesForList.length} found)`;
-    isLoading = false;
-  }
-
-  const propertiesWithDeals = useMemo(() => {
-    if (isDisplayingDeals || loadingMyDeals || myDeals.length === 0) {
-      return propertiesForList;
-    }
-    return propertiesForList.map((prop) => {
-      const propId = prop.id || prop.propertyId;
-      if (!propId) return prop;
-      const dealForProp = myDeals.find(
-        (deal) => (deal?.property?.id ?? deal?.propertyId) == propId
-      );
-      return { ...prop, dealInfo: dealForProp || null };
-    });
-  }, [propertiesForList, myDeals, isDisplayingDeals, loadingMyDeals]);
+  const isDisplayingDeals = activeTab === "my-deals";
+  const isLoading =
+    (activeTab === "my-properties" && loadingMyProperties) ||
+    (activeTab === "my-deals" && loadingMyDeals) ||
+    searchLoading;
 
   const canCreateDeal =
-    isAuthenticated && user && (user.role === "AGENT" || user.role === "ADMIN");
+    isAuthenticated && (user?.role === "USER" || user?.role === "BROKER");
 
   return (
     <>
       <div className="hp-container">
-        {/* Banner */}
-        <section className="hp-banner card-hover">
+        {/* Enhanced Banner */}
+        <section className="hp-banner">
           <div className="hp-banner-content">
-            <h2 className="hp-banner-title">How PropertyDealz works</h2>
-            <p className="hp-banner-subtitle">
-              Simple, transparent, and hassle-free property deals
-            </p>
-            <div className="hp-banner-features">
-              {[
-                "No Subscription Required - Connect for free",
-                "Buyer Connects to Agent - Direct communication",
-                "End-to-End Documentation - Agent handles paperwork",
-                "Only 0.5% Fee - Charged equally from buyer & seller",
-              ].map((feature) => {
-                const [head, tail] = feature.split(" - ");
-                return (
-                  <div key={feature} className="hp-banner-feature">
-                    <span className="hp-checkmark">✓</span>
-                    <span>
-                      <strong>{head}</strong> - {tail}
-                    </span>
-                  </div>
-                );
-              })}
+            <div className="hp-banner-header">
+              <span className="hp-banner-badge">✨ How It Works</span>
+              <h2 className="hp-banner-title">PropertyDealz Platform</h2>
+              <p className="hp-banner-subtitle">
+                Simple, transparent, and hassle-free property deals for everyone
+              </p>
+            </div>
+
+            <div className="hp-feature-cards">
+              {/* Property Owners Card */}
+              <div className="hp-feature-card hp-feature-card-owner">
+                <div className="hp-feature-card-header">
+                  <div className="hp-feature-icon">🏠</div>
+                  <h3 className="hp-feature-title">For Property Owners</h3>
+                  <p className="hp-feature-desc">List your property with zero hassle</p>
+                </div>
+                <div className="hp-feature-list">
+                  {ownerFeatures.map((feature, idx) => (
+                    <div key={idx} className="hp-feature-item">
+                      <span className="hp-checkmark">✓</span>
+                      <span>{feature}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="hp-feature-shine"></div>
+              </div>
+
+              {/* Brokers Card */}
+              <div className="hp-feature-card hp-feature-card-broker">
+                <div className="hp-feature-card-header">
+                  <div className="hp-feature-icon">💼</div>
+                  <h3 className="hp-feature-title">For Brokers</h3>
+                  <p className="hp-feature-desc">Premium access to quality leads</p>
+                </div>
+                <div className="hp-feature-list">
+                  {brokerFeatures.map((feature, idx) => (
+                    <div key={idx} className="hp-feature-item">
+                      <span className="hp-checkmark">✓</span>
+                      <span>{feature}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="hp-feature-shine"></div>
+              </div>
             </div>
           </div>
+
           <div className="hp-banner-illustration" aria-hidden="true">
-            🤝
+            <div className="hp-illustration-emoji">🤝</div>
+            <div className="hp-illustration-text">Connecting Everyone</div>
           </div>
         </section>
 
