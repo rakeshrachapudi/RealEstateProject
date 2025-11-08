@@ -52,24 +52,34 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.disable())
+                .cors(withDefaults())          // ✅ Must be enabled (NGINX still controls headers)
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
+
+                        // ✅ Always keep OPTIONS free
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // ✅ Public authentication endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/auth/login/**").permitAll()
+
+                        // ✅ Public property-related endpoints
                         .requestMatchers("/api/properties/**").permitAll()
-                        .requestMatchers("/api/areas/**").permitAll()
-                        .requestMatchers("/api/users/**").permitAll()
-                        .requestMatchers("/api/deals/**").permitAll()
-                        .requestMatchers("/api/upload/image/**").permitAll()
-                        .requestMatchers("/api/upload/property-image/**").permitAll()
-                        .requestMatchers("/api/upload/document/**").permitAll() // ✅ NEW
-                        .requestMatchers("/api/upload/deal-document/**").permitAll() // ✅ NEW
                         .requestMatchers("/api/property-types/**").permitAll()
                         .requestMatchers("/api/property-images/**").permitAll()
 
+                        // ✅ Public area, user, deals
+                        .requestMatchers("/api/areas/**").permitAll()
+                        .requestMatchers("/api/users/**").permitAll()
+                        .requestMatchers("/api/deals/**").permitAll()
+
+                        // ✅ Public upload URLs
+                        .requestMatchers("/api/upload/**").permitAll()
+
+                        // ✅ Only this is protected
                         .requestMatchers("/api/agents/**").authenticated()
+
+                        // ✅ Everything else — default protected
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -77,4 +87,5 @@ public class SecurityConfig {
 
         return http.build();
     }
+
 }
