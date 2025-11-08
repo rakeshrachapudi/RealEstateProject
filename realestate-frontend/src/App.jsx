@@ -17,6 +17,8 @@ import AdminDealPanel from "./AdminDealPanel.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 
 import AdminUsersPage from "./pages/AdminUsersPage.jsx";
+import AdminPropertiesPage from "./pages/AdminPropertiesPage.jsx";
+
 import CreateSaleAgreementPage from "./pages/CreateSaleAgreementPage.jsx";
 import EmiCalculatorPage from "./pages/EmiCalculatorPage.jsx";
 
@@ -222,6 +224,7 @@ function AppContent() {
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
           <Route path="/admin-agents" element={<AdminAgentsPage />} />
           <Route path="/admin-users" element={<AdminUsersPage />} />
+          <Route path="/admin/properties" element={<AdminPropertiesPage />} />
 
           {/* Agreement Pages */}
           <Route path="/rental-agreement" element={<RentalAgreementPage />} />
