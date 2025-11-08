@@ -52,7 +52,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(withDefaults())
+                .cors(cors -> cors.disable())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -69,8 +69,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/upload/document/**").permitAll() // ✅ NEW
                         .requestMatchers("/api/upload/deal-document/**").permitAll() // ✅ NEW
 
-
-                        .requestMatchers("/api/broker-subscription/**").permitAll()
 
                         .requestMatchers("/api/agents/**").authenticated()
                         .anyRequest().authenticated()
