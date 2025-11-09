@@ -7,6 +7,7 @@ import com.example.realestate.model.Property;
 import com.example.realestate.repository.FeaturedPropertyRepository;
 import com.example.realestate.repository.PropertyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,14 @@ public class FeaturedPropertyService {
 
     private static final BigDecimal FEATURED_PRICE = BigDecimal.valueOf(499.00);
     private static final int DEFAULT_DURATION_MONTHS = 3;
+    public Long extractUserId(UserDetails userDetails) {
+        try {
+            // If username = userId (your current behavior)
+            return Long.parseLong(userDetails.getUsername());
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("Invalid user authentication. Cannot extract user ID.");
+        }
+    }
 
     /**
      * Apply featured status to a property with optional coupon

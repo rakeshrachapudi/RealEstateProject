@@ -5,37 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="42dfceb5-b8ee-4b67-a031-eae8b466d127" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/CouponController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/FeaturedPropertyController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/ApplyFeaturedRequest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/CheckFeaturedResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/CouponDetails.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/CouponValidationResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/FeaturedPropertyResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/InitiatePaymentRequest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/InitiatePaymentResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/ValidateCouponRequest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/VerifyPaymentRequest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/VerifyPaymentResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/model/Coupon.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/model/FeaturedProperty.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/repository/CouponRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/repository/FeaturedPropertyRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/service/CouponService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/service/FeaturedPropertyService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/FeaturedPromoBanner.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/FeaturedPromoBanner.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/resources/application.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/FeaturedPropertyController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/FeaturedPropertyController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/ApplyFeaturedRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/ApplyFeaturedRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/service/FeaturedPropertyService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/service/FeaturedPropertyService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/assets/index-Bc4Tq2eo.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/assets/index-D1bTRe0U.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/dist/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/PropertyDetails.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/PropertyDetails.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/PropertyDetails.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/PropertyDetails.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pages/HomePage.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/HomePage.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pages/HomePage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/HomePage.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

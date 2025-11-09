@@ -61,6 +61,21 @@ function PropertyDetails() {
       );
       if (!response.ok) throw new Error("Property not found");
       const data = await response.json();
+
+      // ✅ Fetch images from PropertyImage API (production method)
+      const imageResponse = await fetch(
+        `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`
+      );
+
+      let images = [];
+      if (imageResponse.ok) {
+        const imageData = await imageResponse.json();
+        images = imageData.map(img => img.imageUrl);
+      }
+
+      // ✅ Attach images to property object
+      data.imageUrls = images;
+
       setProperty(data);
     } catch (err) {
       setError(err.message);
@@ -195,7 +210,8 @@ function PropertyDetails() {
           body: JSON.stringify({
             propertyId: propertyId,
             couponCode: couponValidation?.valid ? couponCode : null,
-            durationMonths: 3
+            durationMonths: 3,
+            userId: user.id
           }),
         }
       );

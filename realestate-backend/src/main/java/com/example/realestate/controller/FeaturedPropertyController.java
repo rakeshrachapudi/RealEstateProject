@@ -20,24 +20,19 @@ public class FeaturedPropertyController {
     @Autowired
     private FeaturedPropertyService featuredPropertyService;
 
-    /**
-     * Apply featured status to a property
-     * POST /api/featured-properties/apply
-     */
     @PostMapping("/apply")
-    public ResponseEntity<?> applyFeatured(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody ApplyFeaturedRequest request) {
+    public ResponseEntity<?> applyFeatured(@RequestBody ApplyFeaturedRequest request) {
         try {
-            if (userDetails == null) {
+            if (request.getUserId() == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body("User not authenticated");
             }
 
-            Long userId = extractUserIdFromUserDetails(userDetails);
+            FeaturedPropertyResponse response =
+                    featuredPropertyService.applyFeatured(request.getUserId(), request);
 
-            FeaturedPropertyResponse response = featuredPropertyService.applyFeatured(userId, request);
             return ResponseEntity.ok(response);
+
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
@@ -45,6 +40,9 @@ public class FeaturedPropertyController {
                     .body("Error applying featured status: " + e.getMessage());
         }
     }
+
+
+
 
     /**
      * Check if a property is featured
