@@ -10,4 +10,5 @@ import lombok.NoArgsConstructor;
 public class CheckFeaturedResponse {
     private boolean isFeatured;
     private FeaturedPropertyResponse featuredDetails;
+    private FeaturedPropertyResponse featuredProperty;
 }

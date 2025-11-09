@@ -3,6 +3,7 @@ package com.example.realestate.repository;
 import com.example.realestate.model.FeaturedProperty;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -39,4 +40,14 @@ public interface FeaturedPropertyRepository extends JpaRepository<FeaturedProper
             "AND (fp.featuredUntil IS NULL OR fp.featuredUntil > :now) " +
             "AND (fp.paymentStatus = 'COMPLETED' OR fp.paymentStatus = 'FREE')")
     Long countActiveByUserId(Long userId, LocalDateTime now);
+    @Query("""
+        select f
+        from FeaturedProperty f
+        where f.isActive = true
+          and (f.featuredFrom is null or f.featuredFrom <= :now)
+          and (f.featuredUntil is null or f.featuredUntil > :now)
+          and (f.paymentStatus = 'COMPLETED' or f.paymentStatus = 'FREE')
+    """)
+    List<FeaturedProperty> findActiveValid(@Param("now") LocalDateTime now);
+
 }

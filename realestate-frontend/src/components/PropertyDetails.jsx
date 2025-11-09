@@ -31,7 +31,7 @@ function PropertyDetails() {
   const [featuredPrice, setFeaturedPrice] = useState({
     original: 499,
     discount: 0,
-    final: 499
+    final: 499,
   });
   const [applyingFeatured, setApplyingFeatured] = useState(false);
 
@@ -46,8 +46,7 @@ function PropertyDetails() {
       checkExistingDeal();
       checkFeaturedStatus();
       // Check if user is property owner to show featured section
-     if (property.user?.id === user.id) {
-
+      if (property.user?.id === user.id) {
         setShowFeaturedSection(true);
       }
     }
@@ -70,7 +69,7 @@ function PropertyDetails() {
       let images = [];
       if (imageResponse.ok) {
         const imageData = await imageResponse.json();
-        images = imageData.map(img => img.imageUrl);
+        images = imageData.map((img) => img.imageUrl);
       }
 
       // ✅ Attach images to property object
@@ -88,7 +87,6 @@ function PropertyDetails() {
     try {
       const response = await fetch(
         `${BACKEND_BASE_URL}/api/agents/check/${property.user?.id}`
-
       );
       setAgentAvailable(response.ok);
     } catch {
@@ -148,19 +146,16 @@ function PropertyDetails() {
     setCouponValidation(null);
 
     try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/coupons/validate`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            couponCode: couponCode,
-            orderValue: 499.00
-          }),
-        }
-      );
+      const response = await fetch(`${BACKEND_BASE_URL}/api/coupons/validate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          couponCode: couponCode,
+          orderValue: 499.0,
+        }),
+      });
 
       const data = await response.json();
 
@@ -169,7 +164,7 @@ function PropertyDetails() {
         setFeaturedPrice({
           original: data.couponDetails.originalPrice,
           discount: data.couponDetails.discountAmount,
-          final: data.couponDetails.finalPrice
+          final: data.couponDetails.finalPrice,
         });
       } else {
         setCouponValidation(data);
@@ -177,7 +172,7 @@ function PropertyDetails() {
     } catch (err) {
       setCouponValidation({
         valid: false,
-        message: "Error validating coupon. Please try again."
+        message: "Error validating coupon. Please try again.",
       });
     } finally {
       setCouponApplying(false);
@@ -190,7 +185,7 @@ function PropertyDetails() {
     setFeaturedPrice({
       original: 499,
       discount: 0,
-      final: 499
+      final: 499,
     });
   };
 
@@ -211,12 +206,35 @@ function PropertyDetails() {
             propertyId: propertyId,
             couponCode: couponValidation?.valid ? couponCode : null,
             durationMonths: 3,
-            userId: user.id
+            userId: user.id,
           }),
         }
       );
 
-      const data = await response.json();
+     let data;
+     try {
+       data = await response.json();
+     } catch {
+       data = null;
+     }
+if (!response.ok) {
+  const raw = await response.text();
+  const msg = (raw || "").trim().replace(/\s+/g, " ").toLowerCase();
+
+  console.log("RAW ERROR FROM BACKEND =", raw);  // ✅ debugging line
+
+  if (msg.includes("already featured")) {
+    alert("✅ This property is already featured and visible on the home page section.");
+    checkFeaturedStatus();
+    setShowFeaturedSection(false);
+    return;
+  }
+
+  setDealError(raw);
+  return;
+}
+
+
 
       if (response.ok) {
         if (data.paymentStatus === "FREE") {
@@ -230,7 +248,16 @@ function PropertyDetails() {
           checkFeaturedStatus();
         }
       } else {
-        setDealError(typeof data === 'string' ? data : data.message || "Failed to apply featured status");
+        const msg = data.message || data || "Failed to apply featured status";
+
+        // ✅ If backend says property is already featured
+        if (typeof msg === "string" && msg.toLowerCase().includes("already featured")) {
+          alert("✅ This property is already featured and is visible on the home page section.");
+          checkFeaturedStatus();
+          return;
+        }
+
+        setDealError(typeof msg === "string" ? msg : "Failed to apply featured status");
       }
     } catch (err) {
       setDealError("Error applying featured status. Please try again.");
@@ -255,8 +282,7 @@ function PropertyDetails() {
         body: JSON.stringify({
           propertyId: parseInt(propertyId),
           buyerId: user.id,
-         sellerId: property.user?.id,
-
+          sellerId: property.user?.id,
           offerAmount: parseFloat(offerAmount),
         }),
       });
@@ -321,13 +347,11 @@ function PropertyDetails() {
   const ownerPhone = property.ownerPhone || property.phoneNumber || "";
   const ownerInitial = ownerName.charAt(0).toUpperCase();
   const images = property.imageUrls || [];
-const amenitiesList = Array.isArray(property?.amenities)
-  ? property.amenities
-  : typeof property?.amenities === "string"
-  ? property.amenities.split(",").map(a => a.trim())
-  : [];
-
-
+  const amenitiesList = Array.isArray(property?.amenities)
+    ? property.amenities
+    : typeof property?.amenities === "string"
+    ? property.amenities.split(",").map((a) => a.trim())
+    : [];
 
   return (
     <div className="pd-page">
@@ -366,9 +390,7 @@ const amenitiesList = Array.isArray(property?.amenities)
                     onClick={() => setCurrentImageIndex(idx)}
                   />
                 ))}
-                {images.length > 5 && (
-                  <div className="pd-more">+{images.length - 5}</div>
-                )}
+                {images.length > 5 && <div className="pd-more">+{images.length - 5}</div>}
               </div>
             )}
           </div>
@@ -416,15 +438,15 @@ const amenitiesList = Array.isArray(property?.amenities)
                   <div className="pd-key-val">{property.type}</div>
                 </div>
               </div>
-             <div className="pd-key">
-               <span className="pd-key-ic">📏</span>
-               <div>
-                 <div className="pd-key-label">Area</div>
-                 <div className="pd-key-val">
-                   {property.areaSqft} sq ft ({property.area?.areaName})
-                 </div>
-               </div>
-             </div>
+              <div className="pd-key">
+                <span className="pd-key-ic">📏</span>
+                <div>
+                  <div className="pd-key-label">Area</div>
+                  <div className="pd-key-val">
+                    {property.areaSqft} sq ft ({property.area?.areaName})
+                  </div>
+                </div>
+              </div>
 
               <div className="pd-key">
                 <span className="pd-key-ic">🛏️</span>
@@ -448,20 +470,18 @@ const amenitiesList = Array.isArray(property?.amenities)
               <p className="pd-desc">{property.description}</p>
             </div>
 
-       {amenitiesList.length > 0 && (
-         <div className="pd-section">
-           <h2 className="pd-subtitle">Amenities</h2>
-           <div className="pd-amenities">
-             {amenitiesList.map((amenity, idx) => (
-               <span key={idx} className="pd-chip">
-                 ✓ {amenity}
-               </span>
-             ))}
-           </div>
-         </div>
-       )}
-
-
+            {amenitiesList.length > 0 && (
+              <div className="pd-section">
+                <h2 className="pd-subtitle">Amenities</h2>
+                <div className="pd-amenities">
+                  {amenitiesList.map((amenity, idx) => (
+                    <span key={idx} className="pd-chip">
+                      ✓ {amenity}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right column */}
@@ -501,19 +521,15 @@ const amenitiesList = Array.isArray(property?.amenities)
                 {agentLoading ? (
                   <span className="pd-status-loading">⏳ Checking availability...</span>
                 ) : agentAvailable ? (
-                  <span className="pd-status-available">
-                    ✓ Agent available for assistance
-                  </span>
+                  <span className="pd-status-available">✓ Agent available for assistance</span>
                 ) : (
-                  <span className="pd-status-unavailable">
-                    ⚠ Direct owner contact
-                  </span>
+                  <span className="pd-status-unavailable">⚠ Direct owner contact</span>
                 )}
               </div>
             </div>
 
             {/* Featured Property Section - Only for property owners */}
-            {showFeaturedSection && !featuredStatus?.isFeatured && (
+            {showFeaturedSection && !featuredStatus?.featured && (
               <div className="card pd-featured">
                 <h3 className="pd-featured-title">⭐ Make Your Property Featured</h3>
                 <p className="pd-featured-desc">
@@ -560,17 +576,14 @@ const amenitiesList = Array.isArray(property?.amenities)
                         {couponApplying ? "Checking..." : "Apply"}
                       </button>
                     ) : (
-                      <button
-                        onClick={handleRemoveCoupon}
-                        className="pd-btn pd-btn-remove"
-                      >
+                      <button onClick={handleRemoveCoupon} className="pd-btn pd-btn-remove">
                         Remove
                       </button>
                     )}
                   </div>
 
                   {couponValidation && (
-                    <div className={`pd-coupon-msg ${couponValidation.valid ? 'success' : 'error'}`}>
+                    <div className={`pd-coupon-msg ${couponValidation.valid ? "success" : "error"}`}>
                       {couponValidation.message}
                     </div>
                   )}
@@ -588,15 +601,17 @@ const amenitiesList = Array.isArray(property?.amenities)
                   className="pd-btn pd-btn-primary"
                   style={{ width: "100%" }}
                 >
-                  {applyingFeatured ? "Processing..." :
-                   featuredPrice.final === 0 ? "Activate Featured (Free)" :
-                   `Pay ₹${featuredPrice.final} & Activate`}
+                  {applyingFeatured
+                    ? "Processing..."
+                    : featuredPrice.final === 0
+                    ? "Activate Featured (Free)"
+                    : `Pay ₹${featuredPrice.final} & Activate`}
                 </button>
               </div>
             )}
 
             {/* Featured Status - Show if already featured */}
-            {featuredStatus?.isFeatured && (
+            {featuredStatus?.featured && (
               <div className="card pd-featured-active">
                 <h3 className="pd-featured-title">⭐ Featured Property</h3>
                 <div className="pd-featured-badge">
@@ -606,7 +621,11 @@ const amenitiesList = Array.isArray(property?.amenities)
                 <div className="pd-featured-info">
                   <div className="pd-info-row">
                     <span>Featured Until:</span>
-                    <span>{new Date(featuredStatus.featuredDetails.featuredUntil).toLocaleDateString()}</span>
+                    <span>
+                      {new Date(
+                        featuredStatus.featuredProperty.featuredUntil
+                      ).toLocaleDateString()}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -646,10 +665,7 @@ const amenitiesList = Array.isArray(property?.amenities)
                         onChange={(e) => setOfferAmount(e.target.value)}
                       />
                       {dealError && <div className="pd-alert">{dealError}</div>}
-                      <button
-                        onClick={handleCreateDeal}
-                        className="pd-btn pd-btn-primary"
-                      >
+                      <button onClick={handleCreateDeal} className="pd-btn pd-btn-primary">
                         Create Deal
                       </button>
                     </div>
@@ -692,10 +708,7 @@ const amenitiesList = Array.isArray(property?.amenities)
       <button
         className="pd-fab"
         onClick={() =>
-          window.open(
-            `https://wa.me/${ownerPhone.replace(/\D/g, "")}`,
-            "_blank"
-          )
+          window.open(`https://wa.me/${ownerPhone.replace(/\D/g, "")}`, "_blank")
         }
       >
         💬

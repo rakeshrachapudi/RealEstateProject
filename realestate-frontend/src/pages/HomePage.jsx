@@ -8,8 +8,8 @@ import FurniturePartner from "../components/FurniturePartner.jsx";
 import DealStatusCard from "../DealStatusCard.jsx";
 import BrowsePropertiesForDeal from "../pages/BrowsePropertiesForDeal";
 import DealDetailModal from "../DealDetailModal.jsx";
-import { BACKEND_BASE_URL } from "../config/config";
 import FeaturedPromoBanner from "../components/FeaturedPromoBanner.jsx";
+import { BACKEND_BASE_URL } from "../config/config";
 import {
   getPropertyTypes,
   getPropertiesByType,
@@ -20,15 +20,22 @@ import "./HomePage.css";
 
 function HomePage() {
   const { isAuthenticated, user } = useAuth();
+
+  // Featured + All props
   const [featuredPropsList, setFeaturedPropsList] = useState([]);
   const [allProperties, setAllProperties] = useState([]);
   const [loadingAllProps, setLoadingAllProps] = useState(false);
 
+  // My stuff
   const [myProperties, setMyProperties] = useState([]);
   const [myDeals, setMyDeals] = useState([]);
+
+  // Search
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+
+  // UI state
   const [activeTab, setActiveTab] = useState("featured");
   const [selectedArea, setSelectedArea] = useState(null);
   const [showBrowseDeals, setShowBrowseDeals] = useState(false);
@@ -37,11 +44,13 @@ function HomePage() {
   const [loadingMyDeals, setLoadingMyDeals] = useState(false);
   const [fetchError, setFetchError] = useState(null);
 
+  // Type filters
   const navigate = useNavigate();
   const [propertyTypes, setPropertyTypes] = useState(["All"]);
   const [selectedType, setSelectedType] = useState("All");
   const [properties, setProperties] = useState([]);
 
+  // --- Static content ---
   const popularAreas = [
     { name: "Gachibowli", emoji: "🏢" },
     { name: "HITEC City", emoji: "🌆" },
@@ -67,11 +76,22 @@ function HomePage() {
     "Instant Lead Access — No middle agent involved",
   ];
 
+  // --- Effects ---
+
+  // Load property types
   useEffect(() => {
     getPropertyTypes()
       .then((types) => {
-        const typesArray = Array.isArray(types) ? types : [];
-        setPropertyTypes(["All", ...typesArray]);
+        // Normalize to strings (some APIs may return objects)
+        let names = [];
+        if (Array.isArray(types)) {
+          names = types.map((t) => {
+            if (!t) return "";
+            if (typeof t === "string") return t;
+            return t.typeName || t.name || t.type || "";
+          }).filter(Boolean);
+        }
+        setPropertyTypes(["All", ...Array.from(new Set(names))]);
       })
       .catch((err) => {
         console.error("Error loading property types:", err);
@@ -79,30 +99,33 @@ function HomePage() {
       });
   }, []);
 
+  // Browse-by-type tab loads data
   useEffect(() => {
     if (activeTab !== "browse-by-type") return;
 
-    if (selectedType === "All") {
-      getAllProperties()
-        .then((props) => setProperties(Array.isArray(props) ? props : []))
-        .catch((err) => {
-          console.error("Error loading all properties:", err);
-          setProperties([]);
-        });
-    } else {
-      getPropertiesByType(selectedType)
-        .then((props) => setProperties(Array.isArray(props) ? props : []))
-        .catch((err) => {
-          console.error("Error loading properties by type:", err);
-          setProperties([]);
-        });
-    }
+    const load = async () => {
+      try {
+        if (selectedType === "All") {
+          const props = await getAllProperties();
+          setProperties(Array.isArray(props) ? props : []);
+        } else {
+          const props = await getPropertiesByType(selectedType);
+          setProperties(Array.isArray(props) ? props : []);
+        }
+      } catch (err) {
+        console.error("Error loading properties for type:", err);
+        setProperties([]);
+      }
+    };
+    load();
   }, [selectedType, activeTab]);
 
+  // Initial featured fetch
   useEffect(() => {
     fetchFeaturedProperties();
   }, []);
 
+  // If switching to browse-by-type, pre-load All
   useEffect(() => {
     if (activeTab === "browse-by-type" && selectedType === "All") {
       getAllProperties()
@@ -114,6 +137,7 @@ function HomePage() {
     }
   }, [activeTab]);
 
+  // Load my properties + deals if logged in
   useEffect(() => {
     if (isAuthenticated && user?.id && user?.role) {
       setFetchError(null);
@@ -128,13 +152,15 @@ function HomePage() {
     }
   }, [isAuthenticated, user?.id, user?.role]);
 
+  // --- Helpers ---
+
   const safeJsonParse = async (response) => {
     try {
       const contentType = response.headers.get("content-type");
       if (contentType?.includes("application/json")) {
         return await response.json();
       }
-      await response.text();
+      await response.text(); // drain
       return null;
     } catch (err) {
       console.error("Failed to parse response as JSON:", err);
@@ -142,10 +168,48 @@ function HomePage() {
     }
   };
 
+  // Normalize featured properties so UI never breaks on missing fields
   const fetchFeaturedProperties = async () => {
     try {
-      const properties = await getFeaturedProperties();
-      setFeaturedPropsList(Array.isArray(properties) ? properties : []);
+      const list = await getFeaturedProperties();
+
+      const normalized = (Array.isArray(list) ? list : []).map((p) => {
+        const id = p.propertyId ?? p.id ?? null;
+        const rawImage = p.imageUrl;
+        const imageUrl =
+          rawImage && rawImage !== "null" && String(rawImage).trim() !== ""
+            ? rawImage
+            : null;
+
+        return {
+          ...p,
+          id,
+          propertyId: id,
+          // normalize image — PropertyCard has its own fallback too
+          imageUrl,
+          // user object
+          user: p.user || {
+            id: null,
+            firstName: "",
+            lastName: "",
+          },
+          // propertyType
+          propertyType: p.propertyType || p.type || null,
+          // area name normalization
+          areaName: p.areaName || p.cityName || p.location || p.city || "",
+          // amenities always string
+          amenities: typeof p.amenities === "string" ? p.amenities : "",
+          // priceDisplay optional
+          priceDisplay: p.priceDisplay || null,
+          // safety defaults
+          bedrooms: Number.isFinite(p.bedrooms) ? p.bedrooms : (p.bedrooms || 0),
+          bathrooms: Number.isFinite(p.bathrooms) ? p.bathrooms : (p.bathrooms || 0),
+          listingType: p.listingType || (p.type && String(p.type).toLowerCase().includes("rent") ? "rent" : "sale"),
+          isFeatured: p.isFeatured === true || p.isFeatured === 1 || p.isFeatured === "true",
+        };
+      });
+
+      setFeaturedPropsList(normalized);
       setShowSearchResults(false);
     } catch (error) {
       console.error("Error loading featured properties:", error);
@@ -199,9 +263,8 @@ function HomePage() {
     setLoadingMyDeals(true);
     setMyDeals([]);
 
-   const actualUserRole = user.role === "BROKER" || user.role === "AGENT"
-     ? user.role
-     : "USER";
+    const actualUserRole =
+      user.role === "BROKER" || user.role === "AGENT" ? user.role : "USER";
     const endpoint = `${BACKEND_BASE_URL}/api/deals/user/${user.id}/role/${actualUserRole}`;
     const token = localStorage.getItem("authToken");
 
@@ -242,8 +305,9 @@ function HomePage() {
     }
   };
 
+  // --- Search handlers ---
   const handleSearchResults = (results) => {
-    setSearchResults(results);
+    setSearchResults(Array.isArray(results) ? results : []);
     setShowSearchResults(true);
     setSearchLoading(false);
     setActiveTab("featured");
@@ -266,6 +330,7 @@ function HomePage() {
     setActiveTab("featured");
   };
 
+  // Deals modal handlers
   const handleCreateDealClick = () => {
     if (!isAuthenticated) {
       navigate("/login");
@@ -286,6 +351,7 @@ function HomePage() {
     fetchMyDeals();
   };
 
+  // Property mutation hooks
   const handlePropertyUpdated = (updatedProperty) => {
     setMyProperties((prev) =>
       prev.map((p) => (p.id === updatedProperty.id ? updatedProperty : p))
@@ -298,13 +364,23 @@ function HomePage() {
 
   const handleOpenEmiCalculatorPage = () => navigate("/emi-calculator");
 
+  // --- Derivations ---
+
+  // Merge properties with related deals for current user
   const propertiesWithDeals = useMemo(() => {
     let baseProperties = [];
-    if (showSearchResults) baseProperties = searchResults;
-    else if (selectedArea) {
+    if (showSearchResults) {
+      baseProperties = searchResults;
+    } else if (selectedArea) {
       const areaLower = selectedArea.toLowerCase();
       baseProperties = featuredPropsList.filter((prop) => {
-        const locLower = (prop.location || "").toLowerCase();
+        const locLower = (
+          prop.areaName ||
+          prop.cityName ||
+          prop.location ||
+          prop.city ||
+          ""
+        ).toLowerCase();
         return locLower.includes(areaLower);
       });
     } else {
@@ -315,10 +391,12 @@ function HomePage() {
     }
 
     return baseProperties.map((property) => {
+      const pid = property.id || property.propertyId;
       const relatedDeals = myDeals.filter(
         (deal) =>
-          deal.property?.id === property.id ||
-          deal.propertyId === property.id
+          deal.property?.id === pid ||
+          deal.propertyId === pid ||
+          deal.property?.propertyId === pid
       );
       return { ...property, relatedDeals };
     });
@@ -356,10 +434,11 @@ function HomePage() {
   const canCreateDeal =
     isAuthenticated && (user?.role === "USER" || user?.role === "BROKER");
 
+  // --- Render ---
+
   return (
     <>
       <div className="hp-container">
-            <FeaturedPromoBanner />  {/* Add this line */}
         {/* Enhanced Banner */}
         <section className="hp-banner">
           <div className="hp-banner-content">
@@ -416,6 +495,9 @@ function HomePage() {
           </div>
         </section>
 
+        {/* Featured promo banner (placed under main banner) */}
+        <FeaturedPromoBanner />
+
         {/* Hero */}
         <section className="hp-hero">
           <div className="hp-hero-content">
@@ -423,8 +505,7 @@ function HomePage() {
               Find Your <span className="hp-title-gradient">Dream Home</span> 🏡
             </h1>
             <p className="hp-hero-subtitle">
-              Discover the perfect property that matches your lifestyle and
-              budget.
+              Discover the perfect property that matches your lifestyle and budget.
             </p>
           </div>
         </section>
@@ -452,9 +533,7 @@ function HomePage() {
             {popularAreas.map((area) => (
               <button
                 key={area.name}
-                className={`hp-area-btn ${
-                  selectedArea === area.name ? "active" : ""
-                }`}
+                className={`hp-area-btn ${selectedArea === area.name ? "active" : ""}`}
                 onClick={() => handleAreaClick(area)}
               >
                 <span className="hp-area-emoji">{area.emoji}</span>
@@ -477,31 +556,24 @@ function HomePage() {
 
               <button
                 onClick={() => setActiveTab("browse-by-type")}
-                className={`hp-tab ${
-                  activeTab === "browse-by-type" ? "active" : ""
-                }`}
+                className={`hp-tab ${activeTab === "browse-by-type" ? "active" : ""}`}
               >
                 🏘️ Browse by Type
               </button>
 
-              {isAuthenticated &&
-                (loadingMyProperties || myProperties.length > 0) && (
-                  <button
-                    onClick={() => setActiveTab("my-properties")}
-                    className={`hp-tab ${
-                      activeTab === "my-properties" ? "active" : ""
-                    }`}
-                  >
-                    📄 My Properties ({myProperties.length})
-                  </button>
-                )}
+              {isAuthenticated && (loadingMyProperties || myProperties.length > 0) && (
+                <button
+                  onClick={() => setActiveTab("my-properties")}
+                  className={`hp-tab ${activeTab === "my-properties" ? "active" : ""}`}
+                >
+                  📄 My Properties ({myProperties.length})
+                </button>
+              )}
 
               {isAuthenticated && (loadingMyDeals || myDeals.length > 0) && (
                 <button
                   onClick={() => setActiveTab("my-deals")}
-                  className={`hp-tab ${
-                    activeTab === "my-deals" ? "active" : ""
-                  }`}
+                  className={`hp-tab ${activeTab === "my-deals" ? "active" : ""}`}
                 >
                   📊 My Deals ({myDeals.length})
                 </button>
@@ -509,40 +581,30 @@ function HomePage() {
             </div>
           )}
 
-          {activeTab === "browse-by-type" &&
-            !showSearchResults &&
-            !selectedArea && (
-              <div className="hp-type-filter">
-                {propertyTypes.map((type) => (
-                  <button
-                    key={type}
-                    className={`hp-type-chip ${
-                      selectedType === type ? "selected" : ""
-                    }`}
-                    onClick={() => setSelectedType(type)}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            )}
+          {activeTab === "browse-by-type" && !showSearchResults && !selectedArea && (
+            <div className="hp-type-filter">
+              {propertyTypes.map((type) => (
+                <button
+                  key={type}
+                  className={`hp-type-chip ${selectedType === type ? "selected" : ""}`}
+                  onClick={() => setSelectedType(type)}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="hp-section-header">
             <h2 className="hp-section-title">{sectionTitle}</h2>
             <div className="hp-section-actions">
               {(showSearchResults || selectedArea) && (
-                <button
-                  onClick={handleResetSearch}
-                  className="hp-btn hp-btn-clear"
-                >
+                <button onClick={handleResetSearch} className="hp-btn hp-btn-clear">
                   ✕ Clear Filter
                 </button>
               )}
               {canCreateDeal && (
-                <button
-                  onClick={handleCreateDealClick}
-                  className="hp-btn hp-btn-primary"
-                >
+                <button onClick={handleCreateDealClick} className="hp-btn hp-btn-primary">
                   ➕ Create New Deal
                 </button>
               )}
@@ -556,9 +618,7 @@ function HomePage() {
               <div className="hp-empty">
                 <div className="hp-empty-ic">🔭</div>
                 <h3 className="hp-empty-title">No Deals Yet</h3>
-                <p className="hp-empty-text">
-                  You are not currently involved in any deals.
-                </p>
+                <p className="hp-empty-text">You are not currently involved in any deals.</p>
               </div>
             ) : (
               <div className="hp-deals-grid">

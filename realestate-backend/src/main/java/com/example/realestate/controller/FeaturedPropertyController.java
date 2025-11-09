@@ -2,6 +2,7 @@ package com.example.realestate.controller;
 
 import com.example.realestate.dto.*;
 import com.example.realestate.model.FeaturedProperty;
+import com.example.realestate.model.Property;
 import com.example.realestate.service.FeaturedPropertyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -10,7 +11,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/featured-properties")
@@ -51,29 +54,28 @@ public class FeaturedPropertyController {
     @GetMapping("/check/{propertyId}")
     public ResponseEntity<?> checkIfFeatured(@PathVariable Long propertyId) {
         try {
-            CheckFeaturedResponse response = featuredPropertyService.checkIfFeatured(propertyId);
-            return ResponseEntity.ok(response);
+            CheckFeaturedResponse response =
+                    featuredPropertyService.checkFeatured(propertyId);
+
+            return ResponseEntity.ok(response);   // ✅ FIXED
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            return ResponseEntity.status(500)
                     .body("Error checking featured status: " + e.getMessage());
         }
     }
 
-    /**
-     * Get all active featured properties
-     * GET /api/featured-properties/active
-     */
+
     @GetMapping("/active")
-    public ResponseEntity<?> getAllActiveFeaturedProperties() {
-        try {
-            List<FeaturedProperty> featuredProperties =
-                    featuredPropertyService.getAllActiveFeaturedProperties();
-            return ResponseEntity.ok(featuredProperties);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error fetching featured properties: " + e.getMessage());
-        }
+    public ResponseEntity<Map<String, Object>> getActive() {
+        List<FeaturedPropertyDTO> data = featuredPropertyService.getActiveFeaturedProperties();
+        Map<String, Object> body = new HashMap<>();
+        body.put("success", true);
+        body.put("message", "Success");
+        body.put("data", data);
+        return ResponseEntity.ok(body);
     }
+
+
 
     /**
      * Get user's featured properties

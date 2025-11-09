@@ -13,20 +13,39 @@ function MyPropertiesPage({ onPostPropertyClick }) {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  // ✅ Fetch Primary Image for each property
+  const getPrimaryImage = async (propertyId) => {
+    try {
+      const res = await fetch(
+        `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`
+      );
+      if (!res.ok) return null;
+
+      const list = await res.json();
+      if (!Array.isArray(list) || list.length === 0) return null;
+
+      const primary = list.find((img) => img.isPrimary) || list[0];
+      return primary.imageUrl || null;
+    } catch (e) {
+      return null;
+    }
+  };
+
   useEffect(() => {
     if (!user?.id) {
       navigate("/");
       return;
     }
     fetchMyProperties();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // ✅ Updated function to attach image URLs
   const fetchMyProperties = async () => {
     if (!user?.id) {
       setLoading(false);
       return;
     }
+
     setLoading(true);
     setError(null);
 
@@ -49,8 +68,23 @@ function MyPropertiesPage({ onPostPropertyClick }) {
 
       const data = await response.json();
       const propertiesArray = Array.isArray(data) ? data : data.data || [];
-      setProperties(propertiesArray);
+
+      // ✅ Attach S3 Image URL to each property
+      const withImages = await Promise.all(
+        propertiesArray.map(async (p) => {
+          const id = p.id || p.propertyId;
+          const img = await getPrimaryImage(id);
+
+          return {
+            ...p,
+            imageUrl: img || null,
+          };
+        })
+      );
+
+      setProperties(withImages);
     } catch (err) {
+      console.error("Failed to load properties:", err);
       setError("Failed to load properties. Please check your connection.");
       setProperties([]);
     } finally {

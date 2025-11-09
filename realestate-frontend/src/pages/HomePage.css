@@ -18,12 +18,10 @@
   box-sizing: border-box;
 }
 
-/* ========================================
-   FEATURED PROPERTY PROMO BANNER - NEW
-======================================== */
+
 .hp-featured-promo {
   position: relative;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background: linear-gradient(135deg, #7557e0 0%, #8f63ec 50%, #a86ef7 100%);
   background-size: 200% 200%;
   animation: gradientShift 10s ease infinite;
   border-radius: 24px;
@@ -31,10 +29,10 @@
   margin-bottom: clamp(20px, 3vw, 32px);
   overflow: hidden;
   box-shadow:
-    0 25px 70px rgba(102, 126, 234, 0.35),
-    0 12px 35px rgba(118, 75, 162, 0.25),
-    inset 0 2px 0 rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.25);
+    0 20px 60px rgba(117, 87, 224, 0.35),
+    0 10px 30px rgba(143, 99, 236, 0.25),
+    inset 0 2px 0 rgba(255, 255, 255, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.22);
 }
 
 .hp-featured-promo::before {
@@ -1397,4 +1395,119 @@
 html, body {
   overflow-x: hidden;
   max-width: 100%;
+}
+/* --- COMPACT HOW-IT-WORKS SECTION (50% SIZE) --- */
+
+/* Reduce banner padding */
+.hp-banner {
+  padding: 18px 16px !important;
+  border-radius: 14px !important;
+}
+
+/* Reduce title */
+.hp-banner-title {
+  font-size: clamp(16px, 2.5vw, 22px) !important;
+  margin-bottom: 6px !important;
+}
+
+/* Reduce subtitle */
+.hp-banner-subtitle {
+  font-size: 12px !important;
+  max-width: 450px !important;
+  margin-bottom: 14px !important;
+}
+
+/* Shrink grid spacing */
+.hp-feature-cards {
+  gap: 12px !important;
+  margin-top: 10px !important;
+}
+
+/* Make cards smaller */
+.hp-feature-card {
+  padding: 14px !important;
+  border-radius: 12px !important;
+}
+
+/* Title inside cards */
+.hp-feature-title {
+  font-size: clamp(14px, 2vw, 18px) !important;
+  margin-bottom: 4px !important;
+}
+
+/* Card icon */
+.hp-feature-icon {
+  font-size: clamp(28px, 5vw, 36px) !important;
+  margin-bottom: 4px !important;
+}
+
+/* Description below icon */
+.hp-feature-desc {
+  font-size: 12px !important;
+  margin-bottom: 8px !important;
+}
+
+/* List items */
+.hp-feature-item {
+  font-size: 12px !important;
+  gap: 6px !important;
+}
+
+/* Tick icon */
+.hp-checkmark {
+  font-size: 14px !important;
+}
+
+/* Reduce emoji and bottom text */
+.hp-illustration-emoji {
+  font-size: clamp(40px, 7vw, 60px) !important;
+}
+
+.hp-illustration-text {
+  font-size: 14px !important;
+}
+
+/* Reduce bottom spacing */
+.hp-banner-illustration {
+  margin-top: 10px !important;
+}
+/* Make search container fit section cleanly */
+.hp-search {
+  width: 100%;
+  max-width: 1200px !important;  /* Increase width */
+  margin: 0 auto;
+}
+
+/* Make the white search box bigger */
+.hp-search-wrap {
+  background: #fff;
+  padding: 30px 30px !important;  /* Reduce height padding but increase usability */
+  border-radius: 22px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  width: 100%;
+  max-width: 1100px !important;   /* Increase card width */
+  margin: 0 auto;
+}
+
+/* Make the 3-column input layout cleaner */
+.hp-search-wrap form {
+  width: 100%;
+}
+
+/* Reduce top and bottom gaps */
+.hp-search {
+  padding-top: 10px !important;
+  padding-bottom: 20px !important;
+}
+
+/* Make input boxes uniformly wide */
+.hp-search-wrap .form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px !important;
+}
+
+.hp-search-wrap .form-row > * {
+  flex: 1;
+  min-width: 180px;
 }

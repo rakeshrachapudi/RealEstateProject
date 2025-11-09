@@ -1,17 +1,21 @@
-/* Featured Property Promotional Banner Styles */
-/* Add these styles to your HomePage.css */
-
 .hp-promo-banner {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fbbf24 100%);
-  border: 3px solid #f59e0b;
-  border-radius: 20px;
-  padding: 32px;
-  margin-bottom: 24px;
-  box-shadow: 0 10px 30px rgba(245, 158, 11, 0.3);
   position: relative;
+  background: linear-gradient(135deg, #7557e0 0%, #8f63ec 50%, #a86ef7 100%);
+  border-radius: 12px;
+  padding: 10px 14px !important;
+  margin-bottom: 10px;
   overflow: hidden;
-  animation: hp-promo-glow 3s ease-in-out infinite;
+
+  box-shadow:
+    0 10px 25px rgba(117, 87, 224, 0.25),
+    0 5px 15px rgba(143, 99, 236, 0.2);
 }
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
 
 @keyframes hp-promo-glow {
   0%, 100% {
@@ -342,4 +346,115 @@
   .hp-timer-unit {
     font-size: 10px;
   }
+}
+/* ---------- ULTRA COMPACT FEATURED BANNER ---------- */
+
+/* Reduce overall height */
+.hp-promo-banner {
+  padding: 12px !important;
+  border-radius: 14px !important;
+}
+
+/* Smaller "LIMITED TIME OFFER" badge */
+.hp-promo-badge {
+  padding: 4px 10px !important;
+  font-size: 10px !important;
+  margin-bottom: 8px !important;
+}
+
+/* Title */
+.hp-promo-title {
+  font-size: 18px !important;
+  margin-bottom: 4px !important;
+}
+
+/* Subtitle */
+.hp-promo-desc {
+  font-size: 11px !important;
+  margin-bottom: 10px !important;
+  max-width: 400px !important;
+}
+
+/* Feature Cards Row */
+.hp-promo-features {
+  gap: 8px !important;
+  margin-bottom: 10px !important;
+}
+
+.hp-promo-feature {
+  padding: 8px 10px !important;
+  font-size: 12px !important;
+  border-radius: 10px !important;
+}
+
+.hp-promo-icon {
+  font-size: 16px !important;
+}
+
+/* Coupon Section */
+.hp-promo-coupon {
+  padding: 10px !important;
+  max-width: 280px !important;
+  margin-bottom: 12px !important;
+}
+
+.hp-coupon-label {
+  font-size: 11px !important;
+}
+
+.hp-coupon-code {
+  padding: 8px !important;
+}
+
+.hp-coupon-text {
+  font-size: 16px !important;
+}
+
+/* Copy Button */
+.hp-coupon-copy {
+  padding: 6px 12px !important;
+  font-size: 11px !important;
+}
+
+/* Timer Section */
+.hp-promo-timer {
+  padding: 10px !important;
+  border-radius: 12px !important;
+  margin-bottom: 14px !important;
+}
+
+.hp-timer-label {
+  font-size: 12px !important;
+  margin-bottom: 6px !important;
+}
+
+.hp-timer-box {
+  padding: 6px !important;
+  min-width: 40px !important;
+  border-radius: 8px !important;
+}
+
+.hp-timer-value {
+  font-size: 16px !important;
+}
+
+.hp-timer-unit {
+  font-size: 9px !important;
+}
+
+.hp-timer-sep {
+  font-size: 16px !important;
+}
+
+/* Action Button */
+.hp-promo-btn {
+  padding: 10px 18px !important;
+  font-size: 14px !important;
+  border-radius: 30px !important;
+}
+
+/* Footer Note */
+.hp-promo-note {
+  font-size: 10px !important;
+  margin-top: 8px !important;
 }
