@@ -9,6 +9,7 @@ import DealStatusCard from "../DealStatusCard.jsx";
 import BrowsePropertiesForDeal from "../pages/BrowsePropertiesForDeal";
 import DealDetailModal from "../DealDetailModal.jsx";
 import { BACKEND_BASE_URL } from "../config/config";
+import FeaturedPromoBanner from "../components/FeaturedPromoBanner.jsx";
 import {
   getPropertyTypes,
   getPropertiesByType,
@@ -358,6 +359,7 @@ function HomePage() {
   return (
     <>
       <div className="hp-container">
+            <FeaturedPromoBanner />  {/* Add this line */}
         {/* Enhanced Banner */}
         <section className="hp-banner">
           <div className="hp-banner-content">

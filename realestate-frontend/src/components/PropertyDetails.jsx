@@ -1,659 +1,691 @@
 // src/components/PropertyDetails.jsx
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "../AuthContext";
-import { getPropertyDetails } from "../services/api";
-import DealDetailsPopup from "../components/DealDetailsPopup";
+import { useAuth } from "../AuthContext.jsx";
 import { BACKEND_BASE_URL } from "../config/config";
 import "./PropertyDetails.css";
 
-// Safe JSON parse
-const safeJsonParse = async (response) => {
-  try {
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      return await response.json();
-    }
-    await response.text();
-    return null;
-  } catch {
-    return null;
-  }
-};
+function PropertyDetails() {
+  const { id: propertyId } = useParams();
 
-const PropertyDetails = ({ onLoginClick, onSignupClick }) => {
-  const { id: propertyIdParam } = useParams();
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const [existingDeal, setExistingDeal] = useState(null);
-  const [showDealDetails, setShowDealDetails] = useState(false);
-  const [checkingDeal, setCheckingDeal] = useState(false);
-
-  const [agents, setAgents] = useState([]);
-  const [loadingAgents, setLoadingAgents] = useState(false);
-
-  const [propertyImages, setPropertyImages] = useState([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [loadingImages, setLoadingImages] = useState(true);
+  const [agentLoading, setAgentLoading] = useState(true);
+  const [agentAvailable, setAgentAvailable] = useState(false);
+  const [dealLoading, setDealLoading] = useState(true);
+  const [existingDeal, setExistingDeal] = useState(null);
+  const [offerAmount, setOfferAmount] = useState("");
+  const [dealError, setDealError] = useState("");
 
-  const [creatingDeal, setCreatingDeal] = useState(false);
-  const [createError, setCreateError] = useState(null);
-  const [buyerPhone, setBuyerPhone] = useState("");
+  // Featured property states
+  const [showFeaturedSection, setShowFeaturedSection] = useState(false);
+  const [featuredStatus, setFeaturedStatus] = useState(null);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponApplying, setCouponApplying] = useState(false);
+  const [couponValidation, setCouponValidation] = useState(null);
+  const [featuredPrice, setFeaturedPrice] = useState({
+    original: 499,
+    discount: 0,
+    final: 499
+  });
+  const [applyingFeatured, setApplyingFeatured] = useState(false);
 
   useEffect(() => {
     fetchPropertyDetails();
-    fetchAgents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [propertyIdParam]);
+  }, [propertyId]);
 
   useEffect(() => {
-    if (property?.id) fetchPropertyImages(property.id);
-  }, [property?.id]);
+    if (property && user) {
+      checkAgentAvailability();
+      checkExistingDeal();
+      checkFeaturedStatus();
+      // Check if user is property owner to show featured section
+     if (property.user?.id === user.id) {
 
-  useEffect(() => {
-    if (property?.id && user?.id && user?.role) {
-      checkForExistingDeal();
-    } else {
-      setExistingDeal(null);
-    }
-  }, [property?.id, user?.id, user?.role]);
-
-  const fetchAgents = async () => {
-    setLoadingAgents(true);
-    try {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/users/agents`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
-      if (response.ok) {
-        const result = await safeJsonParse(response);
-        const raw =
-          result?.success && Array.isArray(result.data)
-            ? result.data
-            : Array.isArray(result)
-            ? result
-            : [];
-        const activeAgents = raw.filter((a) => a.isActive && a.mobileNumber);
-        setAgents(activeAgents);
-      } else {
-        setAgents([]);
+        setShowFeaturedSection(true);
       }
-    } catch {
-      setAgents([]);
-    } finally {
-      setLoadingAgents(false);
     }
-  };
-
-  const handleContactAgent = () => {
-    if (!user) {
-      if (typeof onLoginClick === "function") onLoginClick();
-      return;
-    }
-    if (agents.length === 0) {
-      alert("No agents available at the moment. Please try again later.");
-      return;
-    }
-    const selectedAgent = agents[Math.floor(Math.random() * agents.length)];
-    let mobileNumber = (selectedAgent.mobileNumber || "").replace(/\D/g, "");
-    if (mobileNumber.length === 10) mobileNumber = "91" + mobileNumber;
-
-    const propertyTitle = property?.title || "Property";
-    const propertyPrice = formatPrice(property?.price);
-    const propertyLocation = property?.areaName || property?.city || "Location";
-
-    const message =
-      `Hi! I'm interested in this property:\n\n` +
-      `🏠 *${propertyTitle}*\n` +
-      `💰 Price: ${propertyPrice}\n` +
-      `📍 Location: ${propertyLocation}\n\n` +
-      `Could you please provide more details?`;
-
-    const encoded = encodeURIComponent(message);
-    const url = `https://wa.me/${mobileNumber}?text=${encoded}`;
-    window.open(url, "_blank");
-  };
-
-  const fetchPropertyImages = async (propertyId) => {
-    setLoadingImages(true);
-    try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        }
-      );
-      if (response.ok) {
-        const images = await response.json();
-        const sorted = (Array.isArray(images) ? images : [])
-          .filter((img) => img.imageUrl)
-          .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-        setPropertyImages(sorted);
-      } else {
-        setPropertyImages([]);
-      }
-    } catch {
-      setPropertyImages([]);
-    } finally {
-      setLoadingImages(false);
-    }
-  };
-
-  const handlePreviousImage = () => {
-    setCurrentImageIndex((i) => (i === 0 ? propertyImages.length - 1 : i - 1));
-  };
-  const handleNextImage = () => {
-    setCurrentImageIndex((i) => (i === propertyImages.length - 1 ? 0 : i + 1));
-  };
-  const handleThumbnailClick = (index) => setCurrentImageIndex(index);
-
-  const getCurrentImageUrl = () => {
-    if (propertyImages.length > 0)
-      return propertyImages[currentImageIndex]?.imageUrl;
-    return (
-      property?.imageUrl ||
-      "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&h=600&fit=crop"
-    );
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [property, user]);
 
   const fetchPropertyDetails = async () => {
-    setLoading(true);
-    setError(null);
-    setProperty(null);
     try {
-      const data = await getPropertyDetails(propertyIdParam);
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/properties/${propertyId}`
+      );
+      if (!response.ok) throw new Error("Property not found");
+      const data = await response.json();
       setProperty(data);
     } catch (err) {
-      setError("Failed to load property details.");
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const checkForExistingDeal = async () => {
-    if (!user?.id || !user?.role || !property?.id) {
-      setExistingDeal(null);
-    }
-    setCheckingDeal(true);
+  const checkAgentAvailability = async () => {
     try {
-      const endpoint = `${BACKEND_BASE_URL}/api/deals/user/${
-        user.id
-      }/role/${user.role.toUpperCase()}`;
-      const response = await fetch(endpoint, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
-      if (!response.ok) throw new Error(`API Error ${response.status}`);
-      const responseData = await safeJsonParse(response);
-      const deals =
-        responseData?.success && Array.isArray(responseData.data)
-          ? responseData.data
-          : Array.isArray(responseData)
-          ? responseData
-          : [];
-      const found = deals.find(
-        (d) => (d?.property?.id ?? d?.propertyId) == property.id
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/agents/check/${property.user?.id}`
+
       );
-      setExistingDeal(found || null);
+      setAgentAvailable(response.ok);
     } catch {
-      setExistingDeal(null);
+      setAgentAvailable(false);
     } finally {
-      setCheckingDeal(false);
+      setAgentLoading(false);
     }
   };
 
-  const handleCreateDeal = async () => {
-    if (!user || (user.role !== "AGENT" && user.role !== "ADMIN")) {
-      setCreateError("Only agents/admins can create deals.");
+  const checkExistingDeal = async () => {
+    if (!user?.id) {
+      setDealLoading(false);
       return;
     }
-    setCreateError(null);
-    if (!buyerPhone || buyerPhone.replace(/\D/g, "").length !== 10) {
-      setCreateError("Valid 10-digit buyer phone needed.");
-      return;
-    }
-    setCreatingDeal(true);
+
     try {
-      const searchRes = await fetch(
-        `${BACKEND_BASE_URL}/api/users/search?phone=${buyerPhone}`,
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/deals/property/${propertyId}/buyer/${user.id}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
         }
       );
-      if (!searchRes.ok)
-        throw new Error(`Buyer search failed: ${searchRes.status}`);
-      const searchData = await safeJsonParse(searchRes);
-      const buyer = searchData?.success ? searchData.data : null;
-      if (!buyer?.id) throw new Error("Buyer not found.");
-      if ((buyer.role || "").toUpperCase() !== "USER")
-        throw new Error(
-          `The user is a ${buyer.role}. Only USER can be the buyer.`
-        );
+      if (response.ok) {
+        const deal = await response.json();
+        setExistingDeal(deal);
+      }
+    } catch {
+      setExistingDeal(null);
+    } finally {
+      setDealLoading(false);
+    }
+  };
 
-      const createRes = await fetch(`${BACKEND_BASE_URL}/api/deals/create`, {
+  const checkFeaturedStatus = async () => {
+    try {
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/featured-properties/check/${propertyId}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setFeaturedStatus(data);
+      }
+    } catch (err) {
+      console.error("Error checking featured status:", err);
+    }
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponValidation({ valid: false, message: "Please enter a coupon code" });
+      return;
+    }
+
+    setCouponApplying(true);
+    setCouponValidation(null);
+
+    try {
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/coupons/validate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            couponCode: couponCode,
+            orderValue: 499.00
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.valid) {
+        setCouponValidation(data);
+        setFeaturedPrice({
+          original: data.couponDetails.originalPrice,
+          discount: data.couponDetails.discountAmount,
+          final: data.couponDetails.finalPrice
+        });
+      } else {
+        setCouponValidation(data);
+      }
+    } catch (err) {
+      setCouponValidation({
+        valid: false,
+        message: "Error validating coupon. Please try again."
+      });
+    } finally {
+      setCouponApplying(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setCouponCode("");
+    setCouponValidation(null);
+    setFeaturedPrice({
+      original: 499,
+      discount: 0,
+      final: 499
+    });
+  };
+
+  const handleApplyFeatured = async () => {
+    setApplyingFeatured(true);
+    setDealError("");
+
+    try {
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/featured-properties/apply`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+          body: JSON.stringify({
+            propertyId: propertyId,
+            couponCode: couponValidation?.valid ? couponCode : null,
+            durationMonths: 3
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.paymentStatus === "FREE") {
+          alert("🎉 Congratulations! Your property is now featured for 3 months!");
+          checkFeaturedStatus();
+          setShowFeaturedSection(false);
+        } else {
+          alert("Featured application submitted. Please complete payment.");
+          // Here you would integrate Razorpay payment
+          // For now, just refresh the status
+          checkFeaturedStatus();
+        }
+      } else {
+        setDealError(typeof data === 'string' ? data : data.message || "Failed to apply featured status");
+      }
+    } catch (err) {
+      setDealError("Error applying featured status. Please try again.");
+    } finally {
+      setApplyingFeatured(false);
+    }
+  };
+
+  const handleCreateDeal = async () => {
+    if (!offerAmount || parseFloat(offerAmount) <= 0) {
+      setDealError("Please enter a valid offer amount");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/deals`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
         body: JSON.stringify({
-          propertyId: property.id,
-          buyerId: buyer.id,
-          agentId: user.id,
+          propertyId: parseInt(propertyId),
+          buyerId: user.id,
+         sellerId: property.user?.id,
+
+          offerAmount: parseFloat(offerAmount),
         }),
       });
-      const createData = await safeJsonParse(createRes);
-      if (!createRes.ok || !createData?.success) {
-        throw new Error(
-          createData?.message || `Failed to create deal (${createRes.status}).`
-        );
+
+      if (response.ok) {
+        const newDeal = await response.json();
+        setExistingDeal(newDeal);
+        setOfferAmount("");
+        alert("Deal created successfully!");
+      } else {
+        const errorData = await response.text();
+        setDealError(errorData || "Failed to create deal");
       }
-      alert("✅ Deal created!");
-      setBuyerPhone("");
-      setCreateError(null);
-      setTimeout(checkForExistingDeal, 400);
     } catch (err) {
-      setCreateError(err.message || "Error occurred.");
-    } finally {
-      setCreatingDeal(false);
+      setDealError("Error creating deal. Please try again.");
     }
   };
 
-  const handleRefreshDeal = () => {
-    setShowDealDetails(false);
-    checkForExistingDeal();
+  const handleNext = () => {
+    setCurrentImageIndex((prev) =>
+      prev === property.imageUrls.length - 1 ? 0 : prev + 1
+    );
   };
 
-  const formatPrice = (price) => {
-    if (price == null) return "Price on request";
-    const n = Number(price);
-    if (isNaN(n)) return "Invalid Price";
-    if (n >= 10000000) return `₹${(n / 10000000).toFixed(2)} Cr`;
-    if (n >= 100000) return `₹${(n / 100000).toFixed(2)} Lac`;
-    return `₹${n.toLocaleString("en-IN")}`;
+  const handlePrev = () => {
+    setCurrentImageIndex((prev) =>
+      prev === 0 ? property.imageUrls.length - 1 : prev - 1
+    );
   };
 
   if (loading) {
     return (
-      <div className="pd-state pd-loading">
-        <div className="pd-spinner" />
-        <p className="pd-loading-text">Loading property details...</p>
+      <div className="pd-page">
+        <div className="pd-container">
+          <div className="pd-state pd-loading">
+            <div className="pd-spinner" />
+            <span className="pd-loading-text">Loading property details...</span>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error || !property) {
     return (
-      <div className="pd-state pd-error">
-        <div className="pd-error-ic" aria-hidden="true">
-          🏠
+      <div className="pd-page">
+        <div className="pd-container">
+          <div className="pd-state pd-error">
+            <div className="pd-error-ic">⚠️</div>
+            <h2 className="pd-error-title">Property Not Found</h2>
+            <p className="pd-error-msg">{error || "Unable to load property"}</p>
+            <button onClick={() => navigate(-1)} className="pd-btn pd-btn-primary">
+              Go Back
+            </button>
+          </div>
         </div>
-        <h2 className="pd-error-title">Oops! Something went wrong</h2>
-        <p className="pd-error-msg">{error || "Property not found."}</p>
-        <button onClick={() => navigate(-1)} className="pd-back">
-          ← Go Back
-        </button>
       </div>
     );
   }
 
+  const ownerName = property.ownerName || property.userName || "Property Owner";
+  const ownerPhone = property.ownerPhone || property.phoneNumber || "";
+  const ownerInitial = ownerName.charAt(0).toUpperCase();
+  const images = property.imageUrls || [];
+const amenitiesList = Array.isArray(property?.amenities)
+  ? property.amenities
+  : typeof property?.amenities === "string"
+  ? property.amenities.split(",").map(a => a.trim())
+  : [];
+
+
+
   return (
-    <>
-      <div className="pd-page">
-        <div className="pd-container">
-          <button onClick={() => navigate(-1)} className="pd-back">
-            ← Back
-          </button>
+    <div className="pd-page">
+      <div className="pd-container">
+        <button onClick={() => navigate(-1)} className="pd-back">
+          ← Back
+        </button>
 
-          {/* Image gallery */}
+        {/* Images */}
+        {images.length > 0 ? (
           <div className="pd-images">
-            {loadingImages ? (
-              <div className="pd-image-loading">
-                <div className="pd-spinner" />
-                <p>Loading...</p>
-              </div>
-            ) : (
-              <>
-                <div className="pd-image-main">
-                  <img
-                    src={getCurrentImageUrl()}
-                    alt={property.title || "Property"}
-                    onError={(e) => {
-                      e.currentTarget.src =
-                        "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&h=600&fit=crop";
-                    }}
-                  />
-
-                  {propertyImages.length > 1 && (
-                    <>
-                      <button
-                        onClick={handlePreviousImage}
-                        className="pd-img-nav pd-img-left"
-                        aria-label="Previous image"
-                      >
-                        ‹
-                      </button>
-                      <button
-                        onClick={handleNextImage}
-                        className="pd-img-nav pd-img-right"
-                        aria-label="Next image"
-                      >
-                        ›
-                      </button>
-
-                      <div className="pd-img-count">
-                        {currentImageIndex + 1}/{propertyImages.length}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {propertyImages.length > 1 && (
-                  <div className="pd-thumbs">
-                    {propertyImages.slice(0, 5).map((image, index) => (
-                      <img
-                        key={image.id || index}
-                        src={image.imageUrl}
-                        alt={`View ${index + 1}`}
-                        className={`pd-thumb ${
-                          index === currentImageIndex ? "active" : ""
-                        }`}
-                        onClick={() => handleThumbnailClick(index)}
-                        onError={(e) => {
-                          e.currentTarget.src =
-                            "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=200&h=150&fit=crop";
-                        }}
-                      />
-                    ))}
-                    {propertyImages.length > 5 && (
-                      <div className="pd-more">
-                        +{propertyImages.length - 5}
-                      </div>
-                    )}
+            <div className="pd-image-main">
+              <img src={images[currentImageIndex]} alt={property.title} />
+              {images.length > 1 && (
+                <>
+                  <button onClick={handlePrev} className="pd-img-nav pd-img-left">
+                    ‹
+                  </button>
+                  <button onClick={handleNext} className="pd-img-nav pd-img-right">
+                    ›
+                  </button>
+                  <div className="pd-img-count">
+                    {currentImageIndex + 1} / {images.length}
                   </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Main content */}
-          <div className="pd-main">
-            {/* Left */}
-            <div className="pd-left card">
-              <div className="pd-head">
-                <div className="pd-head-top">
-                  {property.isFeatured && (
-                    <span className="pd-badge">⭐ Featured</span>
-                  )}
-                  <span className="pd-type">
-                    {property.listingType?.toLowerCase() === "sale"
-                      ? "SALE"
-                      : "RENT"}
-                  </span>
-                </div>
-
-                <h1 className="pd-title">{property.title || "Property"}</h1>
-
-                <div className="pd-loc">
-                  <span className="pd-loc-ic">📍</span>
-                  <span className="pd-loc-txt">
-                    {property.areaName || property.city || "Location"}
-                  </span>
-                </div>
-
-                <div className="pd-price">
-                  <span className="pd-price-amt">
-                    {formatPrice(property.price)}
-                  </span>
-                  {property.listingType?.toLowerCase() === "rent" && (
-                    <span className="pd-price-period">/month</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="pd-keys">
-                {property.areaSqft && (
-                  <div className="pd-key">
-                    <span className="pd-key-ic">📐</span>
-                    <div>
-                      <div className="pd-key-label">Area</div>
-                      <div className="pd-key-val">
-                        {property.areaSqft} sq ft
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {property.bedrooms > 0 && (
-                  <div className="pd-key">
-                    <span className="pd-key-ic">🛏️</span>
-                    <div>
-                      <div className="pd-key-label">Beds</div>
-                      <div className="pd-key-val">{property.bedrooms}</div>
-                    </div>
-                  </div>
-                )}
-                {property.bathrooms > 0 && (
-                  <div className="pd-key">
-                    <span className="pd-key-ic">🚿</span>
-                    <div>
-                      <div className="pd-key-label">Baths</div>
-                      <div className="pd-key-val">{property.bathrooms}</div>
-                    </div>
-                  </div>
-                )}
-                {property.propertyType && (
-                  <div className="pd-key">
-                    <span className="pd-key-ic">🏠</span>
-                    <div>
-                      <div className="pd-key-label">Type</div>
-                      <div className="pd-key-val">
-                        {property.propertyType.typeName || property.type}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {property.description && (
-                <div className="pd-section">
-                  <h3 className="pd-subtitle">Description</h3>
-                  <p className="pd-desc">{property.description}</p>
-                </div>
-              )}
-
-              {property.amenities && (
-                <div className="pd-section">
-                  <h3 className="pd-subtitle">Amenities</h3>
-                  <div className="pd-amenities">
-                    {property.amenities
-                      .split(",")
-                      .map((a) => a.trim())
-                      .filter((a) => a)
-                      .slice(0, 8)
-                      .map((amenity, idx) => (
-                        <div key={idx} className="pd-chip">
-                          {amenity}
-                        </div>
-                      ))}
-                  </div>
-                </div>
+                </>
               )}
             </div>
-
-            {/* Right */}
-            <div className="pd-right">
-              <div className="pd-contact card">
-                <h3 className="pd-contact-title">Contact Agent</h3>
-
-                {property.user && (
-                  <div className="pd-owner">
-                    <div className="pd-avatar">
-                      {(property.user.firstName?.[0] || "A").toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="pd-owner-label">Listed by</div>
-                      <div className="pd-owner-name">
-                        {property.user.firstName || ""}{" "}
-                        {property.user.lastName || "Agent"}
-                      </div>
-                    </div>
-                  </div>
+            {images.length > 1 && (
+              <div className="pd-thumbs">
+                {images.slice(0, 5).map((img, idx) => (
+                  <img
+                    key={idx}
+                    src={img}
+                    alt={`Thumbnail ${idx + 1}`}
+                    className={`pd-thumb ${idx === currentImageIndex ? "active" : ""}`}
+                    onClick={() => setCurrentImageIndex(idx)}
+                  />
+                ))}
+                {images.length > 5 && (
+                  <div className="pd-more">+{images.length - 5}</div>
                 )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="pd-images">
+            <div className="pd-image-loading">
+              <span>📷</span>
+              <span>No images available</span>
+            </div>
+          </div>
+        )}
 
-                <div className="pd-contact-actions">
-                  <button
-                    className="pd-btn pd-btn-wa"
-                    onClick={handleContactAgent}
-                    disabled={loadingAgents || agents.length === 0}
-                    aria-busy={loadingAgents}
-                  >
-                    <span aria-hidden="true">
-                      {loadingAgents ? "⏳" : "💬"}
-                    </span>
-                    {user ? "WhatsApp" : "Login to chat"}
-                  </button>
+        {/* Main content */}
+        <div className="pd-main">
+          {/* Left column */}
+          <div className="card pd-left">
+            <div className="pd-head">
+              <div className="pd-head-top">
+                <span className="pd-badge">
+                  {property.isVerified ? "✓ Verified" : "Pending Verification"}
+                </span>
+                <span className="pd-type">
+                  {property.listingType === "sale" ? "For Sale" : "For Rent"}
+                </span>
+              </div>
+              <h1 className="pd-title">{property.title}</h1>
+              <div className="pd-loc">
+                <span className="pd-loc-ic">📍</span>
+                <span className="pd-loc-txt">{property.address}</span>
+              </div>
+              <div className="pd-price">
+                <span className="pd-price-amt">₹{property.price?.toLocaleString()}</span>
+                {property.listingType === "rent" && (
+                  <span className="pd-price-period">/month</span>
+                )}
+              </div>
+            </div>
 
-                  <button className="pd-btn pd-btn-phone">
-                    <span aria-hidden="true">📞</span>
-                    Call
-                  </button>
-                </div>
-
-                <div className="pd-agent-status">
-                  {loadingAgents && (
-                    <span className="pd-status pd-status-loading">
-                      Finding agents...
-                    </span>
-                  )}
-                  {!loadingAgents && agents.length === 0 && (
-                    <span className="pd-status pd-status-unavailable">
-                      No agents available
-                    </span>
-                  )}
-                  {!loadingAgents && agents.length > 0 && (
-                    <span className="pd-status pd-status-available">
-                      {agents.length} agent{agents.length > 1 ? "s" : ""}{" "}
-                      available
-                    </span>
-                  )}
+            {/* Key details */}
+            <div className="pd-keys">
+              <div className="pd-key">
+                <span className="pd-key-ic">🏠</span>
+                <div>
+                  <div className="pd-key-label">Type</div>
+                  <div className="pd-key-val">{property.type}</div>
                 </div>
               </div>
+             <div className="pd-key">
+               <span className="pd-key-ic">📏</span>
+               <div>
+                 <div className="pd-key-label">Area</div>
+                 <div className="pd-key-val">
+                   {property.areaSqft} sq ft ({property.area?.areaName})
+                 </div>
+               </div>
+             </div>
 
-              <div className="pd-deal card">
-                <h4 className="pd-deal-title">Deal Status</h4>
+              <div className="pd-key">
+                <span className="pd-key-ic">🛏️</span>
+                <div>
+                  <div className="pd-key-label">Bedrooms</div>
+                  <div className="pd-key-val">{property.bedrooms}</div>
+                </div>
+              </div>
+              <div className="pd-key">
+                <span className="pd-key-ic">🚿</span>
+                <div>
+                  <div className="pd-key-label">Bathrooms</div>
+                  <div className="pd-key-val">{property.bathrooms}</div>
+                </div>
+              </div>
+            </div>
 
-                {checkingDeal && (
+            {/* Description */}
+            <div className="pd-section">
+              <h2 className="pd-subtitle">Description</h2>
+              <p className="pd-desc">{property.description}</p>
+            </div>
+
+       {amenitiesList.length > 0 && (
+         <div className="pd-section">
+           <h2 className="pd-subtitle">Amenities</h2>
+           <div className="pd-amenities">
+             {amenitiesList.map((amenity, idx) => (
+               <span key={idx} className="pd-chip">
+                 ✓ {amenity}
+               </span>
+             ))}
+           </div>
+         </div>
+       )}
+
+
+          </div>
+
+          {/* Right column */}
+          <div className="pd-right">
+            {/* Contact card */}
+            <div className="card pd-contact">
+              <h3 className="pd-contact-title">Contact Owner</h3>
+              <div className="pd-owner">
+                <div className="pd-avatar">{ownerInitial}</div>
+                <div>
+                  <div className="pd-owner-label">Property Owner</div>
+                  <div className="pd-owner-name">{ownerName}</div>
+                </div>
+              </div>
+              <div className="pd-contact-actions">
+                <button
+                  className="pd-btn pd-btn-wa"
+                  onClick={() =>
+                    window.open(
+                      `https://wa.me/${ownerPhone.replace(/\D/g, "")}`,
+                      "_blank"
+                    )
+                  }
+                >
+                  <span>💬</span>
+                  <span>WhatsApp</span>
+                </button>
+                <button
+                  className="pd-btn pd-btn-phone"
+                  onClick={() => (window.location.href = `tel:${ownerPhone}`)}
+                >
+                  <span>📞</span>
+                  <span>Call</span>
+                </button>
+              </div>
+              <div className="pd-agent-status">
+                {agentLoading ? (
+                  <span className="pd-status-loading">⏳ Checking availability...</span>
+                ) : agentAvailable ? (
+                  <span className="pd-status-available">
+                    ✓ Agent available for assistance
+                  </span>
+                ) : (
+                  <span className="pd-status-unavailable">
+                    ⚠ Direct owner contact
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Featured Property Section - Only for property owners */}
+            {showFeaturedSection && !featuredStatus?.isFeatured && (
+              <div className="card pd-featured">
+                <h3 className="pd-featured-title">⭐ Make Your Property Featured</h3>
+                <p className="pd-featured-desc">
+                  Get more visibility! Featured properties appear at the top of search results.
+                </p>
+
+                <div className="pd-featured-pricing">
+                  <div className="pd-featured-price-row">
+                    <span>Original Price:</span>
+                    <span className="pd-price-original">₹{featuredPrice.original}</span>
+                  </div>
+                  {featuredPrice.discount > 0 && (
+                    <div className="pd-featured-price-row pd-discount">
+                      <span>Discount:</span>
+                      <span className="pd-price-discount">-₹{featuredPrice.discount}</span>
+                    </div>
+                  )}
+                  <div className="pd-featured-price-row pd-final">
+                    <span>Final Price:</span>
+                    <span className="pd-price-final">₹{featuredPrice.final}</span>
+                  </div>
+                  <div className="pd-featured-duration">
+                    <small>✓ Valid for 3 months</small>
+                  </div>
+                </div>
+
+                <div className="pd-featured-coupon">
+                  <label className="pd-coupon-label">Have a coupon code?</label>
+                  <div className="pd-coupon-input-group">
+                    <input
+                      type="text"
+                      className="pd-input"
+                      placeholder="Enter coupon code"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      disabled={couponValidation?.valid}
+                    />
+                    {!couponValidation?.valid ? (
+                      <button
+                        onClick={handleApplyCoupon}
+                        disabled={couponApplying || !couponCode.trim()}
+                        className="pd-btn pd-btn-coupon"
+                      >
+                        {couponApplying ? "Checking..." : "Apply"}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleRemoveCoupon}
+                        className="pd-btn pd-btn-remove"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+
+                  {couponValidation && (
+                    <div className={`pd-coupon-msg ${couponValidation.valid ? 'success' : 'error'}`}>
+                      {couponValidation.message}
+                    </div>
+                  )}
+
+                  <div className="pd-coupon-hint">
+                    💡 Try code: <strong>FEATURED3M</strong> for free featured listing!
+                  </div>
+                </div>
+
+                {dealError && <div className="pd-alert">{dealError}</div>}
+
+                <button
+                  onClick={handleApplyFeatured}
+                  disabled={applyingFeatured}
+                  className="pd-btn pd-btn-primary"
+                  style={{ width: "100%" }}
+                >
+                  {applyingFeatured ? "Processing..." :
+                   featuredPrice.final === 0 ? "Activate Featured (Free)" :
+                   `Pay ₹${featuredPrice.final} & Activate`}
+                </button>
+              </div>
+            )}
+
+            {/* Featured Status - Show if already featured */}
+            {featuredStatus?.isFeatured && (
+              <div className="card pd-featured-active">
+                <h3 className="pd-featured-title">⭐ Featured Property</h3>
+                <div className="pd-featured-badge">
+                  <span className="pd-badge-icon">✓</span>
+                  <span>This property is currently featured</span>
+                </div>
+                <div className="pd-featured-info">
+                  <div className="pd-info-row">
+                    <span>Featured Until:</span>
+                    <span>{new Date(featuredStatus.featuredDetails.featuredUntil).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Deal section - Only for buyers/non-owners */}
+            {user && user.id !== property.user?.id && (
+              <div className="card pd-deal">
+                <h3 className="pd-deal-title">Make an Offer</h3>
+                {dealLoading ? (
                   <div className="pd-deal-loading">
                     <div className="pd-spinner small" />
                     <span>Checking...</span>
                   </div>
-                )}
-
-                {!checkingDeal && existingDeal && (
+                ) : existingDeal ? (
                   <div className="pd-deal-exists">
-                    <div className="pd-deal-badge">✅ Active Deal</div>
-                    <div className="pd-deal-info">
-                      <strong>Stage:</strong>{" "}
-                      {existingDeal.stage ||
-                        existingDeal.currentStage ||
-                        "INQUIRY"}
-                    </div>
+                    <div className="pd-deal-badge">Deal Active</div>
+                    <p className="pd-deal-info">
+                      Stage: <strong>{existingDeal.stage}</strong>
+                    </p>
                     <button
-                      onClick={() => setShowDealDetails(true)}
+                      onClick={() => navigate(`/deals/${existingDeal.dealId}`)}
                       className="pd-btn pd-btn-view"
                     >
-                      View Details
+                      View Deal
                     </button>
                   </div>
-                )}
-
-                {!checkingDeal && !existingDeal && (
+                ) : (
                   <div className="pd-deal-none">
-                    <div className="pd-deal-none-badge">ℹ️ No active deals</div>
-
-                    {user &&
-                      (user.role === "AGENT" || user.role === "ADMIN") && (
-                        <div className="pd-deal-create">
-                          <input
-                            type="tel"
-                            value={buyerPhone}
-                            onChange={(e) => setBuyerPhone(e.target.value)}
-                            placeholder="Buyer phone"
-                            className="pd-input"
-                            maxLength={10}
-                            inputMode="numeric"
-                          />
-                          <button
-                            onClick={handleCreateDeal}
-                            className="pd-btn pd-btn-primary"
-                            disabled={creatingDeal}
-                          >
-                            {creatingDeal ? "⏳" : "➕"} Create
-                          </button>
-                          {createError && (
-                            <div className="pd-alert">{createError}</div>
-                          )}
-                        </div>
-                      )}
+                    <div className="pd-deal-none-badge">No Active Deal</div>
+                    <div className="pd-deal-create">
+                      <input
+                        type="number"
+                        className="pd-input"
+                        placeholder="Your offer amount (₹)"
+                        value={offerAmount}
+                        onChange={(e) => setOfferAmount(e.target.value)}
+                      />
+                      {dealError && <div className="pd-alert">{dealError}</div>}
+                      <button
+                        onClick={handleCreateDeal}
+                        className="pd-btn pd-btn-primary"
+                      >
+                        Create Deal
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
+            )}
 
-              <div className="pd-details card">
-                <h4 className="pd-details-title">Details</h4>
-                <div className="pd-details-list">
-                  <div className="pd-detail-row">
-                    <span>Price:</span>
-                    <span>{formatPrice(property.price)}</span>
-                  </div>
-                  {property.address && (
-                    <div className="pd-detail-row">
-                      <span>Address:</span>
-                      <span>{property.address}</span>
-                    </div>
-                  )}
-                  {property.pincode && (
-                    <div className="pd-detail-row">
-                      <span>Pincode:</span>
-                      <span>{property.pincode}</span>
-                    </div>
-                  )}
+            {/* Additional details */}
+            <div className="card pd-details">
+              <h3 className="pd-details-title">Property Details</h3>
+              <div className="pd-details-list">
+                <div className="pd-detail-row">
+                  <span>Property ID</span>
+                  <span>#{property.propertyId}</span>
                 </div>
+                <div className="pd-detail-row">
+                  <span>Posted On</span>
+                  <span>{new Date(property.createdAt).toLocaleDateString()}</span>
+                </div>
+                {property.yearBuilt && (
+                  <div className="pd-detail-row">
+                    <span>Year Built</span>
+                    <span>{property.yearBuilt}</span>
+                  </div>
+                )}
+                {property.availableFrom && (
+                  <div className="pd-detail-row">
+                    <span>Available From</span>
+                    <span>{new Date(property.availableFrom).toLocaleDateString()}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
-
-        {showDealDetails && existingDeal && (
-          <DealDetailsPopup
-            deal={existingDeal}
-            onClose={() => setShowDealDetails(false)}
-            onDealUpdated={handleRefreshDeal}
-          />
-        )}
-
-        <button
-          className="pd-fab"
-          onClick={handleContactAgent}
-          disabled={loadingAgents || agents.length === 0}
-          aria-label="Contact via WhatsApp"
-        >
-          💬
-        </button>
       </div>
-    </>
+
+      {/* Floating WhatsApp button */}
+      <button
+        className="pd-fab"
+        onClick={() =>
+          window.open(
+            `https://wa.me/${ownerPhone.replace(/\D/g, "")}`,
+            "_blank"
+          )
+        }
+      >
+        💬
+      </button>
+    </div>
   );
-};
+}
 
 export default PropertyDetails;
