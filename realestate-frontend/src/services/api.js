@@ -1,31 +1,54 @@
+// src/services/api.js
 import { BACKEND_BASE_URL } from "../config/config";
 
 const API_BASE_URL = `${BACKEND_BASE_URL}/api`;
 
-// Helper function to handle different response formats
+/**
+ * Normalized response handler:
+ * - Accepts ApiResponse format: { success, data, message }
+ * - Accepts direct array/object responses too
+ */
 const handleResponse = async (response) => {
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
-  }
-  const data = await response.json();
-
-  // Handle ApiResponse format {success: true, data: [...]}
-  if (data && typeof data === 'object' && data.success !== undefined) {
-    return data.data || [];
+    const txt = await response.text().catch(() => "");
+    throw new Error(`API request failed: ${response.status} ${txt || ""}`.trim());
   }
 
-  // Handle direct array or object
+  // Try JSON, fall back to text/null
+  let data = null;
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    data = await response.json();
+  } else {
+    // Some endpoints may return text; return as-is
+    const text = await response.text();
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text || null;
+    }
+  }
+
+  // If backend wraps with ApiResponse shape, return data.data
+  if (data && typeof data === "object" && Object.prototype.hasOwnProperty.call(data, "success")) {
+    return data.data ?? null;
+  }
+
   return data;
 };
 
+// -------------------------
 // Property Type APIs
+// -------------------------
 export const getPropertyTypes = async () => {
   const response = await fetch(`${API_BASE_URL}/properties/types`);
   return handleResponse(response);
 };
 
 export const getPropertiesByType = async (type) => {
-  const response = await fetch(`${API_BASE_URL}/properties/byType?type=${encodeURIComponent(type)}`);
+  const response = await fetch(
+    `${API_BASE_URL}/properties/byType?type=${encodeURIComponent(type)}`
+  );
   return handleResponse(response);
 };
 
@@ -35,13 +58,16 @@ export const getAllProperties = async () => {
   return handleResponse(response);
 };
 
-// Authentication APIs
+// -------------------------
+// Auth APIs
+// -------------------------
 export const login = async (username, password) => {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
+  // Auth endpoints typically return a known shape; don't normalize
   return response.json();
 };
 
@@ -65,19 +91,27 @@ export const verifyToken = async (token) => {
   return response.json();
 };
 
-// Featured properties (using PropertySearchController)
+// -------------------------
+// Featured Properties
+// Uses FeaturedPropertyController `/featured-properties/active`
+// -------------------------
 export const getFeaturedProperties = async () => {
-  const response = await fetch(`${API_BASE_URL}/properties/featured`);
+  const response = await fetch(`${API_BASE_URL}/featured-properties/active`);
   return handleResponse(response);
 };
 
-// Property details
+// -------------------------
+// Property Details
+// -------------------------
 export const getPropertyDetails = async (id) => {
   const response = await fetch(`${API_BASE_URL}/properties/${id}`);
+  // Keep raw JSON (details pages often expect exact shape)
   return response.json();
 };
 
-// Search properties (using PropertySearchController)
+// -------------------------
+// Search (PropertySearchController)
+// -------------------------
 export const searchProperties = async (searchParams) => {
   const response = await fetch(`${API_BASE_URL}/properties/search`, {
     method: "POST",
@@ -87,8 +121,12 @@ export const searchProperties = async (searchParams) => {
   return handleResponse(response);
 };
 
-// Get areas
+// -------------------------
+// Areas
+// -------------------------
 export const getAreas = async (city = "Hyderabad") => {
-  const response = await fetch(`${API_BASE_URL}/areas?city=${encodeURIComponent(city)}`);
+  const response = await fetch(
+    `${API_BASE_URL}/areas?city=${encodeURIComponent(city)}`
+  );
   return handleResponse(response);
 };

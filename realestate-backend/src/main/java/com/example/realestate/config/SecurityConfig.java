@@ -62,6 +62,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/properties/**").permitAll()
                         .requestMatchers("/api/areas/**").permitAll()
                         .requestMatchers("/api/users/**").permitAll()
+                        .requestMatchers("/api/deals/property/**").permitAll()
+                        .requestMatchers("/api/coupons/**").permitAll()
+                        .requestMatchers("/api/featured-properties/**").permitAll()
                         .requestMatchers("/api/deals/**").permitAll()
                         .requestMatchers("/api/upload/image/**").permitAll()
                         .requestMatchers("/api/upload/property-image/**").permitAll()
@@ -69,10 +72,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/upload/deal-document/**").permitAll() // ✅ NEW
                         .requestMatchers("/api/property-types/**").permitAll()
                         .requestMatchers("/api/property-images/**").permitAll()
+                        .requestMatchers("/api/featured-properties/**").permitAll()
 
                         .requestMatchers("/api/broker-subscription/**").permitAll()
 
+                        .requestMatchers("/api/agents/check/**").permitAll()
                         .requestMatchers("/api/agents/**").authenticated()
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
