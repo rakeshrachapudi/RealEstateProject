@@ -57,7 +57,6 @@ const AdminUsersPage = () => {
     setError(null);
 
     try {
-      // Try to fetch all users from admin endpoint
       const response = await fetch(`${BACKEND_BASE_URL}/api/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -163,7 +162,7 @@ const AdminUsersPage = () => {
 
         alert("✅ User created successfully");
         closeCreateModal();
-        fetchAllUsers(); // Refresh to get complete data
+        fetchAllUsers();
       } else {
         const errorData = await response.json().catch(() => ({}));
         alert(
@@ -219,7 +218,6 @@ const AdminUsersPage = () => {
   const filteredAndSortedUsers = useMemo(() => {
     let filtered = [...users];
 
-    // Search filter
     if (searchQuery.trim()) {
       const needle = searchQuery.trim().toLowerCase();
       filtered = filtered.filter(
@@ -232,14 +230,11 @@ const AdminUsersPage = () => {
       );
     }
 
-    // Role filter
     if (roleFilter !== "ALL") {
       filtered = filtered.filter((user) => user.role === roleFilter);
     }
 
-    // Status filter (you can extend this based on your user model)
     if (statusFilter !== "ALL") {
-      // Assuming users have an active/inactive status
       if (statusFilter === "ACTIVE") {
         filtered = filtered.filter(
           (user) => !user.isDeleted && user.isActive !== false
@@ -251,7 +246,6 @@ const AdminUsersPage = () => {
       }
     }
 
-    // Sort
     filtered.sort((a, b) => {
       let aVal, bVal;
 
@@ -287,7 +281,7 @@ const AdminUsersPage = () => {
     return filtered;
   }, [users, searchQuery, roleFilter, statusFilter, sortBy, sortOrder]);
 
-  // Stats calculation
+  // Stats calculation - FIXED TO INCLUDE BROKER
   const stats = useMemo(() => {
     const total = users.length;
     const byRole = users.reduce((acc, user) => {
@@ -299,9 +293,8 @@ const AdminUsersPage = () => {
       total,
       users: byRole.USER || 0,
       agents: byRole.AGENT || 0,
+      brokers: byRole.BROKER || 0,
       admins: byRole.ADMIN || 0,
-      others:
-        total - (byRole.USER || 0) - (byRole.AGENT || 0) - (byRole.ADMIN || 0),
     };
   }, [users]);
 
@@ -309,6 +302,7 @@ const AdminUsersPage = () => {
     const classes = {
       USER: "aup-badge-user",
       AGENT: "aup-badge-agent",
+      BROKER: "aup-badge-broker",
       ADMIN: "aup-badge-admin",
     };
     return `aup-role-badge ${classes[role] || "aup-badge-other"}`;
@@ -336,7 +330,7 @@ const AdminUsersPage = () => {
         </button>
       </header>
 
-      {/* Stats */}
+      {/* Stats - UPDATED TO SHOW BROKERS */}
       <section className="aup-stats">
         <div className="aup-stat">
           <div className="aup-stat-value">{stats.total}</div>
@@ -351,8 +345,8 @@ const AdminUsersPage = () => {
           <div className="aup-stat-label">Agents</div>
         </div>
         <div className="aup-stat">
-          <div className="aup-stat-value">{stats.admins}</div>
-          <div className="aup-stat-label">Admins</div>
+          <div className="aup-stat-value">{stats.brokers}</div>
+          <div className="aup-stat-label">Brokers</div>
         </div>
       </section>
 
@@ -379,6 +373,7 @@ const AdminUsersPage = () => {
               <option value="ALL">All Roles</option>
               <option value="USER">Users</option>
               <option value="AGENT">Agents</option>
+              <option value="BROKER">Brokers</option>
               <option value="ADMIN">Admins</option>
             </select>
           </div>
@@ -512,7 +507,7 @@ const AdminUsersPage = () => {
                         e.stopPropagation();
                         openDeleteModal(userItem);
                       }}
-                      disabled={userItem.id === user?.id} // Prevent self-deletion
+                      disabled={userItem.id === user?.id}
                     >
                       🗑️ Delete
                     </button>
@@ -560,7 +555,7 @@ const AdminUsersPage = () => {
         </div>
       )}
 
-      {/* Edit Modal */}
+      {/* Edit Modal - ADDED BROKER OPTION */}
       {editModal.show && (
         <div className="aup-modal" onClick={closeEditModal}>
           <div
@@ -618,6 +613,7 @@ const AdminUsersPage = () => {
                 >
                   <option value="USER">User</option>
                   <option value="AGENT">Agent</option>
+                  <option value="BROKER">Broker</option>
                   <option value="ADMIN">Admin</option>
                 </select>
               </div>
@@ -650,7 +646,7 @@ const AdminUsersPage = () => {
         </div>
       )}
 
-      {/* Create Modal */}
+      {/* Create Modal - ADDED BROKER OPTION */}
       {createModal.show && (
         <div className="aup-modal" onClick={closeCreateModal}>
           <div
@@ -724,6 +720,7 @@ const AdminUsersPage = () => {
                 >
                   <option value="USER">User</option>
                   <option value="AGENT">Agent</option>
+                  <option value="BROKER">Broker</option>
                   <option value="ADMIN">Admin</option>
                 </select>
               </div>

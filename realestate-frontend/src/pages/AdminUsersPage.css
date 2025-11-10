@@ -593,4 +593,9 @@
   .aup-form-input {
     font-size: 16px; /* Prevent iOS zoom */
   }
+
+  .aup-badge-broker {
+    background: #fef3c7;
+    color: #92400e;
+  }
 }
