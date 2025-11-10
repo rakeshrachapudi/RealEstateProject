@@ -15,7 +15,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(220px, 1fr));
   gap: clamp(24px, 4vw, 48px);
-  max-width: 1400px;
+  max-width: 1800px;
   margin: 0 auto;
   padding: 20px;
 }
@@ -116,7 +116,7 @@
 
 /* Trust seals */
 .footer-trust-badges {
-  max-width: 1400px;
+  max-width: 1800px;
   margin: 16px auto 8px;
   display: flex;
   justify-content: center;
