@@ -75,6 +75,8 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     formData.type?.toLowerCase() === "villa";
 
   const isAgentOrAdmin = user?.role === "AGENT" || user?.role === "ADMIN";
+  const isBroker = user?.role === "BROKER";
+
 
   useEffect(() => {
     const originalStyle = window.getComputedStyle(document.body).overflow;
@@ -93,6 +95,11 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       loadUsers();
     }
   }, [isAgentOrAdmin]);
+useEffect(() => {
+  if (user?.role === "BROKER") {
+    setFormData(prev => ({ ...prev, ownerType: "broker" }));
+  }
+}, [user]);
 
   const loadAreas = async () => {
     setAreasLoading(true);
@@ -647,16 +654,19 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
             {/* Posted By */}
             <div className="ppm-field">
               <label className="ppm-label">👤 Posted By *</label>
-              <select
-                name="ownerType"
-                value={formData.ownerType}
-                onChange={handleChange}
-                className="ppm-select"
-                required
-              >
-                <option value="owner">Owner</option>
-                <option value="broker">Broker</option>
-              </select>
+           <select
+             name="ownerType"
+             value={formData.ownerType}
+             onChange={handleChange}
+             className="ppm-select"
+             required
+             // optional: prevent changing when broker
+             disabled={isBroker}
+           >
+             {!isBroker && <option value="owner">Owner</option>}
+             <option value="broker">Broker</option>
+           </select>
+
             </div>
 
             {/* City & Area */}
