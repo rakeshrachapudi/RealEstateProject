@@ -345,7 +345,7 @@ const RoleBasedDealsView = () => {
 
 const styles = {
   container: {
-    maxWidth: 1700,
+    maxWidth: 1800,
     margin: "0 auto",
     padding: "24px 32px",
     minHeight: "80vh",

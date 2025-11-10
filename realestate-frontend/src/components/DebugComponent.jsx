@@ -363,7 +363,7 @@ const DebugComponent = () => {
 const styles = {
   container: {
     padding: "24px",
-    maxWidth: "1700px",
+    maxWidth: "1800px",
     margin: "0 auto",
     backgroundColor: "#f9fafb",
     minHeight: "100vh",
