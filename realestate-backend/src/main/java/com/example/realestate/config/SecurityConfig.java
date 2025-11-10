@@ -39,6 +39,7 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "http://localhost:5173"
         ));
+        config.addAllowedOriginPattern("*");
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization", "Content-Type"));
