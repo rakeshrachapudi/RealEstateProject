@@ -426,9 +426,35 @@ function PropertyDetails() {
     );
   }
 
+  // ====== 👇 Contact logic (UPDATED FOR BROKER FLOW) 👇 ======
   const ownerName = property.ownerName || property.userName || "Property Owner";
-  const ownerPhone = property.ownerPhone || property.phoneNumber || "";
-  const ownerInitial = ownerName.charAt(0).toUpperCase();
+
+  // ✅ IMPORTANT — ignore ownerPhone, always use user.mobileNumber
+  const isBrokerPosted =
+    (property.ownerType &&
+      property.ownerType.toString().toLowerCase() === "broker") ||
+    (property.user?.role &&
+      property.user.role.toString().toUpperCase() === "BROKER");
+
+  // ✅ Set contact label based on broker / owner
+  const contactLabel = isBrokerPosted ? "Contact Broker" : "Contact Agent";
+
+  // ✅ UI sub-label under avatar
+  const contactRoleLabel = isBrokerPosted
+    ? "Property Posted by Broker"
+    : "Agent Assigned";
+
+  // ✅ Agent/Broker Name
+  const contactName = property.user?.firstName || ownerName;
+
+  // ✅ ALWAYS USE BROKER/OWNER MOBILE NUMBER FROM USER OBJECT
+  const contactPhone = property.user?.mobileNumber || "";
+  console.log("contactPhone =", contactPhone);
+  // ====== 👆 Contact logic (UPDATED FOR BROKER FLOW) 👆 ======
+
+  // ====== 👆 Contact logic (ONLY addition/change) 👆 ======
+
+  const ownerInitial = (contactName || ownerName).charAt(0).toUpperCase();
   const images = property.imageUrls || [];
   const amenitiesList = Array.isArray(property?.amenities)
     ? property.amenities
@@ -596,12 +622,13 @@ function PropertyDetails() {
             <div className="pd-right">
               {/* Contact card */}
               <div className="card pd-contact">
-                <h3 className="pd-contact-title">Contact Owner</h3>
+                <h3 className="pd-contact-title">{contactLabel}</h3>
                 <div className="pd-owner">
                   <div className="pd-avatar">{ownerInitial}</div>
                   <div>
-                    <div className="pd-owner-label">Property Owner</div>
-                    <div className="pd-owner-name">{ownerName}</div>
+                    <div className="pd-owner-label">{contactRoleLabel}</div>
+                    <div className="pd-owner-name">{contactName}</div>
+                     <div className="pd-owner-phone">{contactPhone}</div>
                   </div>
                 </div>
                 <div className="pd-contact-actions">
@@ -609,7 +636,7 @@ function PropertyDetails() {
                     className="pd-btn pd-btn-wa"
                     onClick={() =>
                       window.open(
-                        `https://wa.me/${ownerPhone.replace(/\D/g, "")}`,
+                        `https://wa.me/${(contactPhone || "").replace(/\D/g, "")}`,
                         "_blank"
                       )
                     }
@@ -619,7 +646,7 @@ function PropertyDetails() {
                   </button>
                   <button
                     className="pd-btn pd-btn-phone"
-                    onClick={() => (window.location.href = `tel:${ownerPhone}`)}
+                    onClick={() => (window.location.href = `tel:${contactPhone}`)}
                   >
                     <span>📞</span>
                     <span>Call</span>
@@ -636,7 +663,7 @@ function PropertyDetails() {
                     </span>
                   ) : (
                     <span className="pd-status-unavailable">
-                      ⚠ Direct owner contact
+                      ⚠ Direct Property Broker Contact
                     </span>
                   )}
                 </div>
@@ -855,7 +882,7 @@ function PropertyDetails() {
           className="pd-fab"
           onClick={() =>
             window.open(
-              `https://wa.me/${ownerPhone.replace(/\D/g, "")}`,
+              `https://wa.me/${(contactPhone || "").replace(/\D/g, "")}`,
               "_blank"
             )
           }
