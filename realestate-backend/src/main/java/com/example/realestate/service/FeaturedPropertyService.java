@@ -1,19 +1,27 @@
 package com.example.realestate.service;
 
-import com.example.realestate.dto.*;
-import com.example.realestate.model.*;
+import com.example.realestate.dto.ApplyFeaturedRequest;
+import com.example.realestate.dto.CheckFeaturedResponse;
+import com.example.realestate.dto.CouponDetails;
+import com.example.realestate.dto.CouponValidationResponse;
+import com.example.realestate.dto.CreateFeaturedOrderRequest;
+import com.example.realestate.dto.FeaturedOrderResponse;
+import com.example.realestate.dto.FeaturedPropertyDTO;
+import com.example.realestate.dto.FeaturedPropertyResponse;
+import com.example.realestate.model.FeaturedProperty;
+import com.example.realestate.model.Property;
+import com.example.realestate.model.PropertyImage;
 import com.example.realestate.repository.FeaturedPropertyRepository;
 import com.example.realestate.repository.PropertyRepository;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class FeaturedPropertyService {
@@ -38,6 +46,115 @@ public class FeaturedPropertyService {
         this.propertyImageService = propertyImageService;
     }
 
+    @Autowired
+    private RazorpayService razorpayService;
+
+    // ---------------------------------------------------------------------
+    // ✅ Option-1: Create Featured Order (FREE → activate, PAID → create Razorpay order)
+    // ---------------------------------------------------------------------
+    @Transactional
+    public FeaturedOrderResponse createFeaturedOrder(CreateFeaturedOrderRequest request) {
+        Long propertyId = request.getPropertyId();
+        Long userId = request.getUserId();
+        Integer months = request.getDurationMonths() != null ? request.getDurationMonths() : DEFAULT_DURATION_MONTHS;
+        String couponCode = request.getCouponCode() != null ? request.getCouponCode().trim() : null;
+
+        Property property = propertyRepository.findById(propertyId)
+                .orElseThrow(() -> new RuntimeException("Property not found"));
+
+        // Prevent duplicates: if already active, do not allow new order
+        if (featuredPropertyRepository.existsByPropertyIdAndIsActiveTrue(propertyId)) {
+            throw new RuntimeException("Property is already featured");
+        }
+
+        // Price calculation (with coupon if provided)
+        BigDecimal original = FEATURED_PRICE;
+        BigDecimal discount = BigDecimal.ZERO;
+        BigDecimal finalAmount = original;
+        Long couponId = null;
+
+        if (couponCode != null && !couponCode.isBlank()) {
+            CouponValidationResponse cv = couponService.validateCoupon(couponCode, original);
+            if (cv != null && cv.isValid()) {
+                CouponDetails cd = cv.getCouponDetails();
+                discount = cd.getDiscountAmount() != null ? cd.getDiscountAmount() : BigDecimal.ZERO;
+                finalAmount = cd.getFinalPrice() != null ? cd.getFinalPrice().max(BigDecimal.ZERO) : original;
+                couponId = cd.getCouponId();
+                couponCode = cd.getCouponCode();
+            } else {
+                // keep discount=0 and finalAmount=original if invalid
+                log.info("Coupon invalid or not applicable: {}", couponCode);
+            }
+        }
+
+        // Create the FeaturedProperty record
+        FeaturedProperty fp = new FeaturedProperty();
+        fp.setPropertyId(propertyId);
+        fp.setUserId(userId);
+        fp.setOriginalPrice(original);
+        fp.setDiscountAmount(discount);
+        fp.setFinalPrice(finalAmount);
+        fp.setCouponId(couponId);
+        fp.setCouponCode(couponCode);
+        fp.setFeaturedFrom(LocalDateTime.now());
+        fp.setFeaturedUntil(LocalDateTime.now().plusMonths(months));
+
+        FeaturedOrderResponse out = new FeaturedOrderResponse();
+        out.setCurrency("INR");
+        out.setFeaturedId(null); // set after save
+
+        // FREE path → activate immediately
+        if (finalAmount.compareTo(BigDecimal.ZERO) == 0) {
+            fp.setPaymentStatus(FeaturedProperty.PaymentStatus.FREE);
+            fp.setIsActive(true);
+            FeaturedProperty saved = featuredPropertyRepository.save(fp);
+
+            // reflect on property now
+            Property p = propertyRepository.findById(propertyId)
+                    .orElseThrow(() -> new RuntimeException("Property not found"));
+            p.setIsFeatured(true);
+            propertyRepository.save(p);
+
+            if (couponId != null) {
+                couponService.incrementUsageCount(couponId);
+            }
+
+            out.setSuccess(true);
+            out.setMessage("Property featured successfully for free!");
+            out.setFeaturedId(saved.getFeaturedId());
+            out.setFinalAmount(BigDecimal.ZERO);
+            out.setFree(true);
+            return out;
+        }
+
+        // PAID path → create Razorpay order, activation after verification
+        fp.setPaymentStatus(FeaturedProperty.PaymentStatus.PENDING);
+        fp.setIsActive(false); // IMPORTANT: not active until /verify-payment success
+        FeaturedProperty saved = featuredPropertyRepository.save(fp);
+
+        String receipt = "FEATURED_" + propertyId + "_" + System.currentTimeMillis();
+        Map<String, String> notes = new HashMap<>();
+        notes.put("property_id", String.valueOf(propertyId));
+        notes.put("user_id", String.valueOf(userId));
+        if (couponCode != null) notes.put("coupon", couponCode);
+
+        Map<String, Object> order = razorpayService.createOrder(finalAmount, "INR", receipt, notes);
+
+        // Persist order id from Razorpay onto our record
+        String orderId = String.valueOf(order.get("orderId"));
+        saved.setOrderId(orderId);
+        featuredPropertyRepository.save(saved);
+
+        out.setSuccess(true);
+        out.setMessage("Featured order created. Complete payment to activate.");
+        out.setFeaturedId(saved.getFeaturedId());
+        out.setRazorpayOrderId(orderId);
+        out.setRazorpayKeyId(razorpayService.getKeyId());
+        out.setFinalAmount(finalAmount);
+        out.setFree(false);
+        return out;
+    }
+
     /**
      * Returns enriched FeaturedPropertyDTO list for all currently active featured properties.
      * Includes primary image, location, user summary, and type.
@@ -52,7 +169,7 @@ public class FeaturedPropertyService {
             return Collections.emptyList();
         }
 
-        // Load all property IDs referenced by active featured rows
+        // Collect property IDs
         Set<Long> propIds = active.stream()
                 .map(FeaturedProperty::getPropertyId)
                 .filter(Objects::nonNull)
@@ -66,32 +183,32 @@ public class FeaturedPropertyService {
         // Fetch properties in bulk
         List<Property> props = propertyRepository.findAllById(propIds);
 
-        // Map propertyId -> Property for quick lookup
+        // propertyId -> Property
         Map<Long, Property> propMap = props.stream()
                 .collect(Collectors.toMap(Property::getId, p -> p));
 
         // Build DTOs
         List<FeaturedPropertyDTO> out = new ArrayList<>();
         for (FeaturedProperty fp : active) {
-            Long propertyId = fp.getPropertyId();
-            if (propertyId == null) continue;
+            Long pid = fp.getPropertyId();
+            if (pid == null) continue;
 
-            Property p = propMap.get(propertyId);
+            Property p = propMap.get(pid);
             if (p == null) continue;
 
             FeaturedPropertyDTO dto = toDto(p);
 
-            // Attach primary image from PropertyImageService
-            String primaryImage = resolvePrimaryImage(propertyId);
+            // Attach primary image
+            String primaryImage = resolvePrimaryImage(pid);
             dto.setImageUrl(primaryImage);
 
-            // Ensure isFeatured true (it is featured now)
+            // Ensure isFeatured true in DTO context
             dto.setIsFeatured(Boolean.TRUE);
 
             out.add(dto);
         }
 
-        // Sort by property createdAt (or adjust to featured recency if needed)
+        // Sort: newest first by property createdAt
         out.sort(Comparator.comparing(FeaturedPropertyDTO::getCreatedAt,
                 Comparator.nullsLast(Comparator.naturalOrder())).reversed());
 
@@ -126,7 +243,6 @@ public class FeaturedPropertyService {
         dto.setStatus(nz(p.getStatus()));
         dto.setAddress(nz(p.getAddress()));
 
-        // areaSqft → Double (DTO expects Double). Handle BigDecimal/Double safely.
         if (p.getAreaSqft() != null) {
             try {
                 dto.setAreaSqft(Double.valueOf(p.getAreaSqft().toString()));
@@ -147,18 +263,16 @@ public class FeaturedPropertyService {
         dto.setOwnerType(nz(p.getOwnerType()));
         dto.setCreatedAt(p.getCreatedAt());
 
-        // property type (try entity's typeName, fallback to plain string "type")
         String typeName = null;
         if (p.getPropertyType() != null) {
             typeName = p.getPropertyType().getTypeName();
         }
         if (typeName == null || typeName.isBlank()) {
-            typeName = p.getType(); // fallback
+            typeName = p.getType();
         }
         dto.setPropertyType(typeName);
-        dto.setType(typeName); // keep for frontend fallbacks
+        dto.setType(typeName);
 
-        // area + city/state
         if (p.getArea() != null) {
             dto.setAreaName(nz(p.getArea().getAreaName()));
             dto.setPincode(nz(p.getArea().getPincode()));
@@ -172,7 +286,6 @@ public class FeaturedPropertyService {
             dto.setCityName(nz(p.getCity()));
         }
 
-        // user summary
         if (p.getUser() != null) {
             FeaturedPropertyDTO.UserSummary us = new FeaturedPropertyDTO.UserSummary();
             us.setId(p.getUser().getId());
@@ -202,7 +315,9 @@ public class FeaturedPropertyService {
     }
 
     // ---------------------------------------------------------------------
-    // ✅ Apply Featured Property Logic
+    // ✅ OLD FLOW (kept): Apply Featured Property
+    //     - Activate immediately ONLY for FREE
+    //     - For paid (PENDING), keep inactive until payment completion
     // ---------------------------------------------------------------------
     @Transactional
     public FeaturedPropertyResponse applyFeatured(Long userId, ApplyFeaturedRequest request) {
@@ -227,7 +342,7 @@ public class FeaturedPropertyService {
 
         FeaturedProperty.PaymentStatus paymentStatus = FeaturedProperty.PaymentStatus.PENDING;
 
-        // ✅ Apply coupon
+        // Apply coupon (optional)
         if (request.getCouponCode() != null && !request.getCouponCode().trim().isEmpty()) {
             CouponValidationResponse validation =
                     couponService.validateCoupon(request.getCouponCode(), FEATURED_PRICE);
@@ -254,23 +369,26 @@ public class FeaturedPropertyService {
         featured.setFinalPrice(finalPrice);
         featured.setCouponId(couponId);
         featured.setCouponCode(couponCode);
-
         featured.setFeaturedFrom(LocalDateTime.now());
         featured.setFeaturedUntil(LocalDateTime.now().plusMonths(
                 request.getDurationMonths() != null ? request.getDurationMonths() : DEFAULT_DURATION_MONTHS
         ));
 
-        featured.setIsActive(true);
+        // ✅ IMPORTANT: Activate immediately ONLY if FREE; otherwise keep inactive
+        boolean activateNow = (paymentStatus == FeaturedProperty.PaymentStatus.FREE);
+        featured.setIsActive(activateNow);
         featured.setPaymentStatus(paymentStatus);
 
         FeaturedProperty saved = featuredPropertyRepository.save(featured);
 
-        // ✅ update property table also
-        property.setIsFeatured(true);
-        propertyRepository.save(property);
-
-        if (paymentStatus == FeaturedProperty.PaymentStatus.FREE && couponId != null)
-            couponService.incrementUsageCount(couponId);
+        // ✅ Reflect to property table ONLY when FREE
+        if (activateNow) {
+            property.setIsFeatured(true);
+            propertyRepository.save(property);
+            if (couponId != null) {
+                couponService.incrementUsageCount(couponId);
+            }
+        }
 
         return buildFeaturedPropertyResponse(saved,
                 paymentStatus == FeaturedProperty.PaymentStatus.FREE
@@ -330,7 +448,10 @@ public class FeaturedPropertyService {
     }
 
     // ---------------------------------------------------------------------
-    // ✅ Complete Payment
+    // ✅ Complete Payment (called after successful Razorpay verification)
+    //     - Mark COMPLETED
+    //     - Set isActive = true
+    //     - Set property.isFeatured = true
     // ---------------------------------------------------------------------
     @Transactional
     public FeaturedPropertyResponse completePayment(Long featuredId, String paymentId, String orderId) {
@@ -338,14 +459,27 @@ public class FeaturedPropertyService {
         FeaturedProperty featured = featuredPropertyRepository.findById(featuredId)
                 .orElseThrow(() -> new RuntimeException("Featured property record not found"));
 
+        // Mark payment details
         featured.setPaymentStatus(FeaturedProperty.PaymentStatus.COMPLETED);
         featured.setPaymentId(paymentId);
         featured.setOrderId(orderId);
+        featured.setIsActive(true); // ✅ ACTIVATE NOW
 
         FeaturedProperty saved = featuredPropertyRepository.save(featured);
 
-        if (featured.getCouponId() != null)
-            couponService.incrementUsageCount(featured.getCouponId());
+        // Reflect on property table now
+        Property property = propertyRepository.findById(saved.getPropertyId())
+                .orElseThrow(() -> new RuntimeException("Property not found"));
+
+        if (!Boolean.TRUE.equals(property.getIsFeatured())) {
+            property.setIsFeatured(true);
+            propertyRepository.save(property);
+        }
+
+        // Increment coupon usage if applicable
+        if (saved.getCouponId() != null) {
+            couponService.incrementUsageCount(saved.getCouponId());
+        }
 
         return buildFeaturedPropertyResponse(saved, "Payment completed successfully!");
     }

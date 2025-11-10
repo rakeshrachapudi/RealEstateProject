@@ -1,4 +1,4 @@
-﻿﻿// realestate-frontend/src/PostPropertyModal.jsx
+﻿// realestate-frontend/src/PostPropertyModal.jsx
 import React, { useState, useEffect } from "react";
 import { useAuth } from "./AuthContext.jsx";
 import { BACKEND_BASE_URL } from "./config/config";
@@ -660,11 +660,11 @@ useEffect(() => {
              onChange={handleChange}
              className="ppm-select"
              required
-             // optional: prevent changing when broker
-             disabled={isBroker}
+             // Disable dropdown when user is broker or when user is a regular user (since they can only post as owner)
+             disabled={isBroker || user?.role === "USER"}
            >
              {!isBroker && <option value="owner">Owner</option>}
-             <option value="broker">Broker</option>
+             {isBroker && <option value="broker">Broker</option>}
            </select>
 
             </div>

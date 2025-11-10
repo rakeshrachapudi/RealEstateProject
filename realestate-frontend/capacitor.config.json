@@ -1,5 +1,15 @@
 {
-  "appId": "com.propertydealsdotcom.realestate",
-  "appName": "Property Deals",
-  "webDir": "dist"
+  "appId": "com.yourcompany.realestate",
+  "appName": "Property Dealz",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000
+    }
+  },
+  "server": {
+    "url": "https://propertydealz.in",
+    "cleartext": true
+  }
 }

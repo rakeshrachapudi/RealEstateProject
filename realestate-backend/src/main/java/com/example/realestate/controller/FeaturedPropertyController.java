@@ -4,6 +4,9 @@ import com.example.realestate.dto.*;
 import com.example.realestate.model.FeaturedProperty;
 import com.example.realestate.model.Property;
 import com.example.realestate.service.FeaturedPropertyService;
+import com.example.realestate.service.RazorpayService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +22,10 @@ import java.util.Map;
 @RequestMapping("/api/featured-properties")
 @CrossOrigin(origins = "*")
 public class FeaturedPropertyController {
+    @Autowired
+    private RazorpayService razorpayService;
+    private static final Logger log = LoggerFactory.getLogger(FeaturedPropertyController.class);
+
 
     @Autowired
     private FeaturedPropertyService featuredPropertyService;
@@ -174,6 +181,69 @@ public class FeaturedPropertyController {
             // If username is not the ID, you might need to query the database
             // or use a custom UserDetails implementation that includes userId
             throw new RuntimeException("Unable to extract user ID from authentication");
+        }
+    }
+
+    @PostMapping("/create-order")
+    public ResponseEntity<?> createFeaturedOrder(@RequestBody CreateFeaturedOrderRequest request) {
+        try {
+            FeaturedOrderResponse resp = featuredPropertyService.createFeaturedOrder(request);
+            return ResponseEntity.ok(resp);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("success", false, "message", e.getMessage())
+            );
+        }
+    }
+
+
+
+    /**
+     * Verify Razorpay payment (signature) and complete activation.
+     * DOES NOT remove /complete-payment. This is an additional, safer path.
+     */
+    @PostMapping("/verify-payment")
+    public ResponseEntity<?> verifyFeaturedPayment(@RequestBody VerifyPaymentRequest request) {
+        try {
+            // If orderId not sent by UI, fetch from DB using featuredId
+            String orderId = request.getRazorpayOrderId();
+            if (orderId == null || orderId.isBlank()) {
+                var fpOpt = featuredPropertyService.getFeaturedPropertyById(request.getFeaturedId());
+                if (fpOpt.isEmpty()) {
+                    return ResponseEntity.badRequest().body(
+                            Map.of("success", false, "message", "Featured record not found")
+                    );
+                }
+                orderId = fpOpt.get().getOrderId(); // may be null if not created yet
+            }
+
+            // Verify signature before activation (like brokers do)
+            boolean ok = razorpayService.verifyPaymentSignature(
+                    orderId,
+                    request.getRazorpayPaymentId(),
+                    request.getRazorpaySignature()
+            );
+            if (!ok) {
+                return ResponseEntity.badRequest().body(
+                        Map.of("success", false, "message", "Invalid Razorpay signature")
+                );
+            }
+
+            // Mark completed + activate
+            FeaturedPropertyResponse resp = featuredPropertyService
+                    .completePayment(request.getFeaturedId(), request.getRazorpayPaymentId(), orderId);
+
+            VerifyPaymentResponse out = new VerifyPaymentResponse();
+            out.setSuccess(true);
+            out.setMessage(resp.getMessage());
+            out.setFeaturedProperty(resp);
+
+            return ResponseEntity.ok(out);
+        } catch (Exception e) {
+            log.error("Error verifying featured payment", e);
+            return ResponseEntity.badRequest().body(
+                    Map.of("success", false, "message", e.getMessage())
+            );
         }
     }
 }

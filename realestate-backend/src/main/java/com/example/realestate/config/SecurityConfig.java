@@ -73,6 +73,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/property-types/**").permitAll()
                         .requestMatchers("/api/property-images/**").permitAll()
                         .requestMatchers("/api/featured-properties/**").permitAll()
+                        .requestMatchers("/api/agents/property/**").permitAll()
+
 
                         .requestMatchers("/api/broker-subscription/**").permitAll()
 
