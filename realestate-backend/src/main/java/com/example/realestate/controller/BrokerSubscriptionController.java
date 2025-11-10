@@ -122,14 +122,36 @@ public class BrokerSubscriptionController {
 
     /**
      * Verify payment and activate subscription
+     * FIXED: Added null checks to prevent NullPointerException
      */
     @PostMapping("/verify-payment")
     public ResponseEntity<?> verifyPayment(@RequestBody Map<String, Object> request) {
         logger.info("Verifying payment");
+        logger.info("Request payload: {}", request);
+
         try {
+            // Validate required parameters
+            if (request.get("razorpay_order_id") == null) {
+                logger.error("Missing razorpay_order_id in request");
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Missing required parameter: razorpay_order_id"));
+            }
+            if (request.get("razorpay_payment_id") == null) {
+                logger.error("Missing razorpay_payment_id in request");
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Missing required parameter: razorpay_payment_id"));
+            }
+            if (request.get("razorpay_signature") == null) {
+                logger.error("Missing razorpay_signature in request");
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Missing required parameter: razorpay_signature"));
+            }
+
             String orderId = request.get("razorpay_order_id").toString();
             String paymentId = request.get("razorpay_payment_id").toString();
             String signature = request.get("razorpay_signature").toString();
+
+            logger.info("Verifying payment - Order ID: {}, Payment ID: {}", orderId, paymentId);
 
             BrokerSubscription subscription = subscriptionService
                     .verifyAndActivateSubscription(orderId, paymentId, signature);
