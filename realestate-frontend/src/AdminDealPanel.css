@@ -1,6 +1,6 @@
 /* Container */
 .adp-container {
-  max-width: 1700px;
+  max-width: 1800px;
   margin: 0 auto;
   padding: clamp(16px, 3vw, 32px);
   background: #f9fafb;
