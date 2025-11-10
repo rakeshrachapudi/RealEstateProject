@@ -4,24 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="42dfceb5-b8ee-4b67-a031-eae8b466d127" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/CreateFeaturedOrderRequest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/FeaturedOrderResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/AgentController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/AgentController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/FeaturedPropertyController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/FeaturedPropertyController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/InitiatePaymentRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/InitiatePaymentRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/InitiatePaymentResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/dto/InitiatePaymentResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/service/AgentService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/service/AgentService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/service/FeaturedPropertyService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/service/FeaturedPropertyService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/app/capacitor.build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/capacitor.build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/capacitor.settings.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/android/capacitor.settings.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/capacitor.config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/PostPropertyModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/PostPropertyModal.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/PropertyDetails.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/PropertyDetails.jsx" afterDir="false" />
-    </list>
+    <list default="true" id="42dfceb5-b8ee-4b67-a031-eae8b466d127" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
