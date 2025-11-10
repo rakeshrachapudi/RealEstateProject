@@ -31,6 +31,47 @@ public class AgentService {
     @Autowired
     private UserRepository userRepository;
 
+    public User getAssignedAgent() {
+        List<User> agents = userRepository.findByRole(User.UserRole.AGENT);
+
+        if (agents == null || agents.isEmpty()) {
+            return null; // no agent exists
+        }
+
+        return agents.get(0); // ✅ Always return first (or random if needed)
+    }
+
+    public Optional<User> getRandomAgent() {
+        List<User> agents = userRepository.findByRole(User.UserRole.AGENT);
+        if (agents.isEmpty()) return Optional.empty();
+
+        Random random = new Random();
+        return Optional.of(agents.get(random.nextInt(agents.size())));
+    }
+
+
+    /**
+     * ✅ Return agent for a property (right now always the same agent)
+     */
+    public User getAgentForProperty(Long propertyId) {
+        return getAssignedAgent();
+    }
+    /**
+     * ✅ Returns a random AGENT mobile number from DB
+     */
+    public String getRandomAgentPhone() {
+        List<User> agents = userRepository.findByRole(User.UserRole.AGENT);
+
+        if (agents == null || agents.isEmpty()) {
+            return null;  // No agents in DB
+        }
+
+        Random random = new Random();
+        User selected = agents.get(random.nextInt(agents.size()));
+
+        return selected.getMobileNumber();
+    }
+
     public Map<String, Object> getAgentDashboard(Long agentId) {
         logger.info("Generating dashboard for agent: {}", agentId);
 

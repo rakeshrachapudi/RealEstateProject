@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-class InitiatePaymentResponse {
+public class InitiatePaymentResponse {
     private String orderId;
     private String paymentId;
     private BigDecimal amount;

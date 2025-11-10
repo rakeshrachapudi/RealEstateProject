@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/agents")
@@ -28,6 +29,33 @@ public class AgentController {
 
     @Autowired
     private UserRepository userRepository;
+    @GetMapping("/property/{propertyId}")
+    public ResponseEntity<?> getAgentForProperty(@PathVariable Long propertyId) {
+        Optional<User> agent = agentService.getRandomAgent();
+
+        if (agent.isEmpty()) {
+            return ResponseEntity.ok(Map.of(
+                    "agentPhone", "",
+                    "agentName", "Agent"
+            ));
+        }
+
+        User user = agent.get();
+        return ResponseEntity.ok(Map.of(
+                "agentPhone", user.getMobileNumber(),
+                "agentName", user.getFirstName()
+        ));
+    }
+
+    static class AgentResponse {
+        public String agentPhone;
+        public String agentName;
+
+        public AgentResponse(String phone, String name) {
+            this.agentPhone = phone;
+            this.agentName = name;
+        }
+    }
 
     @GetMapping("/{agentId}/dashboard")
     public ResponseEntity<?> getAgentDashboard(@PathVariable Long agentId, Authentication authentication) {

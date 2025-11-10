@@ -7,22 +7,22 @@ import "./PropertyDetails.css";
 
 function PropertyDetails() {
   const { id: propertyId } = useParams();
-
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Core property state
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [agentLoading, setAgentLoading] = useState(true);
-  const [agentAvailable, setAgentAvailable] = useState(false);
+
+  // Deals
   const [dealLoading, setDealLoading] = useState(true);
   const [existingDeal, setExistingDeal] = useState(null);
   const [offerAmount, setOfferAmount] = useState("");
   const [dealError, setDealError] = useState("");
 
-  // Featured property states
+  // Featured
   const [showFeaturedSection, setShowFeaturedSection] = useState(false);
   const [featuredStatus, setFeaturedStatus] = useState(null);
   const [couponCode, setCouponCode] = useState("");
@@ -35,9 +35,13 @@ function PropertyDetails() {
   });
   const [applyingFeatured, setApplyingFeatured] = useState(false);
 
-  // Image modal states
+  // Image modal
   const [showImageModal, setShowImageModal] = useState(false);
   const [modalImageIndex, setModalImageIndex] = useState(0);
+
+  // Agent fetched dynamically for this property
+  const [agent, setAgent] = useState(null);
+  const [agentLoading, setAgentLoading] = useState(false);
 
   useEffect(() => {
     fetchPropertyDetails();
@@ -46,18 +50,21 @@ function PropertyDetails() {
 
   useEffect(() => {
     if (property && user) {
-      checkAgentAvailability();
+      // Always fetch agent (we always show agent phone)
+      fetchAgentForProperty();
       checkExistingDeal();
       checkFeaturedStatus();
-      // Check if user is property owner to show featured section
+
+      // Show featured section ONLY if the logged-in user is the owner
       if (property.user?.id === user.id) {
         setShowFeaturedSection(true);
+      } else {
+        setShowFeaturedSection(false);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [property, user]);
 
-  // ✅ FIXED: Keyboard navigation - moved inside useEffect
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (!showImageModal || !property?.imageUrls) return;
@@ -84,19 +91,16 @@ function PropertyDetails() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showImageModal, modalImageIndex, property?.imageUrls]);
 
-  // Prevent body scroll when modal is open
   useEffect(() => {
-    if (showImageModal) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-
+    document.body.style.overflow = showImageModal ? "hidden" : "unset";
     return () => {
       document.body.style.overflow = "unset";
     };
   }, [showImageModal]);
 
+  // -----------------------------
+  // Data fetching helpers
+  // -----------------------------
   const fetchPropertyDetails = async () => {
     try {
       const response = await fetch(
@@ -105,7 +109,6 @@ function PropertyDetails() {
       if (!response.ok) throw new Error("Property not found");
       const data = await response.json();
 
-      // ✅ Fetch images from PropertyImage API (production method)
       const imageResponse = await fetch(
         `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`
       );
@@ -116,25 +119,47 @@ function PropertyDetails() {
         images = imageData.map((img) => img.imageUrl);
       }
 
-      // ✅ Attach images to property object
       data.imageUrls = images;
-
       setProperty(data);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Failed to load property");
     } finally {
       setLoading(false);
     }
   };
 
-  const checkAgentAvailability = async () => {
+  // Always fetch the agent for this property; backend returns assigned agent
+  // or a default/first active agent (e.g., Rakesh) if none assigned
+  const fetchAgentForProperty = async () => {
     try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/agents/check/${property.user?.id}`
+      setAgentLoading(true);
+      const token = localStorage.getItem("authToken");
+      const res = await fetch(
+        `${BACKEND_BASE_URL}/api/agents/property/${propertyId}`,
+        {
+          headers: token
+            ? { Authorization: `Bearer ${token}` }
+            : undefined,
+        }
       );
-      setAgentAvailable(response.ok);
+      if (!res.ok) {
+        setAgent(null);
+        return;
+      }
+      const data = await res.json();
+      // Expecting: { agentPhone, agentName }, tolerate variations
+      const normalized = {
+        agentId: data.agentId ?? data.id ?? null,
+        agentName:
+          data.agentName ??
+          [data.firstName, data.lastName].filter(Boolean).join(" ") ??
+          data.name ??
+          "Agent",
+        agentPhone: (data.agentPhone ?? data.mobileNumber ?? data.phone ?? "").toString(),
+      };
+      setAgent(normalized);
     } catch {
-      setAgentAvailable(false);
+      setAgent(null);
     } finally {
       setAgentLoading(false);
     }
@@ -145,7 +170,6 @@ function PropertyDetails() {
       setDealLoading(false);
       return;
     }
-
     try {
       const response = await fetch(
         `${BACKEND_BASE_URL}/api/deals/property/${propertyId}/buyer/${user.id}`,
@@ -158,6 +182,8 @@ function PropertyDetails() {
       if (response.ok) {
         const deal = await response.json();
         setExistingDeal(deal);
+      } else {
+        setExistingDeal(null);
       }
     } catch {
       setExistingDeal(null);
@@ -180,6 +206,9 @@ function PropertyDetails() {
     }
   };
 
+  // -----------------------------
+  // Coupon & Featured Payment
+  // -----------------------------
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
       setCouponValidation({
@@ -219,7 +248,7 @@ function PropertyDetails() {
     } catch (err) {
       setCouponValidation({
         valid: false,
-        message: "Error validating coupon. Please try again.",
+        message: "Error validating coupon. You can still proceed with payment.",
       });
     } finally {
       setCouponApplying(false);
@@ -236,13 +265,14 @@ function PropertyDetails() {
     });
   };
 
+  // Create order → (free activates) or open Razorpay → verify-payment
   const handleApplyFeatured = async () => {
     setApplyingFeatured(true);
     setDealError("");
 
     try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/featured-properties/apply`,
+      const createRes = await fetch(
+        `${BACKEND_BASE_URL}/api/featured-properties/create-order`,
         {
           method: "POST",
           headers: {
@@ -250,78 +280,109 @@ function PropertyDetails() {
             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
           body: JSON.stringify({
-            propertyId: propertyId,
-            couponCode: couponValidation?.valid ? couponCode : null,
-            durationMonths: 3,
+            propertyId: Number(propertyId),
             userId: user.id,
+            couponCode: (couponCode || "").trim() || null,
+            durationMonths: 3,
           }),
         }
       );
 
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
-      }
-      if (!response.ok) {
-        const raw = await response.text();
-        const msg = (raw || "").trim().replace(/\s+/g, " ").toLowerCase();
+      const createData = await createRes.json();
 
-        console.log("RAW ERROR FROM BACKEND =", raw); // ✅ debugging line
-
-        if (msg.includes("already featured")) {
-          alert(
-            "✅ This property is already featured and visible on the home page section."
-          );
-          checkFeaturedStatus();
+      if (!createRes.ok) {
+        const msg = createData?.message || "Unable to start featured order";
+        if (String(msg).toLowerCase().includes("already featured")) {
+          alert("✅ This property is already featured.");
+          await checkFeaturedStatus();
           setShowFeaturedSection(false);
           return;
         }
-
-        setDealError(raw);
+        setDealError(msg);
         return;
       }
 
-      if (response.ok) {
-        if (data.paymentStatus === "FREE") {
-          alert(
-            "🎉 Congratulations! Your property is now featured for 3 months!"
-          );
-          checkFeaturedStatus();
-          setShowFeaturedSection(false);
-        } else {
-          alert("Featured application submitted. Please complete payment.");
-          // Here you would integrate Razorpay payment
-          // For now, just refresh the status
-          checkFeaturedStatus();
-        }
-      } else {
-        const msg = data.message || data || "Failed to apply featured status";
-
-        // ✅ If backend says property is already featured
-        if (
-          typeof msg === "string" &&
-          msg.toLowerCase().includes("already featured")
-        ) {
-          alert(
-            "✅ This property is already featured and is visible on the home page section."
-          );
-          checkFeaturedStatus();
-          return;
-        }
-
-        setDealError(
-          typeof msg === "string" ? msg : "Failed to apply featured status"
-        );
+      // FREE activation
+      if (createData.free || Number(createData.finalAmount) === 0) {
+        alert("🎉 Your property is now featured for 3 months!");
+        await checkFeaturedStatus();
+        setShowFeaturedSection(false);
+        window.location.reload();
+        return;
       }
+
+      // Paid path
+      const options = {
+        key: createData.razorpayKeyId,
+        amount: Math.round(Number(createData.finalAmount) * 100),
+        currency: createData.currency || "INR",
+        name: "PropertyDealz",
+        description: "Featured Property - 3 Months",
+        order_id: createData.razorpayOrderId,
+        prefill: {
+          name: `${user.firstName || ""} ${user.lastName || ""}`,
+          email: user.email || "",
+          contact: user.mobileNumber || "",
+        },
+        handler: async function (paymentResponse) {
+          try {
+            const verifyRes = await fetch(
+              `${BACKEND_BASE_URL}/api/featured-properties/verify-payment`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+                },
+                body: JSON.stringify({
+                  featuredId: createData.featuredId,
+                  razorpayOrderId: paymentResponse.razorpay_order_id,
+                  razorpayPaymentId: paymentResponse.razorpay_payment_id,
+                  razorpaySignature: paymentResponse.razorpay_signature,
+                }),
+              }
+            );
+
+            const verifyData = await verifyRes.json();
+            if (verifyRes.ok && verifyData.success) {
+              alert("🎉 Payment successful! Your property is now featured.");
+              await checkFeaturedStatus();
+              setShowFeaturedSection(false);
+              window.location.reload();
+            } else {
+              alert(verifyData.message || "❌ Payment verification failed.");
+            }
+          } catch (e) {
+            console.error("Verify error:", e);
+            alert("❌ Payment verification failed.");
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            alert("Payment cancelled.");
+            setApplyingFeatured(false);
+          },
+        },
+        theme: { color: "#3399cc" },
+      };
+
+      if (!window.Razorpay) {
+        alert("Payment gateway not loaded. Please refresh and try again.");
+        return;
+      }
+      const rzp = new window.Razorpay(options);
+      rzp.open();
     } catch (err) {
+      console.error("Error applying featured:", err);
       setDealError("Error applying featured status. Please try again.");
     } finally {
       setApplyingFeatured(false);
     }
   };
 
+  // -----------------------------
+  // Deal helpers
+  // -----------------------------
   const handleCreateDeal = async () => {
     if (!offerAmount || parseFloat(offerAmount) <= 0) {
       setDealError("Please enter a valid offer amount");
@@ -357,19 +418,21 @@ function PropertyDetails() {
     }
   };
 
+  // -----------------------------
+  // UI helpers
+  // -----------------------------
   const handleNext = () => {
     setCurrentImageIndex((prev) =>
-      prev === property.imageUrls.length - 1 ? 0 : prev + 1
+      prev === (property?.imageUrls?.length || 0) - 1 ? 0 : prev + 1
     );
   };
 
   const handlePrev = () => {
     setCurrentImageIndex((prev) =>
-      prev === 0 ? property.imageUrls.length - 1 : prev - 1
+      prev === 0 ? (property?.imageUrls?.length || 1) - 1 : prev - 1
     );
   };
 
-  // ✅ FIXED: Image modal handlers using property.imageUrls
   const handleImageClick = () => {
     setModalImageIndex(currentImageIndex);
     setShowImageModal(true);
@@ -393,6 +456,9 @@ function PropertyDetails() {
     );
   };
 
+  // -----------------------------
+  // Early returns
+  // -----------------------------
   if (loading) {
     return (
       <div className="pd-page">
@@ -426,35 +492,38 @@ function PropertyDetails() {
     );
   }
 
-  // ====== 👇 Contact logic (UPDATED FOR BROKER FLOW) 👇 ======
-  const ownerName = property.ownerName || property.userName || "Property Owner";
-
-  // ✅ IMPORTANT — ignore ownerPhone, always use user.mobileNumber
+  // -----------------------------
+  // Contact card data: show Owner Name, use Agent Phone
+  // -----------------------------
   const isBrokerPosted =
     (property.ownerType &&
-      property.ownerType.toString().toLowerCase() === "broker") ||
+      String(property.ownerType).toLowerCase() === "broker") ||
     (property.user?.role &&
-      property.user.role.toString().toUpperCase() === "BROKER");
+      String(property.user.role).toUpperCase() === "BROKER");
 
-  // ✅ Set contact label based on broker / owner
-  const contactLabel = isBrokerPosted ? "Contact Broker" : "Contact Agent";
-
-  // ✅ UI sub-label under avatar
+  const contactLabel = "Contact Agent";
   const contactRoleLabel = isBrokerPosted
     ? "Property Posted by Broker"
-    : "Agent Assigned";
+    : "Property Owner";
 
-  // ✅ Agent/Broker Name
-  const contactName = property.user?.firstName || ownerName;
+  // Owner name to display
+  const ownerDisplayName =
+    [property.user?.firstName, property.user?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || property.user?.username || "Property Owner";
 
-  // ✅ ALWAYS USE BROKER/OWNER MOBILE NUMBER FROM USER OBJECT
-  const contactPhone = property.user?.mobileNumber || "";
-  console.log("contactPhone =", contactPhone);
-  // ====== 👆 Contact logic (UPDATED FOR BROKER FLOW) 👆 ======
+  // Always use agent phone for contact
+  const agentPhoneVal = (agent?.agentPhone || "").toString().trim();
+  const digitsOnly = agentPhoneVal.replace(/\D/g, "");
+  const validAgentPhone = digitsOnly.length >= 8; // be lenient; adjust if you want 10+
 
-  // ====== 👆 Contact logic (ONLY addition/change) 👆 ======
+  const waHref =
+    validAgentPhone ? `https://wa.me/${digitsOnly}` : "";
+  const telHref =
+    validAgentPhone ? `tel:${agentPhoneVal}` : "";
 
-  const ownerInitial = (contactName || ownerName).charAt(0).toUpperCase();
+  const ownerInitial = (ownerDisplayName || "P").charAt(0).toUpperCase();
   const images = property.imageUrls || [];
   const amenitiesList = Array.isArray(property?.amenities)
     ? property.amenities
@@ -462,6 +531,9 @@ function PropertyDetails() {
     ? property.amenities.split(",").map((a) => a.trim())
     : [];
 
+  // -----------------------------
+  // Render
+  // -----------------------------
   return (
     <>
       <div className="pd-page">
@@ -470,7 +542,6 @@ function PropertyDetails() {
             ← Back
           </button>
 
-          {/* Images */}
           {images.length > 0 ? (
             <div className="pd-images">
               <div
@@ -533,16 +604,12 @@ function PropertyDetails() {
             </div>
           )}
 
-          {/* Main content */}
           <div className="pd-main">
-            {/* Left column */}
             <div className="card pd-left">
               <div className="pd-head">
                 <div className="pd-head-top">
                   <span className="pd-badge">
-                    {property.isVerified
-                      ? "✓ Verified"
-                      : "Pending Verification"}
+                    {property.isVerified ? "✓ Verified" : "Pending Verification"}
                   </span>
                   <span className="pd-type">
                     {property.listingType === "sale" ? "For Sale" : "For Rent"}
@@ -563,7 +630,6 @@ function PropertyDetails() {
                 </div>
               </div>
 
-              {/* Key details */}
               <div className="pd-keys">
                 <div className="pd-key">
                   <span className="pd-key-ic">🏠</span>
@@ -581,7 +647,6 @@ function PropertyDetails() {
                     </div>
                   </div>
                 </div>
-
                 <div className="pd-key">
                   <span className="pd-key-ic">🛏️</span>
                   <div>
@@ -598,7 +663,6 @@ function PropertyDetails() {
                 </div>
               </div>
 
-              {/* Description */}
               <div className="pd-section">
                 <h2 className="pd-subtitle">Description</h2>
                 <p className="pd-desc">{property.description}</p>
@@ -618,88 +682,75 @@ function PropertyDetails() {
               )}
             </div>
 
-            {/* Right column */}
             <div className="pd-right">
-              {/* Contact card */}
               <div className="card pd-contact">
                 <h3 className="pd-contact-title">{contactLabel}</h3>
+
                 <div className="pd-owner">
                   <div className="pd-avatar">{ownerInitial}</div>
                   <div>
                     <div className="pd-owner-label">{contactRoleLabel}</div>
-                    <div className="pd-owner-name">{contactName}</div>
-                     <div className="pd-owner-phone">{contactPhone}</div>
+
+                    {/* Show Owner Name (Option B) */}
+                    <div className="pd-owner-name">{ownerDisplayName}</div>
+
+                    {/* Always show agent phone if available */}
+                    {agentLoading ? (
+                      <div className="pd-owner-phone">Assigning agent…</div>
+                    ) : validAgentPhone ? (
+                      <div className="pd-owner-phone">{agentPhoneVal}</div>
+                    ) : (
+                      <div className="pd-owner-phone pd-muted">
+                        Agent contact will be assigned shortly.
+                      </div>
+                    )}
                   </div>
                 </div>
+
                 <div className="pd-contact-actions">
                   <button
                     className="pd-btn pd-btn-wa"
-                    onClick={() =>
-                      window.open(
-                        `https://wa.me/${(contactPhone || "").replace(/\D/g, "")}`,
-                        "_blank"
-                      )
-                    }
+                    disabled={!validAgentPhone}
+                    onClick={() => validAgentPhone && window.open(waHref, "_blank")}
+                    title={validAgentPhone ? "Chat on WhatsApp" : "Agent not assigned yet"}
                   >
                     <span>💬</span>
                     <span>WhatsApp</span>
                   </button>
                   <button
                     className="pd-btn pd-btn-phone"
-                    onClick={() => (window.location.href = `tel:${contactPhone}`)}
+                    disabled={!validAgentPhone}
+                    onClick={() => validAgentPhone && (window.location.href = telHref)}
+                    title={validAgentPhone ? "Call Agent" : "Agent not assigned yet"}
                   >
                     <span>📞</span>
                     <span>Call</span>
                   </button>
                 </div>
-                <div className="pd-agent-status">
-                  {agentLoading ? (
-                    <span className="pd-status-loading">
-                      ⏳ Checking availability...
-                    </span>
-                  ) : agentAvailable ? (
-                    <span className="pd-status-available">
-                      ✓ Agent available for assistance
-                    </span>
-                  ) : (
-                    <span className="pd-status-unavailable">
-                      ⚠ Direct Property Broker Contact
-                    </span>
-                  )}
-                </div>
               </div>
 
-              {/* Featured Property Section - Only for property owners */}
+              {/* Featured (owner sees this on their own property if not yet featured) */}
               {showFeaturedSection && !featuredStatus?.featured && (
                 <div className="card pd-featured">
-                  <h3 className="pd-featured-title">
-                    ⭐ Make Your Property Featured
-                  </h3>
+                  <h3 className="pd-featured-title">⭐ Make Your Property Featured</h3>
                   <p className="pd-featured-desc">
-                    Get more visibility! Featured properties appear at the top
-                    of search results.
+                    Get more visibility! Featured properties appear at the top of search results.
                   </p>
 
                   <div className="pd-featured-pricing">
                     <div className="pd-featured-price-row">
                       <span>Original Price:</span>
-                      <span className="pd-price-original">
-                        ₹{featuredPrice.original}
-                      </span>
+                      <span className="pd-price-original">₹{featuredPrice.original}</span>
                     </div>
                     {featuredPrice.discount > 0 && (
                       <div className="pd-featured-price-row pd-discount">
                         <span>Discount:</span>
-                        <span className="pd-price-discount">
-                          -₹{featuredPrice.discount}
-                        </span>
+                        <span className="pd-price-discount">-₹{featuredPrice.discount}</span>
                       </div>
                     )}
                     <div className="pd-featured-price-row pd-final">
                       <span>Final Price:</span>
-                      <span className="pd-price-final">
-                        ₹{featuredPrice.final}
-                      </span>
+                      <span className="pd-price-final">₹{featuredPrice.final}</span>
                     </div>
                     <div className="pd-featured-duration">
                       <small>✓ Valid for 3 months</small>
@@ -707,18 +758,14 @@ function PropertyDetails() {
                   </div>
 
                   <div className="pd-featured-coupon">
-                    <label className="pd-coupon-label">
-                      Have a coupon code?
-                    </label>
+                    <label className="pd-coupon-label">Have a coupon code?</label>
                     <div className="pd-coupon-input-group">
                       <input
                         type="text"
                         className="pd-input"
                         placeholder="Enter coupon code"
                         value={couponCode}
-                        onChange={(e) =>
-                          setCouponCode(e.target.value.toUpperCase())
-                        }
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                         disabled={couponValidation?.valid}
                       />
                       {!couponValidation?.valid ? (
@@ -730,10 +777,7 @@ function PropertyDetails() {
                           {couponApplying ? "Checking..." : "Apply"}
                         </button>
                       ) : (
-                        <button
-                          onClick={handleRemoveCoupon}
-                          className="pd-btn pd-btn-remove"
-                        >
+                        <button onClick={handleRemoveCoupon} className="pd-btn pd-btn-remove">
                           Remove
                         </button>
                       )}
@@ -741,17 +785,19 @@ function PropertyDetails() {
 
                     {couponValidation && (
                       <div
-                        className={`pd-coupon-msg ${
-                          couponValidation.valid ? "success" : "error"
-                        }`}
+                        className={`pd-coupon-msg ${couponValidation.valid ? "success" : "error"}`}
                       >
                         {couponValidation.message}
+                        {!couponValidation.valid && (
+                          <span style={{ display: "block", marginTop: 4 }}>
+                            You can still proceed with payment below.
+                          </span>
+                        )}
                       </div>
                     )}
 
                     <div className="pd-coupon-hint">
-                      💡 Try code: <strong>FEATURED3M</strong> for free featured
-                      listing!
+                      💡 Try code: <strong>FEATURED3M</strong> for free featured listing!
                     </div>
                   </div>
 
@@ -772,7 +818,6 @@ function PropertyDetails() {
                 </div>
               )}
 
-              {/* Featured Status - Show if already featured */}
               {featuredStatus?.featured && (
                 <div className="card pd-featured-active">
                   <h3 className="pd-featured-title">⭐ Featured Property</h3>
@@ -793,7 +838,6 @@ function PropertyDetails() {
                 </div>
               )}
 
-              {/* Deal section - Only for buyers/non-owners */}
               {user && user.id !== property.user?.id && (
                 <div className="card pd-deal">
                   <h3 className="pd-deal-title">Make an Offer</h3>
@@ -809,9 +853,7 @@ function PropertyDetails() {
                         Stage: <strong>{existingDeal.stage}</strong>
                       </p>
                       <button
-                        onClick={() =>
-                          navigate(`/deals/${existingDeal.dealId}`)
-                        }
+                        onClick={() => navigate(`/deals/${existingDeal.dealId}`)}
                         className="pd-btn pd-btn-view"
                       >
                         View Deal
@@ -828,13 +870,8 @@ function PropertyDetails() {
                           value={offerAmount}
                           onChange={(e) => setOfferAmount(e.target.value)}
                         />
-                        {dealError && (
-                          <div className="pd-alert">{dealError}</div>
-                        )}
-                        <button
-                          onClick={handleCreateDeal}
-                          className="pd-btn pd-btn-primary"
-                        >
+                        {dealError && <div className="pd-alert">{dealError}</div>}
+                        <button onClick={handleCreateDeal} className="pd-btn pd-btn-primary">
                           Create Deal
                         </button>
                       </div>
@@ -843,7 +880,6 @@ function PropertyDetails() {
                 </div>
               )}
 
-              {/* Additional details */}
               <div className="card pd-details">
                 <h3 className="pd-details-title">Property Details</h3>
                 <div className="pd-details-list">
@@ -853,9 +889,7 @@ function PropertyDetails() {
                   </div>
                   <div className="pd-detail-row">
                     <span>Posted On</span>
-                    <span>
-                      {new Date(property.createdAt).toLocaleDateString()}
-                    </span>
+                    <span>{new Date(property.createdAt).toLocaleDateString()}</span>
                   </div>
                   {property.yearBuilt && (
                     <div className="pd-detail-row">
@@ -866,88 +900,74 @@ function PropertyDetails() {
                   {property.availableFrom && (
                     <div className="pd-detail-row">
                       <span>Available From</span>
-                      <span>
-                        {new Date(property.availableFrom).toLocaleDateString()}
-                      </span>
+                      <span>{new Date(property.availableFrom).toLocaleDateString()}</span>
                     </div>
                   )}
                 </div>
               </div>
             </div>
           </div>
+
+          {/* WhatsApp FAB always targets agent phone */}
+          <button
+            className="pd-fab"
+            onClick={() => validAgentPhone && window.open(waHref, "_blank")}
+            disabled={!validAgentPhone}
+            title={validAgentPhone ? "Chat on WhatsApp" : "Agent not assigned yet"}
+          >
+            💬
+          </button>
         </div>
 
-        {/* Floating WhatsApp button */}
-        <button
-          className="pd-fab"
-          onClick={() =>
-            window.open(
-              `https://wa.me/${(contactPhone || "").replace(/\D/g, "")}`,
-              "_blank"
-            )
-          }
-        >
-          💬
-        </button>
-      </div>
+        {/* Image Modal */}
+        {showImageModal && (
+          <div className="pd-modal-overlay" onClick={handleCloseModal}>
+            <div className="pd-modal-content" onClick={(e) => e.stopPropagation()}>
+              <button className="pd-modal-close" onClick={handleCloseModal}>
+                ✕
+              </button>
 
-      {/* Image Modal */}
-      {showImageModal && (
-        <div className="pd-modal-overlay" onClick={handleCloseModal}>
-          <div
-            className="pd-modal-content"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button className="pd-modal-close" onClick={handleCloseModal}>
-              ✕
-            </button>
+              <div className="pd-modal-image-container">
+                <img
+                  src={images[modalImageIndex]}
+                  alt={`${property.title} - Image ${modalImageIndex + 1}`}
+                  className="pd-modal-image"
+                />
 
-            <div className="pd-modal-image-container">
-              <img
-                src={images[modalImageIndex]}
-                alt={`${property.title} - Image ${modalImageIndex + 1}`}
-                className="pd-modal-image"
-              />
+                {images.length > 1 && (
+                  <>
+                    <button onClick={handleModalPrev} className="pd-modal-nav pd-modal-left">
+                      ‹
+                    </button>
+                    <button onClick={handleModalNext} className="pd-modal-nav pd-modal-right">
+                      ›
+                    </button>
+                    <div className="pd-modal-counter">
+                      {modalImageIndex + 1} / {images.length}
+                    </div>
+                  </>
+                )}
+              </div>
 
               {images.length > 1 && (
-                <>
-                  <button
-                    onClick={handleModalPrev}
-                    className="pd-modal-nav pd-modal-left"
-                  >
-                    ‹
-                  </button>
-                  <button
-                    onClick={handleModalNext}
-                    className="pd-modal-nav pd-modal-right"
-                  >
-                    ›
-                  </button>
-                  <div className="pd-modal-counter">
-                    {modalImageIndex + 1} / {images.length}
-                  </div>
-                </>
+                <div className="pd-modal-thumbs">
+                  {images.map((img, idx) => (
+                    <img
+                      key={idx}
+                      src={img}
+                      alt={`Thumbnail ${idx + 1}`}
+                      className={`pd-modal-thumb ${
+                        idx === modalImageIndex ? "active" : ""
+                      }`}
+                      onClick={() => setModalImageIndex(idx)}
+                    />
+                  ))}
+                </div>
               )}
             </div>
-
-            {images.length > 1 && (
-              <div className="pd-modal-thumbs">
-                {images.map((img, idx) => (
-                  <img
-                    key={idx}
-                    src={img}
-                    alt={`Thumbnail ${idx + 1}`}
-                    className={`pd-modal-thumb ${
-                      idx === modalImageIndex ? "active" : ""
-                    }`}
-                    onClick={() => setModalImageIndex(idx)}
-                  />
-                ))}
-              </div>
-            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </>
   );
 }

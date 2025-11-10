@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-class InitiatePaymentRequest {
+public class InitiatePaymentRequest {
     private Long featuredId;
     private String paymentMethod; // RAZORPAY, FREE
 }
