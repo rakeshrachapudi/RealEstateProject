@@ -74,6 +74,7 @@ function HomePage() {
     "Get Direct Buyer Contact Numbers",
     "Unlimited Listings",
     "Instant Lead Access — No middle agent involved",
+    "Use coupon codes BROKER3FREE or WELCOME2024 to enjoy exclusive subscription discounts."
   ];
 
   // --- Effects ---
