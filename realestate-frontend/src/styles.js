@@ -56,7 +56,7 @@ export const styles = {
   },
 
   headerContent: {
-    maxWidth: "1200px",
+    maxWidth: "100%",
     margin: "0 auto",
     padding: "12px 20px",
     display: "flex",
@@ -310,7 +310,7 @@ export const styles = {
   },
 
   container: {
-    maxWidth: "1200px",
+    maxWidth: "1800px",
     margin: "0 auto",
     padding: "clamp(16px, 3vw, 24px)",
     minHeight: "80vh",
@@ -562,7 +562,7 @@ export const styles = {
   },
 
   statsGrid: {
-    maxWidth: "1200px",
+    maxWidth: "1800px",
     margin: "0 auto",
     padding: "0 clamp(16px, 3vw, 24px)",
     display: "grid",
