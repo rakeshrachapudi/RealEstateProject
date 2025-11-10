@@ -210,9 +210,9 @@ const verifyPayment = async (orderId, paymentId, signature) => {
     const response = await axios.post(
       `${import.meta.env.VITE_BACKEND_BASE_URL}/api/broker-subscription/verify-payment`,
       {
-        orderId: orderId,
-        paymentId: paymentId,
-        signature: signature
+        razorpay_order_id: orderId,
+        razorpay_payment_id: paymentId,
+        razorpay_signature: signature
       }
     );
 
