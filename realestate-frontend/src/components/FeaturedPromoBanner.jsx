@@ -4,31 +4,51 @@
 // Add this FeaturedPromoBanner component before HomePage function
 import React from "react";
 import "./FeaturedPromoBanner.css";
+import { useNavigate } from "react-router-dom";
 
 const FeaturedPromoBanner = () => {
+  const navigate = useNavigate();
+
   const [timeLeft, setTimeLeft] = React.useState({
     days: 89,
     hours: 23,
     minutes: 59,
-    seconds: 59
+    seconds: 59,
   });
+
+  const handleMyPropertiesClick = () => {
+    navigate("/my-properties");
+  };
 
   React.useEffect(() => {
     const timer = setInterval(() => {
-      setTimeLeft(prev => {
+      setTimeLeft((prev) => {
         const newSeconds = prev.seconds > 0 ? prev.seconds - 1 : 59;
-        const newMinutes = newSeconds === 59 && prev.seconds === 0 ?
-          (prev.minutes > 0 ? prev.minutes - 1 : 59) : prev.minutes;
-        const newHours = newMinutes === 59 && prev.minutes === 0 && newSeconds === 59 ?
-          (prev.hours > 0 ? prev.hours - 1 : 23) : prev.hours;
-        const newDays = newHours === 23 && prev.hours === 0 && newMinutes === 59 && newSeconds === 59 ?
-          Math.max(0, prev.days - 1) : prev.days;
+        const newMinutes =
+          newSeconds === 59 && prev.seconds === 0
+            ? prev.minutes > 0
+              ? prev.minutes - 1
+              : 59
+            : prev.minutes;
+        const newHours =
+          newMinutes === 59 && prev.minutes === 0 && newSeconds === 59
+            ? prev.hours > 0
+              ? prev.hours - 1
+              : 23
+            : prev.hours;
+        const newDays =
+          newHours === 23 &&
+          prev.hours === 0 &&
+          newMinutes === 59 &&
+          newSeconds === 59
+            ? Math.max(0, prev.days - 1)
+            : prev.days;
 
         return {
           days: newDays,
           hours: newHours,
           minutes: newMinutes,
-          seconds: newSeconds
+          seconds: newSeconds,
         };
       });
     }, 1000);
@@ -43,10 +63,12 @@ const FeaturedPromoBanner = () => {
 
         <div className="hp-promo-content">
           <h2 className="hp-promo-title">
-            ⭐ Make Your Property <span className="hp-promo-highlight">FEATURED</span> for FREE!
+            ⭐ Make Your Property{" "}
+            <span className="hp-promo-highlight">FEATURED</span> for FREE!
           </h2>
           <p className="hp-promo-desc">
-            Get 3X more visibility with featured listing - Normally ₹499, now FREE with code <strong>FEATURED3M</strong>
+            Get 3X more visibility with featured listing - Normally ₹499, now
+            FREE with code <strong>FEATURED3M</strong>
           </p>
 
           <div className="hp-promo-features">
@@ -71,8 +93,8 @@ const FeaturedPromoBanner = () => {
               <button
                 className="hp-coupon-copy"
                 onClick={() => {
-                  navigator.clipboard.writeText('FEATURED3M');
-                  alert('Coupon code copied!');
+                  navigator.clipboard.writeText("FEATURED3M");
+                  alert("Coupon code copied!");
                 }}
               >
                 📋 Copy
@@ -89,17 +111,23 @@ const FeaturedPromoBanner = () => {
               </div>
               <div className="hp-timer-sep">:</div>
               <div className="hp-timer-box">
-                <div className="hp-timer-value">{String(timeLeft.hours).padStart(2, '0')}</div>
+                <div className="hp-timer-value">
+                  {String(timeLeft.hours).padStart(2, "0")}
+                </div>
                 <div className="hp-timer-unit">Hours</div>
               </div>
               <div className="hp-timer-sep">:</div>
               <div className="hp-timer-box">
-                <div className="hp-timer-value">{String(timeLeft.minutes).padStart(2, '0')}</div>
+                <div className="hp-timer-value">
+                  {String(timeLeft.minutes).padStart(2, "0")}
+                </div>
                 <div className="hp-timer-unit">Minutes</div>
               </div>
               <div className="hp-timer-sep">:</div>
               <div className="hp-timer-box">
-                <div className="hp-timer-value">{String(timeLeft.seconds).padStart(2, '0')}</div>
+                <div className="hp-timer-value">
+                  {String(timeLeft.seconds).padStart(2, "0")}
+                </div>
                 <div className="hp-timer-unit">Seconds</div>
               </div>
             </div>
@@ -107,14 +135,17 @@ const FeaturedPromoBanner = () => {
         </div>
 
         <div className="hp-promo-cta">
-          <button className="hp-promo-btn" onClick={() => {
-            // Scroll to properties section or navigate to post property
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}>
+          <button
+            className="hp-promo-btn"
+            onClick={() => {
+              handleMyPropertiesClick();
+            }}
+          >
             🎯 Make My Property Featured Now
           </button>
           <p className="hp-promo-note">
-            💡 Already have a property listed? Go to your property details and apply the coupon code!
+            💡 Already have a property listed? Go to your property details and
+            apply the coupon code!
           </p>
         </div>
       </div>
