@@ -12,7 +12,7 @@
 }
 
 .subheader-inner {
-  max-width: 1800px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 0 20px;
   display: flex;
@@ -161,7 +161,7 @@
 }
 
 .subheader-inner {
-  max-width: 1800px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 0 20px;
   display: flex;
@@ -226,7 +226,7 @@
 .dropdowns-tab {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 2px;
   transition: all 0.3s ease;
 }
 
@@ -242,7 +242,7 @@
   background: none;
   border: none;
   color: white;
-  padding: 12px 16px;
+  padding: 6px 8px;
   cursor: pointer;
   font-weight: 600;
   font-size: 14px;

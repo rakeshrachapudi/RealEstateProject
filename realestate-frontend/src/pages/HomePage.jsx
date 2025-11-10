@@ -85,11 +85,13 @@ function HomePage() {
         // Normalize to strings (some APIs may return objects)
         let names = [];
         if (Array.isArray(types)) {
-          names = types.map((t) => {
-            if (!t) return "";
-            if (typeof t === "string") return t;
-            return t.typeName || t.name || t.type || "";
-          }).filter(Boolean);
+          names = types
+            .map((t) => {
+              if (!t) return "";
+              if (typeof t === "string") return t;
+              return t.typeName || t.name || t.type || "";
+            })
+            .filter(Boolean);
         }
         setPropertyTypes(["All", ...Array.from(new Set(names))]);
       })
@@ -202,10 +204,19 @@ function HomePage() {
           // priceDisplay optional
           priceDisplay: p.priceDisplay || null,
           // safety defaults
-          bedrooms: Number.isFinite(p.bedrooms) ? p.bedrooms : (p.bedrooms || 0),
-          bathrooms: Number.isFinite(p.bathrooms) ? p.bathrooms : (p.bathrooms || 0),
-          listingType: p.listingType || (p.type && String(p.type).toLowerCase().includes("rent") ? "rent" : "sale"),
-          isFeatured: p.isFeatured === true || p.isFeatured === 1 || p.isFeatured === "true",
+          bedrooms: Number.isFinite(p.bedrooms) ? p.bedrooms : p.bedrooms || 0,
+          bathrooms: Number.isFinite(p.bathrooms)
+            ? p.bathrooms
+            : p.bathrooms || 0,
+          listingType:
+            p.listingType ||
+            (p.type && String(p.type).toLowerCase().includes("rent")
+              ? "rent"
+              : "sale"),
+          isFeatured:
+            p.isFeatured === true ||
+            p.isFeatured === 1 ||
+            p.isFeatured === "true",
         };
       });
 
@@ -443,11 +454,19 @@ function HomePage() {
         <section className="hp-banner">
           <div className="hp-banner-content">
             <div className="hp-banner-header">
-              <span className="hp-banner-badge">✨ How It Works</span>
-              <h2 className="hp-banner-title">PropertyDealz Platform</h2>
-              <p className="hp-banner-subtitle">
-                Simple, transparent, and hassle-free property deals for everyone
-              </p>
+              <div className="hp-banner-header-content">
+                <span className="hp-banner-badge">✨ How It Works</span>
+                <h2 className="hp-banner-title">PropertyDealz Platform</h2>
+                <p className="hp-banner-subtitle">
+                  Simple, transparent, and hassle-free property deals for
+                  everyone
+                </p>
+              </div>
+
+              <div className="hp-banner-illustration" aria-hidden="true">
+                <div className="hp-illustration-emoji">🤝</div>
+                <div className="hp-illustration-text">Connecting Everyone</div>
+              </div>
             </div>
 
             <div className="hp-feature-cards">
@@ -456,7 +475,9 @@ function HomePage() {
                 <div className="hp-feature-card-header">
                   <div className="hp-feature-icon">🏠</div>
                   <h3 className="hp-feature-title">For Property Owners</h3>
-                  <p className="hp-feature-desc">List your property with zero hassle</p>
+                  <p className="hp-feature-desc">
+                    List your property with zero hassle
+                  </p>
                 </div>
                 <div className="hp-feature-list">
                   {ownerFeatures.map((feature, idx) => (
@@ -474,7 +495,9 @@ function HomePage() {
                 <div className="hp-feature-card-header">
                   <div className="hp-feature-icon">💼</div>
                   <h3 className="hp-feature-title">For Brokers</h3>
-                  <p className="hp-feature-desc">Premium access to quality leads</p>
+                  <p className="hp-feature-desc">
+                    Premium access to quality leads
+                  </p>
                 </div>
                 <div className="hp-feature-list">
                   {brokerFeatures.map((feature, idx) => (
@@ -488,11 +511,6 @@ function HomePage() {
               </div>
             </div>
           </div>
-
-          <div className="hp-banner-illustration" aria-hidden="true">
-            <div className="hp-illustration-emoji">🤝</div>
-            <div className="hp-illustration-text">Connecting Everyone</div>
-          </div>
         </section>
 
         {/* Featured promo banner (placed under main banner) */}
@@ -505,7 +523,8 @@ function HomePage() {
               Find Your <span className="hp-title-gradient">Dream Home</span> 🏡
             </h1>
             <p className="hp-hero-subtitle">
-              Discover the perfect property that matches your lifestyle and budget.
+              Discover the perfect property that matches your lifestyle and
+              budget.
             </p>
           </div>
         </section>
@@ -533,7 +552,9 @@ function HomePage() {
             {popularAreas.map((area) => (
               <button
                 key={area.name}
-                className={`hp-area-btn ${selectedArea === area.name ? "active" : ""}`}
+                className={`hp-area-btn ${
+                  selectedArea === area.name ? "active" : ""
+                }`}
                 onClick={() => handleAreaClick(area)}
               >
                 <span className="hp-area-emoji">{area.emoji}</span>
@@ -556,24 +577,31 @@ function HomePage() {
 
               <button
                 onClick={() => setActiveTab("browse-by-type")}
-                className={`hp-tab ${activeTab === "browse-by-type" ? "active" : ""}`}
+                className={`hp-tab ${
+                  activeTab === "browse-by-type" ? "active" : ""
+                }`}
               >
                 🏘️ Browse by Type
               </button>
 
-              {isAuthenticated && (loadingMyProperties || myProperties.length > 0) && (
-                <button
-                  onClick={() => setActiveTab("my-properties")}
-                  className={`hp-tab ${activeTab === "my-properties" ? "active" : ""}`}
-                >
-                  📄 My Properties ({myProperties.length})
-                </button>
-              )}
+              {isAuthenticated &&
+                (loadingMyProperties || myProperties.length > 0) && (
+                  <button
+                    onClick={() => setActiveTab("my-properties")}
+                    className={`hp-tab ${
+                      activeTab === "my-properties" ? "active" : ""
+                    }`}
+                  >
+                    📄 My Properties ({myProperties.length})
+                  </button>
+                )}
 
               {isAuthenticated && (loadingMyDeals || myDeals.length > 0) && (
                 <button
                   onClick={() => setActiveTab("my-deals")}
-                  className={`hp-tab ${activeTab === "my-deals" ? "active" : ""}`}
+                  className={`hp-tab ${
+                    activeTab === "my-deals" ? "active" : ""
+                  }`}
                 >
                   📊 My Deals ({myDeals.length})
                 </button>
@@ -581,30 +609,40 @@ function HomePage() {
             </div>
           )}
 
-          {activeTab === "browse-by-type" && !showSearchResults && !selectedArea && (
-            <div className="hp-type-filter">
-              {propertyTypes.map((type) => (
-                <button
-                  key={type}
-                  className={`hp-type-chip ${selectedType === type ? "selected" : ""}`}
-                  onClick={() => setSelectedType(type)}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-          )}
+          {activeTab === "browse-by-type" &&
+            !showSearchResults &&
+            !selectedArea && (
+              <div className="hp-type-filter">
+                {propertyTypes.map((type) => (
+                  <button
+                    key={type}
+                    className={`hp-type-chip ${
+                      selectedType === type ? "selected" : ""
+                    }`}
+                    onClick={() => setSelectedType(type)}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            )}
 
           <div className="hp-section-header">
             <h2 className="hp-section-title">{sectionTitle}</h2>
             <div className="hp-section-actions">
               {(showSearchResults || selectedArea) && (
-                <button onClick={handleResetSearch} className="hp-btn hp-btn-clear">
+                <button
+                  onClick={handleResetSearch}
+                  className="hp-btn hp-btn-clear"
+                >
                   ✕ Clear Filter
                 </button>
               )}
               {canCreateDeal && (
-                <button onClick={handleCreateDealClick} className="hp-btn hp-btn-primary">
+                <button
+                  onClick={handleCreateDealClick}
+                  className="hp-btn hp-btn-primary"
+                >
                   ➕ Create New Deal
                 </button>
               )}
@@ -618,7 +656,9 @@ function HomePage() {
               <div className="hp-empty">
                 <div className="hp-empty-ic">🔭</div>
                 <h3 className="hp-empty-title">No Deals Yet</h3>
-                <p className="hp-empty-text">You are not currently involved in any deals.</p>
+                <p className="hp-empty-text">
+                  You are not currently involved in any deals.
+                </p>
               </div>
             ) : (
               <div className="hp-deals-grid">
