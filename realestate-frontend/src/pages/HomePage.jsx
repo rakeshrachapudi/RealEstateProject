@@ -469,13 +469,11 @@ function HomePage() {
 
         {/* Search */}
         <section className="hp-search">
-          <div className="hp-search-wrap">
-            <PropertySearch
-              onSearchResults={handleSearchResults}
-              onSearchStart={handleSearchStart}
-              onReset={handleResetSearch}
-            />
-          </div>
+          <PropertySearch
+            onSearchResults={handleSearchResults}
+            onSearchStart={handleSearchStart}
+            onReset={handleResetSearch}
+          />
         </section>
 
         {/* Error */}
