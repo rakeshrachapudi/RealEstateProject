@@ -86,7 +86,7 @@
   border-radius: 14px;
   padding: 18px 16px;
   margin: 0;
-  box-shadow: 0 8px 32px rgba(124, 58, 237, 0.3);
+  /* box-shadow: 0 8px 32px rgba(124, 58, 237, 0.3); */
   position: relative;
   overflow: hidden;
 }
@@ -197,7 +197,14 @@
 
 .hp-promo-coupon {
   margin: 0 !important;
+  background: #ffffff !important;
   height: 100%;
+}
+
+.hp-promo-timer {
+  margin: 0 !important;
+  background: #ffffff !important;
+  height: auto;
 }
 
 .hp-promo-row .hp-promo-coupon,
@@ -230,7 +237,7 @@
   padding: 8px 10px;
   border-radius: 8px;
   border: 2px dashed #fbbf24;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); */
 }
 
 .hp-coupon-text {
@@ -246,13 +253,17 @@
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
   border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 6px 14px; /* Increased from 6px 10px */
+  border-radius: 5px;
   cursor: pointer;
-  font-weight: 600;
-  font-size: 11px;
+  font-weight: 700; /* Changed from 600 */
+  font-size: 12px; /* Increased from 10px */
   transition: all 0.3s ease;
   white-space: nowrap;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .hp-coupon-copy:hover {
@@ -263,7 +274,7 @@
 .hp-timer-label {
   font-size: 11px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.95);
+  color: #667eea;
   margin-bottom: 6px;
   text-align: center;
   letter-spacing: 0.5px;
