@@ -1,0 +1,413 @@
+/* ========================================
+   CAROUSEL STYLES
+======================================== */
+
+.banner-carousel-wrapper {
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: clamp(16px, 2.5vw, 28px);
+  position: relative;
+}
+
+.banner-carousel-container {
+  width: 100%;
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+}
+
+.banner-carousel-container:active {
+  cursor: grabbing;
+}
+
+.banner-carousel-track {
+  display: flex;
+  width: 200%;
+}
+
+.banner-carousel-slide {
+  width: 50%;
+  min-width: 50%;
+  flex-shrink: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.banner-carousel-slide .hp-banner,
+.banner-carousel-slide .hp-promo-banner {
+  width: 100%;
+  margin: 0;
+}
+
+.banner-carousel-indicators {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 10px 0;
+}
+
+.carousel-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+  outline: none;
+}
+
+.carousel-indicator:hover {
+  background: #94a3b8;
+  transform: scale(1.15);
+}
+
+.carousel-indicator.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 32px;
+  border-radius: 6px;
+}
+
+.carousel-indicator.active:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* ========================================
+   PROMO BANNER - MATCHED TO HOW IT WORKS
+======================================== */
+
+.hp-promo-banner {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #6366f1 100%);
+  border-radius: 14px;
+  padding: 18px 16px;
+  margin: 0;
+  /* box-shadow: 0 8px 32px rgba(124, 58, 237, 0.3); */
+  position: relative;
+  overflow: hidden;
+}
+
+.hp-promo-banner::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 70%
+  );
+  animation: shimmer 15s infinite linear;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.hp-promo-container {
+  position: relative;
+  z-index: 1;
+}
+
+.hp-promo-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 50px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin: 4px !important;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.hp-promo-content {
+  margin-bottom: 10px;
+}
+
+.hp-promo-title {
+  font-size: clamp(16px, 2.5vw, 22px);
+  font-weight: 800;
+  color: white;
+  margin-bottom: 0 !important;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.hp-promo-highlight {
+  color: #fbbf24;
+  text-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+}
+
+.hp-promo-desc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 10px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.hp-promo-features {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 !important;
+  flex-wrap: wrap;
+}
+
+.hp-promo-feature {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 6px 10px;
+  border-radius: 50px;
+  color: white;
+  font-weight: 600;
+  font-size: 11px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.hp-promo-icon {
+  font-size: 16px;
+}
+
+/* Row for Coupon and Timer - 50% each */
+.hp-promo-row {
+  display: flex !important;
+  gap: 16px;
+  width: 100% !important;
+  align-items: stretch;
+  margin: 10px 0;
+}
+
+.hp-promo-coupon {
+  margin: 0 !important;
+  background: #ffffff !important;
+  height: 100%;
+}
+
+.hp-promo-timer {
+  margin: 0 !important;
+  background: #ffffff !important;
+  height: auto;
+}
+
+.hp-promo-row .hp-promo-coupon,
+.hp-promo-row .hp-promo-timer {
+  flex: 0 0 calc(50% - 8px) !important;
+  width: calc(50% - 8px) !important;
+  min-width: calc(50% - 8px) !important;
+  max-width: calc(50% - 8px) !important;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 10px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.hp-coupon-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 6px;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.hp-coupon-code {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 2px dashed #fbbf24;
+  /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); */
+}
+
+.hp-coupon-text {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 700;
+  color: #7c3aed;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.hp-coupon-copy {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 6px 14px; /* Increased from 6px 10px */
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 700; /* Changed from 600 */
+  font-size: 12px; /* Increased from 10px */
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hp-coupon-copy:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.hp-timer-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #667eea;
+  margin-bottom: 6px;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.hp-timer-boxes {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap !important;
+}
+
+.hp-timer-box {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  border-radius: 6px;
+  padding: 6px 4px;
+  min-width: 42px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
+  flex: 0 0 auto !important;
+}
+
+.hp-timer-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.hp-timer-unit {
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.hp-timer-sep {
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+  margin: 0 2px;
+}
+
+.hp-promo-cta {
+  text-align: center;
+  margin-top: 10px;
+}
+
+.hp-promo-btn {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 18px rgba(220, 38, 38, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.hp-promo-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.6);
+}
+
+.hp-promo-btn:active {
+  transform: translateY(0);
+}
+
+.hp-promo-note {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  margin-top: 6px;
+  font-style: italic;
+}
+
+/* ========================================
+   RESPONSIVE
+======================================== */
+
+@media (max-width: 768px) {
+  .carousel-indicator {
+    width: 10px;
+    height: 10px;
+  }
+
+  .carousel-indicator.active {
+    width: 28px;
+  }
+
+  .banner-carousel-indicators {
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .hp-promo-row {
+    flex-direction: column !important;
+    gap: 12px;
+  }
+
+  .hp-promo-row .hp-promo-coupon,
+  .hp-promo-row .hp-promo-timer {
+    flex: 1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .hp-timer-box {
+    min-width: 38px;
+    padding: 5px 3px;
+  }
+
+  .hp-timer-value {
+    font-size: 16px;
+  }
+
+  .hp-timer-unit {
+    font-size: 8px;
+  }
+
+  .hp-coupon-text {
+    font-size: 14px;
+  }
+
+  .hp-promo-btn {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+}

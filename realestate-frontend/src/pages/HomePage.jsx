@@ -8,8 +8,8 @@ import FurniturePartner from "../components/FurniturePartner.jsx";
 import DealStatusCard from "../DealStatusCard.jsx";
 import BrowsePropertiesForDeal from "../pages/BrowsePropertiesForDeal";
 import DealDetailModal from "../DealDetailModal.jsx";
-import FeaturedPromoBanner from "../components/FeaturedPromoBanner.jsx";
 import { BACKEND_BASE_URL } from "../config/config";
+import BannerCarousel from "../components/BannerCorousel.jsx";
 import {
   getPropertyTypes,
   getPropertiesByType,
@@ -74,7 +74,7 @@ function HomePage() {
     "Get Direct Buyer Contact Numbers",
     "Unlimited Listings",
     "Instant Lead Access — No middle agent involved",
-    "Use coupon codes BROKER3FREE or WELCOME2024 to enjoy exclusive subscription discounts."
+    "Use coupon codes BROKER3FREE or WELCOME2024 to enjoy exclusive subscription discounts.",
   ];
 
   // --- Effects ---
@@ -452,70 +452,7 @@ function HomePage() {
     <>
       <div className="hp-container">
         {/* Enhanced Banner */}
-        <section className="hp-banner">
-          <div className="hp-banner-content">
-            <div className="hp-banner-header">
-              <div className="hp-banner-header-content">
-                <span className="hp-banner-badge">✨ How It Works</span>
-                <h2 className="hp-banner-title">PropertyDealz Platform</h2>
-                <p className="hp-banner-subtitle">
-                  Simple, transparent, and hassle-free property deals for
-                  everyone
-                </p>
-              </div>
-
-              <div className="hp-banner-illustration" aria-hidden="true">
-                <div className="hp-illustration-emoji">🤝</div>
-                <div className="hp-illustration-text">Connecting Everyone</div>
-              </div>
-            </div>
-
-            <div className="hp-feature-cards">
-              {/* Property Owners Card */}
-              <div className="hp-feature-card hp-feature-card-owner">
-                <div className="hp-feature-card-header">
-                  <div className="hp-feature-icon">🏠</div>
-                  <h3 className="hp-feature-title">For Property Owners</h3>
-                  <p className="hp-feature-desc">
-                    List your property with zero hassle
-                  </p>
-                </div>
-                <div className="hp-feature-list">
-                  {ownerFeatures.map((feature, idx) => (
-                    <div key={idx} className="hp-feature-item">
-                      <span className="hp-checkmark">✓</span>
-                      <span>{feature}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="hp-feature-shine"></div>
-              </div>
-
-              {/* Brokers Card */}
-              <div className="hp-feature-card hp-feature-card-broker">
-                <div className="hp-feature-card-header">
-                  <div className="hp-feature-icon">💼</div>
-                  <h3 className="hp-feature-title">For Brokers</h3>
-                  <p className="hp-feature-desc">
-                    Premium access to quality leads
-                  </p>
-                </div>
-                <div className="hp-feature-list">
-                  {brokerFeatures.map((feature, idx) => (
-                    <div key={idx} className="hp-feature-item">
-                      <span className="hp-checkmark">✓</span>
-                      <span>{feature}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="hp-feature-shine"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Featured promo banner (placed under main banner) */}
-        <FeaturedPromoBanner />
+        <BannerCarousel />
 
         {/* Hero */}
         <section className="hp-hero">
