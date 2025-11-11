@@ -155,7 +155,8 @@ function PropertyDetails() {
           [data.firstName, data.lastName].filter(Boolean).join(" ") ??
           data.name ??
           "Agent",
-        agentPhone: (data.agentPhone ?? data.mobileNumber ?? data.phone ?? "").toString(),
+        agentPhone:
+          (data.agentPhone ?? data.mobileNumber ?? data.phone ?? "").toString(),
       };
       setAgent(normalized);
     } catch {
@@ -501,27 +502,37 @@ function PropertyDetails() {
     (property.user?.role &&
       String(property.user.role).toUpperCase() === "BROKER");
 
-  const contactLabel = "Contact Agent";
+  const contactLabel = isBrokerPosted ? "Contact Broker" : "Contact Agent";
   const contactRoleLabel = isBrokerPosted
     ? "Property Posted by Broker"
     : "Property Owner";
 
-  // Owner name to display
+  // Display name to show
   const ownerDisplayName =
     [property.user?.firstName, property.user?.lastName]
       .filter(Boolean)
       .join(" ")
       .trim() || property.user?.username || "Property Owner";
 
-  // Always use agent phone for contact
-  const agentPhoneVal = (agent?.agentPhone || "").toString().trim();
-  const digitsOnly = agentPhoneVal.replace(/\D/g, "");
-  const validAgentPhone = digitsOnly.length >= 8; // be lenient; adjust if you want 10+
+  // Determine which phone to use based on who posted the property
+  let contactPhone = "";
+  let validContactPhone = false;
 
-  const waHref =
-    validAgentPhone ? `https://wa.me/${digitsOnly}` : "";
-  const telHref =
-    validAgentPhone ? `tel:${agentPhoneVal}` : "";
+  if (isBrokerPosted) {
+    // Broker posted: Show broker's phone (from property.user.mobileNumber)
+    contactPhone = (property.user?.mobileNumber || "").toString().trim();
+    const digitsOnly = contactPhone.replace(/\D/g, "");
+    validContactPhone = digitsOnly.length >= 8;
+  } else {
+    // Owner posted: Show agent's phone
+    contactPhone = (agent?.agentPhone || "").toString().trim();
+    const digitsOnly = contactPhone.replace(/\D/g, "");
+    validContactPhone = digitsOnly.length >= 8;
+  }
+
+  const digitsOnlyForLinks = contactPhone.replace(/\D/g, "");
+  const waHref = validContactPhone ? `https://wa.me/${digitsOnlyForLinks}` : "";
+  const telHref = validContactPhone ? `tel:${contactPhone}` : "";
 
   const ownerInitial = (ownerDisplayName || "P").charAt(0).toUpperCase();
   const images = property.imageUrls || [];
@@ -697,8 +708,8 @@ function PropertyDetails() {
                     {/* Always show agent phone if available */}
                     {agentLoading ? (
                       <div className="pd-owner-phone">Assigning agent…</div>
-                    ) : validAgentPhone ? (
-                      <div className="pd-owner-phone">{agentPhoneVal}</div>
+                    ) : validContactPhone ? (
+                      <div className="pd-owner-phone">{contactPhone}</div>
                     ) : (
                       <div className="pd-owner-phone pd-muted">
                         Agent contact will be assigned shortly.
@@ -710,18 +721,28 @@ function PropertyDetails() {
                 <div className="pd-contact-actions">
                   <button
                     className="pd-btn pd-btn-wa"
-                    disabled={!validAgentPhone}
-                    onClick={() => validAgentPhone && window.open(waHref, "_blank")}
-                    title={validAgentPhone ? "Chat on WhatsApp" : "Agent not assigned yet"}
+                    disabled={!validContactPhone}
+                    onClick={() =>
+                      validContactPhone && window.open(waHref, "_blank")
+                    }
+                    title={
+                      validContactPhone
+                        ? "Chat on WhatsApp"
+                        : "Agent not assigned yet"
+                    }
                   >
                     <span>💬</span>
                     <span>WhatsApp</span>
                   </button>
                   <button
                     className="pd-btn pd-btn-phone"
-                    disabled={!validAgentPhone}
-                    onClick={() => validAgentPhone && (window.location.href = telHref)}
-                    title={validAgentPhone ? "Call Agent" : "Agent not assigned yet"}
+                    disabled={!validContactPhone}
+                    onClick={() =>
+                      validContactPhone && (window.location.href = telHref)
+                    }
+                    title={
+                      validContactPhone ? "Call Agent" : "Agent not assigned yet"
+                    }
                   >
                     <span>📞</span>
                     <span>Call</span>
@@ -911,9 +932,9 @@ function PropertyDetails() {
           {/* WhatsApp FAB always targets agent phone */}
           <button
             className="pd-fab"
-            onClick={() => validAgentPhone && window.open(waHref, "_blank")}
-            disabled={!validAgentPhone}
-            title={validAgentPhone ? "Chat on WhatsApp" : "Agent not assigned yet"}
+            onClick={() => validContactPhone && window.open(waHref, "_blank")}
+            disabled={!validContactPhone}
+            title={validContactPhone ? "Chat on WhatsApp" : "Agent not assigned yet"}
           >
             💬
           </button>
