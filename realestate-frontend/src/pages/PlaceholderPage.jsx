@@ -167,7 +167,7 @@ const PlaceholderPage = () => {
         </button>
         <div className="pp-logo">
           <span className="pp-logo-icon">🏢</span>
-          <span className="pp-logo-text">PropertyDealz</span>
+          <span className="pp-logo-text">Property Dealz</span>
         </div>
       </header>
 
@@ -298,7 +298,7 @@ const PlaceholderPage = () => {
       {/* Footer */}
       <footer className="pp-footer">
         <p className="pp-footer-text">
-          © 2025 PropertyDealz. All rights reserved. |
+          © 2025 Property Dealz. All rights reserved. |
           <button className="pp-footer-link" onClick={() => navigate("/legal")}>
             Privacy Policy
           </button>

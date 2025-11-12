@@ -134,7 +134,7 @@ const MobileNav = ({
       >
         <div className="mobile-nav-header">
           <div className="mobile-nav-logo">
-            <span>PropertyDealz</span>
+            <span>Property Dealz</span>
           </div>
           <button
             className="mobile-nav-close"

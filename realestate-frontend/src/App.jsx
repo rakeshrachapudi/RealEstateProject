@@ -47,7 +47,7 @@ import "./App.css";
 const PRIVACY_POLICY_CONTENT = [
   {
     title: "1. Introduction",
-    body: "This Privacy Policy describes how PropertyDealz ('we,' 'us,' or 'our') collects, uses, and protects the personal information of users of our platform, which is dedicated to real estate transactions primarily within the Hyderabad metropolitan area.",
+    body: "This Privacy Policy describes how Property Dealz ('we,' 'us,' or 'our') collects, uses, and protects the personal information of users of our platform, which is dedicated to real estate transactions primarily within the Hyderabad metropolitan area.",
   },
   {
     title: "2. Information We Collect",
@@ -93,11 +93,11 @@ const PRIVACY_POLICY_CONTENT = [
 const TERMS_AND_CONDITIONS_CONTENT = [
   {
     title: "1. Acceptance of Terms",
-    body: "By accessing or using the PropertyDealz website and mobile application (the 'Platform'), you agree to be bound by these Terms and Conditions ('Terms') and all applicable laws and regulations in Hyderabad, India. If you do not agree to these Terms, you may not use the Platform.",
+    body: "By accessing or using the Property Dealz website and mobile application (the 'Platform'), you agree to be bound by these Terms and Conditions ('Terms') and all applicable laws and regulations in Hyderabad, India. If you do not agree to these Terms, you may not use the Platform.",
   },
   {
     title: "2. User Registration and Account Security",
-    body: "To access certain features, you must register for an account. You are responsible for maintaining the confidentiality of your account password and are fully responsible for all activities that occur under your account. You agree to notify PropertyDealz immediately of any unauthorized use of your account.",
+    body: "To access certain features, you must register for an account. You are responsible for maintaining the confidentiality of your account password and are fully responsible for all activities that occur under your account. You agree to notify Property Dealz immediately of any unauthorized use of your account.",
   },
   {
     title: "3. User Obligations and Conduct",
@@ -111,20 +111,20 @@ const TERMS_AND_CONDITIONS_CONTENT = [
   },
   {
     title: "4. Property Listings and Content",
-    body: "All property listings must be legally compliant and accurate. PropertyDealz reserves the right, but not the obligation, to screen, remove, or edit any content that we deem harmful, misleading, or in violation of these Terms.",
+    body: "All property listings must be legally compliant and accurate. Property Dealz reserves the right, but not the obligation, to screen, remove, or edit any content that we deem harmful, misleading, or in violation of these Terms.",
   },
   {
     title: "5. Platform Role and Limitation of Liability",
-    body: "PropertyDealz acts strictly as a technology platform and facilitator. We are not a real estate broker, agent, or contracting party in any transaction. Your transaction is solely between you (the Buyer/Seller/Renter) and the other user.",
+    body: "Property Dealz acts strictly as a technology platform and facilitator. We are not a real estate broker, agent, or contracting party in any transaction. Your transaction is solely between you (the Buyer/Seller/Renter) and the other user.",
     list: [
       "We do not verify the financial capability of any user or the title/condition of any property beyond basic document checks.",
-      "PropertyDealz is not responsible for losses, damages, or disputes arising from negotiations or finalized agreements between users.",
+      "Property Dealz is not responsible for losses, damages, or disputes arising from negotiations or finalized agreements between users.",
       "You must seek independent legal and financial advice before entering into any property agreement.",
     ],
   },
   {
     title: "6. Trusted Partners and Third-Party Services",
-    body: "We may feature or link to services provided by our Trusted Partners (e.g., Furniture Partner, Electrical Contractor). Your use of their services is a direct contract between you and the Partner. PropertyDealz is not liable for the quality, performance, or service delivery of any Trusted Partner.",
+    body: "We may feature or link to services provided by our Trusted Partners (e.g., Furniture Partner, Electrical Contractor). Your use of their services is a direct contract between you and the Partner. Property Dealz is not liable for the quality, performance, or service delivery of any Trusted Partner.",
     list: [
       "We share your contact information with a Trusted Partner only upon your explicit request or consent for that specific service.",
       "All claims regarding partner services must be directed to the Partner directly.",

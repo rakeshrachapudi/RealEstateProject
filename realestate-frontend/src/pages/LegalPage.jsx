@@ -24,7 +24,7 @@ const LegalPage = () => {
         <div className="lp-header-content">
           <h1 className="lp-title">Legal Information</h1>
           <p className="lp-subtitle">
-            PropertyDealz - Your trusted real estate platform
+            Property Dealz - Your trusted real estate platform
           </p>
         </div>
       </header>
@@ -74,7 +74,7 @@ const LegalPage = () => {
             <div className="lp-article">
               <h3 className="lp-article-title">1. Acceptance of Terms</h3>
               <p className="lp-article-text">
-                By accessing and using PropertyDealz ("the Platform"), you
+                By accessing and using Property Dealz ("the Platform"), you
                 accept and agree to be bound by the terms and provision of this
                 agreement. These Terms of Service apply to all users of the
                 platform, including buyers, sellers, agents, and visitors.
@@ -84,7 +84,7 @@ const LegalPage = () => {
             <div className="lp-article">
               <h3 className="lp-article-title">2. Platform Services</h3>
               <p className="lp-article-text">
-                PropertyDealz provides a digital platform for real estate
+                Property Dealz provides a digital platform for real estate
                 transactions, including:
               </p>
               <ul className="lp-article-list">
@@ -101,7 +101,7 @@ const LegalPage = () => {
             <div className="lp-article">
               <h3 className="lp-article-title">3. User Responsibilities</h3>
               <p className="lp-article-text">
-                Users of PropertyDealz agree to:
+                Users of Property Dealz agree to:
               </p>
               <ul className="lp-article-list">
                 <li>
@@ -123,8 +123,8 @@ const LegalPage = () => {
             <div className="lp-article">
               <h3 className="lp-article-title">4. Prohibited Activities</h3>
               <p className="lp-article-text">
-                The following activities are strictly prohibited on
-                PropertyDealz:
+                The following activities are strictly prohibited on Property
+                Dealz:
               </p>
               <ul className="lp-article-list">
                 <li>
@@ -144,7 +144,7 @@ const LegalPage = () => {
             <div className="lp-article">
               <h3 className="lp-article-title">5. Limitation of Liability</h3>
               <p className="lp-article-text">
-                PropertyDealz operates as a platform connecting parties and is
+                Property Dealz operates as a platform connecting parties and is
                 not directly involved in real estate transactions. We are not
                 liable for disputes between users, property defects, or
                 transaction failures. Users engage in transactions at their own
@@ -155,7 +155,7 @@ const LegalPage = () => {
             <div className="lp-article">
               <h3 className="lp-article-title">6. Modification of Terms</h3>
               <p className="lp-article-text">
-                PropertyDealz reserves the right to modify these terms at any
+                Property Dealz reserves the right to modify these terms at any
                 time. Users will be notified of significant changes, and
                 continued use of the platform constitutes acceptance of modified
                 terms.
@@ -175,7 +175,7 @@ const LegalPage = () => {
                   <strong>Phone:</strong> +91 40 1234 5678
                 </p>
                 <p>
-                  <strong>Address:</strong> PropertyDealz Legal Dept.,
+                  <strong>Address:</strong> Property Dealz Legal Dept.,
                   Hyderabad, Telangana, India
                 </p>
               </div>
@@ -196,8 +196,8 @@ const LegalPage = () => {
             <div className="lp-article">
               <h3 className="lp-article-title">1. Information We Collect</h3>
               <p className="lp-article-text">
-                PropertyDealz collects information to provide better services to
-                our users:
+                Property Dealz collects information to provide better services
+                to our users:
               </p>
               <ul className="lp-article-list">
                 <li>
@@ -243,7 +243,7 @@ const LegalPage = () => {
             <div className="lp-article">
               <h3 className="lp-article-title">3. Information Sharing</h3>
               <p className="lp-article-text">
-                PropertyDealz does not sell personal information. We may share
+                Property Dealz does not sell personal information. We may share
                 information:
               </p>
               <ul className="lp-article-list">
@@ -303,7 +303,7 @@ const LegalPage = () => {
             <div className="lp-article">
               <h3 className="lp-article-title">1. Platform Nature</h3>
               <p className="lp-article-text">
-                PropertyDealz operates as an intermediary platform connecting
+                Property Dealz operates as an intermediary platform connecting
                 buyers, sellers, and real estate professionals. We do not own,
                 sell, or directly manage any properties listed on the platform.
               </p>
@@ -312,7 +312,7 @@ const LegalPage = () => {
             <div className="lp-article">
               <h3 className="lp-article-title">2. Information Accuracy</h3>
               <p className="lp-article-text">
-                While we strive to ensure accuracy, PropertyDealz makes no
+                While we strive to ensure accuracy, Property Dealz makes no
                 warranties regarding the completeness, accuracy, or reliability
                 of property listings, prices, or user-generated content. Users
                 should independently verify all information.
@@ -322,7 +322,7 @@ const LegalPage = () => {
             <div className="lp-article">
               <h3 className="lp-article-title">3. Investment Advice</h3>
               <p className="lp-article-text">
-                PropertyDealz does not provide investment, legal, or financial
+                Property Dealz does not provide investment, legal, or financial
                 advice. All real estate decisions should be made after
                 consulting with qualified professionals and conducting due
                 diligence.
@@ -333,7 +333,7 @@ const LegalPage = () => {
               <h3 className="lp-article-title">4. Third-Party Content</h3>
               <p className="lp-article-text">
                 Our platform may contain links to third-party websites or
-                services. PropertyDealz is not responsible for the content,
+                services. Property Dealz is not responsible for the content,
                 privacy practices, or reliability of external sites.
               </p>
             </div>
@@ -343,8 +343,9 @@ const LegalPage = () => {
               <p className="lp-article-text">
                 Our agreement generation tools provide templates for common real
                 estate documents. These should be reviewed by legal
-                professionals before execution. PropertyDealz is not responsible
-                for the legal validity or enforcement of generated documents.
+                professionals before execution. Property Dealz is not
+                responsible for the legal validity or enforcement of generated
+                documents.
               </p>
             </div>
 
@@ -471,7 +472,7 @@ const LegalPage = () => {
         </button>
         <div className="lp-footer-content">
           <p className="lp-footer-text">
-            © 2025 PropertyDealz. All rights reserved. |
+            © 2025 Property Dealz. All rights reserved. |
             <span className="lp-footer-link">
               {" "}
               Contact: legal@propertydealz.in
