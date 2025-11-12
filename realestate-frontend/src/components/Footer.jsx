@@ -34,7 +34,7 @@ function Footer() {
       <div className="footer-content-grid">
         {/* Column 1: About & Support */}
         <div className="footer-col">
-          <h4 className="footer-col-title">About PropertyDealz</h4>
+          <h4 className="footer-col-title">About Property Dealz</h4>
           <p className="footer-text">
             Your platform connecting property buyers and sellers exclusively in
             Hyderabad.
@@ -161,7 +161,7 @@ function Footer() {
               {/* Social Icons */}
               <div className="footer-social-icons">
                 <a
-                  href="https://www.facebook.com/PropertyDealz"
+                  href="https://www.facebook.com/Property Dealz"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="footer-social-link"
@@ -178,7 +178,7 @@ function Footer() {
                   </svg>
                 </a>
                 <a
-                  href="https://twitter.com/PropertyDealz"
+                  href="https://twitter.com/Property Dealz"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="footer-social-link"
@@ -195,7 +195,7 @@ function Footer() {
                   </svg>
                 </a>
                 <a
-                  href="https://www.linkedin.com/company/PropertyDealz"
+                  href="https://www.linkedin.com/company/Property Dealz"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="footer-social-link"
@@ -269,7 +269,7 @@ function Footer() {
       </div>
 
       <div className="footer-copy">
-        &copy; {new Date().getFullYear()} PropertyDealz. All rights reserved. |
+        &copy; {new Date().getFullYear()} Property Dealz. All rights reserved. |
         Serving Hyderabad.
         {/* <div className="footer-time">Current Time: {currentDateTime} IST</div> */}
       </div>

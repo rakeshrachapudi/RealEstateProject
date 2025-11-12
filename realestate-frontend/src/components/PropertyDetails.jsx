@@ -137,9 +137,7 @@ function PropertyDetails() {
       const res = await fetch(
         `${BACKEND_BASE_URL}/api/agents/property/${propertyId}`,
         {
-          headers: token
-            ? { Authorization: `Bearer ${token}` }
-            : undefined,
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         }
       );
       if (!res.ok) {
@@ -155,8 +153,12 @@ function PropertyDetails() {
           [data.firstName, data.lastName].filter(Boolean).join(" ") ??
           data.name ??
           "Agent",
-        agentPhone:
-          (data.agentPhone ?? data.mobileNumber ?? data.phone ?? "").toString(),
+        agentPhone: (
+          data.agentPhone ??
+          data.mobileNumber ??
+          data.phone ??
+          ""
+        ).toString(),
       };
       setAgent(normalized);
     } catch {
@@ -317,7 +319,7 @@ function PropertyDetails() {
         key: createData.razorpayKeyId,
         amount: Math.round(Number(createData.finalAmount) * 100),
         currency: createData.currency || "INR",
-        name: "PropertyDealz",
+        name: "Property Dealz",
         description: "Featured Property - 3 Months",
         order_id: createData.razorpayOrderId,
         prefill: {
@@ -512,7 +514,9 @@ function PropertyDetails() {
     [property.user?.firstName, property.user?.lastName]
       .filter(Boolean)
       .join(" ")
-      .trim() || property.user?.username || "Property Owner";
+      .trim() ||
+    property.user?.username ||
+    "Property Owner";
 
   // Determine which phone to use based on who posted the property
   let contactPhone = "";
@@ -620,7 +624,9 @@ function PropertyDetails() {
               <div className="pd-head">
                 <div className="pd-head-top">
                   <span className="pd-badge">
-                    {property.isVerified ? "✓ Verified" : "Pending Verification"}
+                    {property.isVerified
+                      ? "✓ Verified"
+                      : "Pending Verification"}
                   </span>
                   <span className="pd-type">
                     {property.listingType === "sale" ? "For Sale" : "For Rent"}
@@ -741,7 +747,9 @@ function PropertyDetails() {
                       validContactPhone && (window.location.href = telHref)
                     }
                     title={
-                      validContactPhone ? "Call Agent" : "Agent not assigned yet"
+                      validContactPhone
+                        ? "Call Agent"
+                        : "Agent not assigned yet"
                     }
                   >
                     <span>📞</span>
@@ -753,25 +761,34 @@ function PropertyDetails() {
               {/* Featured (owner sees this on their own property if not yet featured) */}
               {showFeaturedSection && !featuredStatus?.featured && (
                 <div className="card pd-featured">
-                  <h3 className="pd-featured-title">⭐ Make Your Property Featured</h3>
+                  <h3 className="pd-featured-title">
+                    ⭐ Make Your Property Featured
+                  </h3>
                   <p className="pd-featured-desc">
-                    Get more visibility! Featured properties appear at the top of search results.
+                    Get more visibility! Featured properties appear at the top
+                    of search results.
                   </p>
 
                   <div className="pd-featured-pricing">
                     <div className="pd-featured-price-row">
                       <span>Original Price:</span>
-                      <span className="pd-price-original">₹{featuredPrice.original}</span>
+                      <span className="pd-price-original">
+                        ₹{featuredPrice.original}
+                      </span>
                     </div>
                     {featuredPrice.discount > 0 && (
                       <div className="pd-featured-price-row pd-discount">
                         <span>Discount:</span>
-                        <span className="pd-price-discount">-₹{featuredPrice.discount}</span>
+                        <span className="pd-price-discount">
+                          -₹{featuredPrice.discount}
+                        </span>
                       </div>
                     )}
                     <div className="pd-featured-price-row pd-final">
                       <span>Final Price:</span>
-                      <span className="pd-price-final">₹{featuredPrice.final}</span>
+                      <span className="pd-price-final">
+                        ₹{featuredPrice.final}
+                      </span>
                     </div>
                     <div className="pd-featured-duration">
                       <small>✓ Valid for 3 months</small>
@@ -779,14 +796,18 @@ function PropertyDetails() {
                   </div>
 
                   <div className="pd-featured-coupon">
-                    <label className="pd-coupon-label">Have a coupon code?</label>
+                    <label className="pd-coupon-label">
+                      Have a coupon code?
+                    </label>
                     <div className="pd-coupon-input-group">
                       <input
                         type="text"
                         className="pd-input"
                         placeholder="Enter coupon code"
                         value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        onChange={(e) =>
+                          setCouponCode(e.target.value.toUpperCase())
+                        }
                         disabled={couponValidation?.valid}
                       />
                       {!couponValidation?.valid ? (
@@ -798,7 +819,10 @@ function PropertyDetails() {
                           {couponApplying ? "Checking..." : "Apply"}
                         </button>
                       ) : (
-                        <button onClick={handleRemoveCoupon} className="pd-btn pd-btn-remove">
+                        <button
+                          onClick={handleRemoveCoupon}
+                          className="pd-btn pd-btn-remove"
+                        >
                           Remove
                         </button>
                       )}
@@ -806,7 +830,9 @@ function PropertyDetails() {
 
                     {couponValidation && (
                       <div
-                        className={`pd-coupon-msg ${couponValidation.valid ? "success" : "error"}`}
+                        className={`pd-coupon-msg ${
+                          couponValidation.valid ? "success" : "error"
+                        }`}
                       >
                         {couponValidation.message}
                         {!couponValidation.valid && (
@@ -818,7 +844,8 @@ function PropertyDetails() {
                     )}
 
                     <div className="pd-coupon-hint">
-                      💡 Try code: <strong>FEATURED3M</strong> for free featured listing!
+                      💡 Try code: <strong>FEATURED3M</strong> for free featured
+                      listing!
                     </div>
                   </div>
 
@@ -874,7 +901,9 @@ function PropertyDetails() {
                         Stage: <strong>{existingDeal.stage}</strong>
                       </p>
                       <button
-                        onClick={() => navigate(`/deals/${existingDeal.dealId}`)}
+                        onClick={() =>
+                          navigate(`/deals/${existingDeal.dealId}`)
+                        }
                         className="pd-btn pd-btn-view"
                       >
                         View Deal
@@ -891,8 +920,13 @@ function PropertyDetails() {
                           value={offerAmount}
                           onChange={(e) => setOfferAmount(e.target.value)}
                         />
-                        {dealError && <div className="pd-alert">{dealError}</div>}
-                        <button onClick={handleCreateDeal} className="pd-btn pd-btn-primary">
+                        {dealError && (
+                          <div className="pd-alert">{dealError}</div>
+                        )}
+                        <button
+                          onClick={handleCreateDeal}
+                          className="pd-btn pd-btn-primary"
+                        >
                           Create Deal
                         </button>
                       </div>
@@ -910,7 +944,9 @@ function PropertyDetails() {
                   </div>
                   <div className="pd-detail-row">
                     <span>Posted On</span>
-                    <span>{new Date(property.createdAt).toLocaleDateString()}</span>
+                    <span>
+                      {new Date(property.createdAt).toLocaleDateString()}
+                    </span>
                   </div>
                   {property.yearBuilt && (
                     <div className="pd-detail-row">
@@ -921,7 +957,9 @@ function PropertyDetails() {
                   {property.availableFrom && (
                     <div className="pd-detail-row">
                       <span>Available From</span>
-                      <span>{new Date(property.availableFrom).toLocaleDateString()}</span>
+                      <span>
+                        {new Date(property.availableFrom).toLocaleDateString()}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -934,7 +972,9 @@ function PropertyDetails() {
             className="pd-fab"
             onClick={() => validContactPhone && window.open(waHref, "_blank")}
             disabled={!validContactPhone}
-            title={validContactPhone ? "Chat on WhatsApp" : "Agent not assigned yet"}
+            title={
+              validContactPhone ? "Chat on WhatsApp" : "Agent not assigned yet"
+            }
           >
             💬
           </button>
@@ -943,7 +983,10 @@ function PropertyDetails() {
         {/* Image Modal */}
         {showImageModal && (
           <div className="pd-modal-overlay" onClick={handleCloseModal}>
-            <div className="pd-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="pd-modal-content"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button className="pd-modal-close" onClick={handleCloseModal}>
                 ✕
               </button>
@@ -957,10 +1000,16 @@ function PropertyDetails() {
 
                 {images.length > 1 && (
                   <>
-                    <button onClick={handleModalPrev} className="pd-modal-nav pd-modal-left">
+                    <button
+                      onClick={handleModalPrev}
+                      className="pd-modal-nav pd-modal-left"
+                    >
                       ‹
                     </button>
-                    <button onClick={handleModalNext} className="pd-modal-nav pd-modal-right">
+                    <button
+                      onClick={handleModalNext}
+                      className="pd-modal-nav pd-modal-right"
+                    >
                       ›
                     </button>
                     <div className="pd-modal-counter">

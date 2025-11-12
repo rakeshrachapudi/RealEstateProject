@@ -156,7 +156,7 @@ const BannerCarousel = () => {
                 <div className="hp-banner-header">
                   <div className="hp-banner-header-content">
                     <span className="hp-banner-badge">✨ How It Works</span>
-                    <h2 className="hp-banner-title">PropertyDealz Platform</h2>
+                    <h2 className="hp-banner-title">Property Dealz Platform</h2>
                     <p className="hp-banner-subtitle">
                       Simple, transparent, and hassle-free property deals for
                       everyone

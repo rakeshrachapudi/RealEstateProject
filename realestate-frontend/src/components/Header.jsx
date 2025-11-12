@@ -252,7 +252,7 @@ function Header({
                     alt="Logo"
                   />
                   <span style={mobileHeaderStyles.mobileLogoText}>
-                    PropertyDealz
+                    Property Dealz
                   </span>
                 </div>
               </div>
@@ -312,7 +312,7 @@ function Header({
                     alt="Logo"
                   />
                   <span style={mobileHeaderStyles.mobileLogoText}>
-                    PropertyDealz
+                    Property Dealz
                   </span>
                 </div>
 
@@ -395,7 +395,7 @@ function Header({
             <span style={styles.logoIcon}>
               <img style={styles.logoIconImg} src={logo} alt="Logo" />
             </span>
-            <span style={styles.logoText}>PropertyDealz</span>
+            <span style={styles.logoText}>Property Dealz</span>
           </div>
 
           <nav style={styles.nav}>
