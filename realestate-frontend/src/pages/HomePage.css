@@ -24,20 +24,64 @@
   box-sizing: border-box;
 }
 
+/* ✅ MATCH SECOND BANNER TO FIRST — SAME LOOK */
 .hp-featured-promo {
   position: relative;
-  background: linear-gradient(135deg, #7557e0 0%, #8f63ec 50%, #a86ef7 100%);
-  background-size: 200% 200%;
-  animation: gradientShift 10s ease infinite;
-  border-radius: 24px;
+  border-radius: 24px !important;
   padding: clamp(32px, 4vw, 48px) clamp(24px, 3.5vw, 40px);
   margin-bottom: clamp(20px, 3vw, 32px);
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(117, 87, 224, 0.35),
-    0 10px 30px rgba(143, 99, 236, 0.25),
-    inset 0 2px 0 rgba(255, 255, 255, 0.18);
-  border: 2px solid rgba(255, 255, 255, 0.22);
+
+  /* ✅ SAME Black–Brown Luxury Background */
+  background-color: #2a2013 !important;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      rgba(0,0,0,0.18),
+      rgba(0,0,0,0.18) 24px,
+      rgba(0,0,0,0.28) 24px,
+      rgba(0,0,0,0.28) 48px
+    ),
+    linear-gradient(135deg, #3a2b18 0%, #2a2013 50%, #1a140d 100%) !important;
+
+  background-size: cover !important;
+  background-blend-mode: overlay !important;
+
+  /* ✅ SAME Border & Shadow */
+  border: 3px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.35) !important;
 }
+
+/* ✅ REMOVE PURPLE GLOW LAYERS */
+.hp-featured-promo::before,
+.hp-featured-promo::after {
+  display: none !important;
+}
+
+/* ✅ MATCH INNER WHITE BOXES TO FIRST BANNER */
+.hp-featured-promo .inner-box,
+.hp-featured-promo .hp-featured-box {
+  background: white !important;
+  border-radius: 16px !important;
+  padding: 20px !important;
+  border: 2px solid #e5e7eb !important;
+
+  box-shadow:
+    0 10px 25px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,1) !important;
+}
+
+/* ✅ Ensure consistency for coupon/timer boxes */
+.hp-featured-promo .hp-coupon-box,
+.hp-featured-promo .hp-offer-box {
+  background: white !important;
+  border-radius: 16px !important;
+  border: 2px solid #e5e7eb !important;
+  box-shadow:
+    0 10px 25px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,1) !important;
+}
+
 
 .hp-featured-promo::before {
   content: "";
@@ -1568,8 +1612,151 @@ body {
   flex-wrap: wrap;
   gap: 14px !important;
 }
+/* Force both banners to have the same purple theme */
+/* ✅ FINAL FIX — FORCE BOTH BANNERS TO BROWN-GOLD LUXURY THEME */
+.hp-banner,
+.hp-featured-promo {
+  background: none !important;
+  background-color: #2a2013 !important;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      rgba(0,0,0,0.18),
+      rgba(0,0,0,0.18) 24px,
+      rgba(0,0,0,0.28) 24px,
+      rgba(0,0,0,0.28) 48px
+    ),
+    linear-gradient(135deg, #3a2b18 0%, #2a2013 50%, #1a140d 100%) !important;
+
+  background-size: cover !important;
+  background-blend-mode: overlay !important;
+
+  border-radius: 20px !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.35) !important;
+}
+
+/* ✅ Remove leftover purple gradients from promo banner layers */
+.hp-featured-promo::before,
+.hp-featured-promo::after {
+  background: none !important;
+}
+
+/* ✅ Remove purple from inner items inside promo card */
+.hp-featured-promo * {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-color: rgba(255,255,255,0.2) !important;
+}
+
+/* ✅ Fix coupon text gradients back to normal readable white */
+.hp-coupon-code,
+.hp-promo-title,
+.hp-promo-highlight,
+.hp-promo-subtitle {
+  -webkit-text-fill-color: #fff !important;
+  color: #fff !important;
+  background: none !important;
+  filter: none !important;
+}
+
+
+
 
 .hp-search-wrap .form-row > * {
   flex: 1;
   min-width: 180px;
 }
+/* =====================================================================================
+   ✅ FINAL FIX — MAKE SLIDE-2 (LIMITED OFFER) MATCH LUXURY GOLD THEME EXACTLY LIKE SLIDE-1
+   ===================================================================================== */
+
+/* MAIN BACKGROUND MATCH */
+.hp-promo-banner,
+.hp-promo-container {
+  background: #2a2013 !important;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      rgba(0,0,0,0.20),
+      rgba(0,0,0,0.20) 24px,
+      rgba(0,0,0,0.30) 24px,
+      rgba(0,0,0,0.30) 48px
+    ),
+    linear-gradient(135deg, #3a2b18 0%, #2a2013 50%, #1a140d 100%) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  color: #fff !important;
+}
+
+/* Remove leftover purples */
+.hp-promo-banner * {
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,0.25) !important;
+}
+
+/* TITLE + HIGHLIGHTS FIX */
+.hp-promo-title,
+.hp-promo-desc,
+.hp-promo-highlight {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  background: none !important;
+  filter: none !important;
+}
+
+/* FEATURES BOXES GOLD OUTLINE */
+.hp-promo-feature {
+  border: 1px solid rgba(255,215,0,0.35) !important;
+  background: rgba(255,255,255,0.06) !important;
+  border-radius: 14px !important;
+}
+
+/* ICONS WHITE */
+.hp-promo-icon {
+  color: #fff !important;
+}
+
+/* COUPON BOX */
+.hp-coupon-code {
+  color: #ffd700 !important;
+}
+
+/* COPY BUTTON GOLD */
+.hp-coupon-copy {
+  background: linear-gradient(135deg, #f0c14b, #d4a028) !important;
+  color: #000 !important;
+  border-radius: 10px !important;
+  padding: 8px 16px !important;
+}
+
+/* TIMER BOXES */
+.hp-timer-box {
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255,215,0,0.3) !important;
+  border-radius: 10px !important;
+}
+
+.hp-timer-value,
+.hp-timer-unit {
+  color: #fff !important;
+}
+
+/* MAIN CTA BUTTON GOLD */
+.hp-promo-btn {
+  background: linear-gradient(135deg, #f0c14b 0%, #d4a028 100%) !important;
+  color: #000 !important;
+  font-weight: 900 !important;
+  border-radius: 12px !important;
+  padding: 14px 28px !important;
+  box-shadow: 0 8px 30px rgba(255,215,0,0.3) !important;
+}
+
+/* Note text */
+.hp-promo-note {
+  color: #fff !important;
+  opacity: 0.8 !important;
+}
+
