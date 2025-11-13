@@ -37,7 +37,6 @@ const PropertyCard = ({
 
   const handleCardClick = (e) => {
     if (e.target.closest("button")) return;
-
     const propertyId = property?.id || property?.propertyId;
     if (propertyId) navigate(`/property/${propertyId}`);
   };
@@ -51,7 +50,6 @@ const PropertyCard = ({
     e.stopPropagation();
     if (!window.confirm("⚠️ Are you sure?")) return;
     setIsDeleting(true);
-
     try {
       const propertyId = property.id || property.propertyId;
       const response = await fetch(
@@ -63,10 +61,8 @@ const PropertyCard = ({
           },
         }
       );
-
       if (!response.ok)
         throw new Error(`Failed to delete (Status: ${response.status})`);
-
       alert("✅ Property deleted!");
       onPropertyDeleted && onPropertyDeleted(propertyId);
     } catch (error) {
@@ -111,19 +107,10 @@ const PropertyCard = ({
     }
   };
 
-  // ✅ SAFE PROPERTY TYPE HANDLING (NO CRASH)
-  const resolvedPropertyType =
-    typeof property.propertyType === "string"
-      ? property.propertyType
-      : property.propertyType?.typeName ||
-        property.propertyType?.type ||
-        property.type ||
-        "N/A";
-
   return (
     <>
       <div className="pc-card" onClick={handleCardClick}>
-        {/* Badges */}
+        {/* Badges (Top Right) */}
         <div className="pc-badges">
           {property.isFeatured && (
             <span className="pc-badge featured">⭐ Featured</span>
@@ -149,6 +136,7 @@ const PropertyCard = ({
           />
           <div className="pc-image-overlay" />
 
+          {/* Deal Stage badge on image */}
           {dealInfo && (
             <span
               className={`pc-stage-badge ${getStageColorClass(
@@ -160,6 +148,7 @@ const PropertyCard = ({
           )}
         </div>
 
+        {/* Content */}
         <div className="pc-content">
           <div className="pc-type-tag">
             {property.listingType?.toLowerCase() === "sale"
@@ -181,9 +170,13 @@ const PropertyCard = ({
             )}
           </div>
 
-          {/* ✅ SAFE PROPERTY TYPE */}
           <div className="pc-type">
-            <strong>{resolvedPropertyType}</strong>
+            <strong>
+              {property.propertyType ||
+                property.propertyType?.typeName ||
+                property.type ||
+                "N/A"}
+            </strong>
           </div>
 
           <div className="pc-details">
@@ -193,15 +186,13 @@ const PropertyCard = ({
                 <span>{property.areaSqft} sqft</span>
               </div>
             )}
-
-            {Number(property.bedrooms) > 0 && (
+            {property.bedrooms > 0 && (
               <div className="pc-detail">
                 <span className="pc-detail-icon">🛏️</span>
                 <span>{property.bedrooms} Beds</span>
               </div>
             )}
-
-            {Number(property.bathrooms) > 0 && (
+            {property.bathrooms > 0 && (
               <div className="pc-detail">
                 <span className="pc-detail-icon">🚿</span>
                 <span>{property.bathrooms} Baths</span>
@@ -213,7 +204,7 @@ const PropertyCard = ({
             <div className="pc-amenities">
               <strong>✨ Amenities:</strong>{" "}
               {property.amenities
-                ?.split(",")
+                .split(",")
                 .map((a) => a.trim())
                 .filter((a) => a)
                 .slice(0, 3)
@@ -230,17 +221,29 @@ const PropertyCard = ({
           )}
 
           <div className="pc-ids">
+            {/* ADDED: RERA ID */}
+            {property.reraId && (
+              <span className="pc-id-tag pc-statutory-tag">
+                RERA ID: {property.reraId}
+              </span>
+            )}
+            {/* ADDED: HMDA ID */}
+            {property.hmdaId && (
+              <span className="pc-id-tag pc-statutory-tag">
+                HMDA ID: {property.hmdaId}
+              </span>
+            )}
             {(property.id || property.propertyId) && (
               <span className="pc-id-tag">
                 Property ID: {property.id || property.propertyId}
               </span>
             )}
-
             {dealInfo?.dealId && (
               <span className="pc-deal-tag">Deal ID: {dealInfo.dealId}</span>
             )}
           </div>
 
+          {/* Deal button */}
           {dealInfo && (
             <div className="pc-deal-actions">
               <button

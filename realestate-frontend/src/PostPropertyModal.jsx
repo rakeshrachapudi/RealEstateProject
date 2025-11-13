@@ -12,7 +12,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [areasLoading, setAreasLoading] = useState(true);
+  const [areasLoading, setAreasLoading] = useState(true); // ✅ FIX: Correct useState initialization
   const [imageUploading, setImageUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [priceInWords, setPriceInWords] = useState("");
@@ -42,15 +42,21 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     areaId: "",
     address: "",
     imageUrl: "",
+    // Bedrooms, bathrooms, balconies will be numbers/strings that allow decimals
     bedrooms: "",
     bathrooms: "",
     balconies: "",
     areaSqft: "",
-    price: "",
+    price: "", // Total Price
+    pricePerSqft: "", // New Field
     amenities: "",
     description: "",
     ownerType: "owner",
-    isReadyToMove: false,
+    constructionStatus: "ready_to_move",
+    possessionYear: "",
+    possessionMonth: "",
+    reraId: "",
+    hmdaId: "",
   });
 
   const commonAmenities = [
@@ -76,6 +82,15 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
   const isAgentOrAdmin = user?.role === "AGENT" || user?.role === "ADMIN";
   const isBroker = user?.role === "BROKER";
+
+  // Array for possession months and years
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 10 }, (_, i) => currentYear + i);
 
 
   useEffect(() => {
@@ -132,10 +147,8 @@ useEffect(() => {
       });
       if (response.ok) {
         const data = await response.json();
-        if (data.success && Array.isArray(data.data)) {
-          const regularUsers = data.data.filter((u) => u.role === "USER");
-          setUsers(regularUsers);
-        }
+        const regularUsers = data.data.filter((u) => u.role === "USER");
+        setUsers(regularUsers);
       }
     } catch (err) {
       console.error("Error loading users:", err);
@@ -225,11 +238,105 @@ useEffect(() => {
     return words.trim() + " Rupees Only";
   };
 
+  // --- Price/Area Calculation Logic ---
+
+  const calculatePricePerSqft = (price, areaSqft) => {
+    const p = Number(price);
+    const a = Number(areaSqft);
+    if (p > 0 && a > 0) {
+      return Math.round(p / a);
+    }
+    return "";
+  };
+
+  const calculateTotalPrice = (pricePerSqft, areaSqft) => {
+    const ps = Number(pricePerSqft);
+    const a = Number(areaSqft);
+    if (ps > 0 && a > 0) {
+      return Math.round(ps * a);
+    }
+    return "";
+  };
+
   const handlePriceChange = (e) => {
     const priceValue = e.target.value;
-    setFormData((prev) => ({ ...prev, price: priceValue }));
+    const areaSqft = formData.areaSqft;
+
+    setFormData((prev) => ({
+      ...prev,
+      price: priceValue,
+      pricePerSqft: calculatePricePerSqft(priceValue, areaSqft),
+    }));
     setPriceInWords(priceValue ? convertToIndianWords(priceValue) : "");
   };
+
+  const handlePricePerSqftChange = (e) => {
+    const pricePerSqftValue = e.target.value;
+    const areaSqft = formData.areaSqft;
+
+    setFormData((prev) => ({
+      ...prev,
+      pricePerSqft: pricePerSqftValue,
+      price: calculateTotalPrice(pricePerSqftValue, areaSqft),
+    }));
+
+    const calculatedPrice = calculateTotalPrice(pricePerSqftValue, areaSqft);
+    setPriceInWords(calculatedPrice ? convertToIndianWords(calculatedPrice) : "");
+  };
+
+  const handleAreaSqftChange = (e) => {
+    const areaSqftValue = e.target.value;
+    const price = formData.price;
+    const pricePerSqft = formData.pricePerSqft;
+
+    let newPrice = price;
+    let newPricePerSqft = pricePerSqft;
+
+    if (pricePerSqft > 0) {
+      // If PPSF is set, calculate Total Price
+      newPrice = calculateTotalPrice(pricePerSqft, areaSqftValue);
+    } else if (price > 0) {
+      // If Total Price is set, calculate PPSF
+      newPricePerSqft = calculatePricePerSqft(price, areaSqftValue);
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      areaSqft: areaSqftValue,
+      price: newPrice,
+      pricePerSqft: newPricePerSqft,
+    }));
+
+    setPriceInWords(newPrice ? convertToIndianWords(newPrice) : "");
+  };
+
+  // --- End Price/Area Calculation Logic ---
+
+  // --- START DECIMAL INPUT HANDLER ---
+  /**
+   * Enforces a maximum of one digit after the decimal point
+   * by truncating the input value.
+   */
+  const handleDecimalChange = (e) => {
+    const { name, value } = e.target;
+    let newValue = value;
+
+    // Check for decimal point
+    if (newValue.includes('.')) {
+      const parts = newValue.split('.');
+      if (parts.length > 1 && parts[1].length > 1) {
+        // Truncate the part after the decimal to one digit
+        newValue = parts[0] + '.' + parts[1].substring(0, 1);
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: newValue,
+    }));
+    setError(null);
+  };
+  // --- END DECIMAL INPUT HANDLER ---
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -299,12 +406,21 @@ useEffect(() => {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     const processedValue = type === "checkbox" ? checked : value;
-    setFormData((prev) => ({ ...prev, [name]: processedValue }));
-    if (name === "price") {
-      setPriceInWords(convertToIndianWords(processedValue));
-    }
+
+    setFormData((prev) => {
+      let newState = { ...prev, [name]: processedValue };
+
+      // If constructionStatus changes, clear possession fields if not 'under_construction'
+      if (name === "constructionStatus" && value !== "under_construction") {
+        newState.possessionYear = "";
+        newState.possessionMonth = "";
+      }
+
+      return newState;
+    });
     setError(null);
   };
+
   const uploadImagesToS3 = async (propertyId) => {
     const uploadedUrls = [];
 
@@ -365,8 +481,6 @@ useEffect(() => {
     }
   };
 
-  // ✅ *** MAIN FIX STARTS HERE ***
-  // Ensures subscription modal opens on backend 500
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -418,13 +532,41 @@ useEffect(() => {
         return;
       }
 
-      // ✅ Create property
+      // ✅ Under Construction fields check
+      if (formData.constructionStatus === "under_construction" && (!formData.possessionYear || !formData.possessionMonth)) {
+         setError("Please specify the Possession Year and Month for 'Under Construction' properties.");
+         setLoading(false);
+         return;
+      }
+
+      // ✅ Must have images
+      if (selectedImages.length === 0) {
+        setError("Please upload at least one property image.");
+        setLoading(false);
+        return;
+      }
+
+      // --- Prepare Payload with number conversion for decimal fields ---
       const propertyPayload = {
         ...formData,
         imageUrl: null,
         user: { id: (user?.role === "AGENT" || user?.role === "ADMIN") ? selectedUserId : user.id },
         area: { id: formData.areaId },
+        // Convert numbers from string input:
+        price: Number(formData.price),
+        pricePerSqft: formData.pricePerSqft ? Number(formData.pricePerSqft) : null,
+        areaSqft: formData.areaSqft ? Number(formData.areaSqft) : null,
+
+        // Convert decimal-allowed fields to number (will handle '2' and '2.5').
+        // The handleDecimalChange ensures only one digit after the decimal.
+        bedrooms: formData.bedrooms ? Number(formData.bedrooms) : null,
+        bathrooms: formData.bathrooms ? Number(formData.bathrooms) : null,
+        balconies: formData.balconies ? Number(formData.balconies) : null,
+
+        // Map constructionStatus to isReadyToMove for older backends if needed, or update backend to accept status string
+        isReadyToMove: formData.constructionStatus === 'ready_to_move',
       };
+      // -------------------------------------------------------------------
 
       const createResponse = await fetch(`${BACKEND_BASE_URL}/api/properties`, {
         method: "POST",
@@ -443,15 +585,13 @@ useEffect(() => {
         createJson = null;
       }
 
-      // ✅ *** BACKEND 500 FIX ***
-      // Backend logs show error message:
-      // "Subscription required. Please activate a subscription or use a trial coupon to post properties."
+      // ✅ *** BACKEND 500 FIX *** (Redundant check kept for robustness)
       if (
         user?.role === "BROKER" &&
         createResponse.status === 500 &&
         (
           (createJson?.message && createJson.message.includes("Subscription required")) ||
-          true // backend ALWAYS sends 500 for this case
+          true
         )
       ) {
         setCurrentBrokerId(user.id);
@@ -476,15 +616,11 @@ useEffect(() => {
       }
 
       // ✅ Extract property ID from response (handles both formats)
-      // Format 1: ApiResponse wrapper {success: true, data: {id: ...}}
-      // Format 2: Direct entity {id: ..., title: ...}
       let propertyId = null;
 
       if (createJson?.data?.id) {
-        // ApiResponse format
         propertyId = createJson.data.id;
       } else if (createJson?.id) {
-        // Direct entity format
         propertyId = createJson.id;
       }
 
@@ -495,7 +631,9 @@ useEffect(() => {
       }
 
       // ✅ Upload images
+      setImageUploading(true);
       const uploadedImageUrls = await uploadImagesToS3(propertyId);
+      setImageUploading(false);
 
       if (uploadedImageUrls.length > 0) {
         await saveImageUrlsToDatabase(propertyId, uploadedImageUrls);
@@ -510,9 +648,9 @@ useEffect(() => {
       setError(err?.message || "An error occurred. Please try again.");
     } finally {
       setLoading(false);
+      setImageUploading(false);
     }
   };
-  // ✅ *** MAIN FIX ENDS HERE ***
 
   const handleBackdropClick = (e) => {
     if (e.target.classList.contains("ppm-backdrop")) {
@@ -559,8 +697,8 @@ useEffect(() => {
             {isAgentOrAdmin && (
               <div className="ppm-user-section">
                 <div className="ppm-user-header">
-                  <label className="ppm-label required">
-                    Select Property Owner
+                  <label className="ppm-label">
+                    Select Property Owner <span className="ppm-required-star">*</span>
                   </label>
                   <button
                     type="button"
@@ -594,7 +732,7 @@ useEffect(() => {
               </div>
             )}
 
-            {/* ✅ Subscription Modal Rendering (Fix Applied) */}
+            {/* ✅ Subscription Modal Rendering */}
             {showSubscriptionModal && (
               <BrokerSubscriptionModal
                 isOpen={showSubscriptionModal}
@@ -606,7 +744,7 @@ useEffect(() => {
 
             {/* Title */}
             <div className="ppm-field">
-              <label className="ppm-label">Property Title *</label>
+              <label className="ppm-label required">Property Title</label>
               <input
                 type="text"
                 name="title"
@@ -621,7 +759,7 @@ useEffect(() => {
             {/* Property Type & Listing Type */}
             <div className="ppm-row">
               <div className="ppm-field">
-                <label className="ppm-label">Property Type *</label>
+                <label className="ppm-label required">Property Type</label>
                 <select
                   name="type"
                   value={formData.type}
@@ -637,7 +775,7 @@ useEffect(() => {
                 </select>
               </div>
               <div className="ppm-field">
-                <label className="ppm-label">Listing Type *</label>
+                <label className="ppm-label required">Listing Type</label>
                 <select
                   name="listingType"
                   value={formData.listingType}
@@ -653,7 +791,7 @@ useEffect(() => {
 
             {/* Posted By */}
             <div className="ppm-field">
-              <label className="ppm-label">👤 Posted By *</label>
+              <label className="ppm-label required">👤 Posted By</label>
            <select
              name="ownerType"
              value={formData.ownerType}
@@ -672,7 +810,7 @@ useEffect(() => {
             {/* City & Area */}
             <div className="ppm-row">
               <div className="ppm-field">
-                <label className="ppm-label">City *</label>
+                <label className="ppm-label">City</label>
                 <input
                   type="text"
                   name="city"
@@ -682,8 +820,8 @@ useEffect(() => {
                 />
               </div>
               <div className="ppm-field">
-                <label className="ppm-label">
-                  📍 Area * ({areas.length} available)
+                <label className="ppm-label required">
+                  📍 Area ({areas.length} available)
                 </label>
                 <select
                   name="areaId"
@@ -716,21 +854,99 @@ useEffect(() => {
               />
             </div>
 
-            {/* Ready to Move */}
-            <label className="ppm-checkbox">
-              <input
-                type="checkbox"
-                name="isReadyToMove"
-                checked={formData.isReadyToMove}
-                onChange={handleChange}
-              />
-              <span className="ppm-checkbox-text">✅ Ready to Move</span>
-            </label>
+            {/* RERA, HMDA, and Construction Status */}
+            <div className="ppm-row">
+               {/* Construction Status Dropdown */}
+              <div className="ppm-field">
+                <label className="ppm-label required">Construction Status</label>
+                <select
+                  name="constructionStatus"
+                  value={formData.constructionStatus}
+                  onChange={handleChange}
+                  className="ppm-select"
+                  required
+                >
+                  <option value="ready_to_move">✅ Ready to Move</option>
+                  <option value="under_construction">🚧 Under Construction</option>
+                </select>
+              </div>
+
+              {/* RERA ID */}
+              <div className="ppm-field">
+                <label className="ppm-label">RERA ID (Optional)
+                  {formData.reraId && <span className="ppm-badge-success">✔</span>}
+                </label>
+                <input
+                  type="text"
+                  name="reraId"
+                  value={formData.reraId}
+                  onChange={handleChange}
+                  placeholder="e.g., P01230004567"
+                  className="ppm-input"
+                />
+              </div>
+
+              {/* HMDA ID */}
+              <div className="ppm-field">
+                <label className="ppm-label">HMDA/DTCP ID (Optional)
+                  {formData.hmdaId && <span className="ppm-badge-success">✔</span>}
+                </label>
+                <input
+                  type="text"
+                  name="hmdaId"
+                  value={formData.hmdaId}
+                  onChange={handleChange}
+                  placeholder="e.g., 12/L.O./HMDA/2023"
+                  className="ppm-input"
+                />
+              </div>
+            </div>
+            {/* End RERA, HMDA, and Status */}
+
+            {/* --- CONDITIONAL BLOCK: Possession Year and Month --- */}
+            {formData.constructionStatus === "under_construction" && (
+              <div className="ppm-row">
+                 <div className="ppm-field">
+                    <label className="ppm-label required">Expected Possession Year</label>
+                    <select
+                        name="possessionYear"
+                        value={formData.possessionYear}
+                        onChange={handleChange}
+                        className="ppm-select"
+                        required
+                    >
+                        <option value="">-- Select Year --</option>
+                        {years.map(year => (
+                            <option key={year} value={year}>{year}</option>
+                        ))}
+                    </select>
+                 </div>
+                 <div className="ppm-field">
+                    <label className="ppm-label required">Expected Possession Month</label>
+                    <select
+                        name="possessionMonth"
+                        value={formData.possessionMonth}
+                        onChange={handleChange}
+                        className="ppm-select"
+                        required
+                    >
+                        <option value="">-- Select Month --</option>
+                        {months.map(month => (
+                            <option key={month} value={month}>{month}</option>
+                        ))}
+                    </select>
+                 </div>
+                 {/* Empty div for layout symmetry */}
+                 <div className="ppm-field"></div>
+              </div>
+            )}
+            {/* -------------------------------------------------------- */}
+
 
             {/* Multiple Image Upload */}
             <div className="ppm-images">
-              <label className="ppm-label">
-                📷 Upload Property Images * (Max 10)
+              <label className="ppm-label required">
+                📷 Upload Property Images (Max 10)
               </label>
 
               <input
@@ -804,7 +1020,7 @@ useEffect(() => {
             </div>
             {/* Description */}
             <div className="ppm-field">
-              <label className="ppm-label">Description *</label>
+              <label className="ppm-label required">Description</label>
               <textarea
                 name="description"
                 value={formData.description}
@@ -819,33 +1035,33 @@ useEffect(() => {
             {!isPlotOrLandOrVilla && (
               <div className="ppm-row3">
                 <div className="ppm-field">
-                  <label className="ppm-label">🛏️ Bedrooms *</label>
+                  <label className="ppm-label required">🛏️ Bedrooms</label>
                   <input
                     type="number"
                     name="bedrooms"
                     value={formData.bedrooms}
-                    onChange={handleChange}
+                    onChange={handleDecimalChange} // ✅ Using the strict decimal handler
                     min="0"
-                    max="10"
+                    step="0.1"
                     className="ppm-input"
                     placeholder="2"
                     required
-                    inputMode="numeric"
+                    inputMode="decimal"
                   />
                 </div>
                 <div className="ppm-field">
-                  <label className="ppm-label">🚿 Bathrooms *</label>
+                  <label className="ppm-label required">🚿 Bathrooms</label>
                   <input
                     type="number"
                     name="bathrooms"
                     value={formData.bathrooms}
-                    onChange={handleChange}
+                    onChange={handleDecimalChange} // ✅ Using the strict decimal handler
                     min="0"
-                    max="10"
+                    step="0.1"
                     className="ppm-input"
                     placeholder="2"
                     required
-                    inputMode="numeric"
+                    inputMode="decimal"
                   />
                 </div>
                 <div className="ppm-field">
@@ -854,34 +1070,52 @@ useEffect(() => {
                     type="number"
                     name="balconies"
                     value={formData.balconies}
-                    onChange={handleChange}
+                    onChange={handleDecimalChange} // ✅ Using the strict decimal handler
                     min="0"
-                    max="10"
+                    step="0.1"
                     className="ppm-input"
                     placeholder="1"
-                    inputMode="numeric"
+                    inputMode="decimal"
                   />
                 </div>
               </div>
             )}
 
-            {/* Area & Price */}
+            {/* Area & Price Row */}
             <div className="ppm-row">
+              {/* Area */}
               <div className="ppm-field">
                 <label className="ppm-label">📐 Area (sqft)</label>
                 <input
                   type="number"
                   name="areaSqft"
                   value={formData.areaSqft}
-                  onChange={handleChange}
+                  onChange={handleAreaSqftChange}
                   placeholder="1200"
                   className="ppm-input"
-                  max="9999"
+                  max="99999"
                   inputMode="numeric"
                 />
               </div>
+
+              {/* Price Per Sqft */}
               <div className="ppm-field">
-                <label className="ppm-label">💰 Expected Price (₹) *</label>
+                <label className="ppm-label">💵 Price Per Sqft (₹)</label>
+                <input
+                  type="number"
+                  name="pricePerSqft"
+                  value={formData.pricePerSqft}
+                  onChange={handlePricePerSqftChange}
+                  placeholder="e.g., 5000"
+                  className="ppm-input"
+                  max="99999"
+                  inputMode="numeric"
+                />
+              </div>
+
+              {/* Total Price */}
+              <div className="ppm-field">
+                <label className="ppm-label required">💰 Expected Price (₹)</label>
                 <input
                   type="number"
                   name="price"
@@ -951,7 +1185,7 @@ useEffect(() => {
         />
       )}
 
-      {/* ✅ SUBSCRIPTION MODAL BLOCK (bottom duplicate from your original code) */}
+      {/* ✅ SUBSCRIPTION MODAL BLOCK */}
       {showSubscriptionModal && (
         <BrokerSubscriptionModal
           isOpen={showSubscriptionModal}

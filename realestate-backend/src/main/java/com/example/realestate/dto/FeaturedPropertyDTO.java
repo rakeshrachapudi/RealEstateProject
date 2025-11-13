@@ -13,15 +13,20 @@ public class FeaturedPropertyDTO {
     private String status;
 
     private String address;
-    private Double areaSqft;      // <-- Double (NOT BigDecimal)
-    private Integer bedrooms;
-    private Integer bathrooms;
-    private Integer balconies;
+    private Double areaSqft;      // <-- Double
+
+    // ⭐ UPDATED TYPE: Changed from Integer to Double for consistency with Property Entity/DTO
+    private Double bedrooms;
+    private Double bathrooms;
+    private Double balconies;
 
     private String amenities;
 
     private BigDecimal price;
     private String priceDisplay;
+
+    // ⭐ NEW FIELD: Price per sqft (required by service layer)
+    private Double pricePerSqft;
 
     private Boolean isFeatured;
     private Boolean isVerified;
@@ -67,14 +72,16 @@ public class FeaturedPropertyDTO {
     public Double getAreaSqft() { return areaSqft; }
     public void setAreaSqft(Double areaSqft) { this.areaSqft = areaSqft; }
 
-    public Integer getBedrooms() { return bedrooms; }
-    public void setBedrooms(Integer bedrooms) { this.bedrooms = bedrooms; }
+    // ⭐ UPDATED Getters/Setters (Double)
+    public Double getBedrooms() { return bedrooms; }
+    public void setBedrooms(Double bedrooms) { this.bedrooms = bedrooms; }
 
-    public Integer getBathrooms() { return bathrooms; }
-    public void setBathrooms(Integer bathrooms) { this.bathrooms = bathrooms; }
+    public Double getBathrooms() { return bathrooms; }
+    public void setBathrooms(Double bathrooms) { this.bathrooms = bathrooms; }
 
-    public Integer getBalconies() { return balconies; }
-    public void setBalconies(Integer balconies) { this.balconies = balconies; }
+    public Double getBalconies() { return balconies; }
+    public void setBalconies(Double balconies) { this.balconies = balconies; }
+    // END UPDATED Getters/Setters
 
     public String getAmenities() { return amenities; }
     public void setAmenities(String amenities) { this.amenities = amenities; }
@@ -84,6 +91,10 @@ public class FeaturedPropertyDTO {
 
     public String getPriceDisplay() { return priceDisplay; }
     public void setPriceDisplay(String priceDisplay) { this.priceDisplay = priceDisplay; }
+
+    // ⭐ NEW Getter/Setter for pricePerSqft
+    public Double getPricePerSqft() { return pricePerSqft; }
+    public void setPricePerSqft(Double pricePerSqft) { this.pricePerSqft = pricePerSqft; }
 
     public Boolean getIsFeatured() { return isFeatured; }
     public void setIsFeatured(Boolean isFeatured) { this.isFeatured = isFeatured; }

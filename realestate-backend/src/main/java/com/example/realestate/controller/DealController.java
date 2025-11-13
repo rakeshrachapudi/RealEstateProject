@@ -390,7 +390,6 @@ public class DealController {
     }
 
 
-
     // ==================== GET DEALS BY AGENT (for the agent themselves) ====================
     @GetMapping("/agent/{agentId}")
     public ResponseEntity<?> getAgentDeals(@PathVariable Long agentId, Authentication authentication) {
@@ -615,7 +614,8 @@ public class DealController {
                     deal.getProperty().getTitle(),
                     deal.getProperty().getCity(),
                     deal.getProperty().getPrice() != null ? deal.getProperty().getPrice().doubleValue() : 0.0, // Handle null price
-                    deal.getProperty().getBedrooms(),
+                    // Line 618: FIX for the incompatible types error: Convert Double/BigDecimal to Integer.
+                    deal.getProperty().getBedrooms() != null ? deal.getProperty().getBedrooms().intValue() : null,
                     deal.getProperty().getImageUrl()
             ));
         }
@@ -723,13 +723,16 @@ public class DealController {
                     .body(ApiResponse.error("An unexpected error occurred while deleting the deal."));
         }
     }
-
+}
+// ----------------------------------------------------------------------------------
+// The next section of code you provided is for DealService.java, not DealController.java.
+// I cannot place it here, but I have noted it for completeness.
+/*
     // Add this method to your DealService.java
 
-    /**
-     * ⭐ DELETE A SINGLE DEAL BY ID (NEW)
-     * Deletes a specific deal
-     */
+    // ** DELETE A SINGLE DEAL BY ID (NEW)
+    // * Deletes a specific deal
+
     @Transactional
     public void deleteDeal(Long dealId) {
         logger.info("🗑️ Deleting single deal with ID: {}", dealId);
@@ -747,4 +750,4 @@ public class DealController {
 
         logger.info("✅ Successfully deleted deal {}", dealId);
     }
-}
+*/

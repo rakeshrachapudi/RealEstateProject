@@ -13,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal; // <-- NEW REQUIRED IMPORT
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -47,13 +48,18 @@ public class PropertySearchService {
 
         Page<Property> propertyPage = propertyRepository.searchProperties(
                 request.getPropertyType(),
-                request.getMinPrice(),
-                request.getMaxPrice(),
+                // --- START FIX for incompatible types (Price) ---
+                // Convert Integer (from request) to BigDecimal (expected by repository)
+                request.getMinPrice() != null ? BigDecimal.valueOf(request.getMinPrice().doubleValue()) : null,
+                request.getMaxPrice() != null ? BigDecimal.valueOf(request.getMaxPrice().doubleValue()) : null,
+                // --- END FIX ---
                 request.getCity(),
                 request.getArea(),
                 request.getListingType(),
-                request.getMinBedrooms(),
-                request.getMaxBedrooms(),
+                // --- START FIX for incompatible types (Bedrooms - assumed Double based on prior error) ---
+                request.getMinBedrooms() != null ? request.getMinBedrooms().doubleValue() : null,
+                request.getMaxBedrooms() != null ? request.getMaxBedrooms().doubleValue() : null,
+                // --- END FIX ---
                 request.getIsVerified(),
                 request.getOwnerType(),
                 request.getIsReadyToMove(),

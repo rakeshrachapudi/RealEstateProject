@@ -3,7 +3,7 @@ package com.example.realestate.controller;
 import com.example.realestate.model.Property;
 import com.example.realestate.service.PropertyService;
 import com.example.realestate.dto.PropertyPostRequestDto;
-import com.example.realestate.dto.PropertyDTO; // ⭐ Import PropertyDTO
+import com.example.realestate.dto.PropertyDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -25,20 +25,30 @@ public class PropertyController {
     public PropertyController(PropertyService service) {
         this.service = service;
     }
-    @GetMapping("/types")
-    public ResponseEntity<List<String>> getPropertyTypes() {
-        List<String> types = service.getPropertyTypes();
-        return ResponseEntity.ok(types);
+// -------------------------------------------------------------
+// ⭐ NEW: Specific Exception Handler for Subscription/Limit Errors
+// -------------------------------------------------------------
+
+    @ExceptionHandler({RuntimeException.class})
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ResponseEntity<String> handleBrokerSubscriptionException(RuntimeException ex) {
+        String message = ex.getMessage();
+        logger.error("Broker/Subscription error: {}", message);
+
+        // This is a simple way to return a FORBIDDEN (403) status for controlled business exceptions.
+        // In a complex app, you might use custom exceptions and more detailed response objects.
+
+        // Use FORBIDDEN (403) for permission/subscription-based refusal.
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(message);
     }
 
-    @GetMapping("/byType")
-    public ResponseEntity<List<PropertyDTO>> getPropertiesByType(@RequestParam String type) {
-        logger.info("Fetching properties of type: {}", type);
-        List<PropertyDTO> properties = service.getPropertiesByTypeAsDTO(type);
-        return ResponseEntity.ok(properties);
-    }
+// -------------------------------------------------------------
+// ⭐ UPDATED METHOD: Property Creation with refined exception handling
+// -------------------------------------------------------------
+
     /**
-     * UPDATED METHOD: Create new property using the dedicated DTO and error handling.
+     * UPDATED METHOD: Create new property using the dedicated DTO.
+     * Exceptions handled by the specific handlers above and below.
      */
     @PostMapping
     public ResponseEntity<?> create(@RequestBody PropertyPostRequestDto dto) {
@@ -51,10 +61,24 @@ public class PropertyController {
             logger.error("Error creating property: {}", e.getMessage());
             // Return 400 Bad Request for validation/missing FK errors
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        } catch (Exception e) {
-            logger.error("Unexpected error creating property.", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
         }
+        // Note: RuntimeException (Broker checks) is now handled by the @ExceptionHandler above
+        // Any other unexpected exception will fall through to a global 500 handler if one exists,
+        // or just throw a 500 status by default.
+    }
+
+
+    @GetMapping("/types")
+    public ResponseEntity<List<String>> getPropertyTypes() {
+        List<String> types = service.getPropertyTypes();
+        return ResponseEntity.ok(types);
+    }
+
+    @GetMapping("/byType")
+    public ResponseEntity<List<PropertyDTO>> getPropertiesByType(@RequestParam String type) {
+        logger.info("Fetching properties of type: {}", type);
+        List<PropertyDTO> properties = service.getPropertiesByTypeAsDTO(type);
+        return ResponseEntity.ok(properties);
     }
 
     /**

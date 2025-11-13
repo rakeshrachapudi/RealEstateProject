@@ -233,6 +233,23 @@ public class FeaturedPropertyService {
         }
     }
 
+    // ---------------------------------------------------------------------
+    // ✅ NEW: Helper for safe BigDecimal to Double conversion
+    // ---------------------------------------------------------------------
+    private static Double safeBigDecimalToDouble(BigDecimal bd) {
+        return bd == null ? null : bd.doubleValue();
+    }
+
+    // ---------------------------------------------------------------------
+    // ✅ NEW: Helper for safe Double (room counts) to Double (DTO) conversion
+    // ---------------------------------------------------------------------
+    private static Double safeDoubleToDouble(Double d) {
+        return d; // Added for conceptual completeness, mainly for future non-Double types
+    }
+
+    // ---------------------------------------------------------------------
+    // ✅ UPDATED: toDto
+    // ---------------------------------------------------------------------
     private FeaturedPropertyDTO toDto(Property p) {
         FeaturedPropertyDTO dto = new FeaturedPropertyDTO();
 
@@ -243,17 +260,17 @@ public class FeaturedPropertyService {
         dto.setStatus(nz(p.getStatus()));
         dto.setAddress(nz(p.getAddress()));
 
-        if (p.getAreaSqft() != null) {
-            try {
-                dto.setAreaSqft(Double.valueOf(p.getAreaSqft().toString()));
-            } catch (Exception ignore) {
-                dto.setAreaSqft(null);
-            }
-        }
+        // ⭐ IMPROVED: Use safe conversion helpers
+        dto.setAreaSqft(safeBigDecimalToDouble(p.getAreaSqft()));
 
-        dto.setBedrooms(p.getBedrooms());
-        dto.setBathrooms(p.getBathrooms());
-        dto.setBalconies(p.getBalconies());
+        // ⭐ NEW/IMPROVED: Add PricePerSqft and use safe conversion
+        dto.setPricePerSqft(safeBigDecimalToDouble(p.getPricePerSqft()));
+
+        // ⭐ IMPROVED: Use safe conversion helpers for room counts
+        dto.setBedrooms(safeDoubleToDouble(p.getBedrooms()));
+        dto.setBathrooms(safeDoubleToDouble(p.getBathrooms()));
+        dto.setBalconies(safeDoubleToDouble(p.getBalconies()));
+
         dto.setAmenities(nz(p.getAmenities()));
         dto.setPrice(p.getPrice());
         dto.setPriceDisplay(nz(p.getPriceDisplay()));
