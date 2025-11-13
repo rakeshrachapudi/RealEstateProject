@@ -241,6 +241,7 @@
   margin-top: 10px;
 }
 
+/* Standard Property ID Tag */
 .pc-id-tag {
   display: inline-block;
   background: #eff6ff;
@@ -252,6 +253,15 @@
   border: 1px solid #93c5fd;
 }
 
+/* ADDED: RERA/HMDA Statutory Tag Styling */
+.pc-statutory-tag {
+  background: #fef3c7; /* Light yellow background */
+  color: #b45309; /* Darker brown/orange text */
+  border: 1px solid #fbbf24; /* Orange border */
+  font-weight: 700; /* Bolder font for emphasis */
+}
+
+/* Deal ID Tag */
 .pc-deal-tag {
   display: inline-block;
   background: #f0fdf4;

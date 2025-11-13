@@ -36,13 +36,17 @@ public class Property {
     @Column(name = "price", precision = 15, scale = 2)
     private BigDecimal price;
 
+    // ⭐ NEW FIELD: Price per square foot
+    @Column(name = "price_per_sqft", precision = 15, scale = 2)
+    private BigDecimal pricePerSqft;
+
     @Column(name = "area_sqft", precision = 10, scale = 2)
     private BigDecimal areaSqft;
 
-    private Integer bedrooms;
-    private Integer bathrooms;
-
-    private Integer balconies; // 💡 NEW FIELD ADDED TO RESOLVE ERROR
+    // ⭐ UPDATED TYPE: Changed from Integer to Double to allow for 2.5, 3.5 etc.
+    private Double bedrooms;
+    private Double bathrooms;
+    private Double balconies;
 
     @Column(name = "amenities", columnDefinition = "TEXT")
     private String amenities;
@@ -68,29 +72,32 @@ public class Property {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
     private User user;
+
     @Column(name = "is_verified")
     private Boolean isVerified = false;
 
     @Column(name = "owner_type")
     private String ownerType = "owner"; // "owner" or "broker"
 
-    // Add getters and setters
-    public Boolean getIsVerified() { return isVerified; }
-    public void setIsVerified(Boolean isVerified) { this.isVerified = isVerified; }
-
-    public String getOwnerType() { return ownerType; }
-    public void setOwnerType(String ownerType) { this.ownerType = ownerType; }
     @Column(name = "is_ready_to_move")
     private Boolean isReadyToMove = false;
 
-    // Getter and Setter
-    public Boolean getIsReadyToMove() {
-        return isReadyToMove;
-    }
+    // ⭐ NEW CONSTRUCTION & REGULATORY FIELDS
+    @Column(name = "construction_status")
+    private String constructionStatus; // e.g., "ready_to_move", "under_construction"
 
-    public void setIsReadyToMove(Boolean isReadyToMove) {
-        this.isReadyToMove = isReadyToMove;
-    }
+    @Column(name = "possession_year")
+    private String possessionYear;
+
+    @Column(name = "possession_month")
+    private String possessionMonth;
+
+    @Column(name = "rera_id")
+    private String reraId;
+
+    @Column(name = "hmda_id")
+    private String hmdaId;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -105,7 +112,8 @@ public class Property {
     // Constructors
     public Property() {}
 
-    // ALL Getters and Setters
+    // ==================== ALL Getters and Setters ====================
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -139,18 +147,22 @@ public class Property {
     public BigDecimal getPrice() { return price; }
     public void setPrice(BigDecimal price) { this.price = price; }
 
+    // ⭐ NEW Getter/Setter for pricePerSqft
+    public BigDecimal getPricePerSqft() { return pricePerSqft; }
+    public void setPricePerSqft(BigDecimal pricePerSqft) { this.pricePerSqft = pricePerSqft; }
+
     public BigDecimal getAreaSqft() { return areaSqft; }
     public void setAreaSqft(BigDecimal areaSqft) { this.areaSqft = areaSqft; }
 
-    public Integer getBedrooms() { return bedrooms; }
-    public void setBedrooms(Integer bedrooms) { this.bedrooms = bedrooms; }
+    // ⭐ UPDATED: Double Getters/Setters
+    public Double getBedrooms() { return bedrooms; }
+    public void setBedrooms(Double bedrooms) { this.bedrooms = bedrooms; }
 
-    public Integer getBathrooms() { return bathrooms; }
-    public void setBathrooms(Integer bathrooms) { this.bathrooms = bathrooms; }
+    public Double getBathrooms() { return bathrooms; }
+    public void setBathrooms(Double bathrooms) { this.bathrooms = bathrooms; }
 
-    // 💡 NEW GETTER/SETTER
-    public Integer getBalconies() { return balconies; }
-    public void setBalconies(Integer balconies) { this.balconies = balconies; }
+    public Double getBalconies() { return balconies; }
+    public void setBalconies(Double balconies) { this.balconies = balconies; }
 
     public String getAmenities() { return amenities; }
     public void setAmenities(String amenities) { this.amenities = amenities; }
@@ -175,4 +187,29 @@ public class Property {
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
+
+    public Boolean getIsVerified() { return isVerified; }
+    public void setIsVerified(Boolean isVerified) { this.isVerified = isVerified; }
+
+    public String getOwnerType() { return ownerType; }
+    public void setOwnerType(String ownerType) { this.ownerType = ownerType; }
+
+    public Boolean getIsReadyToMove() { return isReadyToMove; }
+    public void setIsReadyToMove(Boolean isReadyToMove) { this.isReadyToMove = isReadyToMove; }
+
+    // ⭐ NEW Getters and Setters
+    public String getConstructionStatus() { return constructionStatus; }
+    public void setConstructionStatus(String constructionStatus) { this.constructionStatus = constructionStatus; }
+
+    public String getPossessionYear() { return possessionYear; }
+    public void setPossessionYear(String possessionYear) { this.possessionYear = possessionYear; }
+
+    public String getPossessionMonth() { return possessionMonth; }
+    public void setPossessionMonth(String possessionMonth) { this.possessionMonth = possessionMonth; }
+
+    public String getReraId() { return reraId; }
+    public void setReraId(String reraId) { this.reraId = reraId; }
+
+    public String getHmdaId() { return hmdaId; }
+    public void setHmdaId(String hmdaId) { this.hmdaId = hmdaId; }
 }

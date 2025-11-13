@@ -10,9 +10,12 @@ public class PropertyDTO {
     private String description;
     private BigDecimal price;
     private BigDecimal areaSqft;
-    private Integer bedrooms;
-    private Integer bathrooms;
-    private Integer balconies;
+
+    // ⭐ UPDATED to Double to support 2.5 bathrooms/bedrooms
+    private Double bedrooms;
+    private Double bathrooms;
+    private Double balconies;
+
     private String address;
     private String status;
     private String listingType;
@@ -28,6 +31,15 @@ public class PropertyDTO {
     private Boolean isReadyToMove;
     private String ownerType;
     private Boolean isVerified;
+
+    // ⭐ NEW FIELDS ADDED
+    private String constructionStatus;
+    private String possessionYear;
+    private String possessionMonth;
+    private String reraId;
+    private String hmdaId;
+    private BigDecimal pricePerSqft;
+
 
     private UserDTO user; // ✅ Contact information (broker or owner)
 
@@ -97,14 +109,16 @@ public class PropertyDTO {
     public BigDecimal getAreaSqft() { return areaSqft; }
     public void setAreaSqft(BigDecimal areaSqft) { this.areaSqft = areaSqft; }
 
-    public Integer getBedrooms() { return bedrooms; }
-    public void setBedrooms(Integer bedrooms) { this.bedrooms = bedrooms; }
+    // ⭐ UPDATED Getters/Setters
+    public Double getBedrooms() { return bedrooms; }
+    public void setBedrooms(Double bedrooms) { this.bedrooms = bedrooms; }
 
-    public Integer getBathrooms() { return bathrooms; }
-    public void setBathrooms(Integer bathrooms) { this.bathrooms = bathrooms; }
+    public Double getBathrooms() { return bathrooms; }
+    public void setBathrooms(Double bathrooms) { this.bathrooms = bathrooms; }
 
-    public Integer getBalconies() { return balconies; }
-    public void setBalconies(Integer balconies) { this.balconies = balconies; }
+    public Double getBalconies() { return balconies; }
+    public void setBalconies(Double balconies) { this.balconies = balconies; }
+    // END UPDATED Getters/Setters
 
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
@@ -141,4 +155,23 @@ public class PropertyDTO {
 
     public String getPriceDisplay() { return priceDisplay; }
     public void setPriceDisplay(String priceDisplay) { this.priceDisplay = priceDisplay; }
+
+    // ⭐ NEW Getters and Setters
+    public String getConstructionStatus() { return constructionStatus; }
+    public void setConstructionStatus(String constructionStatus) { this.constructionStatus = constructionStatus; }
+
+    public String getPossessionYear() { return possessionYear; }
+    public void setPossessionYear(String possessionYear) { this.possessionYear = possessionYear; }
+
+    public String getPossessionMonth() { return possessionMonth; }
+    public void setPossessionMonth(String possessionMonth) { this.possessionMonth = possessionMonth; }
+
+    public String getReraId() { return reraId; }
+    public void setReraId(String reraId) { this.reraId = reraId; }
+
+    public String getHmdaId() { return hmdaId; }
+    public void setHmdaId(String hmdaId) { this.hmdaId = hmdaId; }
+
+    public BigDecimal getPricePerSqft() { return pricePerSqft; }
+    public void setPricePerSqft(BigDecimal pricePerSqft) { this.pricePerSqft = pricePerSqft; }
 }

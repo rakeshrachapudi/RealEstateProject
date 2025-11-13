@@ -65,14 +65,13 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
             @Param("city") String city,
             @Param("area") String area,
             @Param("listingType") String listingType,
-            @Param("minBedrooms") Integer minBedrooms,
-            @Param("maxBedrooms") Integer maxBedrooms,
+            @Param("minBedrooms") Double minBedrooms, // ⭐ CHANGED to Double
+            @Param("maxBedrooms") Double maxBedrooms, // ⭐ CHANGED to Double
             @Param("isVerified") Boolean isVerified,
             @Param("ownerType") String ownerType,
-            @Param("isReadyToMove") Boolean isReadyToMove,  // NEW
+            @Param("isReadyToMove") Boolean isReadyToMove,
             Pageable pageable
     );
-
 
 
     // Find properties by user

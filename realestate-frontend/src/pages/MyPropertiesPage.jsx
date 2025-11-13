@@ -11,6 +11,8 @@ function MyPropertiesPage({ onPostPropertyClick }) {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // ADDITION 1: State for active filter
+  const [activeFilter, setActiveFilter] = useState("all");
   const navigate = useNavigate();
 
   // ✅ Fetch Primary Image for each property
@@ -100,6 +102,17 @@ function MyPropertiesPage({ onPostPropertyClick }) {
     fetchMyProperties();
   };
 
+  // ADDITION 2: Function to handle filter change
+  const handleFilterChange = (filter) => {
+    setActiveFilter(filter);
+  };
+
+  // ADDITION 3: Logic to filter properties based on activeFilter
+  const filteredProperties = properties.filter((p) => {
+    if (activeFilter === "all") return true;
+    return p.listingType?.toLowerCase() === activeFilter;
+  });
+
   if (loading) {
     return (
       <div className="mp-container">
@@ -159,21 +172,58 @@ function MyPropertiesPage({ onPostPropertyClick }) {
             </div>
           </div>
 
-          <div className="mp-grid" role="list">
-            {properties.map((property) => (
-              <div
-                className="mp-grid-item"
-                role="listitem"
-                key={property.propertyId || property.id}
-              >
-                <PropertyCard
-                  property={property}
-                  onPropertyUpdated={handlePropertyUpdated}
-                  onPropertyDeleted={handlePropertyDeleted}
-                />
-              </div>
-            ))}
+          {/* ADDITION 4: Filter Bar */}
+          <div className="mp-filter-bar">
+            <button
+              className={`mp-filter-btn ${activeFilter === "all" ? "active" : ""}`}
+              onClick={() => handleFilterChange("all")}
+            >
+              All ({properties.length})
+            </button>
+            <button
+              className={`mp-filter-btn ${activeFilter === "sale" ? "active" : ""}`}
+              onClick={() => handleFilterChange("sale")}
+            >
+              For Sale ({saleCount})
+            </button>
+            <button
+              className={`mp-filter-btn ${activeFilter === "rent" ? "active" : ""}`}
+              onClick={() => handleFilterChange("rent")}
+            >
+              For Rent ({rentCount})
+            </button>
           </div>
+          {/* END Filter Bar */}
+
+
+          {filteredProperties.length > 0 ? (
+            <div className="mp-grid" role="list">
+              {/* Using filteredProperties here */}
+              {filteredProperties.map((property) => (
+                <div
+                  className="mp-grid-item"
+                  role="listitem"
+                  key={property.propertyId || property.id}
+                >
+                  <PropertyCard
+                    property={property}
+                    onPropertyUpdated={handlePropertyUpdated}
+                    onPropertyDeleted={handlePropertyDeleted}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mp-state mp-empty-filter">
+              <div className="mp-empty-ic" aria-hidden="true">
+                🔍
+              </div>
+              <h3 className="mp-empty-title">No {activeFilter === 'sale' ? 'Sale' : 'Rent'} Properties</h3>
+              <p className="mp-empty-text">
+                You haven't listed any properties {activeFilter === 'sale' ? 'for sale' : 'for rent'} yet.
+              </p>
+            </div>
+          )}
         </>
       ) : (
         <div className="mp-state mp-empty">

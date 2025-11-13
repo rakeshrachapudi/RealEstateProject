@@ -412,12 +412,18 @@ function PropertyDetails() {
         setExistingDeal(newDeal);
         setOfferAmount("");
         alert("Deal created successfully!");
+        setDealError(""); // Clear any previous error
       } else {
-        const errorData = await response.text();
-        setDealError(errorData || "Failed to create deal");
+        const errorData = await response.json();
+        const errorMessage =
+          errorData?.message || errorData?.error || "Failed to create deal";
+        setDealError(errorMessage);
       }
     } catch (err) {
-      setDealError("Error creating deal. Please try again.");
+      console.error("Error creating deal:", err);
+      setDealError(
+        "Error creating deal. Please check your inputs and try again."
+      );
     }
   };
 
@@ -646,6 +652,25 @@ function PropertyDetails() {
                   )}
                 </div>
               </div>
+
+              {/* --- START MOVED AND HIGHLIGHTED SECTION: RERA ID & HMDA ID --- */}
+              {(property.reraId || property.hmdaId) && (
+                <div className="pd-statutory-ids">
+                  {property.reraId && (
+                    <div className="pd-id-badge pd-highlight">
+                      <span className="pd-id-label">RERA ID:</span>
+                      <span className="pd-id-value">{property.reraId}</span>
+                    </div>
+                  )}
+                  {property.hmdaId && (
+                    <div className="pd-id-badge pd-highlight">
+                      <span className="pd-id-label">HMDA ID:</span>
+                      <span className="pd-id-value">{property.hmdaId}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* --- END MOVED SECTION --- */}
 
               <div className="pd-keys">
                 <div className="pd-key">
@@ -942,6 +967,7 @@ function PropertyDetails() {
                     <span>Property ID</span>
                     <span>#{property.propertyId}</span>
                   </div>
+                  {/* NOTE: RERA/HMDA IDs MOVED TO THE TOP LEFT SECTION */}
                   <div className="pd-detail-row">
                     <span>Posted On</span>
                     <span>

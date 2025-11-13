@@ -1,6 +1,6 @@
 package com.example.realestate.dto;
 
-import java.math.BigDecimal;
+import java.math.BigDecimal; // Not strictly needed here, but kept if you plan to use it later
 
 public class PropertyPostRequestDto {
 
@@ -24,10 +24,15 @@ public class PropertyPostRequestDto {
     private String imageUrl;
     private Double price;
     private String priceDisplay;
-    private Integer bedrooms;
-    private Integer bathrooms;
-    private Integer balconies;
+
+    // ⭐ UPDATED to Double to support 2.5 bathrooms/bedrooms
+    private Double bedrooms;
+    private Double bathrooms;
+    private Double balconies;
+
     private Double areaSqft;
+    // ⭐ NEW: Price per square foot
+    private Double pricePerSqft;
 
     // --- Foreign Key fields / Core Type fields ---
     private AreaReferenceDto area;
@@ -43,10 +48,18 @@ public class PropertyPostRequestDto {
     private Boolean isFeatured = false;
     private Boolean isActive = true;
 
-    // ⭐ NEW FIELDS
+    // ⭐ NEW FIELDS ADDED FROM FRONTEND
     private String ownerType = "owner"; // "owner" or "broker"
-    private Boolean isReadyToMove = false;
     private Boolean isVerified = false; // Only agents can verify
+
+    // ⭐ NEW: Construction Status and Possession Details
+    private String constructionStatus; // e.g., "ready_to_move", "under_construction"
+    private String possessionYear;
+    private String possessionMonth;
+
+    // ⭐ NEW: Regulatory IDs
+    private String reraId;
+    private String hmdaId;
 
     // --- Getters and Setters ---
 
@@ -65,17 +78,25 @@ public class PropertyPostRequestDto {
     public String getPriceDisplay() { return priceDisplay; }
     public void setPriceDisplay(String priceDisplay) { this.priceDisplay = priceDisplay; }
 
-    public Integer getBedrooms() { return bedrooms; }
-    public void setBedrooms(Integer bedrooms) { this.bedrooms = bedrooms; }
+    // ⭐ UPDATED GETTERS/SETTERS FOR DECIMAL SUPPORT
+    public Double getBedrooms() { return bedrooms; }
+    public void setBedrooms(Double bedrooms) { this.bedrooms = bedrooms; }
 
-    public Integer getBathrooms() { return bathrooms; }
-    public void setBathrooms(Integer bathrooms) { this.bathrooms = bathrooms; }
+    public Double getBathrooms() { return bathrooms; }
+    public void setBathrooms(Double bathrooms) { this.bathrooms = bathrooms; }
 
-    public Integer getBalconies() { return balconies; }
-    public void setBalconies(Integer balconies) { this.balconies = balconies; }
+    public Double getBalconies() { return balconies; }
+    public void setBalconies(Double balconies) { this.balconies = balconies; }
+    // ---------------------------------------------
 
     public Double getAreaSqft() { return areaSqft; }
     public void setAreaSqft(Double areaSqft) { this.areaSqft = areaSqft; }
+
+    // ⭐ NEW GETTERS/SETTERS
+    public Double getPricePerSqft() { return pricePerSqft; }
+    public void setPricePerSqft(Double pricePerSqft) { this.pricePerSqft = pricePerSqft; }
+    // ---------------------------------------------
+
 
     public AreaReferenceDto getArea() { return area; }
     public void setArea(AreaReferenceDto area) { this.area = area; }
@@ -107,13 +128,25 @@ public class PropertyPostRequestDto {
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
 
-    // ⭐ NEW GETTERS AND SETTERS
+    // ⭐ NEW GETTERS AND SETTERS FOR STATUS AND REGULATORY IDs
     public String getOwnerType() { return ownerType; }
     public void setOwnerType(String ownerType) { this.ownerType = ownerType; }
 
-    public Boolean getIsReadyToMove() { return isReadyToMove; }
-    public void setIsReadyToMove(Boolean isReadyToMove) { this.isReadyToMove = isReadyToMove; }
-
     public Boolean getIsVerified() { return isVerified; }
     public void setIsVerified(Boolean isVerified) { this.isVerified = isVerified; }
+
+    public String getConstructionStatus() { return constructionStatus; }
+    public void setConstructionStatus(String constructionStatus) { this.constructionStatus = constructionStatus; }
+
+    public String getPossessionYear() { return possessionYear; }
+    public void setPossessionYear(String possessionYear) { this.possessionYear = possessionYear; }
+
+    public String getPossessionMonth() { return possessionMonth; }
+    public void setPossessionMonth(String possessionMonth) { this.possessionMonth = possessionMonth; }
+
+    public String getReraId() { return reraId; }
+    public void setReraId(String reraId) { this.reraId = reraId; }
+
+    public String getHmdaId() { return hmdaId; }
+    public void setHmdaId(String hmdaId) { this.hmdaId = hmdaId; }
 }

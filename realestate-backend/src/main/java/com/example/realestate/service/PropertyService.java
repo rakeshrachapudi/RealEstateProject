@@ -33,7 +33,6 @@ public class PropertyService {
     private final AreaRepository areaRepository;
     private final PropertyTypeRepository propertyTypeRepository;
 
-    // ✅ NEW: Add BrokerSubscriptionService dependency
     @Autowired
     private BrokerSubscriptionService brokerSubscriptionService;
 
@@ -45,11 +44,11 @@ public class PropertyService {
         this.propertyTypeRepository = propertyTypeRepository;
     }
 
-    // ==================== ⭐ UPDATED: PROPERTY CREATION WITH BROKER CHECKS ====================
+    // ==================== ⭐ UPDATED: PROPERTY CREATION WITH NEW FIELDS ====================
 
     /**
      * Create new property from DTO with broker subscription enforcement.
-     * ✅ FIXED: Now checks broker subscription before allowing property creation
+     * Maps all new fields (decimals, construction status, regulatory IDs).
      */
     public Property postProperty(PropertyPostRequestDto dto) {
         Long areaId = dto.getArea().getId();
@@ -65,7 +64,6 @@ public class PropertyService {
         if (user.getRole() == User.UserRole.BROKER) {
             logger.info("🔍 User {} is a BROKER - checking subscription status", userId);
 
-            // Check #1: Does broker have active subscription?
             if (!brokerSubscriptionService.hasActiveSubscription(userId)) {
                 logger.error("❌ Broker {} has NO active subscription", userId);
                 throw new RuntimeException(
@@ -73,11 +71,8 @@ public class PropertyService {
                 );
             }
 
-            // Check #2: Has broker reached property limit?
             if (!brokerSubscriptionService.canPostProperty(userId)) {
                 logger.error("❌ Broker {} has reached property posting limit", userId);
-
-                // Get current subscription info for detailed message
                 var status = brokerSubscriptionService.getSubscriptionStatus(userId);
                 throw new RuntimeException(
                         String.format("Property limit reached (%s/%s). Please upgrade your subscription to post more properties.",
@@ -86,7 +81,6 @@ public class PropertyService {
                 );
             }
 
-            // ✅ Auto-set ownerType to "broker" for broker users
             dto.setOwnerType("broker");
             logger.info("✅ Broker subscription check passed - auto-setting ownerType='broker'");
         }
@@ -103,17 +97,26 @@ public class PropertyService {
         property.setTitle(dto.getTitle());
         property.setDescription(dto.getDescription());
         property.setImageUrl(dto.getImageUrl());
+
+        // --- Core Numeric Fields with Decimal Support ---
         property.setPrice(BigDecimal.valueOf(dto.getPrice()));
         property.setPriceDisplay(dto.getPriceDisplay());
+
+        // ⭐ Handle Double/Decimal values for rooms (from DTO to Entity)
         property.setBedrooms(dto.getBedrooms());
         property.setBathrooms(dto.getBathrooms());
         property.setBalconies(dto.getBalconies());
+
+        // ⭐ Handle PricePerSqft
+        property.setPricePerSqft(dto.getPricePerSqft() != null ? BigDecimal.valueOf(dto.getPricePerSqft()) : null);
+
+        // Convert AreaSqft to BigDecimal
         property.setAreaSqft(dto.getAreaSqft() != null ? BigDecimal.valueOf(dto.getAreaSqft()) : null);
 
+        // --- Foreign Keys and Basic Info ---
         property.setArea(area);
         property.setUser(user);
         property.setPropertyType(propertyType);
-
         property.setType(dto.getType());
         property.setListingType(dto.getListingType());
         property.setCity(dto.getCity());
@@ -123,16 +126,25 @@ public class PropertyService {
         property.setIsFeatured(dto.getIsFeatured());
         property.setIsActive(dto.getIsActive());
 
-        property.setOwnerType(dto.getOwnerType()); // Already set to "broker" above if broker
-        property.setIsReadyToMove(dto.getIsReadyToMove());
+        // --- Status, OwnerType, and Regulatory Fields ---
+        property.setOwnerType(dto.getOwnerType());
         property.setIsVerified(dto.getIsVerified());
+
+        // ⭐ NEW: Map Construction and Regulatory fields
+        // Set the boolean flag based on the string status for legacy/filter compatibility
+        property.setIsReadyToMove("ready_to_move".equalsIgnoreCase(dto.getConstructionStatus()));
+        property.setConstructionStatus(dto.getConstructionStatus());
+        property.setPossessionYear(dto.getPossessionYear());
+        property.setPossessionMonth(dto.getPossessionMonth());
+        property.setReraId(dto.getReraId());
+        property.setHmdaId(dto.getHmdaId());
 
         // Save property
         Property savedProperty = repo.save(property);
         logger.info("✅ Property {} created successfully by user {} (Role: {})",
                 savedProperty.getId(), userId, user.getRole());
 
-        // ✅ NEW: Increment broker's property count after successful save
+        // Increment broker's property count after successful save
         if (user.getRole() == User.UserRole.BROKER) {
             brokerSubscriptionService.incrementPropertiesPosted(userId);
             logger.info("✅ Incremented property count for broker {}", userId);
@@ -209,9 +221,12 @@ public class PropertyService {
         dto.setDescription(property.getDescription());
         dto.setPrice(property.getPrice());
         dto.setAreaSqft(property.getAreaSqft());
+
+        // ⭐ Use DTO's Double setters (Property entity must have Double getters)
         dto.setBedrooms(property.getBedrooms());
         dto.setBathrooms(property.getBathrooms());
         dto.setBalconies(property.getBalconies());
+
         dto.setAddress(property.getAddress());
         dto.setStatus(property.getStatus());
         dto.setListingType(property.getListingType());
@@ -220,11 +235,21 @@ public class PropertyService {
         dto.setIsFeatured(property.getIsFeatured());
         dto.setCreatedAt(property.getCreatedAt());
         dto.setPriceDisplay(property.getPriceDisplay());
-        dto.setIsReadyToMove(property.getIsReadyToMove());
+
+        // Map status and owner fields
         dto.setOwnerType(property.getOwnerType());
         dto.setIsVerified(property.getIsVerified());
+        dto.setIsReadyToMove(property.getIsReadyToMove());
 
-        // ✅ Include role in user DTO
+        // ⭐ UNCOMMENTED: Include new construction/regulatory fields in DTO
+        dto.setConstructionStatus(property.getConstructionStatus());
+        dto.setPossessionYear(property.getPossessionYear());
+        dto.setPossessionMonth(property.getPossessionMonth());
+        dto.setReraId(property.getReraId());
+        dto.setHmdaId(property.getHmdaId());
+        dto.setPricePerSqft(property.getPricePerSqft());
+
+
         if (property.getUser() != null) {
             PropertyDTO.UserDTO userDTO = new PropertyDTO.UserDTO();
             userDTO.setId(property.getUser().getId());
@@ -297,13 +322,17 @@ public class PropertyService {
         Property property = repo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Property not found with id: " + id));
 
+        // Update fields based on provided propertyDetails (assuming Property entity is complete)
         if (propertyDetails.getTitle() != null) property.setTitle(propertyDetails.getTitle());
         if (propertyDetails.getDescription() != null) property.setDescription(propertyDetails.getDescription());
         if (propertyDetails.getPrice() != null) property.setPrice(propertyDetails.getPrice());
         if (propertyDetails.getPriceDisplay() != null) property.setPriceDisplay(propertyDetails.getPriceDisplay());
+
+        // Decimal fields
         if (propertyDetails.getBedrooms() != null) property.setBedrooms(propertyDetails.getBedrooms());
         if (propertyDetails.getBathrooms() != null) property.setBathrooms(propertyDetails.getBathrooms());
         if (propertyDetails.getBalconies() != null) property.setBalconies(propertyDetails.getBalconies());
+
         if (propertyDetails.getAreaSqft() != null) property.setAreaSqft(propertyDetails.getAreaSqft());
         if (propertyDetails.getAddress() != null) property.setAddress(propertyDetails.getAddress());
         if (propertyDetails.getImageUrl() != null) property.setImageUrl(propertyDetails.getImageUrl());
@@ -311,6 +340,20 @@ public class PropertyService {
         if (propertyDetails.getStatus() != null) property.setStatus(propertyDetails.getStatus());
         if (propertyDetails.getListingType() != null) property.setListingType(propertyDetails.getListingType());
         if (propertyDetails.getIsFeatured() != null) property.setIsFeatured(propertyDetails.getIsFeatured());
+
+        // New status/owner fields
+        if (propertyDetails.getOwnerType() != null) property.setOwnerType(propertyDetails.getOwnerType());
+        if (propertyDetails.getIsReadyToMove() != null) property.setIsReadyToMove(propertyDetails.getIsReadyToMove());
+        if (propertyDetails.getIsVerified() != null) property.setIsVerified(propertyDetails.getIsVerified());
+
+        // ⭐ UNCOMMENTED: Construction/Regulatory fields (Assumes Property entity has these getters/setters)
+        if (propertyDetails.getConstructionStatus() != null) property.setConstructionStatus(propertyDetails.getConstructionStatus());
+        if (propertyDetails.getPossessionYear() != null) property.setPossessionYear(propertyDetails.getPossessionYear());
+        if (propertyDetails.getPossessionMonth() != null) property.setPossessionMonth(propertyDetails.getPossessionMonth());
+        if (propertyDetails.getReraId() != null) property.setReraId(propertyDetails.getReraId());
+        if (propertyDetails.getHmdaId() != null) property.setHmdaId(propertyDetails.getHmdaId());
+        if (propertyDetails.getPricePerSqft() != null) property.setPricePerSqft(propertyDetails.getPricePerSqft());
+
 
         if (propertyDetails.getArea() != null) {
             Integer areaId = propertyDetails.getArea().getAreaId();
@@ -329,10 +372,6 @@ public class PropertyService {
                 property.setPropertyType(propertyType);
             }
         }
-
-        if (propertyDetails.getOwnerType() != null) property.setOwnerType(propertyDetails.getOwnerType());
-        if (propertyDetails.getIsReadyToMove() != null) property.setIsReadyToMove(propertyDetails.getIsReadyToMove());
-        if (propertyDetails.getIsVerified() != null) property.setIsVerified(propertyDetails.getIsVerified());
 
         if (propertyDetails.getType() != null) property.setType(propertyDetails.getType());
 

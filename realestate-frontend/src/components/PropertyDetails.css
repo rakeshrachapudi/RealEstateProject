@@ -1132,3 +1132,45 @@
     height: 45px;
   }
 }
+
+/* --- START: STYLES FOR RERA/HMDA ID BADGES (ADDED FOR HIGHLIGHTING) --- */
+
+.pd-statutory-ids {
+    display: flex;
+    gap: 15px;
+    margin: 15px 0 20px 0; /* Space it out from price and keys */
+    flex-wrap: wrap;
+}
+
+.pd-id-badge {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 5px;
+    background-color: #ecf0f1; /* Light neutral background */
+    font-size: 0.95em;
+    border: 1px solid #bdc3c7;
+}
+
+.pd-id-label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-right: 8px;
+}
+
+.pd-id-value {
+    font-weight: 700;
+}
+
+/* 🌟 HIGHLIGHT/GLOW STYLE 🌟 */
+.pd-id-badge.pd-highlight {
+    background-color: #fff8e1; /* Light yellow background for the glow */
+    border-color: #ffb300;     /* Orange border */
+    box-shadow: 0 0 5px rgba(255, 165, 0, 0.5); /* Soft orange glow */
+}
+
+.pd-id-badge.pd-highlight .pd-id-value {
+    color: #ff6f00; /* Vibrant orange text */
+}
+
+/* --- END: STYLES FOR RERA/HMDA ID BADGES (ADDED FOR HIGHLIGHTING) --- */

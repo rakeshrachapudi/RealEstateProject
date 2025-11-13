@@ -405,6 +405,88 @@
   .hp-coupon-text {
     font-size: 14px;
   }
+  /* ========================================
+     INNER BOXES MATCHED TO FIRST BANNER
+  ======================================== */
+
+  .hp-promo-row .hp-promo-coupon,
+  .hp-promo-row .hp-promo-timer {
+    flex: 0 0 calc(50% - 8px) !important;
+    background: white !important;
+    border-radius: 16px !important;
+    border: 2px solid #e5e7eb !important;
+    padding: 16px !important;
+    box-shadow:
+      0 10px 25px rgba(0,0,0,0.08),
+      inset 0 1px 0 rgba(255,255,255,1) !important;
+    backdrop-filter: blur(0px) !important;
+  }
+.hp-coupon-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151 !important;
+  margin-bottom: 8px;
+  text-align: center;
+  letter-spacing: 0.4px;
+}
+
+.hp-coupon-code {
+  background: white !important;
+  border: 2px dashed #f59e0b !important;
+  padding: 10px 12px !important;
+  border-radius: 12px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+}
+
+.hp-coupon-text {
+  font-size: 18px !important;
+  font-weight: 900 !important;
+  color: #1f2937 !important;
+  letter-spacing: 2px;
+}
+.hp-coupon-copy {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: white !important;
+  font-weight: 800 !important;
+  border-radius: 10px !important;
+  padding: 8px 16px !important;
+  box-shadow: 0 6px 16px rgba(16,185,129,0.3) !important;
+}
+.hp-timer-label {
+  color: #374151 !important;
+  font-weight: 700 !important;
+  margin-bottom: 10px;
+}
+
+.hp-timer-box {
+  background: linear-gradient(135deg, #fde047 0%, #fbbf24 100%) !important;
+  border-radius: 10px !important;
+  padding: 8px 6px !important;
+  min-width: 50px !important;
+  box-shadow: 0 6px 16px rgba(251,191,36,0.3) !important;
+}
+
+.hp-timer-value {
+  font-size: 20px !important;
+  font-weight: 900 !important;
+  color: #1f2937 !important;
+}
+
+.hp-timer-unit {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #374151 !important;
+}
+.hp-promo-btn {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+  color: white !important;
+  font-weight: 900 !important;
+  padding: 10px 24px !important;
+  border-radius: 50px !important;
+  border: none !important;
+  box-shadow: 0 8px 20px rgba(249,115,22,0.35) !important;
+}
+
 
   .hp-promo-btn {
     padding: 8px 16px;

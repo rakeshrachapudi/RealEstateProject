@@ -194,3 +194,50 @@
     padding: 10px 14px;
   }
 }
+
+/* --- ADDITIONS for Filter Bar --- */
+
+.mp-filter-bar {
+  display: flex;
+  gap: 10px;
+  margin-top: 25px;
+  margin-bottom: 25px;
+  padding: 10px;
+  background-color: #f1f5f9;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  flex-wrap: wrap; /* Added for better mobile responsiveness */
+}
+
+.mp-filter-btn {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background-color: #e2e8f0;
+  color: #475569;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.mp-filter-btn:hover {
+  background-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.mp-filter-btn.active {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+}
+
+/* Style for when a filter is active but no properties match */
+.mp-empty-filter {
+    text-align: center;
+    padding: 60px 20px;
+    margin-top: 30px;
+    background-color: #fff;
+    border-radius: 15px;
+    border: 2px dashed #e2e8f0;
+}

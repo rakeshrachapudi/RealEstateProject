@@ -161,6 +161,19 @@
   font-family: inherit;
 }
 
+/* New: Success badge for RERA/HMDA ID */
+.ppm-badge-success {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 6px;
+    background: #10b981;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    border-radius: 4px;
+    line-height: 1; /* Ensures text is centered vertically */
+}
+
 /* Checkbox */
 .ppm-checkbox {
   display: flex;
