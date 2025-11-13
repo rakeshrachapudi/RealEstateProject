@@ -36,7 +36,7 @@ function Footer() {
         <div className="footer-col">
           <h4 className="footer-col-title">About Property Dealz</h4>
           <p className="footer-text">
-            Your platform connecting property buyers and sellers exclusively in
+            Our platform connecting property buyers and sellers exclusively in
             Hyderabad.
           </p>
 
@@ -153,9 +153,9 @@ function Footer() {
               <h4 className="footer-col-title">Get In Touch</h4>
               <div className="footer-contact">
                 <p>📞 +91 63098 06984</p>
-                <p>📞 +91 89784 54609</p>
+                <p>📞 +91 77300 51329</p>
                 <p>✉️ support@propertydealz.com</p>
-                <p>📍 Gachibowli, Hyderabad, 500032</p>
+                <p>📍 Kondapur, Hyderabad, 500084</p>
               </div>
 
               {/* Social Icons */}
