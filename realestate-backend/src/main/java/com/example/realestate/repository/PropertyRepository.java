@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -72,7 +73,30 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
             @Param("isReadyToMove") Boolean isReadyToMove,
             Pageable pageable
     );
+// Add to PropertyRepository.java
 
+    @Query("""
+    SELECT CASE WHEN COUNT(fp) > 0 THEN true ELSE false END
+    FROM FeaturedProperty fp
+    WHERE fp.propertyId = :propertyId
+    AND fp.isActive = true
+    AND (fp.featuredFrom IS NULL OR fp.featuredFrom <= :now)
+    AND (fp.featuredUntil IS NULL OR fp.featuredUntil > :now)
+    AND (fp.paymentStatus = 'COMPLETED' OR fp.paymentStatus = 'FREE')
+    """)
+    boolean isPropertyActuallyFeatured(@Param("propertyId") Long propertyId, @Param("now") LocalDateTime now);
+
+    // Batch check for multiple properties
+    @Query("""
+    SELECT fp.propertyId
+    FROM FeaturedProperty fp
+    WHERE fp.propertyId IN :propertyIds
+    AND fp.isActive = true
+    AND (fp.featuredFrom IS NULL OR fp.featuredFrom <= :now)
+    AND (fp.featuredUntil IS NULL OR fp.featuredUntil > :now)
+    AND (fp.paymentStatus = 'COMPLETED' OR fp.paymentStatus = 'FREE')
+    """)
+    List<Long> findFeaturedPropertyIds(@Param("propertyIds") List<Long> propertyIds, @Param("now") LocalDateTime now);
 
     // Find properties by user
     @Query("SELECT p FROM Property p WHERE p.user.id = :userId AND p.isActive = true")

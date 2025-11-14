@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -87,15 +88,13 @@ public class PropertyController {
      */
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<PropertyDTO>> byUser(@PathVariable Long userId) {
-        logger.info("Fetching properties for user ID: {}", userId);
-        List<PropertyDTO> userProperties = service.getPropertiesByUser(userId);
+        logger.info("Fetching properties for user ID: {} with accurate featured status", userId);
+        List<PropertyDTO> userProperties = service.getPropertiesByUserWithAccurateFeaturedStatus(userId);
 
         if (userProperties.isEmpty()) {
-            // Return 204 No Content if the list is empty
             return ResponseEntity.noContent().build();
         }
 
-        // Return 200 OK with the list of DTOs
         return ResponseEntity.ok(userProperties);
     }
 
@@ -113,15 +112,27 @@ public class PropertyController {
     }
 
     /**
-     * Get all active properties (returns DTOs)
+     * ⭐ UPDATED: Get all active properties with ACCURATE featured status
      * Endpoint: GET /api/properties/all
      */
     @GetMapping("/all")
     public ResponseEntity<List<PropertyDTO>> getAllActiveProperties() {
-        logger.info("Fetching all active properties as DTOs");
-        List<PropertyDTO> properties = service.getAllActivePropertiesAsDTO();
+        logger.info("Fetching all active properties with accurate featured status");
+        List<PropertyDTO> properties = service.getAllActivePropertiesWithAccurateFeaturedStatus();
         return ResponseEntity.ok(properties);
     }
+
+    /**
+     * ⭐ NEW: Check if property is featured
+     * Endpoint: GET /api/properties/{id}/is-featured
+     */
+    @GetMapping("/{id}/is-featured")
+    public ResponseEntity<Map<String, Boolean>> checkIfFeatured(@PathVariable Long id) {
+        logger.info("Checking if property {} is featured", id);
+        boolean isFeatured = service.isPropertyFeatured(id);
+        return ResponseEntity.ok(Map.of("isFeatured", isFeatured));
+    }
+
 
     @GetMapping("/byCity/{city}")
     public List<Property> byCity(@PathVariable String city) {

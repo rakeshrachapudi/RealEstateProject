@@ -6,6 +6,13 @@ import PropertyEditModal from "../PropertyEditModal";
 import { BACKEND_BASE_URL } from "../config/config";
 import "./PropertyCard.css";
 
+/**
+ * PropertyCard Component
+ *
+ * ✅ The 'isFeatured' flag now accurately reflects whether the property
+ *    exists in the 'featured_properties' table with active status.
+ *    Backend checks: isActive, featuredFrom, featuredUntil, and paymentStatus.
+ */
 const PropertyCard = ({
   property,
   dealInfo,
@@ -48,7 +55,7 @@ const PropertyCard = ({
 
   const handleDelete = async (e) => {
     e.stopPropagation();
-    if (!window.confirm("⚠️ Are you sure?")) return;
+    if (!window.confirm("⚠️ Are you sure you want to delete this property?")) return;
     setIsDeleting(true);
     try {
       const propertyId = property.id || property.propertyId;
@@ -63,7 +70,7 @@ const PropertyCard = ({
       );
       if (!response.ok)
         throw new Error(`Failed to delete (Status: ${response.status})`);
-      alert("✅ Property deleted!");
+      alert("✅ Property deleted successfully!");
       onPropertyDeleted && onPropertyDeleted(propertyId);
     } catch (error) {
       console.error("❌ Error deleting property:", error);
@@ -112,6 +119,7 @@ const PropertyCard = ({
       <div className="pc-card" onClick={handleCardClick}>
         {/* Badges (Top Right) */}
         <div className="pc-badges">
+          {/* ✅ Featured badge - Shows only if property exists in featured_properties table */}
           {property.isFeatured && (
             <span className="pc-badge featured">⭐ Featured</span>
           )}
@@ -221,29 +229,31 @@ const PropertyCard = ({
           )}
 
           <div className="pc-ids">
-            {/* ADDED: RERA ID */}
+            {/* RERA ID */}
             {property.reraId && (
               <span className="pc-id-tag pc-statutory-tag">
                 RERA ID: {property.reraId}
               </span>
             )}
-            {/* ADDED: HMDA ID */}
+            {/* HMDA ID */}
             {property.hmdaId && (
               <span className="pc-id-tag pc-statutory-tag">
                 HMDA ID: {property.hmdaId}
               </span>
             )}
+            {/* Property ID */}
             {(property.id || property.propertyId) && (
               <span className="pc-id-tag">
                 Property ID: {property.id || property.propertyId}
               </span>
             )}
+            {/* Deal ID */}
             {dealInfo?.dealId && (
               <span className="pc-deal-tag">Deal ID: {dealInfo.dealId}</span>
             )}
           </div>
 
-          {/* Deal button */}
+          {/* Deal Actions */}
           {dealInfo && (
             <div className="pc-deal-actions">
               <button
@@ -273,6 +283,7 @@ const PropertyCard = ({
         </div>
       </div>
 
+      {/* Edit Modal */}
       {isEditModalOpen && (
         <PropertyEditModal
           property={property}

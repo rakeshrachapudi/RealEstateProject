@@ -1,13 +1,10 @@
 package com.example.realestate.service;
 
 import com.example.realestate.model.Property;
-import com.example.realestate.repository.PropertyRepository;
+import com.example.realestate.repository.*;
 import com.example.realestate.model.User;
 import com.example.realestate.model.Area;
 import com.example.realestate.model.PropertyType;
-import com.example.realestate.repository.UserRepository;
-import com.example.realestate.repository.AreaRepository;
-import com.example.realestate.repository.PropertyTypeRepository;
 import com.example.realestate.dto.PropertyPostRequestDto;
 import com.example.realestate.dto.PropertyDTO;
 import org.slf4j.Logger;
@@ -18,7 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.Optional;
 
@@ -383,5 +383,86 @@ public class PropertyService {
                 .orElseThrow(() -> new EntityNotFoundException("Property not found with id: " + id));
         property.setIsActive(false);
         repo.save(property);
+    }
+    // Add to PropertyService.java
+
+    @Autowired
+    private FeaturedPropertyRepository featuredPropertyRepository;
+
+    /**
+     * ⭐ NEW: Get properties with ACCURATE featured status from featured_properties table
+     */
+    public List<PropertyDTO> getPropertiesByUserWithAccurateFeaturedStatus(Long userId) {
+        logger.info("Fetching properties for user ID: {} with accurate featured status", userId);
+
+        List<Property> properties = repo.findByUserId(userId);
+
+        if (properties.isEmpty()) {
+            return List.of();
+        }
+
+        // Get property IDs
+        List<Long> propertyIds = properties.stream()
+                .map(Property::getId)
+                .collect(Collectors.toList());
+
+        // ✅ Batch check which properties are ACTUALLY featured
+        LocalDateTime now = LocalDateTime.now();
+        List<Long> actuallyFeaturedIds = repo.findFeaturedPropertyIds(propertyIds, now);
+        Set<Long> featuredIdSet = new HashSet<>(actuallyFeaturedIds);
+
+        logger.info("Found {} properties, {} are actually featured", properties.size(), featuredIdSet.size());
+
+        // Convert to DTO with accurate featured status
+        return properties.stream()
+                .map(property -> {
+                    PropertyDTO dto = convertToDTO(property);
+                    // ✅ Override isFeatured based on featured_properties table
+                    dto.setIsFeatured(featuredIdSet.contains(property.getId()));
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * ⭐ UPDATED: Get all active properties with accurate featured status
+     */
+    public List<PropertyDTO> getAllActivePropertiesWithAccurateFeaturedStatus() {
+        logger.info("Fetching all active properties with accurate featured status");
+
+        List<Property> properties = repo.findByIsActiveTrueOrderByCreatedAtDesc();
+
+        if (properties.isEmpty()) {
+            return List.of();
+        }
+
+        // Get property IDs
+        List<Long> propertyIds = properties.stream()
+                .map(Property::getId)
+                .collect(Collectors.toList());
+
+        // ✅ Batch check which properties are ACTUALLY featured
+        LocalDateTime now = LocalDateTime.now();
+        List<Long> actuallyFeaturedIds = repo.findFeaturedPropertyIds(propertyIds, now);
+        Set<Long> featuredIdSet = new HashSet<>(actuallyFeaturedIds);
+
+        logger.info("Found {} properties, {} are actually featured", properties.size(), featuredIdSet.size());
+
+        // Convert to DTO with accurate featured status
+        return properties.stream()
+                .map(property -> {
+                    PropertyDTO dto = convertToDTO(property);
+                    // ✅ Override isFeatured based on featured_properties table
+                    dto.setIsFeatured(featuredIdSet.contains(property.getId()));
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * ⭐ NEW: Check if single property is featured
+     */
+    public boolean isPropertyFeatured(Long propertyId) {
+        return repo.isPropertyActuallyFeatured(propertyId, LocalDateTime.now());
     }
 }
