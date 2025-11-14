@@ -510,6 +510,7 @@ function PropertyDetails() {
     (property.user?.role &&
       String(property.user.role).toUpperCase() === "BROKER");
 
+
   const contactLabel = isBrokerPosted ? "Contact Broker" : "Contact Agent";
   const contactRoleLabel = isBrokerPosted
     ? "Property Posted by Broker"
