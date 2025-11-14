@@ -14,7 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal; // <-- NEW REQUIRED IMPORT
+import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -65,11 +68,28 @@ public class PropertySearchService {
                 request.getIsReadyToMove(),
                 pageable
         );
+        List<Property> properties = propertyPage.getContent();
 
-        logger.info("Found {} properties", propertyPage.getTotalElements());
+        // Get property IDs
+        List<Long> propertyIds = properties.stream()
+                .map(Property::getId)
+                .collect(Collectors.toList());
 
-        return propertyPage.getContent().stream()
-                .map(this::convertToDTO)
+        // ✅ Batch check which properties are ACTUALLY featured
+        LocalDateTime now = LocalDateTime.now();
+        List<Long> actuallyFeaturedIds = propertyRepository.findFeaturedPropertyIds(propertyIds, now);
+        Set<Long> featuredIdSet = new HashSet<>(actuallyFeaturedIds);
+
+        logger.info("Found {} search results, {} are actually featured", properties.size(), featuredIdSet.size());
+
+        // Convert to DTO with accurate featured status
+        return properties.stream()
+                .map(property -> {
+                    PropertyDTO dto = convertToDTO(property);
+                    // ✅ Override isFeatured based on featured_properties table
+                    dto.setIsFeatured(featuredIdSet.contains(property.getId()));
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
