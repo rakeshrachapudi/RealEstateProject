@@ -1,4 +1,12 @@
 // src/pages/HomePage.jsx
+// ✅ COMPLETE FILE WITH ALL SOFT-DELETE FIXES APPLIED
+//
+// FIXES APPLIED:
+// 1. fetchFeaturedProperties - Added .filter((p) => p.isActive !== false)
+// 2. handlePropertyDeleted - REMOVED handlePropertyUpdated() call
+// 3. Browse by Type useEffect - Added .filter(p => p.isActive !== false)
+// 4. fetchMyProperties - Added .filter(p => p.isActive !== false)
+
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
@@ -172,13 +180,18 @@ function HomePage() {
       });
   }, []);
 
-  // fetch featured properties and normalize
+  // ============================================================================
+  // ✅ FIX #1: fetchFeaturedProperties - Filter out soft-deleted properties
+  // ============================================================================
   const fetchFeaturedProperties = async () => {
     try {
       const list = await getFeaturedProperties();
-      const normalized = (Array.isArray(list) ? list : []).map((p) =>
-        normalizeProperty(p)
-      );
+      const normalized = (Array.isArray(list) ? list : [])
+        .map((p) => normalizeProperty(p))
+        .filter((p) => p.isActive !== false); // ⭐ Added: Filter soft-deleted properties
+
+      console.log("📋 Featured properties loaded:", normalized.length, "active properties");
+
       setFeaturedPropsList(normalized);
       setShowSearchResults(false);
       setShowQuickSearchResults(false);
@@ -194,7 +207,9 @@ function HomePage() {
     fetchFeaturedProperties();
   }, []);
 
-  // Browse by type loading
+  // ============================================================================
+  // ✅ FIX #3: Browse by Type - Filter out soft-deleted properties
+  // ============================================================================
   useEffect(() => {
     if (activeTab !== "browse-by-type") return;
 
@@ -202,10 +217,14 @@ function HomePage() {
       try {
         if (selectedType === "All") {
           const props = await getAllProperties();
-          setProperties(Array.isArray(props) ? props.map(normalizeProperty) : []);
+          const normalized = Array.isArray(props) ? props.map(normalizeProperty) : [];
+          // ⭐ Added: Filter out soft-deleted properties
+          setProperties(normalized.filter(p => p.isActive !== false));
         } else {
           const props = await getPropertiesByType(selectedType);
-          setProperties(Array.isArray(props) ? props.map(normalizeProperty) : []);
+          const normalized = Array.isArray(props) ? props.map(normalizeProperty) : [];
+          // ⭐ Added: Filter out soft-deleted properties
+          setProperties(normalized.filter(p => p.isActive !== false));
         }
       } catch (err) {
         console.error("Error loading properties for type:", err);
@@ -215,7 +234,9 @@ function HomePage() {
     load();
   }, [selectedType, activeTab]);
 
-  // fetch my properties by user
+  // ============================================================================
+  // ✅ FIX #4: fetchMyProperties - Filter out soft-deleted properties
+  // ============================================================================
   const fetchMyProperties = async () => {
     if (!user?.id) return;
     setLoadingMyProperties(true);
@@ -237,7 +258,13 @@ function HomePage() {
       const data = await safeJsonParse(response);
       const propertiesArray =
         (Array.isArray(data) ? data : data?.success ? data.data : []) || [];
-      setMyProperties(propertiesArray.map((p) => normalizeProperty(p)));
+
+      const normalized = propertiesArray.map((p) => normalizeProperty(p));
+      // ⭐ Added: Filter out soft-deleted properties
+      const activeProperties = normalized.filter(p => p.isActive !== false);
+
+      console.log(`📋 Loaded ${activeProperties.length} active properties for user ${user.id}`);
+      setMyProperties(activeProperties);
     } catch (error) {
       console.error("Error fetching user properties:", error);
       setMyProperties([]);
@@ -469,8 +496,62 @@ function HomePage() {
     }
   };
 
-  const handlePropertyDeleted = () => {
-    handlePropertyUpdated();
+  // ============================================================================
+  // ✅ FIX #2: handlePropertyDeleted - REMOVED handlePropertyUpdated() call
+  // ============================================================================
+  const handlePropertyDeleted = (deletedPropertyId) => {
+    console.log("🗑️ Property deleted:", deletedPropertyId);
+
+    // Remove from featured properties list immediately
+    setFeaturedPropsList(prev => {
+      const filtered = prev.filter(p =>
+        String(p.id) !== String(deletedPropertyId) &&
+        String(p.propertyId) !== String(deletedPropertyId)
+      );
+      console.log("Featured list updated:", prev.length, "→", filtered.length);
+      return filtered;
+    });
+
+    // Remove from search results if showing
+    if (showSearchResults) {
+      setSearchResults(prev =>
+        prev.filter(p =>
+          String(p.id) !== String(deletedPropertyId) &&
+          String(p.propertyId) !== String(deletedPropertyId)
+        )
+      );
+    }
+
+    // Remove from quick search results if showing
+    if (showQuickSearchResults) {
+      setQuickSearchResults(prev =>
+        prev.filter(p =>
+          String(p.id) !== String(deletedPropertyId) &&
+          String(p.propertyId) !== String(deletedPropertyId)
+        )
+      );
+    }
+
+    // Remove from browse-by-type properties
+    setProperties(prev =>
+      prev.filter(p =>
+        String(p.id) !== String(deletedPropertyId) &&
+        String(p.propertyId) !== String(deletedPropertyId)
+      )
+    );
+
+    // Remove from my properties
+    setMyProperties(prev =>
+      prev.filter(p =>
+        String(p.id) !== String(deletedPropertyId) &&
+        String(p.propertyId) !== String(deletedPropertyId)
+      )
+    );
+
+    // ⭐ REMOVED: handlePropertyUpdated() call
+    // Don't refetch from server after delete since we've already updated all state
+    // The soft-deleted property would come back if we refetch
+    console.log("✅ Property removed from UI (soft delete - not refetching)");
   };
 
   const handleViewDealDetails = (deal) => {

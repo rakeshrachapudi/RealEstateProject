@@ -81,7 +81,7 @@ public class FeaturedProperty {
     }
 
     public enum PaymentStatus {
-        PENDING, COMPLETED, FREE
+        PENDING, COMPLETED, FREE , CANCELLED
     }
 
     // Helper method to check if featured property is currently active

@@ -140,6 +140,19 @@ public class PropertyService {
     }
 
     // ==================== SOFT DELETE USER PROPERTIES ====================
+
+    /**
+     * Deactivate featured entries for a given property
+     */
+    private void deactivateFeaturedForProperty(Long propertyId) {
+        List<FeaturedProperty> fps = featuredPropertyRepository.findByPropertyId(propertyId);
+        if (fps == null || fps.isEmpty()) return;
+        for (FeaturedProperty fp : fps) {
+            fp.setIsActive(false);
+        }
+        featuredPropertyRepository.saveAll(fps);
+    }
+
     @Transactional
     public void softDeleteAllPropertiesForUser(Long userId) {
         logger.info("Soft-deleting all properties for user ID: {}", userId);
@@ -153,16 +166,17 @@ public class PropertyService {
         for (Property property : userProperties) {
             property.setIsActive(false);
             property.setStatus("DELETED");
+
+            // ⭐ ALSO deactivate featured records for each property
+            deactivateFeaturedForProperty(property.getId());
         }
+
         repo.saveAll(userProperties);
         logger.info("Soft-deleted {} properties for user {}", userProperties.size(), userId);
     }
 
-    // Add this method to PropertyService.java to properly fetch and include images in DTOs
+    // ==================== Convert to DTO (with images) ====================
 
-    /**
-     * ⭐ UPDATED: Convert Property entity to PropertyDTO with IMAGES
-     */
     private PropertyDTO convertToDTO(Property property) {
         PropertyDTO dto = new PropertyDTO();
 
@@ -172,7 +186,7 @@ public class PropertyService {
 
         // ⭐ FIX: Get primary image URL from PropertyImage table
         String imageUrl = getPrimaryImageUrl(property.getId());
-        dto.setImageUrl(imageUrl != null ? imageUrl : property.getImageUrl()); // Fallback to old field
+        dto.setImageUrl(imageUrl != null ? imageUrl : property.getImageUrl());
 
         dto.setPrice(property.getPrice());
         dto.setPriceDisplay(property.getPriceDisplay());
@@ -190,7 +204,7 @@ public class PropertyService {
         dto.setIsReadyToMove(property.getIsReadyToMove());
         dto.setIsVerified(property.getIsVerified());
 
-        // ⭐ NEW: Add construction status and RERA/HMDA IDs
+        // Extra fields
         dto.setConstructionStatus(property.getConstructionStatus());
         dto.setPossessionYear(property.getPossessionYear());
         dto.setPossessionMonth(property.getPossessionMonth());
@@ -199,7 +213,6 @@ public class PropertyService {
 
         dto.setCreatedAt(property.getCreatedAt());
 
-        // Set city and area information
         if (property.getArea() != null) {
             dto.setAreaName(property.getArea().getAreaName());
             dto.setPincode(property.getArea().getPincode());
@@ -211,14 +224,12 @@ public class PropertyService {
             dto.setCityName(property.getCity());
         }
 
-        // Set property type
         if (property.getPropertyType() != null) {
             dto.setPropertyType(property.getPropertyType().getTypeName());
         } else if (property.getType() != null) {
             dto.setPropertyType(property.getType());
         }
 
-        // ⭐ NEW: Add user information
         if (property.getUser() != null) {
             PropertyDTO.UserDTO userDTO = new PropertyDTO.UserDTO();
             userDTO.setId(property.getUser().getId());
@@ -233,9 +244,6 @@ public class PropertyService {
         return dto;
     }
 
-    /**
-     * ⭐ UPDATED: Get primary image URL for a property from PropertyImage table
-     */
     private String getPrimaryImageUrl(Long propertyId) {
         try {
             List<PropertyImage> images = propertyImageRepository.findByPropertyId(propertyId);
@@ -243,7 +251,6 @@ public class PropertyService {
                 return null;
             }
 
-            // Find primary image or use first image
             PropertyImage primaryImage = images.stream()
                     .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
                     .findFirst()
@@ -256,7 +263,8 @@ public class PropertyService {
         }
     }
 
-    // ==================== BASIC READ OPERATIONS ====================
+    // ==================== BASIC READ ====================
+
     public List<String> getPropertyTypes() {
         return repo.findDistinctPropertyTypes();
     }
@@ -314,6 +322,7 @@ public class PropertyService {
     }
 
     // ==================== UPDATE / DELETE ====================
+
     public Property updateProperty(Long id, Property propertyDetails) {
         Property property = repo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Property not found with id: " + id));
@@ -368,30 +377,27 @@ public class PropertyService {
     public void deleteProperty(Long id) {
         Property property = repo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Property not found with id: " + id));
+
         property.setIsActive(false);
+        property.setStatus("DELETED");
+
+        // ⭐ Deactivate featured entries when property is deleted
+        deactivateFeaturedForProperty(id);
+
         repo.save(property);
     }
 
-    // ==================== QUICK SEARCHS (RETURN DTOs) ====================
+    // ==================== QUICK SEARCH (DTO) ====================
 
-    /**
-     * Quick search that searches id/title/description/address/city and also includes area matches.
-     * Returns DTO list (deduplicated).
-     */
     public List<PropertyDTO> quickSearchAsDTO(String q) {
         if (q == null || q.trim().isEmpty()) return List.of();
 
         String trimmed = q.trim();
 
-        // 1) primary quick search query (id/title/description/address/city)
         List<Property> primary = repo.quickSearch(trimmed);
-
-        // 2) also include area matches (searchByArea)
         List<Property> byArea = repo.searchByArea(trimmed);
-
-        // 3) if input looks like a numeric id, also try exact id match (optional)
         List<Property> byId = new ArrayList<>();
-        // After your current quickSearch blocks and before converting to DTO
+
         Map<Long, Property> merged = new LinkedHashMap<>();
         for (Property p : primary) {
             if (p != null && p.getId() != null) merged.putIfAbsent(p.getId(), p);
@@ -403,8 +409,6 @@ public class PropertyService {
             if (p != null && p.getId() != null) merged.putIfAbsent(p.getId(), p);
         }
 
-// 1. Lookup users by name/username
-        // --- Username/owner search addition ---
         List<User> matchingUsers = userRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrUsernameContainingIgnoreCase(trimmed, trimmed, trimmed);
         for (User user : matchingUsers) {
             List<Property> byUser = repo.findByUserIdAndIsActiveTrue(user.getId());
@@ -413,16 +417,11 @@ public class PropertyService {
             }
         }
 
-
         try {
             long maybeId = Long.parseLong(trimmed);
             repo.findById(maybeId).ifPresent(byId::add);
-        } catch (NumberFormatException ignore) {
-            // not an exact id, ignore
-        }
+        } catch (NumberFormatException ignore) {}
 
-
-        // Convert to DTO and also ensure accurate featured flag
         List<Property> mergedList = new ArrayList<>(merged.values());
         if (mergedList.isEmpty()) return List.of();
 
@@ -439,10 +438,6 @@ public class PropertyService {
                 .collect(Collectors.toList());
     }
 
-
-    /**
-     * Search by area and return DTOs (deduplicated).
-     */
     public List<PropertyDTO> searchByAreaAsDTO(String area) {
         if (area == null || area.trim().isEmpty()) return List.of();
         List<Property> list = repo.searchByArea(area.trim());
@@ -460,11 +455,7 @@ public class PropertyService {
                 })
                 .collect(Collectors.toList());
     }
-    /**
-     * Check if a single property is currently featured.
-     * Uses repo.isPropertyActuallyFeatured(...) which validates
-     * isActive, featuredFrom/featuredUntil and paymentStatus.
-     */
+
     public boolean isPropertyFeatured(Long propertyId) {
         if (propertyId == null) return false;
         try {
@@ -474,12 +465,15 @@ public class PropertyService {
             return false;
         }
     }
+
     public List<Property> findByCity(String city) {
         if (city == null || city.trim().isEmpty()) return List.of();
         return repo.findByCityIgnoreCase(city.trim());
     }
+
     public List<PropertyDTO> findByAreaNameAsDTO(String areaName) {
         logger.info("Finding properties by area name as DTOs: {}", areaName);
         List<Property> properties = repo.findByAreaNameAndIsActiveTrue(areaName);
-        return properties.stream() .map(this::convertToDTO) .collect(Collectors.toList()); }
+        return properties.stream().map(this::convertToDTO).collect(Collectors.toList());
+    }
 }
