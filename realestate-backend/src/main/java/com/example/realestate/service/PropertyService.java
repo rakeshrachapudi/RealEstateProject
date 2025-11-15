@@ -5,6 +5,7 @@ import com.example.realestate.repository.*;
 import com.example.realestate.model.User;
 import com.example.realestate.model.Area;
 import com.example.realestate.model.PropertyType;
+import com.example.realestate.model.PropertyImage;
 import com.example.realestate.dto.PropertyPostRequestDto;
 import com.example.realestate.dto.PropertyDTO;
 import org.slf4j.Logger;
@@ -16,11 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.Optional;
 
 @Service
 @Transactional
@@ -36,6 +34,12 @@ public class PropertyService {
     @Autowired
     private BrokerSubscriptionService brokerSubscriptionService;
 
+    @Autowired
+    private FeaturedPropertyRepository featuredPropertyRepository;
+
+    @Autowired
+    private PropertyImageRepository propertyImageRepository;
+
     public PropertyService(PropertyRepository repo, UserRepository userRepository,
                            AreaRepository areaRepository, PropertyTypeRepository propertyTypeRepository) {
         this.repo = repo;
@@ -44,12 +48,8 @@ public class PropertyService {
         this.propertyTypeRepository = propertyTypeRepository;
     }
 
-    // ==================== ⭐ UPDATED: PROPERTY CREATION WITH NEW FIELDS ====================
+    // ==================== PROPERTY CREATION ====================
 
-    /**
-     * Create new property from DTO with broker subscription enforcement.
-     * Maps all new fields (decimals, construction status, regulatory IDs).
-     */
     public Property postProperty(PropertyPostRequestDto dto) {
         Long areaId = dto.getArea().getId();
         Long userId = dto.getUser().getId();
@@ -60,19 +60,19 @@ public class PropertyService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
 
-        // ✅ NEW: ENFORCE BROKER SUBSCRIPTION
+        // ENFORCE BROKER SUBSCRIPTION
         if (user.getRole() == User.UserRole.BROKER) {
-            logger.info("🔍 User {} is a BROKER - checking subscription status", userId);
+            logger.info("User {} is a BROKER - checking subscription status", userId);
 
             if (!brokerSubscriptionService.hasActiveSubscription(userId)) {
-                logger.error("❌ Broker {} has NO active subscription", userId);
+                logger.error("Broker {} has NO active subscription", userId);
                 throw new RuntimeException(
                         "Subscription required. Please activate a subscription or use a trial coupon to post properties."
                 );
             }
 
             if (!brokerSubscriptionService.canPostProperty(userId)) {
-                logger.error("❌ Broker {} has reached property posting limit", userId);
+                logger.error("Broker {} has reached property posting limit", userId);
                 var status = brokerSubscriptionService.getSubscriptionStatus(userId);
                 throw new RuntimeException(
                         String.format("Property limit reached (%s/%s). Please upgrade your subscription to post more properties.",
@@ -82,7 +82,7 @@ public class PropertyService {
             }
 
             dto.setOwnerType("broker");
-            logger.info("✅ Broker subscription check passed - auto-setting ownerType='broker'");
+            logger.info("Broker subscription check passed - ownerType='broker'");
         }
 
         // Fetch or default property type
@@ -98,22 +98,18 @@ public class PropertyService {
         property.setDescription(dto.getDescription());
         property.setImageUrl(dto.getImageUrl());
 
-        // --- Core Numeric Fields with Decimal Support ---
-        property.setPrice(BigDecimal.valueOf(dto.getPrice()));
+        // Numeric fields
+        property.setPrice(dto.getPrice() != null ? BigDecimal.valueOf(dto.getPrice()) : null);
         property.setPriceDisplay(dto.getPriceDisplay());
 
-        // ⭐ Handle Double/Decimal values for rooms (from DTO to Entity)
         property.setBedrooms(dto.getBedrooms());
         property.setBathrooms(dto.getBathrooms());
         property.setBalconies(dto.getBalconies());
 
-        // ⭐ Handle PricePerSqft
         property.setPricePerSqft(dto.getPricePerSqft() != null ? BigDecimal.valueOf(dto.getPricePerSqft()) : null);
-
-        // Convert AreaSqft to BigDecimal
         property.setAreaSqft(dto.getAreaSqft() != null ? BigDecimal.valueOf(dto.getAreaSqft()) : null);
 
-        // --- Foreign Keys and Basic Info ---
+        // Foreign keys and info
         property.setArea(area);
         property.setUser(user);
         property.setPropertyType(propertyType);
@@ -126,12 +122,9 @@ public class PropertyService {
         property.setIsFeatured(dto.getIsFeatured());
         property.setIsActive(dto.getIsActive());
 
-        // --- Status, OwnerType, and Regulatory Fields ---
+        // status/owner/regulatory fields
         property.setOwnerType(dto.getOwnerType());
         property.setIsVerified(dto.getIsVerified());
-
-        // ⭐ NEW: Map Construction and Regulatory fields
-        // Set the boolean flag based on the string status for legacy/filter compatibility
         property.setIsReadyToMove("ready_to_move".equalsIgnoreCase(dto.getConstructionStatus()));
         property.setConstructionStatus(dto.getConstructionStatus());
         property.setPossessionYear(dto.getPossessionYear());
@@ -139,200 +132,208 @@ public class PropertyService {
         property.setReraId(dto.getReraId());
         property.setHmdaId(dto.getHmdaId());
 
-        // Save property
         Property savedProperty = repo.save(property);
-        logger.info("✅ Property {} created successfully by user {} (Role: {})",
+        logger.info("Property {} created successfully by user {} (Role: {})",
                 savedProperty.getId(), userId, user.getRole());
 
-        // Increment broker's property count after successful save
         if (user.getRole() == User.UserRole.BROKER) {
             brokerSubscriptionService.incrementPropertiesPosted(userId);
-            logger.info("✅ Incremented property count for broker {}", userId);
+            logger.info("Incremented property count for broker {}", userId);
         }
 
         return savedProperty;
     }
 
-    // ==================== ⭐ CASCADE DELETE METHOD ====================
-
-    /**
-     * ⭐ SOFT DELETE ALL PROPERTIES FOR A USER (CASCADE DELETE)
-     * Called when a user is deleted
-     */
+    // ==================== SOFT DELETE USER PROPERTIES ====================
     @Transactional
     public void softDeleteAllPropertiesForUser(Long userId) {
-        logger.info("🗑️ CASCADE DELETE: Soft-deleting all properties for user ID: {}", userId);
+        logger.info("Soft-deleting all properties for user ID: {}", userId);
 
         List<Property> userProperties = repo.findByUserId(userId);
-
         if (userProperties.isEmpty()) {
-            logger.info("✅ No properties found for user {}. Nothing to delete.", userId);
+            logger.info("No properties found for user {}.", userId);
             return;
         }
 
-        logger.info("Found {} properties owned by user {}. Soft-deleting...", userProperties.size(), userId);
-
         for (Property property : userProperties) {
-            logger.info("  - Soft-deleting Property ID: {} (Title: {}, Status: {})",
-                    property.getId(),
-                    property.getTitle(),
-                    property.getStatus());
             property.setIsActive(false);
             property.setStatus("DELETED");
         }
-
         repo.saveAll(userProperties);
-        logger.info("✅ Successfully soft-deleted {} properties for user {}", userProperties.size(), userId);
+        logger.info("Soft-deleted {} properties for user {}", userProperties.size(), userId);
     }
 
-    // ==================== OTHER METHODS ====================
+    // ==================== GET PRIMARY IMAGE ====================
+    /**
+     * Get primary image URL for a property.
+     * Returns the primary image if set, otherwise returns the first available image.
+     */
+    private String getPrimaryImageUrl(Long propertyId) {
+        try {
+            List<PropertyImage> images = propertyImageRepository.findByPropertyIdOrderByUploadedAtDesc(propertyId);
+            if (images.isEmpty()) {
+                return null;
+            }
 
-    public List<String> getPropertyTypes() {
-        return repo.findDistinctPropertyTypes();
+            // Try to find primary image
+            PropertyImage primaryImage = images.stream()
+                    .filter(PropertyImage::getIsPrimary)
+                    .findFirst()
+                    .orElse(images.get(0));
+
+            return primaryImage.getImageUrl();
+        } catch (Exception e) {
+            logger.error("Error fetching primary image for property {}: {}", propertyId, e.getMessage());
+            return null;
+        }
     }
 
-    public List<Property> findByType(String type) {
-        return repo.findByTypeIgnoreCaseAndIsActiveTrue(type);
-    }
-
-    public List<PropertyDTO> findByAreaNameAsDTO(String areaName) {
-        logger.info("Finding properties by area name as DTOs: {}", areaName);
-        List<Property> properties = repo.findByAreaNameAndIsActiveTrue(areaName);
-        return properties.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    public List<PropertyDTO> getPropertiesByUser(Long userId) {
-        logger.info("Fetching properties for user ID: {}", userId);
-        List<Property> properties = repo.findByUserId(userId);
-
-        return properties.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
+    // ==================== CONVERTER TO DTO ====================
     private PropertyDTO convertToDTO(Property property) {
         PropertyDTO dto = new PropertyDTO();
 
         dto.setPropertyId(property.getId());
-        dto.setPropertyType(property.getType());
+        dto.setId(property.getId());
         dto.setTitle(property.getTitle());
         dto.setDescription(property.getDescription());
-        dto.setPrice(property.getPrice());
-        dto.setAreaSqft(property.getAreaSqft());
 
-        // ⭐ Use DTO's Double setters (Property entity must have Double getters)
+        // Get primary image URL
+        String imageUrl = getPrimaryImageUrl(property.getId());
+        dto.setImageUrl(imageUrl);
+
+        dto.setPrice(property.getPrice());
+        dto.setPriceDisplay(property.getPriceDisplay());
         dto.setBedrooms(property.getBedrooms());
         dto.setBathrooms(property.getBathrooms());
         dto.setBalconies(property.getBalconies());
-
+        dto.setAreaSqft(property.getAreaSqft());
+        dto.setPricePerSqft(property.getPricePerSqft());
         dto.setAddress(property.getAddress());
+        dto.setAmenities(property.getAmenities());
         dto.setStatus(property.getStatus());
         dto.setListingType(property.getListingType());
-        dto.setImageUrl(property.getImageUrl());
-        dto.setAmenities(property.getAmenities());
+        dto.setCity(property.getCity());
         dto.setIsFeatured(property.getIsFeatured());
-        dto.setCreatedAt(property.getCreatedAt());
-        dto.setPriceDisplay(property.getPriceDisplay());
-
-        // Map status and owner fields
         dto.setOwnerType(property.getOwnerType());
-        dto.setIsVerified(property.getIsVerified());
         dto.setIsReadyToMove(property.getIsReadyToMove());
-
-        // ⭐ UNCOMMENTED: Include new construction/regulatory fields in DTO
+        dto.setIsVerified(property.getIsVerified());
+        dto.setIsActive(property.getIsActive());
         dto.setConstructionStatus(property.getConstructionStatus());
         dto.setPossessionYear(property.getPossessionYear());
         dto.setPossessionMonth(property.getPossessionMonth());
         dto.setReraId(property.getReraId());
         dto.setHmdaId(property.getHmdaId());
-        dto.setPricePerSqft(property.getPricePerSqft());
-
-
-        if (property.getUser() != null) {
-            PropertyDTO.UserDTO userDTO = new PropertyDTO.UserDTO();
-            userDTO.setId(property.getUser().getId());
-            userDTO.setFirstName(property.getUser().getFirstName());
-            userDTO.setLastName(property.getUser().getLastName());
-            userDTO.setEmail(property.getUser().getEmail());
-            userDTO.setMobileNumber(property.getUser().getMobileNumber());
-            userDTO.setRole(property.getUser().getRole().name());
-            dto.setUser(userDTO);
-
-            logger.debug("Set user info for property {}: User ID {} (Role: {})",
-                    property.getId(), userDTO.getId(), userDTO.getRole());
-        } else {
-            logger.warn("Property {} has no user associated!", property.getId());
-        }
+        dto.setCreatedAt(property.getCreatedAt());
+        dto.setUpdatedAt(property.getUpdatedAt());
 
         if (property.getArea() != null) {
+            dto.setAreaId(property.getArea().getAreaId());
             dto.setAreaName(property.getArea().getAreaName());
             dto.setPincode(property.getArea().getPincode());
+        }
 
-            if (property.getArea().getCity() != null) {
-                dto.setCityName(property.getArea().getCity().getCityName());
-                dto.setState(property.getArea().getCity().getState());
-            }
+        if (property.getPropertyType() != null) {
+            dto.setPropertyTypeId(property.getPropertyType().getPropertyTypeId());
+            dto.setType(property.getPropertyType().getTypeName());
+            dto.setPropertyType(Map.of("typeName", property.getPropertyType().getTypeName()));
+        } else if (property.getType() != null) {
+            dto.setType(property.getType());
+            dto.setPropertyType(Map.of("typeName", property.getType()));
+        }
+
+        if (property.getUser() != null) {
+            dto.setUserId(property.getUser().getId());
+            dto.setUser(Map.of(
+                    "id", property.getUser().getId(),
+                    "firstName", property.getUser().getFirstName() != null ? property.getUser().getFirstName() : "",
+                    "lastName", property.getUser().getLastName() != null ? property.getUser().getLastName() : "",
+                    "mobile", property.getUser().getMobile() != null ? property.getUser().getMobile() : ""
+            ));
         }
 
         return dto;
+    }
+
+    // ==================== FIND / RETRIEVE ====================
+    public Optional<Property> findById(Long id) {
+        return repo.findById(id);
     }
 
     public List<Property> findAll() {
         return repo.findAll();
     }
 
-    public Optional<Property> findById(Long id) {
-        return repo.findById(id);
-    }
-
-    public List<Property> findByCity(String city) {
-        return repo.findByCityIgnoreCase(city);
-    }
-
-    public List<Property> findByAreaName(String areaName) {
-        return repo.findByAreaNameAndIsActiveTrue(areaName);
-    }
-
-    public List<Property> getAllActiveProperties() {
-        logger.info("Fetching all active properties");
-        return repo.findByIsActiveTrueOrderByCreatedAtDesc();
-    }
-
-    public List<PropertyDTO> getAllActivePropertiesAsDTO() {
-        logger.info("Fetching all active properties as DTOs");
-        List<Property> properties = repo.findByIsActiveTrueOrderByCreatedAtDesc();
-
-        return properties.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    public List<String> getPropertyTypes() {
+        return repo.findDistinctPropertyTypes();
     }
 
     public List<PropertyDTO> getPropertiesByTypeAsDTO(String type) {
-        logger.info("Fetching properties of type: {} as DTOs", type);
         List<Property> properties = repo.findByTypeIgnoreCaseAndIsActiveTrue(type);
+        if (properties.isEmpty()) return List.of();
+
+        List<Long> ids = properties.stream().map(Property::getId).collect(Collectors.toList());
+        List<Long> actuallyFeaturedIds = repo.findFeaturedPropertyIds(ids, LocalDateTime.now());
+        Set<Long> featuredSet = new HashSet<>(actuallyFeaturedIds);
 
         return properties.stream()
-                .map(this::convertToDTO)
+                .map(p -> {
+                    PropertyDTO dto = convertToDTO(p);
+                    dto.setIsFeatured(featuredSet.contains(p.getId()));
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
+    public List<PropertyDTO> getAllActivePropertiesWithAccurateFeaturedStatus() {
+        logger.info("Fetching all active properties with accurate featured status");
+        List<Property> allActive = repo.findByIsActiveTrueOrderByCreatedAtDesc();
+        if (allActive.isEmpty()) return List.of();
+
+        List<Long> propertyIds = allActive.stream().map(Property::getId).collect(Collectors.toList());
+        LocalDateTime now = LocalDateTime.now();
+        List<Long> actuallyFeaturedIds = repo.findFeaturedPropertyIds(propertyIds, now);
+        Set<Long> featuredIdSet = new HashSet<>(actuallyFeaturedIds);
+
+        return allActive.stream()
+                .map(p -> {
+                    PropertyDTO dto = convertToDTO(p);
+                    dto.setIsFeatured(featuredIdSet.contains(p.getId()));
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    public List<PropertyDTO> getPropertiesByUserWithAccurateFeaturedStatus(Long userId) {
+        logger.info("Fetching properties for user {} with accurate featured status", userId);
+        List<Property> properties = repo.findByUserId(userId);
+        if (properties.isEmpty()) return List.of();
+
+        List<Long> propertyIds = properties.stream().map(Property::getId).collect(Collectors.toList());
+        LocalDateTime now = LocalDateTime.now();
+        List<Long> actuallyFeaturedIds = repo.findFeaturedPropertyIds(propertyIds, now);
+        Set<Long> featuredIdSet = new HashSet<>(actuallyFeaturedIds);
+
+        return properties.stream()
+                .map(p -> {
+                    PropertyDTO dto = convertToDTO(p);
+                    dto.setIsFeatured(featuredIdSet.contains(p.getId()));
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    // ==================== UPDATE / DELETE ====================
     public Property updateProperty(Long id, Property propertyDetails) {
         Property property = repo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Property not found with id: " + id));
 
-        // Update fields based on provided propertyDetails (assuming Property entity is complete)
         if (propertyDetails.getTitle() != null) property.setTitle(propertyDetails.getTitle());
         if (propertyDetails.getDescription() != null) property.setDescription(propertyDetails.getDescription());
         if (propertyDetails.getPrice() != null) property.setPrice(propertyDetails.getPrice());
         if (propertyDetails.getPriceDisplay() != null) property.setPriceDisplay(propertyDetails.getPriceDisplay());
-
-        // Decimal fields
         if (propertyDetails.getBedrooms() != null) property.setBedrooms(propertyDetails.getBedrooms());
         if (propertyDetails.getBathrooms() != null) property.setBathrooms(propertyDetails.getBathrooms());
         if (propertyDetails.getBalconies() != null) property.setBalconies(propertyDetails.getBalconies());
-
         if (propertyDetails.getAreaSqft() != null) property.setAreaSqft(propertyDetails.getAreaSqft());
         if (propertyDetails.getAddress() != null) property.setAddress(propertyDetails.getAddress());
         if (propertyDetails.getImageUrl() != null) property.setImageUrl(propertyDetails.getImageUrl());
@@ -340,20 +341,15 @@ public class PropertyService {
         if (propertyDetails.getStatus() != null) property.setStatus(propertyDetails.getStatus());
         if (propertyDetails.getListingType() != null) property.setListingType(propertyDetails.getListingType());
         if (propertyDetails.getIsFeatured() != null) property.setIsFeatured(propertyDetails.getIsFeatured());
-
-        // New status/owner fields
         if (propertyDetails.getOwnerType() != null) property.setOwnerType(propertyDetails.getOwnerType());
         if (propertyDetails.getIsReadyToMove() != null) property.setIsReadyToMove(propertyDetails.getIsReadyToMove());
         if (propertyDetails.getIsVerified() != null) property.setIsVerified(propertyDetails.getIsVerified());
-
-        // ⭐ UNCOMMENTED: Construction/Regulatory fields (Assumes Property entity has these getters/setters)
         if (propertyDetails.getConstructionStatus() != null) property.setConstructionStatus(propertyDetails.getConstructionStatus());
         if (propertyDetails.getPossessionYear() != null) property.setPossessionYear(propertyDetails.getPossessionYear());
         if (propertyDetails.getPossessionMonth() != null) property.setPossessionMonth(propertyDetails.getPossessionMonth());
         if (propertyDetails.getReraId() != null) property.setReraId(propertyDetails.getReraId());
         if (propertyDetails.getHmdaId() != null) property.setHmdaId(propertyDetails.getHmdaId());
         if (propertyDetails.getPricePerSqft() != null) property.setPricePerSqft(propertyDetails.getPricePerSqft());
-
 
         if (propertyDetails.getArea() != null) {
             Integer areaId = propertyDetails.getArea().getAreaId();
@@ -384,85 +380,97 @@ public class PropertyService {
         property.setIsActive(false);
         repo.save(property);
     }
-    // Add to PropertyService.java
 
-    @Autowired
-    private FeaturedPropertyRepository featuredPropertyRepository;
+    // ==================== QUICK SEARCH (RETURN DTOs) ====================
 
     /**
-     * ⭐ NEW: Get properties with ACCURATE featured status from featured_properties table
+     * Quick search that searches id/title/description/address/city and also includes area matches.
+     * Returns DTO list (deduplicated) with images.
      */
-    public List<PropertyDTO> getPropertiesByUserWithAccurateFeaturedStatus(Long userId) {
-        logger.info("Fetching properties for user ID: {} with accurate featured status", userId);
+    public List<PropertyDTO> quickSearchAsDTO(String q) {
+        if (q == null || q.trim().isEmpty()) return List.of();
 
-        List<Property> properties = repo.findByUserId(userId);
+        String trimmed = q.trim();
+        logger.info("Performing quick search with query: {}", trimmed);
 
-        if (properties.isEmpty()) {
-            return List.of();
+        // 1) primary quick search query (id/title/description/address/city)
+        List<Property> primary = repo.quickSearch(trimmed);
+
+        // 2) also include area matches (searchByArea)
+        List<Property> byArea = repo.searchByArea(trimmed);
+
+        // 3) if input looks like a numeric id, also try exact id match
+        List<Property> byId = new ArrayList<>();
+        try {
+            long maybeId = Long.parseLong(trimmed);
+            repo.findById(maybeId).ifPresent(byId::add);
+        } catch (NumberFormatException ignore) {
+            // not an exact id, ignore
         }
 
-        // Get property IDs
-        List<Long> propertyIds = properties.stream()
-                .map(Property::getId)
-                .collect(Collectors.toList());
+        // Merge & dedupe by id
+        Map<Long, Property> merged = new LinkedHashMap<>();
+        for (Property p : primary) if (p != null && p.getId() != null) merged.putIfAbsent(p.getId(), p);
+        for (Property p : byArea) if (p != null && p.getId() != null) merged.putIfAbsent(p.getId(), p);
+        for (Property p : byId) if (p != null && p.getId() != null) merged.putIfAbsent(p.getId(), p);
 
-        // ✅ Batch check which properties are ACTUALLY featured
-        LocalDateTime now = LocalDateTime.now();
-        List<Long> actuallyFeaturedIds = repo.findFeaturedPropertyIds(propertyIds, now);
-        Set<Long> featuredIdSet = new HashSet<>(actuallyFeaturedIds);
+        // Convert to DTO with accurate featured flag and images
+        List<Property> mergedList = new ArrayList<>(merged.values());
+        if (mergedList.isEmpty()) return List.of();
 
-        logger.info("Found {} properties, {} are actually featured", properties.size(), featuredIdSet.size());
+        List<Long> ids = mergedList.stream().map(Property::getId).collect(Collectors.toList());
+        List<Long> actuallyFeatured = repo.findFeaturedPropertyIds(ids, LocalDateTime.now());
+        Set<Long> featuredSet = new HashSet<>(actuallyFeatured);
 
-        // Convert to DTO with accurate featured status
-        return properties.stream()
-                .map(property -> {
-                    PropertyDTO dto = convertToDTO(property);
-                    // ✅ Override isFeatured based on featured_properties table
-                    dto.setIsFeatured(featuredIdSet.contains(property.getId()));
+        logger.info("Quick search found {} properties", mergedList.size());
+
+        return mergedList.stream()
+                .map(p -> {
+                    PropertyDTO dto = convertToDTO(p);
+                    dto.setIsFeatured(featuredSet.contains(p.getId()));
                     return dto;
                 })
                 .collect(Collectors.toList());
     }
 
     /**
-     * ⭐ UPDATED: Get all active properties with accurate featured status
+     * Search by area and return DTOs (deduplicated) with images.
      */
-    public List<PropertyDTO> getAllActivePropertiesWithAccurateFeaturedStatus() {
-        logger.info("Fetching all active properties with accurate featured status");
+    public List<PropertyDTO> searchByAreaAsDTO(String area) {
+        if (area == null || area.trim().isEmpty()) return List.of();
+        logger.info("Searching properties by area: {}", area);
 
-        List<Property> properties = repo.findByIsActiveTrueOrderByCreatedAtDesc();
+        List<Property> list = repo.searchByArea(area.trim());
+        if (list.isEmpty()) return List.of();
 
-        if (properties.isEmpty()) {
-            return List.of();
-        }
+        List<Long> ids = list.stream().map(Property::getId).collect(Collectors.toList());
+        List<Long> actuallyFeatured = repo.findFeaturedPropertyIds(ids, LocalDateTime.now());
+        Set<Long> featuredSet = new HashSet<>(actuallyFeatured);
 
-        // Get property IDs
-        List<Long> propertyIds = properties.stream()
-                .map(Property::getId)
-                .collect(Collectors.toList());
-
-        // ✅ Batch check which properties are ACTUALLY featured
-        LocalDateTime now = LocalDateTime.now();
-        List<Long> actuallyFeaturedIds = repo.findFeaturedPropertyIds(propertyIds, now);
-        Set<Long> featuredIdSet = new HashSet<>(actuallyFeaturedIds);
-
-        logger.info("Found {} properties, {} are actually featured", properties.size(), featuredIdSet.size());
-
-        // Convert to DTO with accurate featured status
-        return properties.stream()
-                .map(property -> {
-                    PropertyDTO dto = convertToDTO(property);
-                    // ✅ Override isFeatured based on featured_properties table
-                    dto.setIsFeatured(featuredIdSet.contains(property.getId()));
+        return list.stream()
+                .map(p -> {
+                    PropertyDTO dto = convertToDTO(p);
+                    dto.setIsFeatured(featuredSet.contains(p.getId()));
                     return dto;
                 })
                 .collect(Collectors.toList());
     }
 
     /**
-     * ⭐ NEW: Check if single property is featured
+     * Check if a single property is currently featured.
      */
     public boolean isPropertyFeatured(Long propertyId) {
-        return repo.isPropertyActuallyFeatured(propertyId, LocalDateTime.now());
+        if (propertyId == null) return false;
+        try {
+            return repo.isPropertyActuallyFeatured(propertyId, LocalDateTime.now());
+        } catch (Exception e) {
+            logger.error("Error while checking featured status for property {}: {}", propertyId, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    public List<Property> findByCity(String city) {
+        if (city == null || city.trim().isEmpty()) return List.of();
+        return repo.findByCityIgnoreCase(city.trim());
     }
 }

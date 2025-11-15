@@ -8,10 +8,7 @@ import "./PropertyCard.css";
 
 /**
  * PropertyCard Component
- *
- * ✅ The 'isFeatured' flag now accurately reflects whether the property
- *    exists in the 'featured_properties' table with active status.
- *    Backend checks: isActive, featuredFrom, featuredUntil, and paymentStatus.
+ * Displays property information with proper image handling
  */
 const PropertyCard = ({
   property,
@@ -24,6 +21,7 @@ const PropertyCard = ({
   const { user } = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   if (!property) return null;
 
@@ -41,6 +39,19 @@ const PropertyCard = ({
 
   const getDefaultImage = () =>
     "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&h=600&fit=crop";
+
+  const getImageUrl = () => {
+    // If there's an image error, return default
+    if (imageError) return getDefaultImage();
+
+    // Check if property has a valid imageUrl
+    if (property.imageUrl && property.imageUrl !== "null" && String(property.imageUrl).trim() !== "") {
+      return property.imageUrl;
+    }
+
+    // Return default image
+    return getDefaultImage();
+  };
 
   const handleCardClick = (e) => {
     if (e.target.closest("button")) return;
@@ -92,6 +103,10 @@ const PropertyCard = ({
     }
   };
 
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
   const getStageColorClass = (stage) => {
     const key = (stage || "").toUpperCase();
     switch (key) {
@@ -114,12 +129,18 @@ const PropertyCard = ({
     }
   };
 
+  const getPropertyType = () => {
+    if (property.propertyType && typeof property.propertyType === "object") {
+      return property.propertyType.typeName || property.type || "N/A";
+    }
+    return property.type || "N/A";
+  };
+
   return (
     <>
       <div className="pc-card" onClick={handleCardClick}>
         {/* Badges (Top Right) */}
         <div className="pc-badges">
-          {/* ✅ Featured badge - Shows only if property exists in featured_properties table */}
           {property.isFeatured && (
             <span className="pc-badge featured">⭐ Featured</span>
           )}
@@ -135,16 +156,13 @@ const PropertyCard = ({
         <div className="pc-image-wrap">
           <img
             className="pc-image"
-            src={property.imageUrl || getDefaultImage()}
+            src={getImageUrl()}
             alt={property.title || "Property"}
-            onError={(e) => {
-              e.currentTarget.src = getDefaultImage();
-            }}
+            onError={handleImageError}
             loading="lazy"
           />
           <div className="pc-image-overlay" />
 
-          {/* Deal Stage badge on image */}
           {dealInfo && (
             <span
               className={`pc-stage-badge ${getStageColorClass(
@@ -179,12 +197,7 @@ const PropertyCard = ({
           </div>
 
           <div className="pc-type">
-            <strong>
-              {property.propertyType ||
-                property.propertyType?.typeName ||
-                property.type ||
-                "N/A"}
-            </strong>
+            <strong>{getPropertyType()}</strong>
           </div>
 
           <div className="pc-details">
@@ -229,31 +242,26 @@ const PropertyCard = ({
           )}
 
           <div className="pc-ids">
-            {/* RERA ID */}
             {property.reraId && (
               <span className="pc-id-tag pc-statutory-tag">
                 RERA ID: {property.reraId}
               </span>
             )}
-            {/* HMDA ID */}
             {property.hmdaId && (
               <span className="pc-id-tag pc-statutory-tag">
                 HMDA ID: {property.hmdaId}
               </span>
             )}
-            {/* Property ID */}
             {(property.id || property.propertyId) && (
               <span className="pc-id-tag">
                 Property ID: {property.id || property.propertyId}
               </span>
             )}
-            {/* Deal ID */}
             {dealInfo?.dealId && (
               <span className="pc-deal-tag">Deal ID: {dealInfo.dealId}</span>
             )}
           </div>
 
-          {/* Deal Actions */}
           {dealInfo && (
             <div className="pc-deal-actions">
               <button
@@ -265,7 +273,6 @@ const PropertyCard = ({
             </div>
           )}
 
-          {/* Owner Actions */}
           {isOwner && (
             <div className="pc-actions">
               <button onClick={handleEdit} className="pc-btn pc-btn-edit">
@@ -283,7 +290,6 @@ const PropertyCard = ({
         </div>
       </div>
 
-      {/* Edit Modal */}
       {isEditModalOpen && (
         <PropertyEditModal
           property={property}

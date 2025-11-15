@@ -1,73 +1,62 @@
 package com.example.realestate.controller;
 
 import com.example.realestate.model.Property;
+import com.example.realestate.repository.PropertyRepository;
 import com.example.realestate.service.PropertyService;
 import com.example.realestate.dto.PropertyPostRequestDto;
 import com.example.realestate.dto.PropertyDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.persistence.EntityNotFoundException;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/properties")
+@CrossOrigin(origins = "*")
 public class PropertyController {
 
     private static final Logger logger = LoggerFactory.getLogger(PropertyController.class);
     private final PropertyService service;
 
+    @Autowired
+    private PropertyRepository propertyRepository;
 
     public PropertyController(PropertyService service) {
         this.service = service;
     }
-// -------------------------------------------------------------
-// ⭐ NEW: Specific Exception Handler for Subscription/Limit Errors
-// -------------------------------------------------------------
 
+    // -------------------------------------------------------------
+    // Specific Exception Handler for Subscription/Limit Errors
+    // -------------------------------------------------------------
     @ExceptionHandler({RuntimeException.class})
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ResponseEntity<String> handleBrokerSubscriptionException(RuntimeException ex) {
         String message = ex.getMessage();
         logger.error("Broker/Subscription error: {}", message);
-
-        // This is a simple way to return a FORBIDDEN (403) status for controlled business exceptions.
-        // In a complex app, you might use custom exceptions and more detailed response objects.
-
-        // Use FORBIDDEN (403) for permission/subscription-based refusal.
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(message);
     }
 
-// -------------------------------------------------------------
-// ⭐ UPDATED METHOD: Property Creation with refined exception handling
-// -------------------------------------------------------------
-
-    /**
-     * UPDATED METHOD: Create new property using the dedicated DTO.
-     * Exceptions handled by the specific handlers above and below.
-     */
+    // Create property
     @PostMapping
     public ResponseEntity<?> create(@RequestBody PropertyPostRequestDto dto) {
         logger.info("Attempting to create new property from DTO.");
         try {
             Property createdProperty = service.postProperty(dto);
-            // Return 201 Created status
             return new ResponseEntity<>(createdProperty, HttpStatus.CREATED);
         } catch (EntityNotFoundException e) {
             logger.error("Error creating property: {}", e.getMessage());
-            // Return 400 Bad Request for validation/missing FK errors
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
-        // Note: RuntimeException (Broker checks) is now handled by the @ExceptionHandler above
-        // Any other unexpected exception will fall through to a global 500 handler if one exists,
-        // or just throw a 500 status by default.
     }
-
 
     @GetMapping("/types")
     public ResponseEntity<List<String>> getPropertyTypes() {
@@ -82,23 +71,15 @@ public class PropertyController {
         return ResponseEntity.ok(properties);
     }
 
-    /**
-     * ⭐ CRITICAL FIX: Get properties by user (UPDATED to return DTOs)
-     * Endpoint: GET /api/properties/user/{userId}
-     */
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<PropertyDTO>> byUser(@PathVariable Long userId) {
         logger.info("Fetching properties for user ID: {} with accurate featured status", userId);
         List<PropertyDTO> userProperties = service.getPropertiesByUserWithAccurateFeaturedStatus(userId);
-
         if (userProperties.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
-
         return ResponseEntity.ok(userProperties);
     }
-
-    // --- Existing methods (kept for completeness) ---
 
     @GetMapping
     public List<Property> getAll() {
@@ -111,10 +92,6 @@ public class PropertyController {
         return property.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    /**
-     * ⭐ UPDATED: Get all active properties with ACCURATE featured status
-     * Endpoint: GET /api/properties/all
-     */
     @GetMapping("/all")
     public ResponseEntity<List<PropertyDTO>> getAllActiveProperties() {
         logger.info("Fetching all active properties with accurate featured status");
@@ -122,17 +99,12 @@ public class PropertyController {
         return ResponseEntity.ok(properties);
     }
 
-    /**
-     * ⭐ NEW: Check if property is featured
-     * Endpoint: GET /api/properties/{id}/is-featured
-     */
     @GetMapping("/{id}/is-featured")
     public ResponseEntity<Map<String, Boolean>> checkIfFeatured(@PathVariable Long id) {
         logger.info("Checking if property {} is featured", id);
         boolean isFeatured = service.isPropertyFeatured(id);
         return ResponseEntity.ok(Map.of("isFeatured", isFeatured));
     }
-
 
     @GetMapping("/byCity/{city}")
     public List<Property> byCity(@PathVariable String city) {
@@ -143,10 +115,9 @@ public class PropertyController {
     @GetMapping("/byArea/{areaName}")
     public ResponseEntity<List<PropertyDTO>> byArea(@PathVariable String areaName) {
         logger.info("Fetching properties in area: {}", areaName);
-        List<PropertyDTO> properties = service.findByAreaNameAsDTO(areaName);
+        List<PropertyDTO> properties = service.searchByAreaAsDTO(areaName);
         return ResponseEntity.ok(properties);
     }
-
 
     @PutMapping("/{id}")
     public ResponseEntity<Property> update(@PathVariable Long id, @RequestBody Property propertyDetails) {
@@ -172,4 +143,47 @@ public class PropertyController {
         }
     }
 
+    /**
+     * QUICK SEARCH (single q parameter) – returns DTOs with images
+     * Example: GET /api/properties/search/quick?q=20132
+     * Example: GET /api/properties/search/quick?q=Gachibowli
+     * Example: GET /api/properties/search/quick?q=Palm Residency
+     */
+    @GetMapping("/search/quick")
+    public ResponseEntity<?> quickSearchProperties(@RequestParam(required = false) String q) {
+        try {
+            if (q == null || q.trim().isEmpty()) {
+                logger.warn("Quick search called with empty query parameter");
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Query parameter 'q' is required and cannot be empty"
+                ));
+            }
+
+            logger.info("Quick search with query: {}", q);
+            List<PropertyDTO> results = service.quickSearchAsDTO(q);
+
+            if (results.isEmpty()) {
+                logger.info("Quick search returned no results for query: {}", q);
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "data", results,
+                        "message", "No properties found matching the search criteria"
+                ));
+            }
+
+            logger.info("Quick search found {} properties for query: {}", results.size(), q);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "data", results,
+                    "count", results.size()
+            ));
+        } catch (Exception e) {
+            logger.error("Error in quick search for query '{}': {}", q, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "success", false,
+                    "message", "Error searching properties: " + e.getMessage()
+            ));
+        }
+    }
 }
