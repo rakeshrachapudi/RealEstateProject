@@ -11,27 +11,8 @@ function MyPropertiesPage({ onPostPropertyClick }) {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // ADDITION 1: State for active filter
   const [activeFilter, setActiveFilter] = useState("all");
   const navigate = useNavigate();
-
-  // ✅ Fetch Primary Image for each property
-  const getPrimaryImage = async (propertyId) => {
-    try {
-      const res = await fetch(
-        `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`
-      );
-      if (!res.ok) return null;
-
-      const list = await res.json();
-      if (!Array.isArray(list) || list.length === 0) return null;
-
-      const primary = list.find((img) => img.isPrimary) || list[0];
-      return primary.imageUrl || null;
-    } catch (e) {
-      return null;
-    }
-  };
 
   useEffect(() => {
     if (!user?.id) {
@@ -41,7 +22,10 @@ function MyPropertiesPage({ onPostPropertyClick }) {
     fetchMyProperties();
   }, [user?.id]);
 
-  // ✅ Updated function to attach image URLs
+  /**
+   * Fetch user properties
+   * Backend now returns DTOs with imageUrl already populated
+   */
   const fetchMyProperties = async () => {
     if (!user?.id) {
       setLoading(false);
@@ -71,20 +55,9 @@ function MyPropertiesPage({ onPostPropertyClick }) {
       const data = await response.json();
       const propertiesArray = Array.isArray(data) ? data : data.data || [];
 
-      // ✅ Attach S3 Image URL to each property
-      const withImages = await Promise.all(
-        propertiesArray.map(async (p) => {
-          const id = p.id || p.propertyId;
-          const img = await getPrimaryImage(id);
-
-          return {
-            ...p,
-            imageUrl: img || null,
-          };
-        })
-      );
-
-      setProperties(withImages);
+      // Backend DTOs already include imageUrl, so we can use them directly
+      const normalized = propertiesArray.map((p) => normalizeProperty(p));
+      setProperties(normalized);
     } catch (err) {
       console.error("Failed to load properties:", err);
       setError("Failed to load properties. Please check your connection.");
@@ -92,6 +65,73 @@ function MyPropertiesPage({ onPostPropertyClick }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  /**
+   * Normalize property data to ensure consistent structure
+   */
+  const normalizeProperty = (p) => {
+    if (!p) return null;
+
+    const id = p.propertyId ?? p.id ?? null;
+
+    // Handle property type
+    const propertyTypeRaw = p.propertyType ?? p.type ?? null;
+    let typeName = null;
+    if (typeof propertyTypeRaw === "string") {
+      typeName = propertyTypeRaw;
+    } else if (propertyTypeRaw && typeof propertyTypeRaw === "object") {
+      typeName = propertyTypeRaw.typeName || propertyTypeRaw.name || null;
+    }
+
+    // Image URL is already in DTO from backend
+    const imageUrl =
+      p.imageUrl && p.imageUrl !== "null" && String(p.imageUrl).trim() !== ""
+        ? p.imageUrl
+        : null;
+
+    // Handle amenities
+    const amenities =
+      typeof p.amenities === "string"
+        ? p.amenities
+        : Array.isArray(p.amenities)
+        ? p.amenities.join(", ")
+        : "";
+
+    // Handle area name
+    const areaName =
+      p.areaName ||
+      p.cityName ||
+      (p.area && (p.area.areaName || p.area.name)) ||
+      p.location ||
+      p.city ||
+      "";
+
+    // Handle user object
+    const userObj =
+      p.user && typeof p.user === "object"
+        ? {
+            id: p.user.id ?? null,
+            firstName: p.user.firstName ?? p.user.first_name ?? "",
+            lastName: p.user.lastName ?? p.user.last_name ?? "",
+            mobile: p.user.mobile ?? p.user.phone ?? "",
+          }
+        : { id: null, firstName: "", lastName: "", mobile: "" };
+
+    return {
+      ...p,
+      id,
+      propertyId: id,
+      imageUrl,
+      propertyType: typeName ? { typeName } : null,
+      type: typeName,
+      areaName,
+      amenities,
+      user: userObj,
+      priceDisplay: p.priceDisplay ?? null,
+      isFeatured: p.isFeatured === true || p.isFeatured === 1 || p.isFeatured === "true",
+      isActive: p.isActive === undefined ? true : !!p.isActive,
+    };
   };
 
   const handlePropertyUpdated = () => {
@@ -102,12 +142,11 @@ function MyPropertiesPage({ onPostPropertyClick }) {
     fetchMyProperties();
   };
 
-  // ADDITION 2: Function to handle filter change
   const handleFilterChange = (filter) => {
     setActiveFilter(filter);
   };
 
-  // ADDITION 3: Logic to filter properties based on activeFilter
+  // Filter properties based on activeFilter
   const filteredProperties = properties.filter((p) => {
     if (activeFilter === "all") return true;
     return p.listingType?.toLowerCase() === activeFilter;
@@ -172,7 +211,7 @@ function MyPropertiesPage({ onPostPropertyClick }) {
             </div>
           </div>
 
-          {/* ADDITION 4: Filter Bar */}
+          {/* Filter Bar */}
           <div className="mp-filter-bar">
             <button
               className={`mp-filter-btn ${activeFilter === "all" ? "active" : ""}`}
@@ -193,12 +232,9 @@ function MyPropertiesPage({ onPostPropertyClick }) {
               For Rent ({rentCount})
             </button>
           </div>
-          {/* END Filter Bar */}
-
 
           {filteredProperties.length > 0 ? (
             <div className="mp-grid" role="list">
-              {/* Using filteredProperties here */}
               {filteredProperties.map((property) => (
                 <div
                   className="mp-grid-item"
@@ -218,9 +254,12 @@ function MyPropertiesPage({ onPostPropertyClick }) {
               <div className="mp-empty-ic" aria-hidden="true">
                 🔍
               </div>
-              <h3 className="mp-empty-title">No {activeFilter === 'sale' ? 'Sale' : 'Rent'} Properties</h3>
+              <h3 className="mp-empty-title">
+                No {activeFilter === "sale" ? "Sale" : "Rent"} Properties
+              </h3>
               <p className="mp-empty-text">
-                You haven't listed any properties {activeFilter === 'sale' ? 'for sale' : 'for rent'} yet.
+                You haven't listed any properties{" "}
+                {activeFilter === "sale" ? "for sale" : "for rent"} yet.
               </p>
             </div>
           )}
@@ -228,7 +267,7 @@ function MyPropertiesPage({ onPostPropertyClick }) {
       ) : (
         <div className="mp-state mp-empty">
           <div className="mp-empty-ic" aria-hidden="true">
-            📭
+            🔭
           </div>
           <h3 className="mp-empty-title">No Properties Posted Yet</h3>
           <p className="mp-empty-text">

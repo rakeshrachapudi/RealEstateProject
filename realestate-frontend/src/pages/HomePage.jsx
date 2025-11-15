@@ -287,7 +287,17 @@ function HomePage() {
   // Advanced Search handlers
   const handleSearchResults = (results) => {
     console.log("Advanced search results:", results);
-    const normalized = results.map((p) => normalizeProperty(p));
+
+    // Handle multiple response formats
+    let propertiesArray = [];
+    if (Array.isArray(results)) {
+      propertiesArray = results;
+    } else if (results && results.data && Array.isArray(results.data)) {
+      propertiesArray = results.data;
+    }
+
+    console.log("Processing", propertiesArray.length, "properties from advanced search");
+    const normalized = propertiesArray.map((p) => normalizeProperty(p));
     setSearchResults(normalized);
     setShowSearchResults(true);
     setShowQuickSearchResults(false);
@@ -324,9 +334,19 @@ function HomePage() {
       );
       if (!response.ok) throw new Error("Failed to fetch area properties");
       const data = await response.json();
-      const normalized = (Array.isArray(data) ? data : []).map((p) =>
-        normalizeProperty(p)
-      );
+
+      // Handle multiple response formats
+      let propertiesArray = [];
+      if (data.success && Array.isArray(data.data)) {
+        propertiesArray = data.data;
+      } else if (Array.isArray(data.data)) {
+        propertiesArray = data.data;
+      } else if (Array.isArray(data)) {
+        propertiesArray = data;
+      }
+
+      console.log("Area properties found:", propertiesArray.length);
+      const normalized = propertiesArray.map((p) => normalizeProperty(p));
       setSearchResults(normalized);
       setShowSearchResults(true);
     } catch (error) {
@@ -369,8 +389,25 @@ function HomePage() {
       const data = await response.json();
       console.log("Quick search response:", data);
 
+      // Handle multiple response formats
+      let propertiesArray = [];
+
       if (data.success && Array.isArray(data.data)) {
-        const normalized = data.data.map((p) => normalizeProperty(p));
+        // Format: {success: true, data: [...]}
+        propertiesArray = data.data;
+      } else if (Array.isArray(data.data)) {
+        // Format: {data: [...]}
+        propertiesArray = data.data;
+      } else if (Array.isArray(data)) {
+        // Format: [...]
+        propertiesArray = data;
+      }
+
+      console.log("Properties found:", propertiesArray.length);
+
+      if (propertiesArray.length > 0) {
+        const normalized = propertiesArray.map((p) => normalizeProperty(p));
+        console.log("Normalized properties:", normalized);
         setQuickSearchResults(normalized);
         setShowQuickSearchResults(true);
         setShowSearchResults(false);

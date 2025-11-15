@@ -6,10 +6,6 @@ import PropertyEditModal from "../PropertyEditModal";
 import { BACKEND_BASE_URL } from "../config/config";
 import "./PropertyCard.css";
 
-/**
- * PropertyCard Component
- * Displays property information with proper image handling
- */
 const PropertyCard = ({
   property,
   dealInfo,
@@ -41,15 +37,15 @@ const PropertyCard = ({
     "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&h=600&fit=crop";
 
   const getImageUrl = () => {
-    // If there's an image error, return default
     if (imageError) return getDefaultImage();
 
-    // Check if property has a valid imageUrl
-    if (property.imageUrl && property.imageUrl !== "null" && String(property.imageUrl).trim() !== "") {
+    // Check for valid imageUrl
+    if (property.imageUrl &&
+        property.imageUrl !== "null" &&
+        String(property.imageUrl).trim() !== "") {
       return property.imageUrl;
     }
 
-    // Return default image
     return getDefaultImage();
   };
 
@@ -67,6 +63,7 @@ const PropertyCard = ({
   const handleDelete = async (e) => {
     e.stopPropagation();
     if (!window.confirm("⚠️ Are you sure you want to delete this property?")) return;
+
     setIsDeleting(true);
     try {
       const propertyId = property.id || property.propertyId;
@@ -79,8 +76,11 @@ const PropertyCard = ({
           },
         }
       );
-      if (!response.ok)
+
+      if (!response.ok) {
         throw new Error(`Failed to delete (Status: ${response.status})`);
+      }
+
       alert("✅ Property deleted successfully!");
       onPropertyDeleted && onPropertyDeleted(propertyId);
     } catch (error) {
@@ -110,22 +110,14 @@ const PropertyCard = ({
   const getStageColorClass = (stage) => {
     const key = (stage || "").toUpperCase();
     switch (key) {
-      case "INQUIRY":
-        return "stage-inquiry";
-      case "SHORTLIST":
-        return "stage-shortlist";
-      case "NEGOTIATION":
-        return "stage-negotiation";
-      case "AGREEMENT":
-        return "stage-agreement";
-      case "REGISTRATION":
-        return "stage-registration";
-      case "PAYMENT":
-        return "stage-payment";
-      case "COMPLETED":
-        return "stage-completed";
-      default:
-        return "stage-default";
+      case "INQUIRY": return "stage-inquiry";
+      case "SHORTLIST": return "stage-shortlist";
+      case "NEGOTIATION": return "stage-negotiation";
+      case "AGREEMENT": return "stage-agreement";
+      case "REGISTRATION": return "stage-registration";
+      case "PAYMENT": return "stage-payment";
+      case "COMPLETED": return "stage-completed";
+      default: return "stage-default";
     }
   };
 
@@ -134,6 +126,24 @@ const PropertyCard = ({
       return property.propertyType.typeName || property.type || "N/A";
     }
     return property.type || "N/A";
+  };
+
+  // ⭐ NEW: Format construction status display
+  const getConstructionStatusDisplay = () => {
+    const status = property.constructionStatus;
+    if (!status) return null;
+
+    if (status.toLowerCase() === "ready_to_move") {
+      return "🏠 Ready to Move";
+    } else if (status.toLowerCase() === "under_construction") {
+      const year = property.possessionYear;
+      const month = property.possessionMonth;
+      if (year && month) {
+        return `🚧 Under Construction (${month} ${year})`;
+      }
+      return "🚧 Under Construction";
+    }
+    return null;
   };
 
   return (
@@ -200,6 +210,13 @@ const PropertyCard = ({
             <strong>{getPropertyType()}</strong>
           </div>
 
+          {/* ⭐ NEW: Construction Status Display */}
+          {getConstructionStatusDisplay() && (
+            <div className="pc-construction-status">
+              {getConstructionStatusDisplay()}
+            </div>
+          )}
+
           <div className="pc-details">
             {property.areaSqft && (
               <div className="pc-detail">
@@ -241,15 +258,16 @@ const PropertyCard = ({
             </div>
           )}
 
+          {/* ⭐ UPDATED: Show RERA/HMDA prominently */}
           <div className="pc-ids">
             {property.reraId && (
-              <span className="pc-id-tag pc-statutory-tag">
-                RERA ID: {property.reraId}
+              <span className="pc-id-tag pc-statutory-tag pc-highlight">
+                ✅ RERA: {property.reraId}
               </span>
             )}
             {property.hmdaId && (
-              <span className="pc-id-tag pc-statutory-tag">
-                HMDA ID: {property.hmdaId}
+              <span className="pc-id-tag pc-statutory-tag pc-highlight">
+                ✅ HMDA: {property.hmdaId}
               </span>
             )}
             {(property.id || property.propertyId) && (

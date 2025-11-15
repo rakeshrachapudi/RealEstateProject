@@ -346,6 +346,81 @@
     gap: 12px;
   }
 }
+/* Add these new styles to your PropertyCard.css file */
+
+/* Construction Status Display */
+.pc-construction-status {
+  margin: 10px 0;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 6px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Highlighted Statutory Tags (RERA/HMDA) */
+.pc-statutory-tag.pc-highlight {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  color: white;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  margin: 4px 4px 4px 0;
+  display: inline-block;
+}
+
+.pc-statutory-tag.pc-highlight:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  transition: all 0.2s ease;
+}
+
+/* Ensure IDs section has proper spacing */
+.pc-ids {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.pc-id-tag {
+  background: #f0f0f0;
+  color: #666;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Make sure image displays properly */
+.pc-image {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 12px 12px 0 0;
+}
+
+.pc-image-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px 12px 0 0;
+}
+
+/* Improve posted by section */
+.pc-posted-by {
+  font-size: 12px;
+  color: #666;
+  margin-top: 8px;
+  padding: 6px 0;
+  border-top: 1px solid #f0f0f0;
+}
 
 @media (max-width: 480px) {
   .pc-image {

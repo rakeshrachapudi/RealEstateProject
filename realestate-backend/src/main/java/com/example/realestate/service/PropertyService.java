@@ -1,11 +1,7 @@
 package com.example.realestate.service;
 
-import com.example.realestate.model.Property;
+import com.example.realestate.model.*;
 import com.example.realestate.repository.*;
-import com.example.realestate.model.User;
-import com.example.realestate.model.Area;
-import com.example.realestate.model.PropertyType;
-import com.example.realestate.model.PropertyImage;
 import com.example.realestate.dto.PropertyPostRequestDto;
 import com.example.realestate.dto.PropertyDTO;
 import org.slf4j.Logger;
@@ -33,12 +29,11 @@ public class PropertyService {
 
     @Autowired
     private BrokerSubscriptionService brokerSubscriptionService;
+    @Autowired
+    private PropertyImageRepository propertyImageRepository;
 
     @Autowired
     private FeaturedPropertyRepository featuredPropertyRepository;
-
-    @Autowired
-    private PropertyImageRepository propertyImageRepository;
 
     public PropertyService(PropertyRepository repo, UserRepository userRepository,
                            AreaRepository areaRepository, PropertyTypeRepository propertyTypeRepository) {
@@ -163,43 +158,21 @@ public class PropertyService {
         logger.info("Soft-deleted {} properties for user {}", userProperties.size(), userId);
     }
 
-    // ==================== GET PRIMARY IMAGE ====================
+    // Add this method to PropertyService.java to properly fetch and include images in DTOs
+
     /**
-     * Get primary image URL for a property.
-     * Returns the primary image if set, otherwise returns the first available image.
+     * ⭐ UPDATED: Convert Property entity to PropertyDTO with IMAGES
      */
-    private String getPrimaryImageUrl(Long propertyId) {
-        try {
-            List<PropertyImage> images = propertyImageRepository.findByPropertyIdOrderByUploadedAtDesc(propertyId);
-            if (images.isEmpty()) {
-                return null;
-            }
-
-            // Try to find primary image
-            PropertyImage primaryImage = images.stream()
-                    .filter(PropertyImage::getIsPrimary)
-                    .findFirst()
-                    .orElse(images.get(0));
-
-            return primaryImage.getImageUrl();
-        } catch (Exception e) {
-            logger.error("Error fetching primary image for property {}: {}", propertyId, e.getMessage());
-            return null;
-        }
-    }
-
-    // ==================== CONVERTER TO DTO ====================
     private PropertyDTO convertToDTO(Property property) {
         PropertyDTO dto = new PropertyDTO();
 
         dto.setPropertyId(property.getId());
-        dto.setId(property.getId());
         dto.setTitle(property.getTitle());
         dto.setDescription(property.getDescription());
 
-        // Get primary image URL
+        // ⭐ FIX: Get primary image URL from PropertyImage table
         String imageUrl = getPrimaryImageUrl(property.getId());
-        dto.setImageUrl(imageUrl);
+        dto.setImageUrl(imageUrl != null ? imageUrl : property.getImageUrl()); // Fallback to old field
 
         dto.setPrice(property.getPrice());
         dto.setPriceDisplay(property.getPriceDisplay());
@@ -212,89 +185,101 @@ public class PropertyService {
         dto.setAmenities(property.getAmenities());
         dto.setStatus(property.getStatus());
         dto.setListingType(property.getListingType());
-        dto.setCity(property.getCity());
         dto.setIsFeatured(property.getIsFeatured());
         dto.setOwnerType(property.getOwnerType());
         dto.setIsReadyToMove(property.getIsReadyToMove());
         dto.setIsVerified(property.getIsVerified());
-        dto.setIsActive(property.getIsActive());
+
+        // ⭐ NEW: Add construction status and RERA/HMDA IDs
         dto.setConstructionStatus(property.getConstructionStatus());
         dto.setPossessionYear(property.getPossessionYear());
         dto.setPossessionMonth(property.getPossessionMonth());
         dto.setReraId(property.getReraId());
         dto.setHmdaId(property.getHmdaId());
-        dto.setCreatedAt(property.getCreatedAt());
-        dto.setUpdatedAt(property.getUpdatedAt());
 
+        dto.setCreatedAt(property.getCreatedAt());
+
+        // Set city and area information
         if (property.getArea() != null) {
-            dto.setAreaId(property.getArea().getAreaId());
             dto.setAreaName(property.getArea().getAreaName());
             dto.setPincode(property.getArea().getPincode());
+            if (property.getArea().getCity() != null) {
+                dto.setCityName(property.getArea().getCity().getCityName());
+                dto.setState(property.getArea().getCity().getState());
+            }
+        } else if (property.getCity() != null) {
+            dto.setCityName(property.getCity());
         }
 
+        // Set property type
         if (property.getPropertyType() != null) {
-            dto.setPropertyTypeId(property.getPropertyType().getPropertyTypeId());
-            dto.setType(property.getPropertyType().getTypeName());
-            dto.setPropertyType(Map.of("typeName", property.getPropertyType().getTypeName()));
+            dto.setPropertyType(property.getPropertyType().getTypeName());
         } else if (property.getType() != null) {
-            dto.setType(property.getType());
-            dto.setPropertyType(Map.of("typeName", property.getType()));
+            dto.setPropertyType(property.getType());
         }
 
+        // ⭐ NEW: Add user information
         if (property.getUser() != null) {
-            dto.setUserId(property.getUser().getId());
-            dto.setUser(Map.of(
-                    "id", property.getUser().getId(),
-                    "firstName", property.getUser().getFirstName() != null ? property.getUser().getFirstName() : "",
-                    "lastName", property.getUser().getLastName() != null ? property.getUser().getLastName() : "",
-                    "mobile", property.getUser().getMobile() != null ? property.getUser().getMobile() : ""
-            ));
+            PropertyDTO.UserDTO userDTO = new PropertyDTO.UserDTO();
+            userDTO.setId(property.getUser().getId());
+            userDTO.setFirstName(property.getUser().getFirstName());
+            userDTO.setLastName(property.getUser().getLastName());
+            userDTO.setEmail(property.getUser().getEmail());
+            userDTO.setMobileNumber(property.getUser().getMobileNumber());
+            userDTO.setRole(property.getUser().getRole().name());
+            dto.setUser(userDTO);
         }
 
         return dto;
     }
 
-    // ==================== FIND / RETRIEVE ====================
-    public Optional<Property> findById(Long id) {
-        return repo.findById(id);
+    /**
+     * ⭐ UPDATED: Get primary image URL for a property from PropertyImage table
+     */
+    private String getPrimaryImageUrl(Long propertyId) {
+        try {
+            List<PropertyImage> images = propertyImageRepository.findByPropertyId(propertyId);
+            if (images == null || images.isEmpty()) {
+                return null;
+            }
+
+            // Find primary image or use first image
+            PropertyImage primaryImage = images.stream()
+                    .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                    .findFirst()
+                    .orElse(images.get(0));
+
+            return primaryImage.getImageUrl();
+        } catch (Exception e) {
+            logger.warn("Could not resolve primary image for property {}: {}", propertyId, e.getMessage());
+            return null;
+        }
+    }
+
+    // ==================== BASIC READ OPERATIONS ====================
+    public List<String> getPropertyTypes() {
+        return repo.findDistinctPropertyTypes();
     }
 
     public List<Property> findAll() {
         return repo.findAll();
     }
 
-    public List<String> getPropertyTypes() {
-        return repo.findDistinctPropertyTypes();
-    }
-
-    public List<PropertyDTO> getPropertiesByTypeAsDTO(String type) {
-        List<Property> properties = repo.findByTypeIgnoreCaseAndIsActiveTrue(type);
-        if (properties.isEmpty()) return List.of();
-
-        List<Long> ids = properties.stream().map(Property::getId).collect(Collectors.toList());
-        List<Long> actuallyFeaturedIds = repo.findFeaturedPropertyIds(ids, LocalDateTime.now());
-        Set<Long> featuredSet = new HashSet<>(actuallyFeaturedIds);
-
-        return properties.stream()
-                .map(p -> {
-                    PropertyDTO dto = convertToDTO(p);
-                    dto.setIsFeatured(featuredSet.contains(p.getId()));
-                    return dto;
-                })
-                .collect(Collectors.toList());
+    public Optional<Property> findById(Long id) {
+        return repo.findById(id);
     }
 
     public List<PropertyDTO> getAllActivePropertiesWithAccurateFeaturedStatus() {
         logger.info("Fetching all active properties with accurate featured status");
-        List<Property> allActive = repo.findByIsActiveTrueOrderByCreatedAtDesc();
-        if (allActive.isEmpty()) return List.of();
+        List<Property> properties = repo.findByIsActiveTrueOrderByCreatedAtDesc();
+        if (properties.isEmpty()) return List.of();
 
-        List<Long> propertyIds = allActive.stream().map(Property::getId).collect(Collectors.toList());
+        List<Long> propertyIds = properties.stream().map(Property::getId).collect(Collectors.toList());
         LocalDateTime now = LocalDateTime.now();
         List<Long> actuallyFeaturedIds = repo.findFeaturedPropertyIds(propertyIds, now);
         Set<Long> featuredIdSet = new HashSet<>(actuallyFeaturedIds);
 
-        return allActive.stream()
+        return properties.stream()
                 .map(p -> {
                     PropertyDTO dto = convertToDTO(p);
                     dto.setIsFeatured(featuredIdSet.contains(p.getId()));
@@ -303,8 +288,14 @@ public class PropertyService {
                 .collect(Collectors.toList());
     }
 
+    public List<PropertyDTO> getPropertiesByTypeAsDTO(String type) {
+        logger.info("Fetching properties of type: {} as DTOs", type);
+        List<Property> properties = repo.findByTypeIgnoreCaseAndIsActiveTrue(type);
+        return properties.stream().map(this::convertToDTO).collect(Collectors.toList());
+    }
+
     public List<PropertyDTO> getPropertiesByUserWithAccurateFeaturedStatus(Long userId) {
-        logger.info("Fetching properties for user {} with accurate featured status", userId);
+        logger.info("Fetching properties for user ID: {} with accurate featured status", userId);
         List<Property> properties = repo.findByUserId(userId);
         if (properties.isEmpty()) return List.of();
 
@@ -381,17 +372,16 @@ public class PropertyService {
         repo.save(property);
     }
 
-    // ==================== QUICK SEARCH (RETURN DTOs) ====================
+    // ==================== QUICK SEARCHS (RETURN DTOs) ====================
 
     /**
      * Quick search that searches id/title/description/address/city and also includes area matches.
-     * Returns DTO list (deduplicated) with images.
+     * Returns DTO list (deduplicated).
      */
     public List<PropertyDTO> quickSearchAsDTO(String q) {
         if (q == null || q.trim().isEmpty()) return List.of();
 
         String trimmed = q.trim();
-        logger.info("Performing quick search with query: {}", trimmed);
 
         // 1) primary quick search query (id/title/description/address/city)
         List<Property> primary = repo.quickSearch(trimmed);
@@ -399,7 +389,7 @@ public class PropertyService {
         // 2) also include area matches (searchByArea)
         List<Property> byArea = repo.searchByArea(trimmed);
 
-        // 3) if input looks like a numeric id, also try exact id match
+        // 3) if input looks like a numeric id, also try exact id match (optional)
         List<Property> byId = new ArrayList<>();
         try {
             long maybeId = Long.parseLong(trimmed);
@@ -414,15 +404,13 @@ public class PropertyService {
         for (Property p : byArea) if (p != null && p.getId() != null) merged.putIfAbsent(p.getId(), p);
         for (Property p : byId) if (p != null && p.getId() != null) merged.putIfAbsent(p.getId(), p);
 
-        // Convert to DTO with accurate featured flag and images
+        // Convert to DTO and also ensure accurate featured flag
         List<Property> mergedList = new ArrayList<>(merged.values());
         if (mergedList.isEmpty()) return List.of();
 
         List<Long> ids = mergedList.stream().map(Property::getId).collect(Collectors.toList());
         List<Long> actuallyFeatured = repo.findFeaturedPropertyIds(ids, LocalDateTime.now());
         Set<Long> featuredSet = new HashSet<>(actuallyFeatured);
-
-        logger.info("Quick search found {} properties", mergedList.size());
 
         return mergedList.stream()
                 .map(p -> {
@@ -434,12 +422,10 @@ public class PropertyService {
     }
 
     /**
-     * Search by area and return DTOs (deduplicated) with images.
+     * Search by area and return DTOs (deduplicated).
      */
     public List<PropertyDTO> searchByAreaAsDTO(String area) {
         if (area == null || area.trim().isEmpty()) return List.of();
-        logger.info("Searching properties by area: {}", area);
-
         List<Property> list = repo.searchByArea(area.trim());
         if (list.isEmpty()) return List.of();
 
@@ -455,9 +441,10 @@ public class PropertyService {
                 })
                 .collect(Collectors.toList());
     }
-
     /**
      * Check if a single property is currently featured.
+     * Uses repo.isPropertyActuallyFeatured(...) which validates
+     * isActive, featuredFrom/featuredUntil and paymentStatus.
      */
     public boolean isPropertyFeatured(Long propertyId) {
         if (propertyId == null) return false;
@@ -468,9 +455,12 @@ public class PropertyService {
             return false;
         }
     }
-
     public List<Property> findByCity(String city) {
         if (city == null || city.trim().isEmpty()) return List.of();
         return repo.findByCityIgnoreCase(city.trim());
     }
+    public List<PropertyDTO> findByAreaNameAsDTO(String areaName) {
+        logger.info("Finding properties by area name as DTOs: {}", areaName);
+        List<Property> properties = repo.findByAreaNameAndIsActiveTrue(areaName);
+        return properties.stream() .map(this::convertToDTO) .collect(Collectors.toList()); }
 }
