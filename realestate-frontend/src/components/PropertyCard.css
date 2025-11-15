@@ -346,7 +346,463 @@
     gap: 12px;
   }
 }
+/* Add these new styles to your PropertyCard.css file */
 
+/* Construction Status Display */
+.pc-construction-status {
+  margin: 10px 0;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 6px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Highlighted Statutory Tags (RERA/HMDA) */
+.pc-statutory-tag.pc-highlight {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  color: white;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  margin: 4px 4px 4px 0;
+  display: inline-block;
+}
+
+.pc-statutory-tag.pc-highlight:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  transition: all 0.2s ease;
+}
+
+/* Ensure IDs section has proper spacing */
+.pc-ids {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.pc-id-tag {
+  background: #f0f0f0;
+  color: #666;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Make sure image displays properly */
+.pc-image {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 12px 12px 0 0;
+}
+
+.pc-image-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px 12px 0 0;
+}
+
+/* Improve posted by section */
+.pc-posted-by {
+  font-size: 12px;
+  color: #666;
+  margin-top: 8px;
+  padding: 6px 0;
+  border-top: 1px solid #f0f0f0;
+}
+/* src/components/PropertyCard.css - ENHANCED VERSION */
+
+.pc-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.pc-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Image Section */
+.pc-image-wrap {
+  position: relative;
+  width: 100%;
+  padding-top: 66.67%; /* 3:2 aspect ratio */
+  overflow: hidden;
+}
+
+.pc-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pc-image-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+}
+
+/* Badges */
+.pc-badges {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 2;
+}
+
+.pc-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.pc-badge.featured {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  color: #000;
+}
+
+.pc-badge.verified {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  color: white;
+}
+
+.pc-badge.ready {
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  color: white;
+}
+
+.pc-stage-badge {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  backdrop-filter: blur(8px);
+  z-index: 2;
+}
+
+.stage-inquiry { background: rgba(59, 130, 246, 0.9); }
+.stage-shortlist { background: rgba(139, 92, 246, 0.9); }
+.stage-negotiation { background: rgba(245, 158, 11, 0.9); }
+.stage-agreement { background: rgba(16, 185, 129, 0.9); }
+.stage-registration { background: rgba(6, 182, 212, 0.9); }
+.stage-payment { background: rgba(236, 72, 153, 0.9); }
+.stage-completed { background: rgba(34, 197, 94, 0.9); }
+.stage-default { background: rgba(107, 114, 128, 0.9); }
+
+/* Content Section */
+.pc-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.pc-type-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  width: fit-content;
+}
+
+.pc-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pc-location {
+  font-size: 14px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pc-price {
+  font-size: 24px;
+  font-weight: 800;
+  color: #059669;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.pc-per-month {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+/* ⭐ NEW: Price Per Sqft Styling */
+.pc-price-per-sqft {
+  font-size: 14px;
+  font-weight: 600;
+  color: #7c3aed;
+  background: #f3e8ff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.pc-type {
+  font-size: 14px;
+  color: #374151;
+}
+
+/* ⭐ ENHANCED: Construction Status Styling */
+.pc-construction-status {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1px solid #fbbf24;
+}
+
+/* Property Details Grid */
+.pc-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.pc-detail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.pc-detail-icon {
+  font-size: 16px;
+}
+
+/* Amenities */
+.pc-amenities {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.pc-amenities strong {
+  color: #374151;
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* ⭐ NEW: Owner Type Styling */
+.pc-owner-type {
+  font-size: 13px;
+  color: #4b5563;
+  font-weight: 500;
+  padding: 6px 10px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+/* Posted By */
+.pc-posted-by {
+  font-size: 13px;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ⭐ ENHANCED: IDs Section with Better Styling */
+.pc-ids {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pc-id-tag {
+  padding: 4px 10px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* ⭐ ENHANCED: Statutory Tags (RERA/HMDA) - Prominent Highlighting */
+.pc-statutory-tag {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #166534;
+  font-weight: 700;
+  border: 2px solid #22c55e;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.pc-statutory-tag.pc-highlight {
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+  }
+}
+
+.pc-deal-tag {
+  background: #dbeafe;
+  color: #1e40af;
+  font-weight: 600;
+}
+
+/* Actions */
+.pc-deal-actions,
+.pc-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.pc-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.pc-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.pc-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pc-btn-view {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+.pc-btn-edit {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.pc-btn-delete {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .pc-title {
+    font-size: 16px;
+  }
+
+  .pc-price {
+    font-size: 20px;
+  }
+
+  .pc-details {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .pc-badges {
+    top: 8px;
+    right: 8px;
+    gap: 4px;
+  }
+
+  .pc-badge {
+    padding: 3px 8px;
+    font-size: 10px;
+  }
+
+  .pc-statutory-tag {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pc-content {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .pc-details {
+    grid-template-columns: 1fr;
+  }
+
+  .pc-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
 @media (max-width: 480px) {
   .pc-image {
     height: 180px;

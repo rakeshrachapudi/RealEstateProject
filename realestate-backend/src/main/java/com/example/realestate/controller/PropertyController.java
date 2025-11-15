@@ -1,175 +1,214 @@
 package com.example.realestate.controller;
 
 import com.example.realestate.model.Property;
-import com.example.realestate.service.PropertyService;
-import com.example.realestate.dto.PropertyPostRequestDto;
 import com.example.realestate.dto.PropertyDTO;
+import com.example.realestate.dto.PropertyPostRequestDto;
+import com.example.realestate.repository.PropertyRepository;
+import com.example.realestate.service.PropertyService;
+
+import jakarta.persistence.EntityNotFoundException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.persistence.EntityNotFoundException;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/properties")
+@CrossOrigin(origins = "*")
 public class PropertyController {
 
     private static final Logger logger = LoggerFactory.getLogger(PropertyController.class);
-    private final PropertyService service;
 
+    @Autowired
+    private PropertyService service;
 
-    public PropertyController(PropertyService service) {
-        this.service = service;
-    }
-// -------------------------------------------------------------
-// ⭐ NEW: Specific Exception Handler for Subscription/Limit Errors
-// -------------------------------------------------------------
+    @Autowired
+    private PropertyRepository propertyRepository;
 
+    // -------------------------------------------------------------
+    // ⭐ GLOBAL HANDLER FOR SUBSCRIPTION / BROKER LIMIT ERRORS
+    // -------------------------------------------------------------
     @ExceptionHandler({RuntimeException.class})
     @ResponseStatus(HttpStatus.FORBIDDEN)
-    public ResponseEntity<String> handleBrokerSubscriptionException(RuntimeException ex) {
-        String message = ex.getMessage();
-        logger.error("Broker/Subscription error: {}", message);
-
-        // This is a simple way to return a FORBIDDEN (403) status for controlled business exceptions.
-        // In a complex app, you might use custom exceptions and more detailed response objects.
-
-        // Use FORBIDDEN (403) for permission/subscription-based refusal.
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(message);
+    public ResponseEntity<String> handleBusinessException(RuntimeException ex) {
+        logger.error("Business Exception: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
     }
 
-// -------------------------------------------------------------
-// ⭐ UPDATED METHOD: Property Creation with refined exception handling
-// -------------------------------------------------------------
-
-    /**
-     * UPDATED METHOD: Create new property using the dedicated DTO.
-     * Exceptions handled by the specific handlers above and below.
-     */
+    // -------------------------------------------------------------
+    // ⭐ CREATE PROPERTY
+    // -------------------------------------------------------------
     @PostMapping
     public ResponseEntity<?> create(@RequestBody PropertyPostRequestDto dto) {
-        logger.info("Attempting to create new property from DTO.");
         try {
-            Property createdProperty = service.postProperty(dto);
-            // Return 201 Created status
-            return new ResponseEntity<>(createdProperty, HttpStatus.CREATED);
-        } catch (EntityNotFoundException e) {
-            logger.error("Error creating property: {}", e.getMessage());
-            // Return 400 Bad Request for validation/missing FK errors
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            Property created = service.postProperty(dto);
+            return new ResponseEntity<>(created, HttpStatus.CREATED);
+        } catch (EntityNotFoundException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
         }
-        // Note: RuntimeException (Broker checks) is now handled by the @ExceptionHandler above
-        // Any other unexpected exception will fall through to a global 500 handler if one exists,
-        // or just throw a 500 status by default.
     }
 
-
+    // -------------------------------------------------------------
+    // ⭐ PROPERTY TYPES
+    // -------------------------------------------------------------
     @GetMapping("/types")
     public ResponseEntity<List<String>> getPropertyTypes() {
-        List<String> types = service.getPropertyTypes();
-        return ResponseEntity.ok(types);
+        return ResponseEntity.ok(service.getPropertyTypes());
     }
 
+    // -------------------------------------------------------------
+    // ⭐ PROPERTIES BY TYPE (DTO)
+    // -------------------------------------------------------------
     @GetMapping("/byType")
-    public ResponseEntity<List<PropertyDTO>> getPropertiesByType(@RequestParam String type) {
-        logger.info("Fetching properties of type: {}", type);
-        List<PropertyDTO> properties = service.getPropertiesByTypeAsDTO(type);
-        return ResponseEntity.ok(properties);
+    public ResponseEntity<List<PropertyDTO>> getByType(@RequestParam String type) {
+        logger.info("Fetching properties of type {}", type);
+        return ResponseEntity.ok(service.getPropertiesByTypeAsDTO(type));
     }
 
-    /**
-     * ⭐ CRITICAL FIX: Get properties by user (UPDATED to return DTOs)
-     * Endpoint: GET /api/properties/user/{userId}
-     */
+    // -------------------------------------------------------------
+    // ⭐ USER PROPERTIES (DTO)
+    // -------------------------------------------------------------
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<PropertyDTO>> byUser(@PathVariable Long userId) {
-        logger.info("Fetching properties for user ID: {} with accurate featured status", userId);
-        List<PropertyDTO> userProperties = service.getPropertiesByUserWithAccurateFeaturedStatus(userId);
-
-        if (userProperties.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-
-        return ResponseEntity.ok(userProperties);
+    public ResponseEntity<List<PropertyDTO>> getByUser(@PathVariable Long userId) {
+        logger.info("Fetching properties for user {}", userId);
+        List<PropertyDTO> list = service.getPropertiesByUserWithAccurateFeaturedStatus(userId);
+        return list.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(list);
     }
 
-    // --- Existing methods (kept for completeness) ---
-
+    // -------------------------------------------------------------
+    // ⭐ GET ALL (ENTITY)
+    // -------------------------------------------------------------
     @GetMapping
     public List<Property> getAll() {
         return service.findAll();
     }
 
+    // -------------------------------------------------------------
+    // ⭐ GET BY ID (ENTITY)
+    // -------------------------------------------------------------
     @GetMapping("/{id}")
-    public ResponseEntity<Property> findById(@PathVariable Long id) {
-        Optional<Property> property = service.findById(id);
-        return property.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<Property> getById(@PathVariable Long id) {
+        return service.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * ⭐ UPDATED: Get all active properties with ACCURATE featured status
-     * Endpoint: GET /api/properties/all
-     */
+    // -------------------------------------------------------------
+    // ⭐ ALL ACTIVE WITH CORRECT FEATURED STATUS (DTO)
+    // -------------------------------------------------------------
     @GetMapping("/all")
-    public ResponseEntity<List<PropertyDTO>> getAllActiveProperties() {
-        logger.info("Fetching all active properties with accurate featured status");
-        List<PropertyDTO> properties = service.getAllActivePropertiesWithAccurateFeaturedStatus();
-        return ResponseEntity.ok(properties);
+    public ResponseEntity<List<PropertyDTO>> getAllActive() {
+        return ResponseEntity.ok(service.getAllActivePropertiesWithAccurateFeaturedStatus());
     }
 
-    /**
-     * ⭐ NEW: Check if property is featured
-     * Endpoint: GET /api/properties/{id}/is-featured
-     */
+    // -------------------------------------------------------------
+    // ⭐ CHECK FEATURED STATUS
+    // -------------------------------------------------------------
     @GetMapping("/{id}/is-featured")
-    public ResponseEntity<Map<String, Boolean>> checkIfFeatured(@PathVariable Long id) {
-        logger.info("Checking if property {} is featured", id);
-        boolean isFeatured = service.isPropertyFeatured(id);
-        return ResponseEntity.ok(Map.of("isFeatured", isFeatured));
+    public ResponseEntity<Map<String, Boolean>> checkFeatured(@PathVariable Long id) {
+        boolean featured = service.isPropertyFeatured(id);
+        return ResponseEntity.ok(Map.of("isFeatured", featured));
     }
 
-
+    // -------------------------------------------------------------
+    // ⭐ GET BY CITY (ENTITY)
+    // -------------------------------------------------------------
     @GetMapping("/byCity/{city}")
-    public List<Property> byCity(@PathVariable String city) {
-        logger.info("Fetching properties in city: {}", city);
+    public List<Property> getByCity(@PathVariable String city) {
+        logger.info("Fetching by city {}", city);
         return service.findByCity(city);
     }
 
+    // -------------------------------------------------------------
+    // ⭐ GET BY AREA (DTO)
+    // -------------------------------------------------------------
     @GetMapping("/byArea/{areaName}")
-    public ResponseEntity<List<PropertyDTO>> byArea(@PathVariable String areaName) {
-        logger.info("Fetching properties in area: {}", areaName);
-        List<PropertyDTO> properties = service.findByAreaNameAsDTO(areaName);
-        return ResponseEntity.ok(properties);
+    public ResponseEntity<List<PropertyDTO>> getByArea(@PathVariable String areaName) {
+        return ResponseEntity.ok(service.findByAreaNameAsDTO(areaName));
     }
 
-
+    // -------------------------------------------------------------
+    // ⭐ UPDATE
+    // -------------------------------------------------------------
     @PutMapping("/{id}")
-    public ResponseEntity<Property> update(@PathVariable Long id, @RequestBody Property propertyDetails) {
-        logger.info("Updating property with ID: {}", id);
+    public ResponseEntity<?> update(
+            @PathVariable Long id,
+            @RequestBody Property propertyDetails
+    ) {
         try {
             Property updated = service.updateProperty(id, propertyDetails);
             return ResponseEntity.ok(updated);
-        } catch (EntityNotFoundException e) {
-            logger.error("Error updating property: {}", e.getMessage());
+        } catch (EntityNotFoundException ex) {
             return ResponseEntity.notFound().build();
         }
     }
 
+    // -------------------------------------------------------------
+    // ⭐ DELETE
+    // -------------------------------------------------------------
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        logger.info("Deleting property with ID: {}", id);
+    public ResponseEntity<?> delete(@PathVariable Long id) {
         try {
             service.deleteProperty(id);
             return ResponseEntity.ok().build();
-        } catch (EntityNotFoundException e) {
-            logger.error("Error deleting property: {}", e.getMessage());
+        } catch (EntityNotFoundException ex) {
             return ResponseEntity.notFound().build();
         }
     }
 
+    // -------------------------------------------------------------
+    // ⭐ SMART QUICK SEARCH (ID, NAME, AUTO-DETECT QUERY)
+    // -------------------------------------------------------------
+    @GetMapping("/search/quick")
+    public ResponseEntity<?> smartQuickSearch(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Long propertyId,
+            @RequestParam(required = false) String name
+    ) {
+        try {
+            // Auto-detect:
+            // Priority → q → propertyId → name
+            String input = q != null ? q :
+                    propertyId != null ? String.valueOf(propertyId) :
+                            name != null ? name : null;
+
+            if (input == null || input.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body("Query is required (q OR propertyId OR name)");
+            }
+
+            input = input.trim();
+            List<Property> results = new ArrayList<>();
+
+            // 1️⃣ If numeric → treat as propertyId
+            if (input.matches("\\d+")) {
+                Long id = Long.parseLong(input);
+                propertyRepository.findById(id).ifPresent(results::add);
+            }
+
+            // 2️⃣ Search by name always
+            List<Property> nameMatches =
+                    propertyRepository.findByTitleContainingIgnoreCase(input);
+            for (Property p : nameMatches) {
+                if (!results.contains(p)) results.add(p);
+            }
+
+            if (results.isEmpty()) {
+                return ResponseEntity.status(404)
+                        .body("No properties found");
+            }
+
+            return ResponseEntity.ok(results);
+
+        } catch (Exception e) {
+            logger.error("Smart quick search error", e);
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
 }
