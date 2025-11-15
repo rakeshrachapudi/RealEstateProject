@@ -5,18 +5,13 @@ import { BACKEND_BASE_URL } from "./config/config";
 import "./PropertyEditModal.css";
 
 /**
- * PropertyEditModal (FINAL)
- * - Fully supports multiple images
- * - Loads existing images from: GET /api/property-images/property/{propertyId}
- * - Uploads new images to: POST /api/upload/property-image  (FormData: file, propertyId)
- *   (Also supports the older ?propertyId=… style, handled internally if needed)
- * - Saves full ordered image set to:
- *   POST /api/property-images/property/{propertyId}
- *     body: [{ imageUrl, isPrimary, displayOrder }]
- * - ❗ FIX: Deletes all previous images BEFORE save to avoid duplication:
- *     DELETE /api/property-images/property/{propertyId}
- * - Deletes individually removed images via: DELETE /api/property-images/{imageId} (best-effort)
- * - Updates property main imageUrl to the selected primary image before PUT /api/properties/{id}
+ * PropertyEditModal - Enhanced with all features from PostPropertyModal
+ * - Multiple images support
+ * - Price per sqft calculation
+ * - Price in Indian words
+ * - Interactive amenities
+ * - Construction status, possession date, RERA/HMDA IDs
+ * - Conditional fields based on property type
  */
 
 function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
@@ -31,17 +26,12 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
   const [imageUploading, setImageUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
+  const [priceInWords, setPriceInWords] = useState("");
 
   // ---------- Images State ----------
-  // Existing images from backend (persisted)
-  // Shape: { imageId, imageUrl, isPrimary, displayOrder, createdAt }
   const [existingImages, setExistingImages] = useState([]);
-
-  // Local new images (files selected in this session)
-  const [newFiles, setNewFiles] = useState([]); // File[]
-  const [newPreviews, setNewPreviews] = useState([]); // string[]
-
-  // Track existing images removed by user (for optional DELETE calls)
+  const [newFiles, setNewFiles] = useState([]);
+  const [newPreviews, setNewPreviews] = useState([]);
   const [removedExistingIds, setRemovedExistingIds] = useState([]);
 
   // ---------- Form Data ----------
@@ -52,23 +42,59 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
     city: property?.city || property?.cityName || "Hyderabad",
     areaId: property?.area?.areaId || property?.area?.id || "",
     address: property?.address || "",
-    // imageUrl will be set to primary image before PUT
     imageUrl: property?.imageUrl || "",
     bedrooms: property?.bedrooms ?? "",
     bathrooms: property?.bathrooms ?? "",
     balconies: property?.balconies ?? "",
     areaSqft: property?.areaSqft ?? "",
     price: property?.price ?? "",
+    pricePerSqft: property?.pricePerSqft ?? "",
     amenities: property?.amenities || "",
     description: property?.description || "",
     ownerType: property?.ownerType || "owner",
+    constructionStatus: property?.constructionStatus || "ready_to_move",
+    possessionYear: property?.possessionYear || "",
+    possessionMonth: property?.possessionMonth || "",
+    reraId: property?.reraId || "",
+    hmdaId: property?.hmdaId || "",
     isReadyToMove: !!property?.isReadyToMove,
     isVerified: !!property?.isVerified,
   });
 
   const propertyId = property?.id || property?.propertyId;
 
-  // Derived: a single ordered list we render (existing first by displayOrder, then new)
+  // Common amenities list
+  const commonAmenities = [
+    "Parking",
+    "Gym",
+    "Swimming Pool",
+    "Security",
+    "Lift",
+    "Power Backup",
+    "Club House",
+    "Park",
+    "Intercom",
+    "Visitor Parking",
+    "Rainwater Harvesting",
+    "24/7 Water Supply",
+    "Community Hall",
+  ];
+
+  // Check if property type is Plot/Land/Villa
+  const isPlotOrLandOrVilla =
+    formData.type?.toLowerCase() === "plot" ||
+    formData.type?.toLowerCase() === "land" ||
+    formData.type?.toLowerCase() === "villa";
+
+  // Possession months and years
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 10 }, (_, i) => currentYear + i);
+
+  // Derived: ordered images list
   const orderedExisting = useMemo(() => {
     const arr = Array.isArray(existingImages) ? [...existingImages] : [];
     arr.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
@@ -88,6 +114,118 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
       fetchExistingImages(propertyId);
     }
   }, [propertyId]);
+
+  useEffect(() => {
+    if (formData.price) {
+      setPriceInWords(convertToIndianWords(formData.price));
+    } else {
+      setPriceInWords("");
+    }
+  }, [formData.price]);
+
+  // ---------- Price Conversion ----------
+  const convertToIndianWords = (numStr) => {
+    const num = Number(numStr);
+    if (!numStr || isNaN(num) || num <= 0) return "";
+
+    const ones = [
+      "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+      "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+      "Seventeen", "Eighteen", "Nineteen",
+    ];
+    const tens = [
+      "", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety",
+    ];
+
+    const numToWords = (n) => {
+      let str = "";
+      if (n > 99) {
+        str += ones[Math.floor(n / 100)] + " Hundred ";
+        n %= 100;
+      }
+      if (n > 19) {
+        str += tens[Math.floor(n / 10)] + " ";
+        n %= 10;
+      }
+      if (n > 0) {
+        str += ones[n] + " ";
+      }
+      return str;
+    };
+
+    let words = "";
+    let tempNum = num;
+    if (tempNum >= 10000000) {
+      words += numToWords(Math.floor(tempNum / 10000000)) + "Crore ";
+      tempNum %= 10000000;
+    }
+    if (tempNum >= 100000) {
+      words += numToWords(Math.floor(tempNum / 100000)) + "Lakh ";
+      tempNum %= 100000;
+    }
+    if (tempNum >= 1000) {
+      words += numToWords(Math.floor(tempNum / 1000)) + "Thousand ";
+      tempNum %= 1000;
+    }
+    if (tempNum > 0) {
+      words += numToWords(tempNum);
+    }
+    return words.trim() + " Rupees Only";
+  };
+
+  // ---------- Price/Area Calculations ----------
+  const calculatePricePerSqft = (price, areaSqft) => {
+    const p = Number(price);
+    const a = Number(areaSqft);
+    if (p > 0 && a > 0) {
+      return Math.round(p / a);
+    }
+    return "";
+  };
+
+  const calculateTotalPrice = (pricePerSqft, areaSqft) => {
+    const pps = Number(pricePerSqft);
+    const a = Number(areaSqft);
+    if (pps > 0 && a > 0) {
+      return Math.round(pps * a);
+    }
+    return "";
+  };
+
+  const handlePriceChange = (e) => {
+    const value = e.target.value;
+    setFormData((prev) => {
+      const newData = { ...prev, price: value };
+      if (prev.areaSqft && value) {
+        newData.pricePerSqft = calculatePricePerSqft(value, prev.areaSqft);
+      }
+      return newData;
+    });
+  };
+
+  const handlePricePerSqftChange = (e) => {
+    const value = e.target.value;
+    setFormData((prev) => {
+      const newData = { ...prev, pricePerSqft: value };
+      if (prev.areaSqft && value) {
+        newData.price = calculateTotalPrice(value, prev.areaSqft);
+      }
+      return newData;
+    });
+  };
+
+  const handleAreaSqftChange = (e) => {
+    const value = e.target.value;
+    setFormData((prev) => {
+      const newData = { ...prev, areaSqft: value };
+      if (prev.pricePerSqft && value) {
+        newData.price = calculateTotalPrice(prev.pricePerSqft, value);
+      } else if (prev.price && value) {
+        newData.pricePerSqft = calculatePricePerSqft(prev.price, value);
+      }
+      return newData;
+    });
+  };
 
   // ---------- Loaders ----------
   async function loadAreas() {
@@ -118,10 +256,7 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
       );
       if (!res.ok) throw new Error(`Failed to load images: HTTP ${res.status}`);
       const data = await res.json();
-      // Expecting an array like:
-      // [{ imageId, imageUrl, isPrimary, displayOrder, createdAt }, ...]
       const list = Array.isArray(data) ? data : data?.data || [];
-      // Normalize displayOrder
       const normalized = list
         .filter(Boolean)
         .map((img, idx) => ({
@@ -133,13 +268,11 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
             : idx,
           createdAt: img.createdAt || null,
         }));
-      // Ensure exactly one primary (fallback to first)
       if (!normalized.some((i) => i.isPrimary) && normalized.length > 0) {
         normalized[0].isPrimary = true;
       }
       setExistingImages(normalized);
     } catch (err) {
-      // Don't block the modal — just start with empty
       console.error(err);
       setExistingImages([]);
     }
@@ -159,6 +292,34 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
       [name]: type === "checkbox" ? checked : value,
     }));
     setError(null);
+  };
+
+  const handleDecimalChange = (e) => {
+    const { name, value } = e.target;
+    const regex = /^\d*\.?\d{0,1}$/;
+    if (value === "" || regex.test(value)) {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleAmenityChange = (amenity) => {
+    const selectedAmenities = formData.amenities
+      ? formData.amenities.split(",").map((a) => a.trim())
+      : [];
+
+    const isSelected = selectedAmenities.includes(amenity);
+    let newAmenities;
+
+    if (isSelected) {
+      newAmenities = selectedAmenities.filter((a) => a !== amenity);
+    } else {
+      newAmenities = [...selectedAmenities, amenity];
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      amenities: newAmenities.join(", "),
+    }));
   };
 
   const handleNewFilesSelected = (e) => {
@@ -213,13 +374,10 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
         isPrimary: img.imageId === imageId,
       }))
     );
-    // Any new images will become non-primary
   };
 
   const setPrimaryNew = (index) => {
-    // If user chooses a new image as primary, all existing become false primary.
     setExistingImages((prev) => prev.map((i) => ({ ...i, isPrimary: false })));
-    // Move that new image preview/file to the front of new arrays to represent primary
     if (index > 0) {
       setNewFiles((prev) => {
         const arr = [...prev];
@@ -234,322 +392,193 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
     }
   };
 
-  // Simple reorder controls for existing images
-  const moveExisting = (imageId, dir) => {
+  const moveExisting = (imageId, direction) => {
     setExistingImages((prev) => {
       const arr = [...prev];
-      const idx = arr.findIndex((x) => x.imageId === imageId);
+      const idx = arr.findIndex((i) => i.imageId === imageId);
       if (idx < 0) return arr;
-      const swapWith = dir === "left" ? idx - 1 : idx + 1;
-      if (swapWith < 0 || swapWith >= arr.length) return arr;
-      [arr[idx], arr[swapWith]] = [arr[swapWith], arr[idx]];
-      return arr;
+      const target = direction === "left" ? idx - 1 : idx + 1;
+      if (target < 0 || target >= arr.length) return arr;
+      [arr[idx], arr[target]] = [arr[target], arr[idx]];
+      return arr.map((img, i) => ({ ...img, displayOrder: i }));
     });
   };
 
-  // Reorder new images
-  const moveNew = (index, dir) => {
+  const moveNew = (index, direction) => {
+    const target = direction === "left" ? index - 1 : index + 1;
+    if (target < 0 || target >= newFiles.length) return;
     setNewFiles((prev) => {
       const arr = [...prev];
-      const swapWith = dir === "left" ? index - 1 : index + 1;
-      if (swapWith < 0 || swapWith >= arr.length) return arr;
-      [arr[index], arr[swapWith]] = [arr[swapWith], arr[index]];
+      [arr[index], arr[target]] = [arr[target], arr[index]];
       return arr;
     });
     setNewPreviews((prev) => {
       const arr = [...prev];
-      const swapWith = dir === "left" ? index - 1 : index + 1;
-      if (swapWith < 0 || swapWith >= arr.length) return arr;
-      [arr[index], arr[swapWith]] = [arr[swapWith], arr[index]];
+      [arr[index], arr[target]] = [arr[target], arr[index]];
       return arr;
     });
   };
 
-  // ---------- Helpers ----------
-  function formatPriceDisplay(numericPrice) {
-    if (numericPrice >= 10000000) {
-      return `₹${(numericPrice / 10000000).toFixed(2)} Cr`;
-    } else if (numericPrice >= 100000) {
-      return `₹${(numericPrice / 100000).toFixed(2)} Lac`;
-    }
-    return `₹${Number(numericPrice).toLocaleString("en-IN")}`;
-  }
-
-  function ensureOnePrimary(images) {
-    if (!images || images.length === 0) return images;
-    if (!images.some((i) => i.isPrimary)) {
-      images[0].isPrimary = true;
-    } else {
-      // If multiple marked primary, keep only the first
-      let found = false;
-      for (const im of images) {
-        if (im.isPrimary && !found) {
-          found = true;
-        } else if (im.isPrimary && found) {
-          im.isPrimary = false;
-        }
-      }
-    }
-    return images;
-  }
-
-  // Upload new files to S3 and return array of URLs (in selected order)
-  async function uploadNewFilesToS3(pid) {
-    if (!newFiles.length) return [];
-    setImageUploading(true);
-
-    const urls = [];
-    for (let i = 0; i < newFiles.length; i++) {
-      const file = newFiles[i];
-
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("propertyId", pid); // primary method (UploadController supports this)
-
-      setUploadProgress(Math.round(((i + 1) / newFiles.length) * 100));
-
-      try {
-        // Preferred: body contains propertyId in form-data
-        let res = await fetch(`${BACKEND_BASE_URL}/api/upload/property-image`, {
-          method: "POST",
-          headers: authToken
-            ? { Authorization: `Bearer ${authToken}` }
-            : undefined,
-          body: fd,
-        });
-
-        if (!res.ok) {
-          // Fallback: try query param
-          res = await fetch(
-            `${BACKEND_BASE_URL}/api/upload/property-image?propertyId=${pid}`,
-            {
-              method: "POST",
-              headers: authToken
-                ? { Authorization: `Bearer ${authToken}` }
-                : undefined,
-              body: fd,
-            }
-          );
-        }
-
-        if (!res.ok) {
-          let errMsg = "";
-          try {
-            errMsg = (await res.json())?.message || "";
-          } catch {}
-          throw new Error(errMsg || `Upload failed (HTTP ${res.status})`);
-        }
-
-        const data = await res.json();
-        if (!data?.success || !data?.url) {
-          throw new Error(data?.message || "Upload response invalid");
-        }
-        urls.push(data.url);
-      } catch (err) {
-        setImageUploading(false);
-        throw err;
-      }
-    }
-
-    setImageUploading(false);
-    setUploadProgress(0);
-    return urls;
-  }
-
-  async function saveImagesToDatabase(pid, allImageUrlsOrdered, primaryIndex) {
-    // Build payload expected by your controller
-    const payload = allImageUrlsOrdered.map((url, idx) => ({
-      imageUrl: url,
-      isPrimary: idx === primaryIndex,
-      displayOrder: idx,
-    }));
-
-    const res = await fetch(
-      `${BACKEND_BASE_URL}/api/property-images/property/${pid}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        },
-        body: JSON.stringify(payload),
-      }
-    );
-    if (!res.ok) {
-      let t = "";
-      try {
-        t = await res.text();
-      } catch {}
-      throw new Error(`Failed to save images: ${t || res.statusText}`);
-    }
-    // success; response body not strictly required
-    return res.json().catch(() => ({}));
-  }
-
-  async function bestEffortDeleteRemoved() {
-    if (!removedExistingIds.length) return;
-    await Promise.allSettled(
-      removedExistingIds.map((id) =>
-        fetch(`${BACKEND_BASE_URL}/api/property-images/${id}`, {
-          method: "DELETE",
-          headers: authToken
-            ? { Authorization: `Bearer ${authToken}` }
-            : undefined,
-        })
-      )
-    );
-  }
-
   // ---------- Submit ----------
-  const handleSubmit = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
-    setError(null);
-
-    // --- Basic validations ---
-    if (!formData.title || !formData.areaId || !formData.price || !formData.description) {
-      setError("Please fill all required fields marked with *");
-      return;
-    }
-    const numericPrice = Number(formData.price);
-    if (!isFinite(numericPrice) || numericPrice <= 0) {
-      setError("Please enter a valid price");
-      return;
-    }
-
-    // Make sure we have at least one image either existing or new
-    if (totalImagesCount === 0) {
-      setError("Please add at least one property image.");
+    if (!authToken) {
+      alert("Please log in to update this property.");
       return;
     }
 
     setLoading(true);
+    setError(null);
 
     try {
-      // 1) Upload NEW files to S3, keep order
-      const uploadedNewUrls = await uploadNewFilesToS3(propertyId);
+      // 1) Upload new images
+      const uploadedNewUrls = [];
+      if (newFiles.length > 0) {
+        setImageUploading(true);
+        for (let i = 0; i < newFiles.length; i++) {
+          const file = newFiles[i];
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("propertyId", String(propertyId));
 
-      // 2) Compose final ordered images (existing in current UI order + new in current order)
-      // Determine which is primary:
-      // - If any existing has isPrimary=true -> that one's index becomes the primary
-      // - Else the first new becomes primary (we also support setPrimaryNew by swapping to index 0)
-      const orderedExistingUrls = orderedExisting.map((i) => i.imageUrl);
-      let primaryIndexInFinal = -1;
+          const res = await fetch(`${BACKEND_BASE_URL}/api/upload/property-image`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${authToken}` },
+            body: fd,
+          });
 
-      const existingPrimaryIdx = orderedExisting.findIndex((i) => i.isPrimary);
-      if (existingPrimaryIdx >= 0) {
-        primaryIndexInFinal = existingPrimaryIdx;
-      } else if (uploadedNewUrls.length > 0) {
-        // If user set a new image primary, we swapped it to index 0 in new arrays
-        primaryIndexInFinal = orderedExistingUrls.length + 0; // first new
-      } else if (orderedExistingUrls.length > 0) {
-        primaryIndexInFinal = 0;
+          if (!res.ok) {
+            throw new Error(`Image upload failed: HTTP ${res.status}`);
+          }
+
+          const data = await res.json();
+          const url = data.data?.imageUrl || data.imageUrl;
+          if (!url) {
+            throw new Error("Upload returned no imageUrl");
+          }
+          uploadedNewUrls.push(url);
+
+          setUploadProgress(Math.round(((i + 1) / newFiles.length) * 100));
+        }
+        setImageUploading(false);
       }
 
-      const finalUrls = [...orderedExistingUrls, ...uploadedNewUrls];
+      // 2) Build final images list
+      const finalImages = [
+        ...orderedExisting.map((img, idx) => ({
+          imageUrl: img.imageUrl,
+          isPrimary: img.isPrimary,
+          displayOrder: idx,
+        })),
+        ...uploadedNewUrls.map((url, idx) => ({
+          imageUrl: url,
+          isPrimary:
+            orderedExisting.every((i) => !i.isPrimary) && idx === 0,
+          displayOrder: orderedExisting.length + idx,
+        })),
+      ];
 
-      if (finalUrls.length === 0) {
-        throw new Error("No images available to save.");
+      // Ensure exactly one primary
+      if (!finalImages.some((i) => i.isPrimary) && finalImages.length > 0) {
+        finalImages[0].isPrimary = true;
       }
-      if (primaryIndexInFinal < 0) primaryIndexInFinal = 0;
 
-      // ❗❗ CRITICAL FIX — delete all previous images so backend doesn't duplicate
+      const primaryUrl = finalImages.find((i) => i.isPrimary)?.imageUrl || "";
+
+      // 3) Delete old property images
       await fetch(
         `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
         {
           method: "DELETE",
-          headers: authToken
-            ? { Authorization: `Bearer ${authToken}` }
-            : undefined,
+          headers: { Authorization: `Bearer ${authToken}` },
         }
       );
 
-      // 3) Save (overwrite) full image list in DB with order + primary
-      await saveImagesToDatabase(propertyId, finalUrls, primaryIndexInFinal);
+      // 4) Save new images list
+      if (finalImages.length > 0) {
+        const saveRes = await fetch(
+          `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify(finalImages),
+          }
+        );
+        if (!saveRes.ok) {
+          throw new Error(`Failed to save images: HTTP ${saveRes.status}`);
+        }
+      }
 
-      // 4) Best-effort delete individually removed existing images (optional; safe even after bulk delete)
-      await bestEffortDeleteRemoved();
-
-      // 5) Prepare Property payload (update main imageUrl to the primary url)
-      const priceDisplay = formatPriceDisplay(numericPrice);
-      const selectedAreaObj =
-        areas.find((a) => String(a.areaId) === String(formData.areaId)) ||
-        null;
-
-      const primaryUrl = finalUrls[primaryIndexInFinal];
-
-      const propertyData = {
-        title: formData.title,
+      // 5) Update property
+      const payload = {
+        title: formData.title.trim(),
         type: formData.type,
-        city: formData.city,
-        address:
-          formData.address ||
-          (selectedAreaObj
-            ? `${selectedAreaObj.areaName}, ${formData.city}`
-            : formData.city),
-        imageUrl: primaryUrl, // as required
-        description: formData.description,
-        price: numericPrice,
-        priceDisplay,
-        areaSqft: formData.areaSqft ? Number(formData.areaSqft) : null,
-        bedrooms: Number(formData.bedrooms || 0),
-        bathrooms: Number(formData.bathrooms || 0),
-        balconies: formData.balconies ? Number(formData.balconies) : 0,
-        amenities: formData.amenities || null,
         listingType: formData.listingType,
-        status: "available",
-        isFeatured: property?.isFeatured || false,
-        isActive: true,
+        city: formData.city,
+        areaId: Number(formData.areaId),
+        address: formData.address.trim(),
+        imageUrl: primaryUrl,
+        bedrooms: formData.bedrooms ? Number(formData.bedrooms) : null,
+        bathrooms: formData.bathrooms ? Number(formData.bathrooms) : null,
+        balconies: formData.balconies ? Number(formData.balconies) : null,
+        areaSqft: formData.areaSqft ? Number(formData.areaSqft) : null,
+        price: formData.price ? Number(formData.price) : 0,
+        pricePerSqft: formData.pricePerSqft ? Number(formData.pricePerSqft) : null,
+        amenities: formData.amenities.trim(),
+        description: formData.description.trim(),
         ownerType: formData.ownerType,
+        constructionStatus: formData.constructionStatus,
+        possessionYear: formData.possessionYear ? Number(formData.possessionYear) : null,
+        possessionMonth: formData.possessionMonth || null,
+        reraId: formData.reraId.trim() || null,
+        hmdaId: formData.hmdaId.trim() || null,
         isReadyToMove: formData.isReadyToMove,
-        isVerified: formData.isVerified || false,
-        area: selectedAreaObj || (property?.area ? property.area : null),
-        user: { id: user?.id },
+        isVerified: formData.isVerified,
       };
 
-      // 6) Update the property core fields
-      const res = await fetch(
+      const propRes = await fetch(
         `${BACKEND_BASE_URL}/api/properties/${propertyId}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+            Authorization: `Bearer ${authToken}`,
           },
-          body: JSON.stringify(propertyData),
+          body: JSON.stringify(payload),
         }
       );
 
-      if (!res.ok) {
-        const errText = await res.text().catch(() => "");
-        throw new Error(
-          "Failed to update property: " + (errText || res.statusText)
-        );
+      if (!propRes.ok) {
+        const errText = await propRes.text();
+        throw new Error(`Failed to update property: ${errText}`);
       }
 
-      await res.json().catch(() => null);
-
+      const updated = await propRes.json();
       alert("✅ Property updated successfully!");
-      onPropertyUpdated && onPropertyUpdated();
-      onClose && onClose();
+      if (onPropertyUpdated) onPropertyUpdated(updated);
+      onClose();
     } catch (err) {
-      console.error(err);
-      setError(
-        err?.message || "Failed to update property. Please try again."
-      );
+      console.error("Update error:", err);
+      setError(err.message || "Failed to update property");
+      alert(`❌ ${err.message}`);
     } finally {
       setLoading(false);
+      setImageUploading(false);
     }
-  };
+  }
 
   // ---------- Render ----------
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated) {
     return (
-      <div className="pem-backdrop" onClick={onClose}>
-        <div className="pem-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="pem-backdrop" onClick={handleBackdropClick}>
+        <div className="pem-modal">
           <button className="pem-close" onClick={onClose}>
             ×
           </button>
-          <h2 className="pem-auth-title">Please Login First</h2>
+          <h2 className="pem-auth-title">Please log in to edit properties</h2>
         </div>
       </div>
     );
@@ -557,39 +586,30 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
 
   return (
     <div className="pem-backdrop" onClick={handleBackdropClick}>
-      <div
-        className="pem-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="pem-title"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button className="pem-close" onClick={onClose} aria-label="Close">
+      <div className="pem-modal">
+        <button className="pem-close" onClick={onClose}>
           ×
         </button>
+        <h2 className="pem-title">Edit Property</h2>
 
-        <h2 id="pem-title" className="pem-title">
-          ✏️ Edit Your Property
-        </h2>
+        {error && <div className="pem-alert">{error}</div>}
 
-        {error && <div className="pem-alert">❌ {error}</div>}
-
-        <form onSubmit={handleSubmit} className="pem-form">
+        <form className="pem-form" onSubmit={handleSubmit}>
           {/* Title */}
           <div className="pem-field">
-            <label className="pem-label">Property Title *</label>
+            <label className="pem-label">Title *</label>
             <input
               className="pem-input"
               type="text"
               name="title"
               value={formData.title}
               onChange={handleChange}
-              placeholder="e.g., Spacious 2BHK Apartment"
+              placeholder="e.g., Spacious 3BHK Apartment in Gachibowli"
               required
             />
           </div>
 
-          {/* Type + ListingType */}
+          {/* Type & Listing Type */}
           <div className="pem-row">
             <div className="pem-field">
               <label className="pem-label">Property Type *</label>
@@ -600,16 +620,15 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
                 onChange={handleChange}
                 required
               >
-                <option>Apartment</option>
-                <option>Villa</option>
-                <option>Independent House</option>
-                <option>Plot</option>
-                <option>Commercial</option>
-                <option>Penthouse</option>
-                <option>Studio</option>
-                <option>Duplex</option>
+                <option value="Apartment">Apartment</option>
+                <option value="Villa">Villa</option>
+                <option value="Plot">Plot</option>
+                <option value="Land">Land</option>
+                <option value="House">House</option>
+                <option value="Farm House">Farm House</option>
               </select>
             </div>
+
             <div className="pem-field">
               <label className="pem-label">Listing Type *</label>
               <select
@@ -619,87 +638,41 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
                 onChange={handleChange}
                 required
               >
-                <option value="sale">🏠 For Sale</option>
-                <option value="rent">🔑 For Rent</option>
+                <option value="sale">Sale</option>
+                <option value="rent">Rent</option>
               </select>
             </div>
           </div>
 
-          {/* Owner + Ready */}
-          <div className="pem-row">
-            <div className="pem-field">
-              <label className="pem-label">👤 Posted By *</label>
-              <select
-                className="pem-select"
-                name="ownerType"
-                value={formData.ownerType}
-                onChange={handleChange}
-                required
-              >
-                <option value="owner">Owner</option>
-                <option value="broker">Broker/Agent</option>
-              </select>
-            </div>
-            <div className="pem-field">
-              <label className="pem-checkbox">
-                <input
-                  type="checkbox"
-                  name="isReadyToMove"
-                  checked={formData.isReadyToMove}
-                  onChange={handleChange}
-                />
-                <span className="pem-checkbox-text">✅ Ready to Move</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Admin only: Verified */}
-          {user?.role === "ADMIN" && (
-            <div className="pem-field">
-              <label className="pem-checkbox">
-                <input
-                  type="checkbox"
-                  name="isVerified"
-                  checked={formData.isVerified}
-                  onChange={handleChange}
-                />
-                <span className="pem-checkbox-text">
-                  ✅ Verified Property (Admin Only)
-                </span>
-              </label>
-            </div>
-          )}
-
-          {/* City + Area */}
+          {/* City & Area */}
           <div className="pem-row">
             <div className="pem-field">
               <label className="pem-label">City *</label>
               <input
-                className="pem-input"
+                className="pem-input readonly"
                 type="text"
                 name="city"
                 value={formData.city}
-                onChange={handleChange}
-                required
+                readOnly
               />
             </div>
+
             <div className="pem-field">
-              <label className="pem-label">
-                📍 Area *{" "}
-                {areasLoading && <span className="pem-hint">(Loading...)</span>}
-              </label>
+              <label className="pem-label">Area *</label>
               <select
                 className="pem-select"
                 name="areaId"
                 value={formData.areaId}
                 onChange={handleChange}
+                disabled={areasLoading}
                 required
-                disabled={areasLoading || areas.length === 0}
               >
-                <option value="">-- Select Area --</option>
+                <option value="">
+                  {areasLoading ? "Loading areas..." : "Select Area"}
+                </option>
                 {areas.map((a) => (
-                  <option key={a.areaId} value={a.areaId}>
-                    {a.areaName} ({a.pincode})
+                  <option key={a.areaId || a.id} value={a.areaId || a.id}>
+                    {a.areaName || a.name}
                   </option>
                 ))}
               </select>
@@ -708,34 +681,130 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
 
           {/* Address */}
           <div className="pem-field">
-            <label className="pem-label">Complete Address (Optional)</label>
+            <label className="pem-label">Address *</label>
             <input
               className="pem-input"
               type="text"
               name="address"
               value={formData.address}
               onChange={handleChange}
-              placeholder="House/Plot number, Street name"
+              placeholder="Full address"
+              required
             />
           </div>
 
-          {/* IMAGES (Multiple) */}
-          <div className="pem-images">
-            <h3 className="pem-images-title">📁 Property Images *</h3>
+          {/* Owner Type & Construction Status */}
+          <div className="pem-row">
+            <div className="pem-field">
+              <label className="pem-label">Owner Type</label>
+              <select
+                className="pem-select"
+                name="ownerType"
+                value={formData.ownerType}
+                onChange={handleChange}
+              >
+                <option value="owner">Owner</option>
+                <option value="broker">Broker</option>
+                <option value="agent">Agent</option>
+                <option value="builder">Builder</option>
+              </select>
+            </div>
 
-            {/* Existing images (from DB) */}
+            <div className="pem-field">
+              <label className="pem-label">Construction Status</label>
+              <select
+                className="pem-select"
+                name="constructionStatus"
+                value={formData.constructionStatus}
+                onChange={handleChange}
+              >
+                <option value="ready_to_move">Ready to Move</option>
+                <option value="under_construction">Under Construction</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Possession Date */}
+          {formData.constructionStatus === "under_construction" && (
+            <div className="pem-row">
+              <div className="pem-field">
+                <label className="pem-label">Possession Month</label>
+                <select
+                  className="pem-select"
+                  name="possessionMonth"
+                  value={formData.possessionMonth}
+                  onChange={handleChange}
+                >
+                  <option value="">Select Month</option>
+                  {months.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="pem-field">
+                <label className="pem-label">Possession Year</label>
+                <select
+                  className="pem-select"
+                  name="possessionYear"
+                  value={formData.possessionYear}
+                  onChange={handleChange}
+                >
+                  <option value="">Select Year</option>
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* RERA & HMDA IDs */}
+          <div className="pem-row">
+            <div className="pem-field">
+              <label className="pem-label">RERA ID</label>
+              <input
+                className="pem-input"
+                type="text"
+                name="reraId"
+                value={formData.reraId}
+                onChange={handleChange}
+                placeholder="e.g., P02400004321"
+              />
+            </div>
+
+            <div className="pem-field">
+              <label className="pem-label">HMDA ID</label>
+              <input
+                className="pem-input"
+                type="text"
+                name="hmdaId"
+                value={formData.hmdaId}
+                onChange={handleChange}
+                placeholder="e.g., HMDA/LO/2024/12345"
+              />
+            </div>
+          </div>
+
+          {/* Images Section */}
+          <div className="pem-images">
+            <h3 className="pem-images-title">Property Images (Max 10)</h3>
+
+            {/* Existing images */}
             {orderedExisting.length > 0 && (
-              <div className="ppm-previews" style={{ marginTop: 8 }}>
+              <div className="ppm-previews">
                 {orderedExisting.map((img, idx) => (
                   <div key={img.imageId} className="ppm-preview-wrap">
                     <img
                       src={img.imageUrl}
-                      alt={`Property ${idx + 1}`}
+                      alt={`Existing ${idx + 1}`}
                       className="ppm-preview"
                     />
-                    {img.isPrimary && (
-                      <span className="ppm-primary">Primary</span>
-                    )}
+                    {img.isPrimary && <span className="ppm-primary">Primary</span>}
                     <span className="ppm-num">{idx + 1}</span>
                     <div className="ppm-controls">
                       {!img.isPrimary && (
@@ -744,7 +813,7 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
                           className="ppm-control ppm-control-primary"
                           onClick={() => setPrimaryExisting(img.imageId)}
                         >
-                          Set Primary
+                          ⭐
                         </button>
                       )}
                       <button
@@ -768,7 +837,7 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
                         className="ppm-control ppm-control-remove"
                         onClick={() => removeExistingImage(img.imageId)}
                       >
-                        Remove
+                        ❌
                       </button>
                     </div>
                   </div>
@@ -776,64 +845,58 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
               </div>
             )}
 
-            {/* New images (local, not yet uploaded) */}
+            {/* New images */}
             {newPreviews.length > 0 && (
-              <>
-                <div className="ppm-previews" style={{ marginTop: 12 }}>
-                  {newPreviews.map((src, idx) => (
-                    <div key={src} className="ppm-preview-wrap">
-                      <img
-                        src={src}
-                        alt={`New ${idx + 1}`}
-                        className="ppm-preview"
-                      />
-                      {/* If no existing image is primary, the first new image may be primary (via setPrimaryNew moves) */}
-                      {orderedExisting.every((i) => !i.isPrimary) &&
-                        idx === 0 && <span className="ppm-primary">Primary</span>}
-                      <span className="ppm-num">
-                        {orderedExisting.length + idx + 1}
-                      </span>
-                      <div className="ppm-controls">
-                        {!(
-                          orderedExisting.some((i) => i.isPrimary) &&
-                          idx === 0
-                        ) && (
-                          <button
-                            type="button"
-                            className="ppm-control ppm-control-primary"
-                            onClick={() => setPrimaryNew(idx)}
-                          >
-                            Set Primary
-                          </button>
-                        )}
+              <div className="ppm-previews" style={{ marginTop: 12 }}>
+                {newPreviews.map((src, idx) => (
+                  <div key={src} className="ppm-preview-wrap">
+                    <img
+                      src={src}
+                      alt={`New ${idx + 1}`}
+                      className="ppm-preview"
+                    />
+                    {orderedExisting.every((i) => !i.isPrimary) &&
+                      idx === 0 && <span className="ppm-primary">Primary</span>}
+                    <span className="ppm-num">
+                      {orderedExisting.length + idx + 1}
+                    </span>
+                    <div className="ppm-controls">
+                      {!(orderedExisting.some((i) => i.isPrimary) && idx === 0) && (
                         <button
                           type="button"
-                          className="ppm-control"
-                          onClick={() => moveNew(idx, "left")}
-                          disabled={idx === 0}
+                          className="ppm-control ppm-control-primary"
+                          onClick={() => setPrimaryNew(idx)}
                         >
-                          ◀
+                          ⭐
                         </button>
-                        <button
-                          type="button"
-                          className="ppm-control"
-                          onClick={() => moveNew(idx, "right")}
-                          disabled={idx === newPreviews.length - 1}
-                        >
-                          ▶
-                        </button>
-                        <button
-                          type="button"
-                          className="ppm-control ppm-control-remove"
-                          onClick={() => removeNewImage(idx)}
-                        >
-                          Remove
-                        </button>
-                      </div>
+                      )}
+                      <button
+                        type="button"
+                        className="ppm-control"
+                        onClick={() => moveNew(idx, "left")}
+                        disabled={idx === 0}
+                      >
+                        ◀
+                      </button>
+                      <button
+                        type="button"
+                        className="ppm-control"
+                        onClick={() => moveNew(idx, "right")}
+                        disabled={idx === newPreviews.length - 1}
+                      >
+                        ▶
+                      </button>
+                      <button
+                        type="button"
+                        className="ppm-control ppm-control-remove"
+                        onClick={() => removeNewImage(idx)}
+                      >
+                        ❌
+                      </button>
                     </div>
-                  ))}
-                </div>
-              </>
+                  </div>
+                ))}
+              </div>
             )}
 
             {/* File input */}
@@ -847,7 +910,7 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
               style={{ marginTop: 12 }}
             />
 
-            {/* Upload progress (for new files during submit) */}
+            {/* Upload progress */}
             {imageUploading && (
               <div className="pem-progress">
                 <div className="pem-progress-bar">
@@ -860,7 +923,7 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
               </div>
             )}
 
-            <p className="ppm-img-count">{totalImagesCount}/10 images selected</p>
+            <p className="ppm-img-count">{totalImagesCount}/10 images</p>
           </div>
 
           {/* Description */}
@@ -876,46 +939,58 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
             />
           </div>
 
-          {/* Numbers */}
-          <div className="pem-row3">
-            <div className="pem-field">
-              <label className="pem-label">🛏️ Bedrooms *</label>
-              <input
-                className="pem-input"
-                type="number"
-                min="0"
-                name="bedrooms"
-                value={formData.bedrooms}
-                onChange={handleChange}
-                required
-              />
+          {/* Bedrooms, Bathrooms, Balconies (conditional) */}
+          {!isPlotOrLandOrVilla && (
+            <div className="pem-row3">
+              <div className="pem-field">
+                <label className="pem-label">🛏️ Bedrooms *</label>
+                <input
+                  className="pem-input"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  name="bedrooms"
+                  value={formData.bedrooms}
+                  onChange={handleDecimalChange}
+                  placeholder="2"
+                  required
+                  inputMode="decimal"
+                />
+              </div>
+              <div className="pem-field">
+                <label className="pem-label">🚿 Bathrooms *</label>
+                <input
+                  className="pem-input"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  name="bathrooms"
+                  value={formData.bathrooms}
+                  onChange={handleDecimalChange}
+                  placeholder="2"
+                  required
+                  inputMode="decimal"
+                />
+              </div>
+              <div className="pem-field">
+                <label className="pem-label">🏠 Balconies</label>
+                <input
+                  className="pem-input"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  name="balconies"
+                  value={formData.balconies}
+                  onChange={handleDecimalChange}
+                  placeholder="1"
+                  inputMode="decimal"
+                />
+              </div>
             </div>
-            <div className="pem-field">
-              <label className="pem-label">🛁 Bathrooms *</label>
-              <input
-                className="pem-input"
-                type="number"
-                min="0"
-                name="bathrooms"
-                value={formData.bathrooms}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="pem-field">
-              <label className="pem-label">🧱 Balconies</label>
-              <input
-                className="pem-input"
-                type="number"
-                min="0"
-                name="balconies"
-                value={formData.balconies}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
+          )}
 
-          <div className="pem-row3">
+          {/* Area & Price Row */}
+          <div className="pem-row">
             <div className="pem-field">
               <label className="pem-label">📐 Area (sqft)</label>
               <input
@@ -924,45 +999,97 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
                 min="0"
                 name="areaSqft"
                 value={formData.areaSqft}
-                onChange={handleChange}
+                onChange={handleAreaSqftChange}
+                placeholder="1200"
+                max="99999"
+                inputMode="numeric"
               />
             </div>
+
             <div className="pem-field">
-              <label className="pem-label">💰 Price *</label>
+              <label className="pem-label">💵 Price Per Sqft (₹)</label>
+              <input
+                className="pem-input"
+                type="number"
+                min="0"
+                name="pricePerSqft"
+                value={formData.pricePerSqft}
+                onChange={handlePricePerSqftChange}
+                placeholder="5000"
+                max="99999"
+                inputMode="numeric"
+              />
+            </div>
+
+            <div className="pem-field">
+              <label className="pem-label">💰 Expected Price (₹) *</label>
               <input
                 className="pem-input"
                 type="number"
                 min="1"
                 name="price"
                 value={formData.price}
-                onChange={handleChange}
+                onChange={handlePriceChange}
+                placeholder="5000000"
                 required
+                max="1000000000"
+                inputMode="numeric"
               />
-            </div>
-            <div className="pem-field">
-              <label className="pem-label">🏷️ Listing</label>
-              <input
-                className="pem-input"
-                type="text"
-                name="listingType"
-                value={formData.listingType}
-                onChange={handleChange}
-                readOnly
-              />
+              {priceInWords && (
+                <p className="ppm-price-words">{priceInWords}</p>
+              )}
             </div>
           </div>
 
-          {/* Amenities */}
+          {/* Amenities (Interactive) */}
           <div className="pem-field">
-            <label className="pem-label">Amenities (comma separated)</label>
+            <label className="pem-label">✨ Amenities</label>
+            <div className="ppm-amenities">
+              {commonAmenities.map((amenity) => {
+                const selectedAmenities = formData.amenities
+                  ? formData.amenities.split(",").map((a) => a.trim())
+                  : [];
+                const isSelected = selectedAmenities.includes(amenity);
+
+                return (
+                  <button
+                    key={amenity}
+                    type="button"
+                    onClick={() => handleAmenityChange(amenity)}
+                    className={`ppm-amenity ${isSelected ? "selected" : ""}`}
+                  >
+                    {amenity}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Checkboxes */}
+          <div className="pem-checkbox">
             <input
-              className="pem-input"
-              type="text"
-              name="amenities"
-              value={formData.amenities}
+              type="checkbox"
+              id="isReadyToMove"
+              name="isReadyToMove"
+              checked={formData.isReadyToMove}
               onChange={handleChange}
-              placeholder="Parking, Lift, Gym"
             />
+            <label htmlFor="isReadyToMove" className="pem-checkbox-text">
+              Ready to Move
+            </label>
+          </div>
+
+          <div className="pem-checkbox">
+            <input
+              type="checkbox"
+              id="isVerified"
+              name="isVerified"
+              checked={formData.isVerified}
+              onChange={handleChange}
+            />
+            <label htmlFor="isVerified" className="pem-checkbox-text">
+              Verified Property
+            </label>
           </div>
 
           {/* Actions */}
@@ -989,4 +1116,3 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
 }
 
 export default PropertyEditModal;
- 
