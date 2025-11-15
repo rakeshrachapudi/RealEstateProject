@@ -38,14 +38,9 @@ const PropertyCard = ({
 
   const getImageUrl = () => {
     if (imageError) return getDefaultImage();
-
-    // Check for valid imageUrl
-    if (property.imageUrl &&
-        property.imageUrl !== "null" &&
-        String(property.imageUrl).trim() !== "") {
+    if (property.imageUrl && property.imageUrl !== "null" && String(property.imageUrl).trim() !== "") {
       return property.imageUrl;
     }
-
     return getDefaultImage();
   };
 
@@ -67,15 +62,12 @@ const PropertyCard = ({
     setIsDeleting(true);
     try {
       const propertyId = property.id || property.propertyId;
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/properties/${propertyId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        }
-      );
+      const response = await fetch(`${BACKEND_BASE_URL}/api/properties/${propertyId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to delete (Status: ${response.status})`);
@@ -128,7 +120,6 @@ const PropertyCard = ({
     return property.type || "N/A";
   };
 
-  // ⭐ NEW: Format construction status display
   const getConstructionStatusDisplay = () => {
     const status = property.constructionStatus;
     if (!status) return null;
@@ -139,11 +130,18 @@ const PropertyCard = ({
       const year = property.possessionYear;
       const month = property.possessionMonth;
       if (year && month) {
-        return `🚧 Under Construction (${month} ${year})`;
+        return `🚧 Under Construction (Possession: ${month} ${year})`;
       }
       return "🚧 Under Construction";
     }
     return null;
+  };
+
+  // ⭐ NEW: Format decimal values for display
+  const formatDecimal = (value) => {
+    if (!value) return null;
+    const num = Number(value);
+    return num % 1 === 0 ? num.toString() : num.toFixed(1);
   };
 
   return (
@@ -174,11 +172,7 @@ const PropertyCard = ({
           <div className="pc-image-overlay" />
 
           {dealInfo && (
-            <span
-              className={`pc-stage-badge ${getStageColorClass(
-                dealInfo.stage || dealInfo.currentStage
-              )}`}
-            >
+            <span className={`pc-stage-badge ${getStageColorClass(dealInfo.stage || dealInfo.currentStage)}`}>
               Stage: {dealInfo.stage || dealInfo.currentStage || "INQUIRY"}
             </span>
           )}
@@ -187,9 +181,7 @@ const PropertyCard = ({
         {/* Content */}
         <div className="pc-content">
           <div className="pc-type-tag">
-            {property.listingType?.toLowerCase() === "sale"
-              ? "FOR SALE"
-              : "FOR RENT"}
+            {property.listingType?.toLowerCase() === "sale" ? "FOR SALE" : "FOR RENT"}
           </div>
 
           <h3 className="pc-title">{property.title || "Property Title"}</h3>
@@ -206,38 +198,53 @@ const PropertyCard = ({
             )}
           </div>
 
+          {/* ⭐ NEW: Price Per Sqft Display */}
+          {property.pricePerSqft && (
+            <div className="pc-price-per-sqft">
+              💵 ₹{Number(property.pricePerSqft).toLocaleString("en-IN")}/sqft
+            </div>
+          )}
+
           <div className="pc-type">
             <strong>{getPropertyType()}</strong>
           </div>
 
-          {/* ⭐ NEW: Construction Status Display */}
+          {/* ⭐ ENHANCED: Construction Status Display */}
           {getConstructionStatusDisplay() && (
             <div className="pc-construction-status">
               {getConstructionStatusDisplay()}
             </div>
           )}
 
+          {/* ⭐ ENHANCED: Property Details with Decimal Support */}
           <div className="pc-details">
             {property.areaSqft && (
               <div className="pc-detail">
                 <span className="pc-detail-icon">📐</span>
-                <span>{property.areaSqft} sqft</span>
+                <span>{Number(property.areaSqft).toLocaleString("en-IN")} sqft</span>
               </div>
             )}
             {property.bedrooms > 0 && (
               <div className="pc-detail">
                 <span className="pc-detail-icon">🛏️</span>
-                <span>{property.bedrooms} Beds</span>
+                <span>{formatDecimal(property.bedrooms)} Beds</span>
               </div>
             )}
             {property.bathrooms > 0 && (
               <div className="pc-detail">
                 <span className="pc-detail-icon">🚿</span>
-                <span>{property.bathrooms} Baths</span>
+                <span>{formatDecimal(property.bathrooms)} Baths</span>
+              </div>
+            )}
+            {property.balconies > 0 && (
+              <div className="pc-detail">
+                <span className="pc-detail-icon">🏠</span>
+                <span>{formatDecimal(property.balconies)} Balconies</span>
               </div>
             )}
           </div>
 
+          {/* ⭐ ENHANCED: Amenities Display */}
           {property.amenities && (
             <div className="pc-amenities">
               <strong>✨ Amenities:</strong>{" "}
@@ -251,14 +258,22 @@ const PropertyCard = ({
             </div>
           )}
 
-          {property.user && (
-            <div className="pc-posted-by">
-              👤 Posted by: {property.user.firstName || ""}{" "}
-              {property.user.lastName || ""}
+          {/* ⭐ NEW: Owner Type Display */}
+          {property.ownerType && (
+            <div className="pc-owner-type">
+              👤 Posted by: {property.ownerType === "broker" ? "Broker" : "Owner"}
             </div>
           )}
 
-          {/* ⭐ UPDATED: Show RERA/HMDA prominently */}
+          {/* ⭐ ENHANCED: User Information Display */}
+          {property.user && (
+            <div className="pc-posted-by">
+              📞 {property.user.firstName || ""} {property.user.lastName || ""}
+              {property.user.mobileNumber && ` • ${property.user.mobileNumber}`}
+            </div>
+          )}
+
+          {/* ⭐ ENHANCED: RERA/HMDA IDs Prominent Display */}
           <div className="pc-ids">
             {property.reraId && (
               <span className="pc-id-tag pc-statutory-tag pc-highlight">
@@ -282,10 +297,7 @@ const PropertyCard = ({
 
           {dealInfo && (
             <div className="pc-deal-actions">
-              <button
-                onClick={handleViewDealClick}
-                className="pc-btn pc-btn-view"
-              >
+              <button onClick={handleViewDealClick} className="pc-btn pc-btn-view">
                 👁️ View Deal
               </button>
             </div>
