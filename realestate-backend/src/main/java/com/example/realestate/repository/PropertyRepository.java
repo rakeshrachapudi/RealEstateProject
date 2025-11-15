@@ -14,6 +14,7 @@ import java.util.List;
 
 @Repository
 public interface PropertyRepository extends JpaRepository<Property, Long> {
+
     List<Property> findByUserIdAndIsActiveTrue(Long userId);
 
     // Find by city
@@ -78,29 +79,35 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
             Pageable pageable
     );
 
-    // Check if property is featured
+    // Check if property is featured — FIXED: ensure property is active
     @Query("""
             SELECT CASE WHEN COUNT(fp) > 0 THEN true ELSE false END
             FROM FeaturedProperty fp
+            JOIN Property p ON p.id = fp.propertyId
             WHERE fp.propertyId = :propertyId
             AND fp.isActive = true
+            AND p.isActive = true
             AND (fp.featuredFrom IS NULL OR fp.featuredFrom <= :now)
             AND (fp.featuredUntil IS NULL OR fp.featuredUntil > :now)
             AND (fp.paymentStatus = 'COMPLETED' OR fp.paymentStatus = 'FREE')
             """)
-    boolean isPropertyActuallyFeatured(@Param("propertyId") Long propertyId, @Param("now") LocalDateTime now);
+    boolean isPropertyActuallyFeatured(@Param("propertyId") Long propertyId,
+                                       @Param("now") LocalDateTime now);
 
-    // Batch featured
+    // Batch featured — FIXED: do NOT include deleted properties
     @Query("""
             SELECT fp.propertyId
             FROM FeaturedProperty fp
+            JOIN Property p ON p.id = fp.propertyId
             WHERE fp.propertyId IN :propertyIds
             AND fp.isActive = true
+            AND p.isActive = true
             AND (fp.featuredFrom IS NULL OR fp.featuredFrom <= :now)
             AND (fp.featuredUntil IS NULL OR fp.featuredUntil > :now)
             AND (fp.paymentStatus = 'COMPLETED' OR fp.paymentStatus = 'FREE')
             """)
-    List<Long> findFeaturedPropertyIds(@Param("propertyIds") List<Long> propertyIds, @Param("now") LocalDateTime now);
+    List<Long> findFeaturedPropertyIds(@Param("propertyIds") List<Long> propertyIds,
+                                       @Param("now") LocalDateTime now);
 
     // User properties
     @Query("SELECT p FROM Property p WHERE p.user.id = :userId AND p.isActive = true")
@@ -115,15 +122,16 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
 
     // Find by type and listing type
     @Query("SELECT p FROM Property p WHERE LOWER(p.type) = LOWER(:type) AND LOWER(p.listingType) = LOWER(:listingType) AND p.isActive = true")
-    List<Property> findByTypeAndListingType(@Param("type") String type, @Param("listingType") String listingType);
+    List<Property> findByTypeAndListingType(@Param("type") String type,
+                                            @Param("listingType") String listingType);
 
     // Active properties
     List<Property> findByIsActiveTrueOrderByCreatedAtDesc();
 
-    // Search by title (case-insensitive)
+    // Search by title
     List<Property> findByTitleContainingIgnoreCase(String title);
 
-    // Search by ID or title or description
+    // Search by ID/title/description
     @Query("""
             SELECT p FROM Property p WHERE 
             CAST(p.id AS string) LIKE CONCAT('%', :searchTerm, '%') 
@@ -132,8 +140,7 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
             """)
     List<Property> searchByNameOrDescription(@Param("searchTerm") String searchTerm);
 
-
-    // ⭐⭐⭐ NEW METHOD #1 — GLOBAL QUICK SEARCH (ID + TITLE + DESCRIPTION + ADDRESS + CITY)
+    // Global quick search
     @Query("""
             SELECT p FROM Property p WHERE 
             CAST(p.id AS string) LIKE CONCAT('%', :q, '%')
@@ -144,13 +151,11 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
             """)
     List<Property> quickSearch(@Param("q") String q);
 
-
-    // ⭐⭐⭐ NEW METHOD #2 — SEARCH BY AREA NAME (PARTIAL MATCH)
+    // Partial area match
     @Query("""
             SELECT p FROM Property p 
             LEFT JOIN p.area a 
             WHERE LOWER(a.areaName) LIKE LOWER(CONCAT('%', :area, '%'))
             """)
     List<Property> searchByArea(@Param("area") String area);
-
 }

@@ -25,7 +25,7 @@ const PropertyList = ({
     return (
       <div className="pl-state pl-empty" role="status" aria-live="polite">
         <span className="pl-empty-icon" aria-hidden="true">
-          🏝️
+          🏘️
         </span>
         <div className="pl-empty-title">No properties found</div>
         <div className="pl-empty-subtitle">

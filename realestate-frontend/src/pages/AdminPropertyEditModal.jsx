@@ -1,8 +1,10 @@
 // AdminPropertyEditModal.jsx
 // Enhanced modal for admin to edit properties with full image management
+// Styled to match PropertyEditModal
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { BACKEND_BASE_URL } from "../config/config";
+import "./AdminPropertyEditModal.css";
 
 function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
   const [areas, setAreas] = useState([]);
@@ -13,11 +15,11 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [priceInWords, setPriceInWords] = useState("");
 
-  // ⭐ Image management state
+  // Image management state
   const [existingImages, setExistingImages] = useState([]);
-  const [selectedImages, setSelectedImages] = useState([]);
-  const [imagePreviews, setImagePreviews] = useState([]);
-  const [imagesToDelete, setImagesToDelete] = useState([]);
+  const [newFiles, setNewFiles] = useState([]);
+  const [newPreviews, setNewPreviews] = useState([]);
+  const [removedExistingIds, setRemovedExistingIds] = useState([]);
 
   const [formData, setFormData] = useState({
     title: property?.title || "",
@@ -31,9 +33,15 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
     balconies: property?.balconies || "",
     areaSqft: property?.areaSqft || "",
     price: property?.price || "",
+    pricePerSqft: property?.pricePerSqft || "",
     amenities: property?.amenities || "",
     description: property?.description || "",
     ownerType: property?.ownerType || "owner",
+    constructionStatus: property?.constructionStatus || "ready_to_move",
+    possessionYear: property?.possessionYear || "",
+    possessionMonth: property?.possessionMonth || "",
+    reraId: property?.reraId || "",
+    hmdaId: property?.hmdaId || "",
     isReadyToMove: property?.isReadyToMove || false,
     isVerified: property?.isVerified || false,
     isFeatured: property?.isFeatured || false,
@@ -56,16 +64,42 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
     "Community Hall",
   ];
 
-  // ⭐ Check if property type is plot, land, or villa (hide bathroom/balcony fields)
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 10 }, (_, i) => currentYear + i);
+
+  // Check if property type is plot, land, or villa
   const isPlotOrLandOrVilla =
     formData.type?.toLowerCase() === "plot" ||
     formData.type?.toLowerCase() === "land" ||
     formData.type?.toLowerCase() === "villa";
 
+  const propertyId = property.id || property.propertyId;
+
+  // Ordered existing images
+  const orderedExisting = useMemo(() => {
+    const arr = Array.isArray(existingImages) ? [...existingImages] : [];
+    arr.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+    return arr;
+  }, [existingImages]);
+
+  const totalImagesCount = (orderedExisting?.length || 0) + (newPreviews?.length || 0);
+
   useEffect(() => {
     loadAreas();
     loadExistingImages();
   }, []);
+
+  useEffect(() => {
+    if (formData.price) {
+      setPriceInWords(convertToIndianWords(formData.price));
+    } else {
+      setPriceInWords("");
+    }
+  }, [formData.price]);
 
   const loadAreas = async () => {
     setAreasLoading(true);
@@ -87,7 +121,6 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
 
   const loadExistingImages = async () => {
     try {
-      const propertyId = property.id || property.propertyId;
       const response = await fetch(
         `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
         {
@@ -97,11 +130,25 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
         }
       );
       if (response.ok) {
-        const images = await response.json();
-        setExistingImages(images || []);
+        const data = await response.json();
+        const list = Array.isArray(data) ? data : data?.data || [];
+        const normalized = list
+          .filter(Boolean)
+          .map((img, idx) => ({
+            imageId: img.imageId ?? img.id ?? null,
+            imageUrl: img.imageUrl,
+            isPrimary: !!img.isPrimary,
+            displayOrder: Number.isFinite(img.displayOrder) ? img.displayOrder : idx,
+            createdAt: img.createdAt || null,
+          }));
+        if (!normalized.some((i) => i.isPrimary) && normalized.length > 0) {
+          normalized[0].isPrimary = true;
+        }
+        setExistingImages(normalized);
       }
     } catch (err) {
       console.error("Error loading existing images:", err);
+      setExistingImages([]);
     }
   };
 
@@ -148,14 +195,57 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
     return words.trim() + " Rupees Only";
   };
 
-  const handlePriceChange = (e) => {
-    const priceValue = e.target.value;
-    setFormData((prev) => ({ ...prev, price: priceValue }));
-    if (priceValue) {
-      setPriceInWords(convertToIndianWords(priceValue));
-    } else {
-      setPriceInWords("");
+  const calculatePricePerSqft = (price, areaSqft) => {
+    const p = Number(price);
+    const a = Number(areaSqft);
+    if (p > 0 && a > 0) {
+      return Math.round(p / a);
     }
+    return "";
+  };
+
+  const calculateTotalPrice = (pricePerSqft, areaSqft) => {
+    const pps = Number(pricePerSqft);
+    const a = Number(areaSqft);
+    if (pps > 0 && a > 0) {
+      return Math.round(pps * a);
+    }
+    return "";
+  };
+
+  const handlePriceChange = (e) => {
+    const value = e.target.value;
+    setFormData((prev) => {
+      const newData = { ...prev, price: value };
+      if (prev.areaSqft && value) {
+        newData.pricePerSqft = calculatePricePerSqft(value, prev.areaSqft);
+      }
+      return newData;
+    });
+  };
+
+  const handlePricePerSqftChange = (e) => {
+    const value = e.target.value;
+    setFormData((prev) => {
+      const newData = { ...prev, pricePerSqft: value };
+      if (prev.areaSqft && value) {
+        newData.price = calculateTotalPrice(value, prev.areaSqft);
+      }
+      return newData;
+    });
+  };
+
+  const handleAreaSqftChange = (e) => {
+    const value = e.target.value;
+    setFormData((prev) => {
+      const newData = { ...prev, areaSqft: value };
+      if (prev.pricePerSqft && value) {
+        newData.price = calculateTotalPrice(prev.pricePerSqft, value);
+      } else if (prev.price && value) {
+        newData.pricePerSqft = calculatePricePerSqft(prev.price, value);
+      }
+      return newData;
+    });
   };
 
   const handleChange = (e) => {
@@ -165,6 +255,14 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
       [name]: type === "checkbox" ? checked : value,
     }));
     setError(null);
+  };
+
+  const handleDecimalChange = (e) => {
+    const { name, value } = e.target;
+    const regex = /^\d*\.?\d{0,1}$/;
+    if (value === "" || regex.test(value)) {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleAmenityChange = (amenity) => {
@@ -183,13 +281,12 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
     }));
   };
 
-  // ⭐ Handle new image selection
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
+  const handleNewFilesSelected = (e) => {
+    const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    const totalImages = existingImages.length + selectedImages.length + files.length;
-    if (totalImages > 10) {
+    const currentTotal = totalImagesCount;
+    if (currentTotal + files.length > 10) {
       alert("Maximum 10 images allowed per property");
       return;
     }
@@ -210,123 +307,82 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
       newPreviews.push(URL.createObjectURL(file));
     }
 
-    setSelectedImages(prev => [...prev, ...validFiles]);
-    setImagePreviews(prev => [...prev, ...newPreviews]);
+    setNewFiles(prev => [...prev, ...validFiles]);
+    setNewPreviews(prev => [...prev, ...newPreviews]);
   };
 
   const removeNewImage = (index) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
-    setImagePreviews(prev => {
-      URL.revokeObjectURL(prev[index]);
+    setNewFiles(prev => prev.filter((_, i) => i !== index));
+    setNewPreviews(prev => {
+      try {
+        URL.revokeObjectURL(prev[index]);
+      } catch {}
       return prev.filter((_, i) => i !== index);
     });
   };
 
-  const markExistingImageForDeletion = (imageId) => {
-    setImagesToDelete(prev => [...prev, imageId]);
-    setExistingImages(prev => prev.filter(img => img.imageId !== imageId));
+  const removeExistingImage = (imageId) => {
+    setExistingImages((prev) =>
+      prev.filter((img) => img.imageId !== imageId)
+    );
+    setRemovedExistingIds((prev) => [...prev, imageId]);
   };
 
-  const setPrimaryExistingImage = async (imageId) => {
-    try {
-      const propertyId = property.id || property.propertyId;
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/property-images/${imageId}/set-primary`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-          body: JSON.stringify({ propertyId }),
-        }
-      );
-      if (response.ok) {
-        loadExistingImages();
-      }
-    } catch (err) {
-      console.error("Error setting primary image:", err);
+  const setPrimaryExisting = (imageId) => {
+    setExistingImages((prev) =>
+      prev.map((img) => ({
+        ...img,
+        isPrimary: img.imageId === imageId,
+      }))
+    );
+  };
+
+  const setPrimaryNew = (index) => {
+    setExistingImages((prev) => prev.map((i) => ({ ...i, isPrimary: false })));
+    if (index > 0) {
+      setNewFiles((prev) => {
+        const arr = [...prev];
+        [arr[0], arr[index]] = [arr[index], arr[0]];
+        return arr;
+      });
+      setNewPreviews((prev) => {
+        const arr = [...prev];
+        [arr[0], arr[index]] = [arr[index], arr[0]];
+        return arr;
+      });
     }
   };
 
-  const uploadNewImages = async (propertyId) => {
-    if (selectedImages.length === 0) return [];
-
-    const uploadedUrls = [];
-    setImageUploading(true);
-
-    for (let i = 0; i < selectedImages.length; i++) {
-      const file = selectedImages[i];
-      const formData = new FormData();
-      formData.append("file", file);
-
-      try {
-        setUploadProgress(Math.round(((i + 1) / selectedImages.length) * 100));
-        const response = await fetch(
-          `${BACKEND_BASE_URL}/api/upload/property-image?propertyId=${propertyId}`,
-          {
-            method: "POST",
-            body: formData,
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            uploadedUrls.push(data.url);
-          }
-        }
-      } catch (err) {
-        console.error("Error uploading image:", err);
-      }
-    }
-
-    setImageUploading(false);
-    setUploadProgress(0);
-    return uploadedUrls;
+  const moveExisting = (imageId, direction) => {
+    setExistingImages((prev) => {
+      const arr = [...prev];
+      const idx = arr.findIndex((i) => i.imageId === imageId);
+      if (idx < 0) return arr;
+      const target = direction === "left" ? idx - 1 : idx + 1;
+      if (target < 0 || target >= arr.length) return arr;
+      [arr[idx], arr[target]] = [arr[target], arr[idx]];
+      return arr.map((img, i) => ({ ...img, displayOrder: i }));
+    });
   };
 
-  const saveImagesToDatabase = async (propertyId, imageUrls) => {
-    if (imageUrls.length === 0) return;
-
-    const imageRequests = imageUrls.map((url, index) => ({
-      imageUrl: url,
-      isPrimary: existingImages.length === 0 && index === 0,
-      displayOrder: existingImages.length + index,
-    }));
-
-    try {
-      await fetch(
-        `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-          body: JSON.stringify(imageRequests),
-        }
-      );
-    } catch (err) {
-      console.error("Error saving images to database:", err);
-    }
+  const moveNew = (index, direction) => {
+    const target = direction === "left" ? index - 1 : index + 1;
+    if (target < 0 || target >= newFiles.length) return;
+    setNewFiles((prev) => {
+      const arr = [...prev];
+      [arr[index], arr[target]] = [arr[target], arr[index]];
+      return arr;
+    });
+    setNewPreviews((prev) => {
+      const arr = [...prev];
+      [arr[index], arr[target]] = [arr[target], arr[index]];
+      return arr;
+    });
   };
 
-  const deleteMarkedImages = async () => {
-    for (const imageId of imagesToDelete) {
-      try {
-        await fetch(
-          `${BACKEND_BASE_URL}/api/property-images/${imageId}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-            },
-          }
-        );
-      } catch (err) {
-        console.error("Error deleting image:", err);
-      }
+  const handleBackdropClick = (e) => {
+    if (e.target.classList.contains("pem-backdrop")) {
+      onClose && onClose();
     }
   };
 
@@ -335,7 +391,7 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
     setLoading(true);
     setError(null);
 
-    // Validation - skip bedroom/bathroom validation for plot/land/villa
+    // Validation
     if (!formData.title || !formData.areaId || !formData.price || !formData.description) {
       setError("Please fill all required fields marked with *");
       setLoading(false);
@@ -357,15 +413,6 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
       return;
     }
 
-    let priceDisplay;
-    if (numericPrice >= 10000000) {
-      priceDisplay = `₹${(numericPrice / 10000000).toFixed(2)} Cr`;
-    } else if (numericPrice >= 100000) {
-      priceDisplay = `₹${(numericPrice / 100000).toFixed(2)} Lac`;
-    } else {
-      priceDisplay = `₹${numericPrice.toLocaleString("en-IN")}`;
-    }
-
     const selectedAreaObject = areas.find(
       (area) => area.areaId.toString() === formData.areaId.toString()
     );
@@ -376,56 +423,126 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
       return;
     }
 
-    const propertyId = property.id || property.propertyId;
-
-    // Build property data - conditionally include bedroom/bathroom fields
-    const propertyData = {
-      title: formData.title,
-      type: formData.type,
-      city: formData.city,
-      address: formData.address || `${selectedAreaObject.areaName}, ${formData.city}`,
-      imageUrl: existingImages[0]?.imageUrl || property.imageUrl || "",
-      description: formData.description,
-      price: numericPrice,
-      priceDisplay: priceDisplay,
-      areaSqft: formData.areaSqft ? parseFloat(formData.areaSqft) : null,
-      amenities: formData.amenities || null,
-      listingType: formData.listingType,
-      status: formData.status,
-      isFeatured: formData.isFeatured,
-      isActive: true,
-      ownerType: formData.ownerType,
-      isReadyToMove: formData.isReadyToMove,
-      isVerified: formData.isVerified,
-      area: selectedAreaObject,
-      user: property.user,
-    };
-
-    // ⭐ Only include bedroom/bathroom/balconies if not plot/land/villa
-    if (!isPlotOrLandOrVilla) {
-      propertyData.bedrooms = parseInt(formData.bedrooms);
-      propertyData.bathrooms = parseInt(formData.bathrooms);
-      propertyData.balconies = parseInt(formData.balconies || "0");
-    } else {
-      // Set to 0 for plot/land/villa
-      propertyData.bedrooms = 0;
-      propertyData.bathrooms = 0;
-      propertyData.balconies = 0;
-    }
-
     try {
-      // 1. Delete marked images
-      await deleteMarkedImages();
+      // 1) Upload new images
+      const uploadedNewUrls = [];
+      if (newFiles.length > 0) {
+        setImageUploading(true);
+        for (let i = 0; i < newFiles.length; i++) {
+          const file = newFiles[i];
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("propertyId", String(propertyId));
 
-      // 2. Upload new images
-      const uploadedUrls = await uploadNewImages(propertyId);
+          const res = await fetch(`${BACKEND_BASE_URL}/api/upload/property-image`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
+            body: fd,
+          });
 
-      // 3. Save new images to database
-      if (uploadedUrls.length > 0) {
-        await saveImagesToDatabase(propertyId, uploadedUrls);
+          if (!res.ok) {
+            throw new Error(`Image upload failed: HTTP ${res.status}`);
+          }
+
+          const data = await res.json();
+          const url = data.data?.imageUrl || data.imageUrl;
+          if (!url) {
+            throw new Error("Upload returned no imageUrl");
+          }
+          uploadedNewUrls.push(url);
+
+          setUploadProgress(Math.round(((i + 1) / newFiles.length) * 100));
+        }
+        setImageUploading(false);
       }
 
-      // 4. Update property details
+      // 2) Build final images list
+      const finalImages = [
+        ...orderedExisting.map((img, idx) => ({
+          imageUrl: img.imageUrl,
+          isPrimary: img.isPrimary,
+          displayOrder: idx,
+        })),
+        ...uploadedNewUrls.map((url, idx) => ({
+          imageUrl: url,
+          isPrimary: orderedExisting.every((i) => !i.isPrimary) && idx === 0,
+          displayOrder: orderedExisting.length + idx,
+        })),
+      ];
+
+      // Ensure exactly one primary
+      if (!finalImages.some((i) => i.isPrimary) && finalImages.length > 0) {
+        finalImages[0].isPrimary = true;
+      }
+
+      const primaryUrl = finalImages.find((i) => i.isPrimary)?.imageUrl || "";
+
+      // 3) Delete old property images
+      await fetch(
+        `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
+        }
+      );
+
+      // 4) Save new images list
+      if (finalImages.length > 0) {
+        const saveRes = await fetch(
+          `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            },
+            body: JSON.stringify(finalImages),
+          }
+        );
+        if (!saveRes.ok) {
+          throw new Error(`Failed to save images: HTTP ${saveRes.status}`);
+        }
+      }
+
+      // 5) Update property details
+      const propertyData = {
+        title: formData.title,
+        type: formData.type,
+        city: formData.city,
+        address: formData.address || `${selectedAreaObject.areaName}, ${formData.city}`,
+        imageUrl: primaryUrl,
+        description: formData.description,
+        price: numericPrice,
+        areaSqft: formData.areaSqft ? parseFloat(formData.areaSqft) : null,
+        pricePerSqft: formData.pricePerSqft ? Number(formData.pricePerSqft) : null,
+        amenities: formData.amenities || null,
+        listingType: formData.listingType,
+        status: formData.status,
+        isFeatured: formData.isFeatured,
+        isActive: true,
+        ownerType: formData.ownerType,
+        constructionStatus: formData.constructionStatus,
+        possessionYear: formData.possessionYear ? Number(formData.possessionYear) : null,
+        possessionMonth: formData.possessionMonth || null,
+        reraId: formData.reraId.trim() || null,
+        hmdaId: formData.hmdaId.trim() || null,
+        isReadyToMove: formData.isReadyToMove,
+        isVerified: formData.isVerified,
+        area: selectedAreaObject,
+        user: property.user,
+      };
+
+      // Only include bedroom/bathroom/balconies if not plot/land/villa
+      if (!isPlotOrLandOrVilla) {
+        propertyData.bedrooms = parseInt(formData.bedrooms);
+        propertyData.bathrooms = parseInt(formData.bathrooms);
+        propertyData.balconies = parseInt(formData.balconies || "0");
+      } else {
+        propertyData.bedrooms = 0;
+        propertyData.bathrooms = 0;
+        propertyData.balconies = 0;
+      }
+
       const response = await fetch(
         `${BACKEND_BASE_URL}/api/properties/${propertyId}`,
         {
@@ -450,57 +567,58 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
     } catch (err) {
       console.error("❌ Error updating property:", err);
       setError(err.message || "Failed to update property. Please try again.");
+      alert(`❌ ${err.message}`);
     } finally {
       setLoading(false);
+      setImageUploading(false);
     }
   };
 
   return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div style={styles.header}>
-          <h2 style={styles.title}>✏️ Edit Property</h2>
-          <button style={styles.closeButton} onClick={onClose}>
-            ✕
-          </button>
-        </div>
+    <div className="pem-backdrop" onClick={handleBackdropClick}>
+      <div className="pem-modal">
+        <button className="pem-close" onClick={onClose}>
+          ×
+        </button>
+        <h2 className="pem-title">✏️ Edit Property (Admin)</h2>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          {error && <div style={styles.error}>{error}</div>}
+        {error && <div className="pem-alert">{error}</div>}
 
+        <form className="pem-form" onSubmit={handleSubmit}>
           {/* Property ID (Read-only) */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Property ID</label>
+          <div className="pem-field">
+            <label className="pem-label">Property ID</label>
             <input
               type="text"
-              value={property.id || property.propertyId}
+              className="pem-input readonly"
+              value={propertyId}
               disabled
-              style={{ ...styles.input, backgroundColor: "#f5f5f5" }}
             />
           </div>
 
           {/* Title */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Title *</label>
+          <div className="pem-field">
+            <label className="pem-label required">Title</label>
             <input
               type="text"
+              className="pem-input"
               name="title"
               value={formData.title}
               onChange={handleChange}
-              style={styles.input}
+              placeholder="e.g., Spacious 3BHK Apartment in Gachibowli"
               required
             />
           </div>
 
           {/* Type & Listing Type */}
-          <div style={styles.row}>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Property Type *</label>
+          <div className="pem-row">
+            <div className="pem-field">
+              <label className="pem-label required">Property Type</label>
               <select
+                className="pem-select"
                 name="type"
                 value={formData.type}
                 onChange={handleChange}
-                style={styles.select}
                 required
               >
                 <option value="Apartment">Apartment</option>
@@ -512,13 +630,13 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
               </select>
             </div>
 
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Listing Type *</label>
+            <div className="pem-field">
+              <label className="pem-label required">Listing Type</label>
               <select
+                className="pem-select"
                 name="listingType"
                 value={formData.listingType}
                 onChange={handleChange}
-                style={styles.select}
                 required
               >
                 <option value="sale">For Sale</option>
@@ -528,31 +646,31 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
           </div>
 
           {/* City & Area */}
-          <div style={styles.row}>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>City *</label>
-              <select
+          <div className="pem-row">
+            <div className="pem-field">
+              <label className="pem-label required">City</label>
+              <input
+                className="pem-input readonly"
+                type="text"
                 name="city"
                 value={formData.city}
-                onChange={handleChange}
-                style={styles.select}
-                required
-              >
-                <option value="Hyderabad">Hyderabad</option>
-              </select>
+                readOnly
+              />
             </div>
 
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Area *</label>
+            <div className="pem-field">
+              <label className="pem-label required">Area</label>
               <select
+                className="pem-select"
                 name="areaId"
                 value={formData.areaId}
                 onChange={handleChange}
-                style={styles.select}
-                required
                 disabled={areasLoading}
+                required
               >
-                <option value="">Select Area</option>
+                <option value="">
+                  {areasLoading ? "Loading areas..." : "Select Area"}
+                </option>
                 {areas.map((area) => (
                   <option key={area.areaId} value={area.areaId}>
                     {area.areaName}
@@ -563,105 +681,27 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
           </div>
 
           {/* Address */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Address</label>
+          <div className="pem-field">
+            <label className="pem-label">Address</label>
             <input
               type="text"
+              className="pem-input"
               name="address"
               value={formData.address}
               onChange={handleChange}
-              style={styles.input}
               placeholder="Optional - auto-generated if empty"
             />
           </div>
 
-          {/* ⭐ Conditionally show Bedrooms, Bathrooms, Balconies */}
-          {!isPlotOrLandOrVilla && (
-            <div style={styles.row}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Bedrooms *</label>
-                <input
-                  type="number"
-                  name="bedrooms"
-                  value={formData.bedrooms}
-                  onChange={handleChange}
-                  style={styles.input}
-                  min="0"
-                  required
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Bathrooms *</label>
-                <input
-                  type="number"
-                  name="bathrooms"
-                  value={formData.bathrooms}
-                  onChange={handleChange}
-                  style={styles.input}
-                  min="0"
-                  required
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Balconies</label>
-                <input
-                  type="number"
-                  name="balconies"
-                  value={formData.balconies}
-                  onChange={handleChange}
-                  style={styles.input}
-                  min="0"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Area (Sqft) & Price */}
-          <div style={styles.row}>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Area (Sqft)</label>
-              <input
-                type="number"
-                name="areaSqft"
-                value={formData.areaSqft}
-                onChange={handleChange}
-                style={styles.input}
-                min="0"
-              />
-            </div>
-
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Price (₹) *</label>
-              <input
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handlePriceChange}
-                style={styles.input}
-                required
-                min="0"
-              />
-            </div>
-          </div>
-
-          {/* Price in Words */}
-          {priceInWords && (
-            <div style={styles.priceInWords}>
-              <strong>In Words:</strong> {priceInWords}
-            </div>
-          )}
-
-          {/* Owner Type & Status */}
-          <div style={styles.row}>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Owner Type</label>
+          {/* Owner Type & Construction Status */}
+          <div className="pem-row">
+            <div className="pem-field">
+              <label className="pem-label">Owner Type</label>
               <select
+                className="pem-select"
                 name="ownerType"
                 value={formData.ownerType}
                 onChange={handleChange}
-                style={styles.select}
               >
                 <option value="owner">Owner</option>
                 <option value="builder">Builder</option>
@@ -669,201 +709,432 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
               </select>
             </div>
 
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Status</label>
+            <div className="pem-field">
+              <label className="pem-label">Construction Status</label>
               <select
-                name="status"
-                value={formData.status}
+                className="pem-select"
+                name="constructionStatus"
+                value={formData.constructionStatus}
                 onChange={handleChange}
-                style={styles.select}
               >
-                <option value="available">Available</option>
-                <option value="sold">Sold</option>
-                <option value="rented">Rented</option>
+                <option value="ready_to_move">Ready to Move</option>
+                <option value="under_construction">Under Construction</option>
               </select>
             </div>
           </div>
 
-          {/* Checkboxes */}
-          <div style={styles.checkboxGroup}>
-            <label style={styles.checkboxLabel}>
-              <input
-                type="checkbox"
-                name="isReadyToMove"
-                checked={formData.isReadyToMove}
-                onChange={handleChange}
-              />
-              Ready to Move
-            </label>
+          {/* Possession Date */}
+          {formData.constructionStatus === "under_construction" && (
+            <div className="pem-row">
+              <div className="pem-field">
+                <label className="pem-label">Possession Month</label>
+                <select
+                  className="pem-select"
+                  name="possessionMonth"
+                  value={formData.possessionMonth}
+                  onChange={handleChange}
+                >
+                  <option value="">Select Month</option>
+                  {months.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <label style={styles.checkboxLabel}>
-              <input
-                type="checkbox"
-                name="isVerified"
-                checked={formData.isVerified}
-                onChange={handleChange}
-              />
-              Verified
-            </label>
+              <div className="pem-field">
+                <label className="pem-label">Possession Year</label>
+                <select
+                  className="pem-select"
+                  name="possessionYear"
+                  value={formData.possessionYear}
+                  onChange={handleChange}
+                >
+                  <option value="">Select Year</option>
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
 
-            <label style={styles.checkboxLabel}>
+          {/* RERA & HMDA IDs */}
+          <div className="pem-row">
+            <div className="pem-field">
+              <label className="pem-label">RERA ID</label>
               <input
-                type="checkbox"
-                name="isFeatured"
-                checked={formData.isFeatured}
+                className="pem-input"
+                type="text"
+                name="reraId"
+                value={formData.reraId}
                 onChange={handleChange}
+                placeholder="e.g., P02400004321"
               />
-              Featured
-            </label>
-          </div>
+            </div>
 
-          {/* Amenities */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Amenities</label>
-            <div style={styles.amenitiesGrid}>
-              {commonAmenities.map((amenity) => (
-                <label key={amenity} style={styles.amenityLabel}>
-                  <input
-                    type="checkbox"
-                    checked={formData.amenities?.includes(amenity)}
-                    onChange={() => handleAmenityChange(amenity)}
-                  />
-                  {amenity}
-                </label>
-              ))}
+            <div className="pem-field">
+              <label className="pem-label">HMDA ID</label>
+              <input
+                className="pem-input"
+                type="text"
+                name="hmdaId"
+                value={formData.hmdaId}
+                onChange={handleChange}
+                placeholder="e.g., HMDA/LO/2024/12345"
+              />
             </div>
           </div>
 
+          {/* Status (Admin only field) */}
+          <div className="pem-field">
+            <label className="pem-label">Status</label>
+            <select
+              className="pem-select"
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+            >
+              <option value="available">Available</option>
+              <option value="sold">Sold</option>
+              <option value="rented">Rented</option>
+            </select>
+          </div>
+
+          {/* Images Section */}
+          <div className="pem-images">
+            <h3 className="pem-images-title">Property Images (Max 10)</h3>
+
+            {/* Existing images */}
+            {orderedExisting.length > 0 && (
+              <div className="ppm-previews">
+                {orderedExisting.map((img, idx) => (
+                  <div key={img.imageId} className="ppm-preview-wrap">
+                    <img
+                      src={img.imageUrl}
+                      alt={`Existing ${idx + 1}`}
+                      className="ppm-preview"
+                    />
+                    {img.isPrimary && <span className="ppm-primary">Primary</span>}
+                    <span className="ppm-num">{idx + 1}</span>
+                    <div className="ppm-controls">
+                      {!img.isPrimary && (
+                        <button
+                          type="button"
+                          className="ppm-control ppm-control-primary"
+                          onClick={() => setPrimaryExisting(img.imageId)}
+                        >
+                          ⭐
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="ppm-control"
+                        onClick={() => moveExisting(img.imageId, "left")}
+                        disabled={idx === 0}
+                      >
+                        ◀
+                      </button>
+                      <button
+                        type="button"
+                        className="ppm-control"
+                        onClick={() => moveExisting(img.imageId, "right")}
+                        disabled={idx === orderedExisting.length - 1}
+                      >
+                        ▶
+                      </button>
+                      <button
+                        type="button"
+                        className="ppm-control ppm-control-remove"
+                        onClick={() => removeExistingImage(img.imageId)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* New images */}
+            {newPreviews.length > 0 && (
+              <div className="ppm-previews" style={{ marginTop: 12 }}>
+                {newPreviews.map((src, idx) => (
+                  <div key={src} className="ppm-preview-wrap">
+                    <img
+                      src={src}
+                      alt={`New ${idx + 1}`}
+                      className="ppm-preview"
+                    />
+                    {orderedExisting.every((i) => !i.isPrimary) &&
+                      idx === 0 && <span className="ppm-primary">Primary</span>}
+                    <span className="ppm-num">
+                      {orderedExisting.length + idx + 1}
+                    </span>
+                    <div className="ppm-controls">
+                      {!(orderedExisting.some((i) => i.isPrimary) && idx === 0) && (
+                        <button
+                          type="button"
+                          className="ppm-control ppm-control-primary"
+                          onClick={() => setPrimaryNew(idx)}
+                        >
+                          ⭐
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="ppm-control"
+                        onClick={() => moveNew(idx, "left")}
+                        disabled={idx === 0}
+                      >
+                        ◀
+                      </button>
+                      <button
+                        type="button"
+                        className="ppm-control"
+                        onClick={() => moveNew(idx, "right")}
+                        disabled={idx === newPreviews.length - 1}
+                      >
+                        ▶
+                      </button>
+                      <button
+                        type="button"
+                        className="ppm-control ppm-control-remove"
+                        onClick={() => removeNewImage(idx)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* File input */}
+            <input
+              className="pem-file"
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleNewFilesSelected}
+              disabled={imageUploading}
+              style={{ marginTop: 12 }}
+            />
+
+            {/* Upload progress */}
+            {imageUploading && (
+              <div className="pem-progress">
+                <div className="pem-progress-bar">
+                  <div
+                    className="pem-progress-fill"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+                <p className="pem-progress-text">Uploading {uploadProgress}%</p>
+              </div>
+            )}
+
+            <p className="ppm-img-count">{totalImagesCount}/10 images</p>
+          </div>
+
           {/* Description */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Description *</label>
+          <div className="pem-field">
+            <label className="pem-label required">Description</label>
             <textarea
+              className="pem-textarea"
               name="description"
               value={formData.description}
               onChange={handleChange}
-              style={styles.textarea}
-              rows="4"
+              placeholder="Describe your property..."
               required
             />
           </div>
 
-          {/* Image Management */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Property Images (Max 10)</label>
-
-            {/* Existing Images */}
-            {existingImages.length > 0 && (
-              <div style={styles.imageSection}>
-                <h4 style={styles.sectionTitle}>Existing Images</h4>
-                <div style={styles.imagesGrid}>
-                  {existingImages.map((img) => (
-                    <div key={img.imageId} style={styles.imageCard}>
-                      <img
-                        src={img.imageUrl}
-                        alt="Property"
-                        style={styles.imagePreview}
-                      />
-                      <div style={styles.imageActions}>
-                        {img.isPrimary && (
-                          <span style={styles.primaryBadge}>Primary</span>
-                        )}
-                        {!img.isPrimary && (
-                          <button
-                            type="button"
-                            onClick={() => setPrimaryExistingImage(img.imageId)}
-                            style={styles.setPrimaryBtn}
-                          >
-                            Set Primary
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => markExistingImageForDeletion(img.imageId)}
-                          style={styles.deleteImgBtn}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* New Images Preview */}
-            {selectedImages.length > 0 && (
-              <div style={styles.imageSection}>
-                <h4 style={styles.sectionTitle}>New Images to Upload</h4>
-                <div style={styles.imagesGrid}>
-                  {imagePreviews.map((preview, idx) => (
-                    <div key={idx} style={styles.imageCard}>
-                      <img
-                        src={preview}
-                        alt={`Preview ${idx + 1}`}
-                        style={styles.imagePreview}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeNewImage(idx)}
-                        style={styles.deleteImgBtn}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Upload Button */}
-            {existingImages.length + selectedImages.length < 10 && (
-              <div style={styles.uploadSection}>
+          {/* Bedrooms, Bathrooms, Balconies (conditional) */}
+          {!isPlotOrLandOrVilla && (
+            <div className="pem-row3">
+              <div className="pem-field">
+                <label className="pem-label required">🛏️ Bedrooms</label>
                 <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  style={{ display: "none" }}
-                  id="property-images"
+                  className="pem-input"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  name="bedrooms"
+                  value={formData.bedrooms}
+                  onChange={handleDecimalChange}
+                  placeholder="2"
+                  required
+                  inputMode="decimal"
                 />
-                <label htmlFor="property-images" style={styles.uploadButton}>
-                  📷 Add More Images
-                </label>
               </div>
-            )}
+              <div className="pem-field">
+                <label className="pem-label required">🚿 Bathrooms</label>
+                <input
+                  className="pem-input"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  name="bathrooms"
+                  value={formData.bathrooms}
+                  onChange={handleDecimalChange}
+                  placeholder="2"
+                  required
+                  inputMode="decimal"
+                />
+              </div>
+              <div className="pem-field">
+                <label className="pem-label">🏠 Balconies</label>
+                <input
+                  className="pem-input"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  name="balconies"
+                  value={formData.balconies}
+                  onChange={handleDecimalChange}
+                  placeholder="1"
+                  inputMode="decimal"
+                />
+              </div>
+            </div>
+          )}
 
-            {/* Upload Progress */}
-            {imageUploading && (
-              <div style={styles.uploadProgress}>
-                <div style={styles.progressBar}>
-                  <div
-                    style={{
-                      ...styles.progressFill,
-                      width: `${uploadProgress}%`,
-                    }}
-                  />
-                </div>
-                <span>Uploading: {uploadProgress}%</span>
-              </div>
-            )}
+          {/* Area & Price Row */}
+          <div className="pem-row">
+            <div className="pem-field">
+              <label className="pem-label">📐 Area (sqft)</label>
+              <input
+                className="pem-input"
+                type="number"
+                min="0"
+                name="areaSqft"
+                value={formData.areaSqft}
+                onChange={handleAreaSqftChange}
+                placeholder="1200"
+                max="99999"
+                inputMode="numeric"
+              />
+            </div>
+
+            <div className="pem-field">
+              <label className="pem-label">💵 Price Per Sqft (₹)</label>
+              <input
+                className="pem-input"
+                type="number"
+                min="0"
+                name="pricePerSqft"
+                value={formData.pricePerSqft}
+                onChange={handlePricePerSqftChange}
+                placeholder="5000"
+                max="99999"
+                inputMode="numeric"
+              />
+            </div>
+
+            <div className="pem-field">
+              <label className="pem-label required">💰 Expected Price (₹)</label>
+              <input
+                className="pem-input"
+                type="number"
+                min="1"
+                name="price"
+                value={formData.price}
+                onChange={handlePriceChange}
+                placeholder="5000000"
+                required
+                max="1000000000"
+                inputMode="numeric"
+              />
+              {priceInWords && (
+                <p className="ppm-price-words">{priceInWords}</p>
+              )}
+            </div>
           </div>
 
-          {/* Submit Button */}
-          <div style={styles.buttonGroup}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={styles.cancelButton}
-              disabled={loading}
-            >
-              Cancel
-            </button>
+          {/* Amenities (Interactive) */}
+          <div className="pem-field">
+            <label className="pem-label">✨ Amenities</label>
+            <div className="ppm-amenities">
+              {commonAmenities.map((amenity) => {
+                const selectedAmenities = formData.amenities
+                  ? formData.amenities.split(",").map((a) => a.trim())
+                  : [];
+                const isSelected = selectedAmenities.includes(amenity);
+
+                return (
+                  <button
+                    key={amenity}
+                    type="button"
+                    onClick={() => handleAmenityChange(amenity)}
+                    className={`ppm-amenity ${isSelected ? "selected" : ""}`}
+                  >
+                    {amenity}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Checkboxes */}
+          <div className="pem-checkbox">
+            <input
+              type="checkbox"
+              id="isReadyToMove"
+              name="isReadyToMove"
+              checked={formData.isReadyToMove}
+              onChange={handleChange}
+            />
+            <label htmlFor="isReadyToMove" className="pem-checkbox-text">
+              Ready to Move
+            </label>
+          </div>
+
+          <div className="pem-checkbox">
+            <input
+              type="checkbox"
+              id="isVerified"
+              name="isVerified"
+              checked={formData.isVerified}
+              onChange={handleChange}
+            />
+            <label htmlFor="isVerified" className="pem-checkbox-text">
+              Verified Property
+            </label>
+          </div>
+
+          <div className="pem-checkbox">
+            <input
+              type="checkbox"
+              id="isFeatured"
+              name="isFeatured"
+              checked={formData.isFeatured}
+              onChange={handleChange}
+            />
+            <label htmlFor="isFeatured" className="pem-checkbox-text">
+              Featured Property (Admin)
+            </label>
+          </div>
+
+          {/* Actions */}
+          <div className="pem-actions">
             <button
               type="submit"
-              style={styles.submitButton}
+              className="pem-btn pem-btn-primary"
               disabled={loading || imageUploading}
             >
               {loading ? "Updating..." : "Update Property"}
+            </button>
+            <button
+              type="button"
+              className="pem-btn pem-btn-secondary"
+              onClick={onClose}
+              disabled={loading}
+            >
+              Cancel
             </button>
           </div>
         </form>
@@ -871,271 +1142,5 @@ function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
     </div>
   );
 }
-
-const styles = {
-  overlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1000,
-    padding: "20px",
-  },
-  modal: {
-    backgroundColor: "white",
-    borderRadius: "12px",
-    maxWidth: "900px",
-    width: "100%",
-    maxHeight: "90vh",
-    overflow: "auto",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "20px 24px",
-    borderBottom: "2px solid #e5e7eb",
-    position: "sticky",
-    top: 0,
-    backgroundColor: "white",
-    zIndex: 1,
-  },
-  title: {
-    margin: 0,
-    fontSize: "24px",
-    fontWeight: "700",
-    color: "#1e293b",
-  },
-  closeButton: {
-    background: "none",
-    border: "none",
-    fontSize: "28px",
-    cursor: "pointer",
-    color: "#64748b",
-    padding: "0",
-    width: "32px",
-    height: "32px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  form: {
-    padding: "24px",
-  },
-  error: {
-    backgroundColor: "#fee2e2",
-    color: "#dc2626",
-    padding: "12px 16px",
-    borderRadius: "8px",
-    marginBottom: "20px",
-    border: "1px solid #fecaca",
-  },
-  formGroup: {
-    marginBottom: "20px",
-    flex: 1,
-  },
-  label: {
-    display: "block",
-    marginBottom: "8px",
-    fontWeight: "600",
-    color: "#1e293b",
-    fontSize: "14px",
-  },
-  input: {
-    width: "100%",
-    padding: "12px",
-    border: "1px solid #e2e8f0",
-    borderRadius: "8px",
-    fontSize: "14px",
-    boxSizing: "border-box",
-  },
-  select: {
-    width: "100%",
-    padding: "12px",
-    border: "1px solid #e2e8f0",
-    borderRadius: "8px",
-    fontSize: "14px",
-    boxSizing: "border-box",
-    backgroundColor: "white",
-  },
-  textarea: {
-    width: "100%",
-    padding: "12px",
-    border: "1px solid #e2e8f0",
-    borderRadius: "8px",
-    fontSize: "14px",
-    boxSizing: "border-box",
-    resize: "vertical",
-    fontFamily: "inherit",
-  },
-  row: {
-    display: "flex",
-    gap: "16px",
-  },
-  priceInWords: {
-    backgroundColor: "#f0fdf4",
-    border: "1px solid #bbf7d0",
-    padding: "12px 16px",
-    borderRadius: "8px",
-    marginBottom: "20px",
-    fontSize: "13px",
-    color: "#166534",
-  },
-  checkboxGroup: {
-    display: "flex",
-    gap: "20px",
-    marginBottom: "20px",
-    flexWrap: "wrap",
-  },
-  checkboxLabel: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    fontSize: "14px",
-    color: "#1e293b",
-    cursor: "pointer",
-  },
-  amenitiesGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-    gap: "12px",
-    marginTop: "8px",
-  },
-  amenityLabel: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    fontSize: "14px",
-    color: "#1e293b",
-    cursor: "pointer",
-  },
-  imageSection: {
-    marginBottom: "20px",
-  },
-  sectionTitle: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#1e293b",
-    marginBottom: "12px",
-  },
-  imagesGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-    gap: "12px",
-  },
-  imageCard: {
-    position: "relative",
-    borderRadius: "8px",
-    overflow: "hidden",
-    border: "1px solid #e2e8f0",
-  },
-  imagePreview: {
-    width: "100%",
-    height: "150px",
-    objectFit: "cover",
-  },
-  imageActions: {
-    padding: "8px",
-    display: "flex",
-    gap: "6px",
-    flexWrap: "wrap",
-    backgroundColor: "white",
-  },
-  primaryBadge: {
-    backgroundColor: "#10b981",
-    color: "white",
-    padding: "4px 8px",
-    borderRadius: "4px",
-    fontSize: "11px",
-    fontWeight: "600",
-  },
-  setPrimaryBtn: {
-    flex: 1,
-    padding: "4px 8px",
-    backgroundColor: "#3b82f6",
-    color: "white",
-    border: "none",
-    borderRadius: "4px",
-    fontSize: "11px",
-    fontWeight: "600",
-    cursor: "pointer",
-  },
-  deleteImgBtn: {
-    flex: 1,
-    padding: "4px 8px",
-    backgroundColor: "#ef4444",
-    color: "white",
-    border: "none",
-    borderRadius: "4px",
-    fontSize: "11px",
-    fontWeight: "600",
-    cursor: "pointer",
-  },
-  uploadSection: {
-    marginTop: "12px",
-  },
-  uploadButton: {
-    display: "inline-block",
-    padding: "12px 24px",
-    backgroundColor: "#3b82f6",
-    color: "white",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  uploadProgress: {
-    marginTop: "12px",
-  },
-  progressBar: {
-    width: "100%",
-    height: "8px",
-    backgroundColor: "#e2e8f0",
-    borderRadius: "4px",
-    overflow: "hidden",
-    marginBottom: "8px",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#3b82f6",
-    transition: "width 0.3s",
-  },
-  buttonGroup: {
-    display: "flex",
-    gap: "12px",
-    marginTop: "24px",
-    paddingTop: "20px",
-    borderTop: "2px solid #e5e7eb",
-  },
-  cancelButton: {
-    flex: 1,
-    padding: "12px 24px",
-    backgroundColor: "#e2e8f0",
-    color: "#1e293b",
-    border: "none",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontWeight: "600",
-    cursor: "pointer",
-  },
-  submitButton: {
-    flex: 1,
-    padding: "12px 24px",
-    backgroundColor: "#10b981",
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontWeight: "600",
-    cursor: "pointer",
-  },
-};
 
 export default AdminPropertyEditModal;

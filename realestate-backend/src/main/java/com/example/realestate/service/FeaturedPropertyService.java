@@ -62,6 +62,11 @@ public class FeaturedPropertyService {
         Property property = propertyRepository.findById(propertyId)
                 .orElseThrow(() -> new RuntimeException("Property not found"));
 
+        // 🔒 Reject if property is soft-deleted
+        if (Boolean.FALSE.equals(property.getIsActive())) {
+            throw new RuntimeException("Cannot feature a deleted property");
+        }
+
         // Prevent duplicates: if already active, do not allow new order
         if (featuredPropertyRepository.existsByPropertyIdAndIsActiveTrue(propertyId)) {
             throw new RuntimeException("Property is already featured");
@@ -347,6 +352,11 @@ public class FeaturedPropertyService {
         if (property.getUser() == null || !Objects.equals(property.getUser().getId(), userId))
             throw new RuntimeException("Unauthorized: Property does not belong to user");
 
+        // 🔒 Reject if property is soft-deleted
+        if (Boolean.FALSE.equals(property.getIsActive())) {
+            throw new RuntimeException("Cannot feature a deleted property");
+        }
+
         if (featuredPropertyRepository.existsByPropertyIdAndIsActiveTrue(request.getPropertyId()))
             throw new RuntimeException("Property is already featured");
 
@@ -488,6 +498,16 @@ public class FeaturedPropertyService {
         Property property = propertyRepository.findById(saved.getPropertyId())
                 .orElseThrow(() -> new RuntimeException("Property not found"));
 
+        // If property has been soft-deleted, deactivate featured and cancel
+        if (!Boolean.TRUE.equals(property.getIsActive())) {
+            // Deactivate featured record
+            saved.setIsActive(false);
+            saved.setPaymentStatus(FeaturedProperty.PaymentStatus.CANCELLED);
+            featuredPropertyRepository.save(saved);
+
+            throw new RuntimeException("Property is deleted; cannot activate featured status.");
+        }
+
         if (!Boolean.TRUE.equals(property.getIsFeatured())) {
             property.setIsFeatured(true);
             propertyRepository.save(property);
@@ -546,5 +566,19 @@ public class FeaturedPropertyService {
     // ---------------------------------------------------------------------
     public Optional<FeaturedProperty> getFeaturedPropertyById(Long featuredId) {
         return featuredPropertyRepository.findById(featuredId);
+    }
+
+    // ---------------------------------------------------------------------
+    // ✅ Utility: Deactivate featured records for a property (used by PropertyService soft-delete)
+    // ---------------------------------------------------------------------
+    @Transactional
+    public void deactivateFeaturedForProperty(Long propertyId) {
+        List<FeaturedProperty> fps = featuredPropertyRepository.findByPropertyId(propertyId);
+        if (fps == null || fps.isEmpty()) return;
+        for (FeaturedProperty fp : fps) {
+            fp.setIsActive(false);
+            fp.setPaymentStatus(FeaturedProperty.PaymentStatus.CANCELLED);
+        }
+        featuredPropertyRepository.saveAll(fps);
     }
 }
