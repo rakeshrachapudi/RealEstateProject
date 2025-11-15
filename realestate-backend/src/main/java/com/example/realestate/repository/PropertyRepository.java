@@ -14,6 +14,7 @@ import java.util.List;
 
 @Repository
 public interface PropertyRepository extends JpaRepository<Property, Long> {
+    List<Property> findByUserIdAndIsActiveTrue(Long userId);
 
     // Find by city
     List<Property> findByCityIgnoreCase(String city);
