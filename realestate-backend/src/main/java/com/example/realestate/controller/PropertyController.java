@@ -162,53 +162,22 @@ public class PropertyController {
         }
     }
 
-    // -------------------------------------------------------------
-    // ⭐ SMART QUICK SEARCH (ID, NAME, AUTO-DETECT QUERY)
-    // -------------------------------------------------------------
     @GetMapping("/search/quick")
-    public ResponseEntity<?> smartQuickSearch(
-            @RequestParam(required = false) String q,
-            @RequestParam(required = false) Long propertyId,
-            @RequestParam(required = false) String name
-    ) {
+    public ResponseEntity<?> smartQuickSearch(@RequestParam(required = false) String q,
+                                              @RequestParam(required = false) Long propertyId,
+                                              @RequestParam(required = false) String name) {
         try {
-            // Auto-detect:
-            // Priority → q → propertyId → name
-            String input = q != null ? q :
-                    propertyId != null ? String.valueOf(propertyId) :
-                            name != null ? name : null;
-
+            String input = q != null ? q : propertyId != null ? String.valueOf(propertyId) : name;
             if (input == null || input.trim().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body("Query is required (q OR propertyId OR name)");
+                return ResponseEntity.badRequest().body("Query is required: q OR propertyId OR name");
             }
-
-            input = input.trim();
-            List<Property> results = new ArrayList<>();
-
-            // 1️⃣ If numeric → treat as propertyId
-            if (input.matches("\\d+")) {
-                Long id = Long.parseLong(input);
-                propertyRepository.findById(id).ifPresent(results::add);
-            }
-
-            // 2️⃣ Search by name always
-            List<Property> nameMatches =
-                    propertyRepository.findByTitleContainingIgnoreCase(input);
-            for (Property p : nameMatches) {
-                if (!results.contains(p)) results.add(p);
-            }
-
-            if (results.isEmpty()) {
-                return ResponseEntity.status(404)
-                        .body("No properties found");
-            }
-
-            return ResponseEntity.ok(results);
-
+            // Use the advanced service search
+            List<PropertyDTO> results = service.quickSearchAsDTO(input.trim());
+            return ResponseEntity.ok(results); // Always return 200 OK with possible empty list
         } catch (Exception e) {
             logger.error("Smart quick search error", e);
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
     }
+
 }

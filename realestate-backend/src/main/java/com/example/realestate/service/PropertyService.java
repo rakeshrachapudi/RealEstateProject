@@ -391,6 +391,29 @@ public class PropertyService {
 
         // 3) if input looks like a numeric id, also try exact id match (optional)
         List<Property> byId = new ArrayList<>();
+        // After your current quickSearch blocks and before converting to DTO
+        Map<Long, Property> merged = new LinkedHashMap<>();
+        for (Property p : primary) {
+            if (p != null && p.getId() != null) merged.putIfAbsent(p.getId(), p);
+        }
+        for (Property p : byArea) {
+            if (p != null && p.getId() != null) merged.putIfAbsent(p.getId(), p);
+        }
+        for (Property p : byId) {
+            if (p != null && p.getId() != null) merged.putIfAbsent(p.getId(), p);
+        }
+
+// 1. Lookup users by name/username
+        // --- Username/owner search addition ---
+        List<User> matchingUsers = userRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrUsernameContainingIgnoreCase(trimmed, trimmed, trimmed);
+        for (User user : matchingUsers) {
+            List<Property> byUser = repo.findByUserIdAndIsActiveTrue(user.getId());
+            for (Property p : byUser) {
+                if (p != null && p.getId() != null) merged.putIfAbsent(p.getId(), p);
+            }
+        }
+
+
         try {
             long maybeId = Long.parseLong(trimmed);
             repo.findById(maybeId).ifPresent(byId::add);
@@ -398,11 +421,6 @@ public class PropertyService {
             // not an exact id, ignore
         }
 
-        // Merge & dedupe by id
-        Map<Long, Property> merged = new LinkedHashMap<>();
-        for (Property p : primary) if (p != null && p.getId() != null) merged.putIfAbsent(p.getId(), p);
-        for (Property p : byArea) if (p != null && p.getId() != null) merged.putIfAbsent(p.getId(), p);
-        for (Property p : byId) if (p != null && p.getId() != null) merged.putIfAbsent(p.getId(), p);
 
         // Convert to DTO and also ensure accurate featured flag
         List<Property> mergedList = new ArrayList<>(merged.values());
@@ -420,6 +438,7 @@ public class PropertyService {
                 })
                 .collect(Collectors.toList());
     }
+
 
     /**
      * Search by area and return DTOs (deduplicated).
