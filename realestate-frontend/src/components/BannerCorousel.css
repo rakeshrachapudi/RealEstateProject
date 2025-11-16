@@ -16,6 +16,7 @@
   user-select: none;
   -webkit-user-select: none;
   position: relative;
+  min-height: 480px; /* Fixed minimum height to prevent spacing issues */
 }
 
 .banner-carousel-container:active {
@@ -25,6 +26,7 @@
 .banner-carousel-track {
   display: flex;
   width: 200%;
+  min-height: 100%;
 }
 
 .banner-carousel-slide {
@@ -33,13 +35,99 @@
   flex-shrink: 0;
   padding: 0;
   box-sizing: border-box;
+  min-height: 100%; /* Take full height of container */
+  display: flex;
+  align-items: stretch;
 }
 
 .banner-carousel-slide .hp-banner,
 .banner-carousel-slide .hp-promo-banner {
   width: 100%;
   margin: 0;
+  flex: 1; /* Fill available height */
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
+
+/* ========================================
+   NAVIGATION ARROWS (NEW)
+======================================== */
+
+.carousel-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid #e5e7eb;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  outline: none;
+  padding: 0;
+}
+
+.carousel-nav-btn svg {
+  width: 24px;
+  height: 24px;
+  color: #374151;
+  transition: all 0.3s ease;
+}
+
+.carousel-nav-btn:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.carousel-nav-btn:hover svg {
+  color: white;
+}
+
+.carousel-nav-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.carousel-nav-btn-left {
+  left: 16px;
+}
+
+.carousel-nav-btn-right {
+  right: 16px;
+}
+
+/* Hide arrows on very small screens */
+@media (max-width: 480px) {
+  .carousel-nav-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .carousel-nav-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .carousel-nav-btn-left {
+    left: 8px;
+  }
+
+  .carousel-nav-btn-right {
+    right: 8px;
+  }
+}
+
+/* ========================================
+   CAROUSEL INDICATORS
+======================================== */
 
 .banner-carousel-indicators {
   display: flex;
@@ -118,6 +206,10 @@
 .hp-promo-container {
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
 }
 
 .hp-promo-badge {
@@ -376,6 +468,11 @@
     margin-top: 12px;
   }
 
+  /* Adjust minimum height for tablets */
+  .banner-carousel-container {
+    min-height: 420px;
+  }
+
   .hp-promo-row {
     flex-direction: column !important;
     gap: 12px;
@@ -491,5 +588,10 @@
   .hp-promo-btn {
     padding: 8px 16px;
     font-size: 12px;
+  }
+
+  /* Adjust minimum height for mobile */
+  .banner-carousel-container {
+    min-height: 380px;
   }
 }
