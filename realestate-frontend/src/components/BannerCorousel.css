@@ -16,7 +16,8 @@
   user-select: none;
   -webkit-user-select: none;
   position: relative;
-  min-height: 480px; /* Fixed minimum height to prevent spacing issues */
+  /* reduced minimum height to make banner smaller */
+  min-height: 300px; /* Fixed minimum height to prevent spacing issues */
 }
 
 .banner-carousel-container:active {
@@ -48,6 +49,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100%;
+  padding: 16px 20px !important; /* compact default padding */
 }
 
 /* ========================================
@@ -594,4 +596,127 @@
   .banner-carousel-container {
     min-height: 380px;
   }
+}
+
+/* ========================================
+   HOW IT WORKS (hp-banner) — overrides to make banner compact
+   These rules target only the carousel slides so they don't affect the
+   main landing banner styles elsewhere in the app.
+======================================== */
+
+/* tighten main banner padding */
+.banner-carousel-slide .hp-banner {
+  padding: 8px 12px !important;
+}
+
+/* reduce header spacing and hide large emoji to save vertical space */
+.banner-carousel-slide .hp-banner-header {
+  gap: 6px !important;
+  align-items: center !important;
+}
+
+/* hide the right-side large illustration emoji to reduce height dramatically */
+.banner-carousel-slide .hp-banner-illustration {
+  display: none !important;
+}
+
+/* if you prefer to keep a small emoji instead of hiding, uncomment below and comment out the rule above */
+/*
+.banner-carousel-slide .hp-illustration-emoji {
+  font-size: 40px !important;
+  margin: 0 !important;
+}
+*/
+
+/* shrink feature cards inside carousel */
+.banner-carousel-slide .hp-feature-cards {
+  gap: 10px !important;
+  margin-top: 10px !important;
+}
+
+.banner-carousel-slide .hp-feature-card {
+  padding: 8px !important;
+  margin-bottom: 6px !important;
+  border-radius: 12px !important;
+}
+
+.banner-carousel-slide .hp-feature-card .hp-feature-card-header {
+  margin-bottom: 8px !important;
+}
+
+.banner-carousel-slide .hp-feature-icon {
+  font-size: 26px !important;
+}
+
+.banner-carousel-slide .hp-feature-title {
+  font-size: 14px !important;
+}
+
+.banner-carousel-slide .hp-feature-desc {
+  font-size: 12px !important;
+}
+
+.banner-carousel-slide .hp-feature-item {
+  font-size: 12px !important;
+  gap: 6px !important;
+  padding: 6px 8px !important;
+}
+
+/* make checkmark smaller */
+.banner-carousel-slide .hp-checkmark {
+  font-size: 14px !important;
+}
+
+/* ensure the promo slide (right side) also respects compact layout */
+.banner-carousel-slide .hp-promo-banner {
+  padding: 12px !important;
+}
+
+/* Responsive adjustments to keep things compact on small screens */
+@media (max-width: 1024px) {
+  .banner-carousel-container {
+    min-height: 280px;
+  }
+
+  .banner-carousel-slide .hp-banner {
+    padding: 10px 12px !important;
+  }
+
+  .banner-carousel-slide .hp-feature-icon {
+    font-size: 22px !important;
+  }
+
+  .banner-carousel-slide .hp-feature-title {
+    font-size: 13px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* on narrower screens we stack cards and further reduce padding */
+  .banner-carousel-container {
+    min-height: 260px;
+  }
+
+  .banner-carousel-slide .hp-banner {
+    padding: 8px 10px !important;
+  }
+
+  .banner-carousel-slide .hp-feature-cards {
+    gap: 8px !important;
+  }
+
+  .banner-carousel-slide .hp-feature-card {
+    padding: 6px !important;
+  }
+}
+
+/* final guard: if some content still forces height, cap the carousel visually */
+.banner-carousel-container {
+  max-height: 520px;
+  overflow: hidden;
+}
+
+/* small helper: slightly reduce overall font-weight inside carousel to save space */
+.banner-carousel-slide {
+  font-weight: 600;
 }

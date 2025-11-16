@@ -404,10 +404,11 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
   background-size: 200% 200%;
   animation: gradientShift 15s ease infinite;
-  padding: clamp(28px, 3.5vw, 44px) clamp(20px, 3vw, 36px);
+  padding: clamp(14px, 2vw, 22px) clamp(14px, 2vw, 22px);
+    border-radius: 16px;
+    margin-bottom: clamp(12px, 2vw, 20px);
   color: #fff;
-  border-radius: 20px;
-  margin-bottom: clamp(16px, 2.5vw, 28px);
+
   position: relative;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3),
@@ -592,7 +593,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
   gap: clamp(16px, 2.5vw, 28px);
-  margin-top: clamp(20px, 2.8vw, 32px);
+  margin-top: clamp(12px, 2vw, 20px);
   width: 100%;
   max-width: 100%;
 }
