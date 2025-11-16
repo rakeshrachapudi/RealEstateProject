@@ -44,7 +44,7 @@ const BannerCarousel = () => {
         if (!isDragging) {
           setCurrentSlide((prev) => (prev === 0 ? 1 : 0));
         }
-      }, 5000); // ---------------------------------------------------------------------------------------Autoscroll
+      }, 5000);
     };
 
     startAutoSlide();
@@ -128,6 +128,23 @@ const BannerCarousel = () => {
     setCurrentSlide(index);
   };
 
+  // NEW: Navigation arrow handlers
+  const handlePrevSlide = () => {
+    setCurrentSlide((prev) => (prev === 0 ? 1 : 0));
+    // Reset auto-slide timer
+    if (autoSlideRef.current) {
+      clearInterval(autoSlideRef.current);
+    }
+  };
+
+  const handleNextSlide = () => {
+    setCurrentSlide((prev) => (prev === 0 ? 1 : 0));
+    // Reset auto-slide timer
+    if (autoSlideRef.current) {
+      clearInterval(autoSlideRef.current);
+    }
+  };
+
   return (
     <div className="banner-carousel-wrapper">
       <div
@@ -140,6 +157,44 @@ const BannerCarousel = () => {
         onTouchMove={(e) => handleMove(e.touches[0].clientX)}
         onTouchEnd={handleEnd}
       >
+        {/* LEFT ARROW */}
+        <button
+          className="carousel-nav-btn carousel-nav-btn-left"
+          onClick={handlePrevSlide}
+          aria-label="Previous slide"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+
+        {/* RIGHT ARROW */}
+        <button
+          className="carousel-nav-btn carousel-nav-btn-right"
+          onClick={handleNextSlide}
+          aria-label="Next slide"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+
         <div
           className="banner-carousel-track"
           style={{
@@ -246,7 +301,7 @@ const BannerCarousel = () => {
                     </div>
                   </div>
 
-                  {/* MODIFIED: Coupon and Timer in ONE ROW */}
+                  {/* Coupon and Timer in ONE ROW */}
                   <div className="hp-promo-row">
                     <div className="hp-promo-coupon">
                       <div className="hp-coupon-label">Use Coupon Code:</div>
