@@ -2435,4 +2435,971 @@ body {
   .hp-quick-search-input {
     font-size: 16px; /* Prevent iOS zoom */
   }
+}/* ========================================
+   ✨ ENHANCED TYPOGRAPHY - Feature Cards
+======================================== */
+
+/* Increased padding for premium feel */
+.hp-feature-card {
+  padding: clamp(24px, 3vw, 34px);
+}
+
+/* ✨ ENHANCED ICON - Larger size */
+.hp-feature-icon {
+  font-size: clamp(38px, 5vw, 54px);
+  margin-bottom: 14px;
+}
+
+.hp-feature-card:hover .hp-feature-icon {
+  transform: scale(1.15) rotate(8deg);
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.25));
+}
+
+/* ✨ ENHANCED TITLE - Larger and bolder */
+.hp-feature-title {
+  font-size: clamp(22px, 3vw, 28px) !important;
+  margin: 0 0 10px 0;
+  letter-spacing: -0.03em;
+}
+
+.hp-feature-card-owner .hp-feature-title {
+  filter: drop-shadow(0 3px 6px rgba(16, 185, 129, 0.3));
+}
+
+.hp-feature-card-broker .hp-feature-title {
+  filter: drop-shadow(0 3px 6px rgba(245, 158, 11, 0.3));
+}
+
+/* ✨ ENHANCED DESCRIPTION - Larger, bolder, darker */
+.hp-feature-desc {
+  font-size: clamp(14px, 2.2vw, 17px) !important;
+  color: #475569 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+
+.hp-feature-card-header {
+  margin-bottom: clamp(20px, 3vw, 28px);
+}
+
+.hp-feature-list {
+  gap: 14px;
+  margin-top: 4px;
+}
+
+/* ✨ ENHANCED FEATURE ITEMS - Much larger and bolder */
+.hp-feature-item {
+  gap: 12px;
+  font-size: clamp(14px, 2.2vw, 16px) !important;
+  color: #1e293b !important;
+  font-weight: 600 !important;
+  padding: 8px 0;
+  transition: all 0.3s ease;
+  position: relative;
+  letter-spacing: -0.01em;
+}
+
+.hp-feature-item:hover {
+  transform: translateX(4px);
+  color: #0f172a !important;
+}
+
+.hp-feature-item strong,
+.hp-feature-item b {
+  font-weight: 800 !important;
+  color: #0f172a !important;
+}
+
+/* ✨ ENHANCED CHECKMARKS - Larger with circular backgrounds */
+.hp-checkmark {
+  font-size: clamp(18px, 2.5vw, 22px) !important;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.hp-feature-card-owner .hp-checkmark {
+  background: rgba(16, 185, 129, 0.1);
+  border: 2px solid rgba(16, 185, 129, 0.3);
+}
+
+.hp-feature-card-broker .hp-checkmark {
+  background: rgba(245, 158, 11, 0.1);
+  border: 2px solid rgba(245, 158, 11, 0.3);
+}
+
+.hp-feature-item:hover .hp-checkmark {
+  transform: scale(1.15) rotate(12deg);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.hp-feature-card-owner .hp-feature-item:hover .hp-checkmark {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.hp-feature-card-broker .hp-feature-item:hover .hp-checkmark {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+/* Hover line effect */
+.hp-feature-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 2px;
+  transition: width 0.3s ease;
+}
+
+.hp-feature-card-owner .hp-feature-item:hover::before {
+  width: 8px;
+  background: linear-gradient(90deg, #10b981, transparent);
+}
+
+.hp-feature-card-broker .hp-feature-item:hover::before {
+  width: 8px;
+  background: linear-gradient(90deg, #f59e0b, transparent);
+}
+
+/* ========================================
+   RESPONSIVE TYPOGRAPHY
+======================================== */
+
+@media (max-width: 768px) {
+  .hp-feature-title {
+    font-size: clamp(20px, 4vw, 24px) !important;
+  }
+
+  .hp-feature-desc {
+    font-size: clamp(13px, 2.5vw, 15px) !important;
+  }
+
+  .hp-feature-item {
+    font-size: clamp(13px, 2.5vw, 15px) !important;
+    gap: 10px;
+    padding: 6px 0;
+  }
+
+  .hp-checkmark {
+    font-size: clamp(16px, 3vw, 20px) !important;
+    width: 24px;
+    height: 24px;
+  }
+
+  .hp-feature-list {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hp-feature-card {
+    padding: clamp(18px, 4vw, 24px);
+  }
+
+  .hp-feature-title {
+    font-size: 18px !important;
+  }
+
+  .hp-feature-desc {
+    font-size: 12px !important;
+  }
+
+  .hp-feature-item {
+    font-size: 12px !important;
+    gap: 8px;
+  }
+
+  .hp-checkmark {
+    font-size: 16px !important;
+    width: 22px;
+    height: 22px;
+  }
+
+  .hp-feature-icon {
+    font-size: clamp(32px, 8vw, 42px);
+  }
+}
+/* ========================================
+   ✨ ULTRA-PROMINENT FEATURE CARDS
+   For Property Owners & Brokers - Main Value Proposition
+======================================== */
+
+/* ====================================
+   ENHANCED FEATURE CARDS WITH HIGHLIGHTS
+==================================== */
+
+.hp-feature-card {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border-radius: 24px; /* More rounded */
+  padding: clamp(28px, 3.5vw, 40px); /* More padding */
+  position: relative;
+  overflow: hidden;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: 3px solid rgba(255, 255, 255, 0.5); /* Thicker border */
+  animation: cardSlideIn 0.8s ease-out both;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.15),
+    0 8px 25px rgba(0, 0, 0, 0.1),
+    inset 0 2px 0 rgba(255, 255, 255, 1);
+  width: 100%;
+  max-width: 100%;
+}
+
+.hp-feature-card:hover {
+  transform: translateY(-12px) scale(1.03); /* More dramatic hover */
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.2),
+    0 15px 40px rgba(0, 0, 0, 0.15),
+    inset 0 2px 0 rgba(255, 255, 255, 1);
+  border-width: 4px;
+}
+
+/* ====================================
+   ENHANCED TOP GRADIENT BAR
+==================================== */
+
+.hp-feature-card-owner::before {
+  height: 6px; /* Thicker bar */
+  background: linear-gradient(90deg, #10b981 0%, #059669 50%, #10b981 100%);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+
+.hp-feature-card-broker::before {
+  height: 6px; /* Thicker bar */
+  background: linear-gradient(90deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+}
+
+/* ====================================
+   MEGA ICONS - MUCH LARGER
+==================================== */
+
+.hp-feature-icon {
+  font-size: clamp(48px, 6vw, 64px) !important; /* HUGE icons */
+  margin-bottom: 18px;
+  display: inline-block;
+  animation: iconFloat 3s ease-in-out infinite;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.2));
+  transition: transform 0.3s ease;
+}
+
+.hp-feature-card:hover .hp-feature-icon {
+  transform: scale(1.2) rotate(10deg);
+  filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.3));
+}
+
+/* ====================================
+   HUGE TITLES WITH GLOW EFFECT
+==================================== */
+
+.hp-feature-title {
+  font-size: clamp(26px, 3.5vw, 34px) !important; /* MUCH LARGER */
+  font-weight: 900 !important;
+  margin: 0 0 14px 0;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  position: relative;
+  display: inline-block;
+  text-transform: uppercase; /* All caps for impact */
+  letter-spacing: 0.5px;
+}
+
+.hp-feature-card-owner .hp-feature-title {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 10px rgba(16, 185, 129, 0.5));
+  position: relative;
+}
+
+.hp-feature-card-owner .hp-feature-title::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 60px;
+  height: 4px;
+  background: linear-gradient(90deg, #10b981, transparent);
+  border-radius: 2px;
+}
+
+.hp-feature-card-broker .hp-feature-title {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 10px rgba(245, 158, 11, 0.5));
+  position: relative;
+}
+
+.hp-feature-card-broker .hp-feature-title::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 60px;
+  height: 4px;
+  background: linear-gradient(90deg, #f59e0b, transparent);
+  border-radius: 2px;
+}
+
+/* ====================================
+   PROMINENT DESCRIPTIONS
+==================================== */
+
+.hp-feature-desc {
+  font-size: clamp(16px, 2.4vw, 19px) !important; /* Even larger */
+  color: #1e293b !important; /* Much darker */
+  font-weight: 800 !important; /* Extra bold */
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+  text-transform: none;
+}
+
+.hp-feature-card-header {
+  margin-bottom: clamp(24px, 3.5vw, 32px);
+  text-align: center;
+  padding-bottom: 16px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+}
+
+/* ====================================
+   HIGHLIGHTED FEATURE ITEMS
+==================================== */
+
+.hp-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* More spacing */
+  margin-top: 8px;
+}
+
+.hp-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  font-size: clamp(15px, 2.4vw, 18px) !important; /* LARGER text */
+  color: #0f172a !important; /* Very dark */
+  line-height: 1.6;
+  font-weight: 700 !important; /* Bold */
+  padding: 14px 16px; /* Added padding */
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  letter-spacing: -0.02em;
+  border-radius: 12px; /* Rounded corners */
+  background: rgba(255, 255, 255, 0.5); /* Subtle background */
+  border: 2px solid transparent;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* OWNER - Green highlights */
+.hp-feature-card-owner .hp-feature-item {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.03) 100%);
+  border-color: rgba(16, 185, 129, 0.15);
+}
+
+.hp-feature-card-owner .hp-feature-item:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.08) 100%);
+  border-color: rgba(16, 185, 129, 0.35);
+  transform: translateX(8px) scale(1.02);
+  box-shadow:
+    0 8px 24px rgba(16, 185, 129, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* BROKER - Orange highlights */
+.hp-feature-card-broker .hp-feature-item {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0.03) 100%);
+  border-color: rgba(245, 158, 11, 0.15);
+}
+
+.hp-feature-card-broker .hp-feature-item:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%);
+  border-color: rgba(245, 158, 11, 0.35);
+  transform: translateX(8px) scale(1.02);
+  box-shadow:
+    0 8px 24px rgba(245, 158, 11, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Bold text within items */
+.hp-feature-item strong,
+.hp-feature-item b {
+  font-weight: 900 !important;
+  color: #000000 !important;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ====================================
+   MEGA CHECKMARKS WITH BADGES
+==================================== */
+
+.hp-checkmark {
+  font-size: clamp(22px, 3vw, 28px) !important; /* HUGE checkmarks */
+  font-weight: 900;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px; /* Larger circle */
+  height: 36px;
+  border-radius: 50%;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+}
+
+/* Pulsing glow effect on checkmarks */
+.hp-checkmark::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.hp-feature-card-owner .hp-checkmark {
+  color: #ffffff; /* White checkmark */
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: 3px solid rgba(16, 185, 129, 0.3);
+  box-shadow:
+    0 4px 12px rgba(16, 185, 129, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.hp-feature-card-owner .hp-checkmark::before {
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.6), transparent);
+}
+
+.hp-feature-card-broker .hp-checkmark {
+  color: #ffffff; /* White checkmark */
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border: 3px solid rgba(245, 158, 11, 0.3);
+  box-shadow:
+    0 4px 12px rgba(245, 158, 11, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.hp-feature-card-broker .hp-checkmark::before {
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.6), transparent);
+}
+
+.hp-feature-item:hover .hp-checkmark {
+  transform: scale(1.25) rotate(360deg);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.hp-feature-item:hover .hp-checkmark::before {
+  opacity: 1;
+  animation: pulse 1.5s ease-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* ====================================
+   SIDE ACCENT BAR ON HOVER
+==================================== */
+
+.hp-feature-item::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-radius: 12px 0 0 12px;
+  transition: width 0.3s ease;
+}
+
+.hp-feature-card-owner .hp-feature-item:hover::after {
+  width: 5px;
+  background: linear-gradient(180deg, #10b981, #059669);
+  box-shadow: 2px 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.hp-feature-card-broker .hp-feature-item:hover::after {
+  width: 5px;
+  background: linear-gradient(180deg, #f59e0b, #d97706);
+  box-shadow: 2px 0 8px rgba(245, 158, 11, 0.4);
+}
+
+/* ====================================
+   RESPONSIVE ADJUSTMENTS
+==================================== */
+
+@media (max-width: 768px) {
+  .hp-feature-card {
+    padding: clamp(22px, 4vw, 32px);
+  }
+
+  .hp-feature-icon {
+    font-size: clamp(40px, 8vw, 52px) !important;
+  }
+
+  .hp-feature-title {
+    font-size: clamp(22px, 5vw, 28px) !important;
+  }
+
+  .hp-feature-desc {
+    font-size: clamp(14px, 3vw, 17px) !important;
+  }
+
+  .hp-feature-item {
+    font-size: clamp(14px, 3vw, 16px) !important;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .hp-checkmark {
+    font-size: clamp(18px, 4vw, 24px) !important;
+    width: 32px;
+    height: 32px;
+  }
+
+  .hp-feature-list {
+    gap: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hp-feature-card {
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .hp-feature-icon {
+    font-size: 36px !important;
+  }
+
+  .hp-feature-title {
+    font-size: 20px !important;
+  }
+
+  .hp-feature-desc {
+    font-size: 13px !important;
+  }
+
+  .hp-feature-item {
+    font-size: 13px !important;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .hp-checkmark {
+    font-size: 18px !important;
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* ====================================
+   SPECIAL: "KEY FEATURE" BADGE
+==================================== */
+
+.hp-feature-item:first-child::before {
+  content: '⭐';
+  position: absolute;
+  top: -8px;
+  right: 8px;
+  font-size: 16px;
+  animation: starTwinkle 2s ease-in-out infinite;
+}
+
+@keyframes starTwinkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+/* ========================================
+   FIND YOUR PERFECT PROPERTY SECTION
+   With Background Image
+======================================== */
+
+/* Main search section container */
+.hp-search,
+.hp-search-wrap {
+  position: relative;
+  margin-bottom: clamp(24px, 3vw, 40px);
+}
+
+/* Search section with background image */
+.hp-search {
+  background-image: url(../assets/bg-image.webp);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed; /* Parallax effect */
+  border-radius: 24px;
+  padding: clamp(40px, 5vw, 60px) clamp(24px, 3vw, 40px);
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.3),
+    0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Dark overlay for better text readability */
+.hp-search::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(15, 23, 42, 0.65) 0%,
+    rgba(30, 41, 59, 0.60) 50%,
+    rgba(51, 65, 85, 0.65) 100%
+  );
+  backdrop-filter: blur(2px);
+  z-index: 1;
+}
+
+/* Subtle pattern overlay for depth */
+.hp-search::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(255, 255, 255, 0.02) 10px,
+      rgba(255, 255, 255, 0.02) 20px
+    );
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Content container */
+.hp-search-wrap {
+  position: relative;
+  z-index: 3;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Section title styling */
+.hp-search .hp-section-title,
+.hp-search h2 {
+  font-size: clamp(28px, 4vw, 42px) !important;
+  font-weight: 900 !important;
+  color: #ffffff !important;
+  text-align: center;
+  margin: 0 0 12px 0 !important;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  text-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.5),
+    0 2px 10px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 3;
+}
+
+/* Add gradient underline to title */
+.hp-search .hp-section-title::after,
+.hp-search h2::after {
+  content: '';
+  display: block;
+  width: 80px;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  margin: 16px auto 0;
+  border-radius: 2px;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+/* Subtitle styling */
+.hp-search p,
+.hp-search .hp-subtitle {
+  font-size: clamp(15px, 2.2vw, 18px) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  text-align: center;
+  margin: 0 0 32px 0 !important;
+  font-weight: 500;
+  line-height: 1.6;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 3;
+}
+
+/* Search form container */
+.hp-search form,
+.hp-search .search-form {
+  position: relative;
+  z-index: 3;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  padding: clamp(24px, 3vw, 36px);
+  border-radius: 20px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 10px 30px rgba(0, 0, 0, 0.3),
+    inset 0 2px 0 rgba(255, 255, 255, 1);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Input fields styling */
+.hp-search input,
+.hp-search select {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 2px solid rgba(148, 163, 184, 0.3) !important;
+  color: #1e293b !important;
+  font-weight: 500;
+}
+
+.hp-search input:focus,
+.hp-search select:focus {
+  background: #ffffff !important;
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1) !important;
+}
+
+/* Labels styling */
+.hp-search label {
+  color: #1e293b !important;
+  font-weight: 700 !important;
+  font-size: clamp(13px, 1.8vw, 15px) !important;
+  text-shadow: none !important;
+}
+
+/* Button styling */
+.hp-search button,
+.hp-search .search-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: clamp(14px, 2vw, 16px) !important;
+  padding: 14px 32px !important;
+  border-radius: 12px !important;
+  border: none !important;
+  box-shadow:
+    0 8px 24px rgba(102, 126, 234, 0.4),
+    0 4px 12px rgba(118, 75, 162, 0.3) !important;
+  transition: all 0.3s ease !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hp-search button:hover,
+.hp-search .search-button:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    0 12px 32px rgba(102, 126, 234, 0.5),
+    0 6px 16px rgba(118, 75, 162, 0.4) !important;
+}
+
+.hp-search button:active,
+.hp-search .search-button:active {
+  transform: translateY(0) scale(1);
+}
+
+/* Decorative elements */
+.hp-search-decoration {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Top-right glow */
+.hp-search-decoration.glow-1 {
+  top: -50px;
+  right: -50px;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(
+    circle,
+    rgba(102, 126, 234, 0.2) 0%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Bottom-left glow */
+.hp-search-decoration.glow-2 {
+  bottom: -50px;
+  left: -50px;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(
+    circle,
+    rgba(118, 75, 162, 0.2) 0%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  animation: float 8s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(20px, 20px) scale(1.1);
+  }
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+======================================== */
+
+@media (max-width: 768px) {
+  .hp-search {
+    background-attachment: scroll; /* Disable parallax on mobile */
+    padding: clamp(32px, 5vw, 48px) clamp(20px, 4vw, 32px);
+    border-radius: 20px;
+  }
+
+  .hp-search::before {
+    background: linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.70) 0%,
+      rgba(30, 41, 59, 0.65) 100%
+    );
+  }
+
+  .hp-search .hp-section-title,
+  .hp-search h2 {
+    font-size: clamp(24px, 6vw, 32px) !important;
+  }
+
+  .hp-search p,
+  .hp-search .hp-subtitle {
+    font-size: clamp(14px, 3.5vw, 16px) !important;
+    margin: 0 0 24px 0 !important;
+  }
+
+  .hp-search form,
+  .hp-search .search-form {
+    padding: clamp(20px, 4vw, 28px);
+    border-radius: 16px;
+  }
+
+  .hp-search button,
+  .hp-search .search-button {
+    width: 100%;
+    padding: 12px 24px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .hp-search {
+    padding: 28px 16px;
+    border-radius: 16px;
+  }
+
+  .hp-search .hp-section-title,
+  .hp-search h2 {
+    font-size: 22px !important;
+  }
+
+  .hp-search p,
+  .hp-search .hp-subtitle {
+    font-size: 13px !important;
+  }
+
+  .hp-search form,
+  .hp-search .search-form {
+    padding: 16px;
+  }
+
+  .hp-search-decoration {
+    display: none; /* Hide decorative elements on very small screens */
+  }
+}
+
+/* ========================================
+   ACCESSIBILITY
+======================================== */
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .hp-search::before {
+    background: rgba(0, 0, 0, 0.95);
+  }
+
+  .hp-search .hp-section-title,
+  .hp-search h2 {
+    color: #ffffff !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .hp-search {
+    background-attachment: scroll;
+  }
+
+  .hp-search-decoration,
+  @keyframes float {
+    animation: none !important;
+  }
+
+  .hp-search button:hover,
+  .hp-search .search-button:hover {
+    transform: none;
+  }
+}
+
+/* ========================================
+   PRINT STYLES
+======================================== */
+
+@media print {
+  .hp-search {
+    background: #f8fafc;
+    box-shadow: none;
+  }
+
+  .hp-search::before,
+  .hp-search::after,
+  .hp-search-decoration {
+    display: none;
+  }
+
+  .hp-search .hp-section-title,
+  .hp-search h2,
+  .hp-search p {
+    color: #000000 !important;
+    text-shadow: none !important;
+  }
 }
