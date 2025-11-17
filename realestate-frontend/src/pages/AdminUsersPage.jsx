@@ -35,6 +35,7 @@ const AdminUsersPage = () => {
     mobileNumber: "",
     role: "USER",
     password: "",
+    username: "", // <-- ADDED: New Username field
     addressLine1: "",
     addressLine2: "",
     city: "",
@@ -143,6 +144,7 @@ const AdminUsersPage = () => {
 
   const handleCreateUser = async () => {
     try {
+      // NOTE: createFormData now includes the username field
       const response = await fetch(`${BACKEND_BASE_URL}/api/auth/register`, {
         method: "POST",
         headers: {
@@ -191,6 +193,7 @@ const AdminUsersPage = () => {
   const openCreateModal = () => setCreateModal({ show: true });
   const closeCreateModal = () => {
     setCreateModal({ show: false });
+    // Reset form data including the new username field
     setCreateFormData({
       firstName: "",
       lastName: "",
@@ -198,6 +201,7 @@ const AdminUsersPage = () => {
       mobileNumber: "",
       role: "USER",
       password: "",
+      username: "", // <-- RESET NEW FIELD
       addressLine1: "",
       addressLine2: "",
       city: "",
@@ -226,6 +230,7 @@ const AdminUsersPage = () => {
           (user.lastName || "").toLowerCase().includes(needle) ||
           (user.email || "").toLowerCase().includes(needle) ||
           (user.mobileNumber || "").includes(needle) ||
+          (user.username || "").toLowerCase().includes(needle) || // <-- NEW: Search by username
           user.id?.toString().includes(needle)
       );
     }
@@ -281,7 +286,7 @@ const AdminUsersPage = () => {
     return filtered;
   }, [users, searchQuery, roleFilter, statusFilter, sortBy, sortOrder]);
 
-  // Stats calculation - FIXED TO INCLUDE BROKER
+  // Stats calculation
   const stats = useMemo(() => {
     const total = users.length;
     const byRole = users.reduce((acc, user) => {
@@ -356,7 +361,7 @@ const AdminUsersPage = () => {
           <input
             type="text"
             className="aup-input"
-            placeholder="Search by name, email, phone, or ID..."
+            placeholder="Search by name, email, phone, ID, or username..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -461,6 +466,14 @@ const AdminUsersPage = () => {
                 </div>
 
                 <div className="aup-user-details">
+                  {userItem.username && (
+                    <div className="aup-detail-row">
+                      <span className="aup-detail-icon">👤</span>
+                      <span className="aup-detail-text">
+                        {userItem.username}
+                      </span>
+                    </div>
+                  )}
                   <div className="aup-detail-row">
                     <span className="aup-detail-icon">📧</span>
                     <span className="aup-detail-text">
@@ -555,7 +568,7 @@ const AdminUsersPage = () => {
         </div>
       )}
 
-      {/* Edit Modal - ADDED BROKER OPTION */}
+      {/* Edit Modal */}
       {editModal.show && (
         <div className="aup-modal" onClick={closeEditModal}>
           <div
@@ -580,6 +593,16 @@ const AdminUsersPage = () => {
                   className="aup-form-input"
                   value={editFormData.lastName || ""}
                   onChange={(e) => updateEditForm("lastName", e.target.value)}
+                />
+              </div>
+
+              {/* Added Username to Edit Modal for completeness */}
+               <div className="aup-form-group">
+                <label className="aup-form-label">Username</label>
+                <input
+                  className="aup-form-input"
+                  value={editFormData.username || ""}
+                  onChange={(e) => updateEditForm("username", e.target.value)}
                 />
               </div>
 
@@ -646,7 +669,7 @@ const AdminUsersPage = () => {
         </div>
       )}
 
-      {/* Create Modal - ADDED BROKER OPTION */}
+      {/* Create Modal - NOW INCLUDES USERNAME */}
       {createModal.show && (
         <div className="aup-modal" onClick={closeCreateModal}>
           <div
@@ -688,6 +711,19 @@ const AdminUsersPage = () => {
                   required
                 />
               </div>
+
+              {/* === NEW: Username Field === */}
+              <div className="aup-form-group">
+                <label className="aup-form-label">Username</label>
+                <input
+                  type="text"
+                  className="aup-form-input"
+                  value={createFormData.username}
+                  onChange={(e) => updateCreateForm("username", e.target.value)}
+                  placeholder="Optional unique display name"
+                />
+              </div>
+              {/* ============================= */}
 
               <div className="aup-form-group">
                 <label className="aup-form-label">Password *</label>
