@@ -527,7 +527,7 @@ function PropertyDetails() {
                   <span className="pd-key-ic">📏</span>
                   <div>
                     <div className="pd-key-label">Area</div>
-                    <div className="pd-key-val">{property.areaSqft} sq ft ({property.area?.areaName})</div>
+                    <div className="pd-key-val">{property.areaSqft} sq ft </div>
                   </div>
                 </div>
                 <div className="pd-key">
@@ -711,7 +711,7 @@ function PropertyDetails() {
                 <div className="pd-details-list">
                   <div className="pd-detail-row">
                     <span>Property ID</span>
-                    <span>#{property.propertyId}</span>
+                    <span>{property.id ||property.propertyId}</span>
                   </div>
                   <div className="pd-detail-row">
                     <span>Posted On</span>
@@ -725,12 +725,7 @@ function PropertyDetails() {
                           <span>{property.user.firstName || ""} {property.user.lastName || ""}</span>
                         </div>
                       )}
-                      {property.user.mobileNumber && (
-                        <div className="pd-detail-row">
-                          <span>Contact</span>
-                          <span>{property.user.mobileNumber}</span>
-                        </div>
-                      )}
+
                     </>
                   )}
                   {property.yearBuilt && (

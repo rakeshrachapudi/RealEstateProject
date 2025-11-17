@@ -1,11 +1,13 @@
 // src/pages/HomePage.jsx
-// ✅ COMPLETE FILE WITH ALL SOFT-DELETE FIXES APPLIED
+// ✅ COMPLETE FILE WITH ALL SOFT-DELETE FIXES APPLIED & 403 FIX
 //
 // FIXES APPLIED:
-// 1. fetchFeaturedProperties - Added .filter((p) => p.isActive !== false)
-// 2. handlePropertyDeleted - REMOVED handlePropertyUpdated() call
-// 3. Browse by Type useEffect - Added .filter(p => p.isActive !== false)
-// 4. fetchMyProperties - Added .filter(p => p.isActive !== false)
+// 1. fetchFeaturedProperties - Filter out soft-deleted and combine featured filtering
+// 2. handlePropertyDeleted - Removed handlePropertyUpdated() call
+// 3. Browse by Type useEffect - Filter out soft-deleted
+// 4. fetchMyProperties - Filter out soft-deleted
+// 5. Create Deal Button - Restricted visibility to Admin/Agent only.
+// 6. fetchMyDeals - Added pre-fetch token check (Fixes 403 Error)
 
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -131,12 +133,13 @@ function HomePage() {
             firstName: p.user.firstName ?? p.user.first_name ?? "",
             lastName: p.user.lastName ?? p.user.last_name ?? "",
             mobile: p.user.mobile ?? p.user.phone ?? "",
+            primaryRole: p.user.role ?? p.user.userRole ?? null,
           }
-        : { id: null, firstName: "", lastName: "", mobile: "" };
+        : { id: null, firstName: "", lastName: "", mobile: "",primaryRole: null };
 
     const bedrooms = Number.isFinite(p.bedrooms) ? p.bedrooms : Number(p.bedrooms) || 0;
     const bathrooms = Number.isFinite(p.bathrooms) ? p.bathrooms : Number(p.bathrooms) || 0;
-
+    const postedByRole = p.postedByRole ?? p.role ?? userObj.primaryRole ?? null;
     return {
       ...p,
       id,
@@ -147,6 +150,7 @@ function HomePage() {
       areaName,
       amenities,
       user: userObj,
+      postedByRole,
       bedrooms,
       bathrooms,
       priceDisplay: p.priceDisplay ?? null,
@@ -181,14 +185,15 @@ function HomePage() {
   }, []);
 
   // ============================================================================
-  // ✅ FIX #1: fetchFeaturedProperties - Filter out soft-deleted properties
+  // ✅ FIX #1: fetchFeaturedProperties - Filter out soft-deleted properties (Combined filter)
   // ============================================================================
   const fetchFeaturedProperties = async () => {
     try {
-      const list = await getFeaturedProperties();
-      const normalized = (Array.isArray(list) ? list : [])
+      const allList = await getAllProperties();
+      const normalized = (Array.isArray(allList) ? allList : [])
         .map((p) => normalizeProperty(p))
-        .filter((p) => p.isActive !== false); // ⭐ Added: Filter soft-deleted properties
+        // ⭐ Combined filter for soft-delete and featured status
+        .filter((p) => p.isActive !== false && p.isFeatured === true);
 
       console.log("📋 Featured properties loaded:", normalized.length, "active properties");
 
@@ -215,17 +220,17 @@ function HomePage() {
 
     const load = async () => {
       try {
+        let props;
         if (selectedType === "All") {
-          const props = await getAllProperties();
-          const normalized = Array.isArray(props) ? props.map(normalizeProperty) : [];
-          // ⭐ Added: Filter out soft-deleted properties
-          setProperties(normalized.filter(p => p.isActive !== false));
+          props = await getAllProperties();
         } else {
-          const props = await getPropertiesByType(selectedType);
-          const normalized = Array.isArray(props) ? props.map(normalizeProperty) : [];
-          // ⭐ Added: Filter out soft-deleted properties
-          setProperties(normalized.filter(p => p.isActive !== false));
+          props = await getPropertiesByType(selectedType);
         }
+
+        const normalized = Array.isArray(props) ? props.map(normalizeProperty) : [];
+        // ⭐ Filter out soft-deleted properties
+        setProperties(normalized.filter(p => p.isActive !== false));
+
       } catch (err) {
         console.error("Error loading properties for type:", err);
         setProperties([]);
@@ -243,7 +248,12 @@ function HomePage() {
     setMyProperties([]);
     try {
       const token = localStorage.getItem("authToken");
-      if (!token) throw new Error("No authentication token found");
+      if (!token) {
+        console.warn("Authentication token missing. Cannot fetch user properties.");
+        setLoadingMyProperties(false);
+        return;
+      }
+
       const response = await fetch(
         `${BACKEND_BASE_URL}/api/properties/user/${user.id}`,
         {
@@ -260,7 +270,7 @@ function HomePage() {
         (Array.isArray(data) ? data : data?.success ? data.data : []) || [];
 
       const normalized = propertiesArray.map((p) => normalizeProperty(p));
-      // ⭐ Added: Filter out soft-deleted properties
+      // ⭐ Filter out soft-deleted properties
       const activeProperties = normalized.filter(p => p.isActive !== false);
 
       console.log(`📋 Loaded ${activeProperties.length} active properties for user ${user.id}`);
@@ -273,14 +283,23 @@ function HomePage() {
     }
   };
 
-  // fetch my deals by user
+  // ============================================================================
+  // ✅ FIX #6: fetchMyDeals - Added pre-fetch token check (Fixes 403 Error)
+  // ============================================================================
   const fetchMyDeals = async () => {
     if (!user?.id) return;
+
+    // ⭐ FIX: Check for token immediately and exit if missing
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+        console.warn("Authentication token missing. Cannot fetch user deals (403 fix).");
+        setLoadingMyDeals(false);
+        return;
+    }
+
     setLoadingMyDeals(true);
     setMyDeals([]);
     try {
-      const token = localStorage.getItem("authToken");
-      if (!token) throw new Error("No authentication token found");
       const response = await fetch(
         `${BACKEND_BASE_URL}/api/deals/user/${user.id}`,
         {
@@ -291,7 +310,9 @@ function HomePage() {
         }
       );
       if (!response.ok)
+        // Throw with status text for clearer error logging
         throw new Error(`API Error ${response.status}: ${response.statusText}`);
+
       const data = await safeJsonParse(response);
       const dealsArray =
         (Array.isArray(data) ? data : data?.success ? data.data : []) || [];
@@ -548,9 +569,7 @@ function HomePage() {
       )
     );
 
-    // ⭐ REMOVED: handlePropertyUpdated() call
-    // Don't refetch from server after delete since we've already updated all state
-    // The soft-deleted property would come back if we refetch
+    // ⭐ REMOVED: handlePropertyUpdated() call (Avoids refetching soft-deleted item)
     console.log("✅ Property removed from UI (soft delete - not refetching)");
   };
 
@@ -636,7 +655,13 @@ function HomePage() {
   ]);
 
   const isDisplayingDeals = activeTab === "my-deals";
-  const canCreateDeal = isAuthenticated && !isDisplayingDeals;
+
+  // 🚀 FIX APPLIED: Restrict visibility to Admin or Agent users
+  const roleValue = user?.role;
+  const roleLower = roleValue ? String(roleValue).toLowerCase() : "";
+  const isAuthorizedToCreateDeal = roleLower === "admin" || roleLower === "agent";
+
+  const canCreateDeal = isAuthenticated && !isDisplayingDeals && isAuthorizedToCreateDeal;
 
   return (
     <>
