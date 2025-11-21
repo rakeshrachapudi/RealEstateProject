@@ -35,7 +35,11 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
   const [removedExistingIds, setRemovedExistingIds] = useState([]);
 
   // ---------- Form Data ----------
-  const [formData, setFormData] = useState({
+
+  // ✅ NEW: Property Types State
+  const [propertyTypes, setPropertyTypes] = useState([]);
+  const [propertyTypesLoading, setPropertyTypesLoading] = useState(true);
+const [formData, setFormData] = useState({
     title: property?.title || "",
     type: property?.type || property?.propertyType || "Apartment",
     listingType: property?.listingType || "sale",
@@ -613,20 +617,25 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
           <div className="pem-row">
             <div className="pem-field">
               <label className="pem-label">Property Type *</label>
-              <select
-                className="pem-select"
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                required
-              >
-                <option value="Apartment">Apartment</option>
-                <option value="Villa">Villa</option>
-                <option value="Plot">Plot</option>
-                <option value="Land">Land</option>
-                <option value="House">House</option>
-                <option value="Farm House">Farm House</option>
-              </select>
+
+{propertyTypesLoading ? (
+  <div>Loading types...</div>
+) : (
+  <select
+    name="type"
+    className="pem-select"
+    value={formData.type}
+    onChange={handleChange}
+  >
+    <option value="">Select Property Type</option>
+    {propertyTypes.map((pt) => (
+      <option key={pt.id ?? pt.name} value={pt.name}>
+        {pt.name}
+      </option>
+    ))}
+  </select>
+)}
+
             </div>
 
             <div className="pem-field">

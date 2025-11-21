@@ -12,16 +12,19 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [areasLoading, setAreasLoading] = useState(true); // ✅ FIX: Correct useState initialization
+  const [areasLoading, setAreasLoading] = useState(true);
   const [imageUploading, setImageUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [priceInWords, setPriceInWords] = useState("");
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [currentBrokerId, setCurrentBrokerId] = useState(null);
 
+  // ✅ NEW: Property Types State
+  const [propertyTypes, setPropertyTypes] = useState([]);
+  const [propertyTypesLoading, setPropertyTypesLoading] = useState(true);
+
   const handleSubscriptionSuccess = (subscription) => {
     setShowSubscriptionModal(false);
-    // Optional: reload user state or retry posting property here if needed
     alert('✅ Subscription activated! You can now post properties.');
   };
 
@@ -42,13 +45,12 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     areaId: "",
     address: "",
     imageUrl: "",
-    // Bedrooms, bathrooms, balconies will be numbers/strings that allow decimals
     bedrooms: "",
     bathrooms: "",
     balconies: "",
     areaSqft: "",
-    price: "", // Total Price
-    pricePerSqft: "", // New Field
+    price: "",
+    pricePerSqft: "",
     amenities: "",
     description: "",
     ownerType: "owner",
@@ -83,7 +85,6 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
   const isAgentOrAdmin = user?.role === "AGENT" || user?.role === "ADMIN";
   const isBroker = user?.role === "BROKER";
 
-  // Array for possession months and years
   const months = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
@@ -91,7 +92,6 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 10 }, (_, i) => currentYear + i);
-
 
   useEffect(() => {
     const originalStyle = window.getComputedStyle(document.body).overflow;
@@ -103,6 +103,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
   useEffect(() => {
     loadAreas();
+    loadPropertyTypes(); // ✅ NEW: Load property types
   }, []);
 
   useEffect(() => {
@@ -110,11 +111,49 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       loadUsers();
     }
   }, [isAgentOrAdmin]);
-useEffect(() => {
-  if (user?.role === "BROKER") {
-    setFormData(prev => ({ ...prev, ownerType: "broker" }));
-  }
-}, [user]);
+
+  useEffect(() => {
+    if (user?.role === "BROKER") {
+      setFormData(prev => ({ ...prev, ownerType: "broker" }));
+    }
+  }, [user]);
+
+  // ✅ NEW: Load Property Types from Database
+
+const loadPropertyTypes = async () => {
+    setPropertyTypesLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_BASE_URL}/api/property-types`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      let typesRaw = [];
+      if (data?.success && Array.isArray(data.data)) {
+        typesRaw = data.data;
+      } else if (Array.isArray(data)) {
+        typesRaw = data;
+      }
+      const normalized = (typesRaw || [])
+        .filter(Boolean)
+        .map((t) => {
+          const id = t.propertyTypeId ?? t.property_type_id ?? t.id ?? null;
+          const name = t.typeName ?? t.type_name ?? t.name ?? t.type ?? (typeof t === "string" ? t : "");
+          return { id, name };
+        })
+        .filter((t) => t.name && t.name.length > 0);
+      setPropertyTypes(normalized);
+      if (normalized.length > 0 && (!formData.type || formData.type === "")) {
+        setFormData((prev) => ({ ...prev, type: normalized[0].name }));
+      }
+      setError(null);
+    } catch (err) {
+      console.error("Failed to load property types:", err);
+      setError(`Failed to load property types: ${err.message}`);
+      setPropertyTypes([]);
+    } finally {
+      setPropertyTypesLoading(false);
+    }
+  };
+
 
   const loadAreas = async () => {
     setAreasLoading(true);
@@ -202,7 +241,7 @@ useEffect(() => {
       "Ninety",
     ];
 
-  const numToWords = (n) => {
+    const numToWords = (n) => {
       let str = "";
       if (n > 99) {
         str += ones[Math.floor(n / 100)] + " Hundred ";
@@ -237,8 +276,6 @@ useEffect(() => {
     }
     return words.trim() + " Rupees Only";
   };
-
-  // --- Price/Area Calculation Logic ---
 
   const calculatePricePerSqft = (price, areaSqft) => {
     const p = Number(price);
@@ -293,10 +330,8 @@ useEffect(() => {
     let newPricePerSqft = pricePerSqft;
 
     if (pricePerSqft > 0) {
-      // If PPSF is set, calculate Total Price
       newPrice = calculateTotalPrice(pricePerSqft, areaSqftValue);
     } else if (price > 0) {
-      // If Total Price is set, calculate PPSF
       newPricePerSqft = calculatePricePerSqft(price, areaSqftValue);
     }
 
@@ -310,22 +345,13 @@ useEffect(() => {
     setPriceInWords(newPrice ? convertToIndianWords(newPrice) : "");
   };
 
-  // --- End Price/Area Calculation Logic ---
-
-  // --- START DECIMAL INPUT HANDLER ---
-  /**
-   * Enforces a maximum of one digit after the decimal point
-   * by truncating the input value.
-   */
   const handleDecimalChange = (e) => {
     const { name, value } = e.target;
     let newValue = value;
 
-    // Check for decimal point
     if (newValue.includes('.')) {
       const parts = newValue.split('.');
       if (parts.length > 1 && parts[1].length > 1) {
-        // Truncate the part after the decimal to one digit
         newValue = parts[0] + '.' + parts[1].substring(0, 1);
       }
     }
@@ -336,7 +362,6 @@ useEffect(() => {
     }));
     setError(null);
   };
-  // --- END DECIMAL INPUT HANDLER ---
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -410,7 +435,6 @@ useEffect(() => {
     setFormData((prev) => {
       let newState = { ...prev, [name]: processedValue };
 
-      // If constructionStatus changes, clear possession fields if not 'under_construction'
       if (name === "constructionStatus" && value !== "under_construction") {
         newState.possessionYear = "";
         newState.possessionMonth = "";
@@ -487,21 +511,18 @@ useEffect(() => {
     setError(null);
 
     try {
-      // Check login
       if (!isAuthenticated || !user) {
         setError("Please login to post.");
         setLoading(false);
         return;
       }
 
-      // Ensure token exists
       if (!authToken) {
         setError("Authentication missing. Please login again.");
         setLoading(false);
         return;
       }
 
-      // ✅ BROKER Pre-check subscription BEFORE creating property
       if (user?.role === "BROKER") {
         const subscriptionCheckResponse = await fetch(
           `${BACKEND_BASE_URL}/api/broker-subscription/can-post/${user.id}`,
@@ -525,48 +546,37 @@ useEffect(() => {
         }
       }
 
-      // ✅ Required fields
       if (!formData.title || !formData.price || !formData.areaId || !formData.description) {
         setError("Please fill in Title, Price, Area, and Description");
         setLoading(false);
         return;
       }
 
-      // ✅ Under Construction fields check
       if (formData.constructionStatus === "under_construction" && (!formData.possessionYear || !formData.possessionMonth)) {
          setError("Please specify the Possession Year and Month for 'Under Construction' properties.");
          setLoading(false);
          return;
       }
 
-      // ✅ Must have images
       if (selectedImages.length === 0) {
         setError("Please upload at least one property image.");
         setLoading(false);
         return;
       }
 
-      // --- Prepare Payload with number conversion for decimal fields ---
       const propertyPayload = {
         ...formData,
         imageUrl: null,
         user: { id: (user?.role === "AGENT" || user?.role === "ADMIN") ? selectedUserId : user.id },
         area: { id: formData.areaId },
-        // Convert numbers from string input:
         price: Number(formData.price),
         pricePerSqft: formData.pricePerSqft ? Number(formData.pricePerSqft) : null,
         areaSqft: formData.areaSqft ? Number(formData.areaSqft) : null,
-
-        // Convert decimal-allowed fields to number (will handle '2' and '2.5').
-        // The handleDecimalChange ensures only one digit after the decimal.
         bedrooms: formData.bedrooms ? Number(formData.bedrooms) : null,
         bathrooms: formData.bathrooms ? Number(formData.bathrooms) : null,
         balconies: formData.balconies ? Number(formData.balconies) : null,
-
-        // Map constructionStatus to isReadyToMove for older backends if needed, or update backend to accept status string
         isReadyToMove: formData.constructionStatus === 'ready_to_move',
       };
-      // -------------------------------------------------------------------
 
       const createResponse = await fetch(`${BACKEND_BASE_URL}/api/properties`, {
         method: "POST",
@@ -585,7 +595,6 @@ useEffect(() => {
         createJson = null;
       }
 
-      // ✅ *** BACKEND 500 FIX *** (Redundant check kept for robustness)
       if (
         user?.role === "BROKER" &&
         createResponse.status === 500 &&
@@ -600,7 +609,6 @@ useEffect(() => {
         return;
       }
 
-      // ✅ JSON based check — if backend returned the error
       if (createJson?.message?.includes("Subscription required")) {
         setCurrentBrokerId(user.id);
         setShowSubscriptionModal(true);
@@ -608,14 +616,12 @@ useEffect(() => {
         return;
       }
 
-      // ✅ Standard error
       if (!createResponse.ok) {
         setError(createJson?.message || "Failed to create property");
         setLoading(false);
         return;
       }
 
-      // ✅ Extract property ID from response (handles both formats)
       let propertyId = null;
 
       if (createJson?.data?.id) {
@@ -630,7 +636,6 @@ useEffect(() => {
         return;
       }
 
-      // ✅ Upload images
       setImageUploading(true);
       const uploadedImageUrls = await uploadImagesToS3(propertyId);
       setImageUploading(false);
@@ -673,6 +678,7 @@ useEffect(() => {
       </div>
     );
   }
+
   return (
     <>
       <div
@@ -693,7 +699,6 @@ useEffect(() => {
           {error && <div className="ppm-alert">{error}</div>}
 
           <form onSubmit={handleSubmit} className="ppm-form">
-            {/* User selection for agents/admins */}
             {isAgentOrAdmin && (
               <div className="ppm-user-section">
                 <div className="ppm-user-header">
@@ -732,7 +737,6 @@ useEffect(() => {
               </div>
             )}
 
-            {/* ✅ Subscription Modal Rendering */}
             {showSubscriptionModal && (
               <BrokerSubscriptionModal
                 isOpen={showSubscriptionModal}
@@ -742,7 +746,6 @@ useEffect(() => {
               />
             )}
 
-            {/* Title */}
             <div className="ppm-field">
               <label className="ppm-label required">Property Title</label>
               <input
@@ -756,23 +759,29 @@ useEffect(() => {
               />
             </div>
 
-            {/* Property Type & Listing Type */}
             <div className="ppm-row">
               <div className="ppm-field">
                 <label className="ppm-label required">Property Type</label>
-                <select
-                  name="type"
-                  value={formData.type}
-                  onChange={handleChange}
-                  className="ppm-select"
-                  required
-                >
-                  <option value="Apartment">🏢 Apartment</option>
-                  <option value="Villa">🏡 Villa</option>
-                  <option value="Independent House">🏠 Independent House</option>
-                  <option value="Plot">📍 Plot</option>
-                  <option value="Commercial">🏪 Commercial</option>
-                </select>
+                {/* ✅ UPDATED DROPDOWN - Fetches from Database */}
+
+{propertyTypesLoading ? (
+  <div>Loading types...</div>
+) : (
+  <select
+    name="type"
+    className="ppm-select"
+    value={formData.type}
+    onChange={handleChange}
+  >
+    <option value="">Select Property Type</option>
+    {propertyTypes.map((pt) => (
+      <option key={pt.id ?? pt.name} value={pt.name}>
+        {pt.name}
+      </option>
+    ))}
+  </select>
+)}
+
               </div>
               <div className="ppm-field">
                 <label className="ppm-label required">Listing Type</label>
@@ -789,25 +798,21 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* Posted By */}
             <div className="ppm-field">
               <label className="ppm-label required">👤 Posted By</label>
-           <select
-             name="ownerType"
-             value={formData.ownerType}
-             onChange={handleChange}
-             className="ppm-select"
-             required
-             // Disable dropdown when user is broker or when user is a regular user (since they can only post as owner)
-             disabled={isBroker || user?.role === "USER"}
-           >
-             {!isBroker && <option value="owner">Owner</option>}
-             {isBroker && <option value="broker">Broker</option>}
-           </select>
-
+              <select
+                name="ownerType"
+                value={formData.ownerType}
+                onChange={handleChange}
+                className="ppm-select"
+                required
+                disabled={isBroker || user?.role === "USER"}
+              >
+                {!isBroker && <option value="owner">Owner</option>}
+                {isBroker && <option value="broker">Broker</option>}
+              </select>
             </div>
 
-            {/* City & Area */}
             <div className="ppm-row">
               <div className="ppm-field">
                 <label className="ppm-label">City</label>
@@ -841,7 +846,6 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* Address */}
             <div className="ppm-field">
               <label className="ppm-label">Complete Address (Optional)</label>
               <input
@@ -854,9 +858,7 @@ useEffect(() => {
               />
             </div>
 
-            {/* RERA, HMDA, and Construction Status */}
             <div className="ppm-row">
-               {/* Construction Status Dropdown */}
               <div className="ppm-field">
                 <label className="ppm-label required">Construction Status</label>
                 <select
@@ -871,7 +873,6 @@ useEffect(() => {
                 </select>
               </div>
 
-              {/* RERA ID */}
               <div className="ppm-field">
                 <label className="ppm-label">RERA ID (Optional)
                   {formData.reraId && <span className="ppm-badge-success">✔</span>}
@@ -886,7 +887,6 @@ useEffect(() => {
                 />
               </div>
 
-              {/* HMDA ID */}
               <div className="ppm-field">
                 <label className="ppm-label">HMDA/DTCP ID (Optional)
                   {formData.hmdaId && <span className="ppm-badge-success">✔</span>}
@@ -901,9 +901,7 @@ useEffect(() => {
                 />
               </div>
             </div>
-            {/* End RERA, HMDA, and Status */}
 
-            {/* --- CONDITIONAL BLOCK: Possession Year and Month --- */}
             {formData.constructionStatus === "under_construction" && (
               <div className="ppm-row">
                  <div className="ppm-field">
@@ -936,14 +934,10 @@ useEffect(() => {
                         ))}
                     </select>
                  </div>
-                 {/* Empty div for layout symmetry */}
                  <div className="ppm-field"></div>
               </div>
             )}
-            {/* -------------------------------------------------------- */}
 
-
-            {/* Multiple Image Upload */}
             <div className="ppm-images">
               <label className="ppm-label required">
                 📷 Upload Property Images (Max 10)
@@ -1018,7 +1012,7 @@ useEffect(() => {
                 </div>
               )}
             </div>
-            {/* Description */}
+
             <div className="ppm-field">
               <label className="ppm-label required">Description</label>
               <textarea
@@ -1031,7 +1025,6 @@ useEffect(() => {
               />
             </div>
 
-            {/* Bedrooms, Bathrooms, Balconies (not for plots/land/villa) */}
             {!isPlotOrLandOrVilla && (
               <div className="ppm-row3">
                 <div className="ppm-field">
@@ -1040,7 +1033,7 @@ useEffect(() => {
                     type="number"
                     name="bedrooms"
                     value={formData.bedrooms}
-                    onChange={handleDecimalChange} // ✅ Using the strict decimal handler
+                    onChange={handleDecimalChange}
                     min="0"
                     step="0.1"
                     className="ppm-input"
@@ -1055,7 +1048,7 @@ useEffect(() => {
                     type="number"
                     name="bathrooms"
                     value={formData.bathrooms}
-                    onChange={handleDecimalChange} // ✅ Using the strict decimal handler
+                    onChange={handleDecimalChange}
                     min="0"
                     step="0.1"
                     className="ppm-input"
@@ -1070,7 +1063,7 @@ useEffect(() => {
                     type="number"
                     name="balconies"
                     value={formData.balconies}
-                    onChange={handleDecimalChange} // ✅ Using the strict decimal handler
+                    onChange={handleDecimalChange}
                     min="0"
                     step="0.1"
                     className="ppm-input"
@@ -1081,9 +1074,7 @@ useEffect(() => {
               </div>
             )}
 
-            {/* Area & Price Row */}
             <div className="ppm-row">
-              {/* Area */}
               <div className="ppm-field">
                 <label className="ppm-label">📐 Area (sqft)</label>
                 <input
@@ -1098,7 +1089,6 @@ useEffect(() => {
                 />
               </div>
 
-              {/* Price Per Sqft */}
               <div className="ppm-field">
                 <label className="ppm-label">💵 Price Per Sqft (₹)</label>
                 <input
@@ -1113,7 +1103,6 @@ useEffect(() => {
                 />
               </div>
 
-              {/* Total Price */}
               <div className="ppm-field">
                 <label className="ppm-label required">💰 Expected Price (₹)</label>
                 <input
@@ -1133,7 +1122,6 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* Amenities */}
             <div className="ppm-field">
               <label className="ppm-label">✨ Amenities</label>
               <div className="ppm-amenities">
@@ -1157,7 +1145,6 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={
@@ -1177,7 +1164,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* User Creation Modal */}
       {showUserCreation && (
         <UserCreationModal
           onClose={() => setShowUserCreation(false)}
@@ -1185,7 +1171,6 @@ useEffect(() => {
         />
       )}
 
-      {/* ✅ SUBSCRIPTION MODAL BLOCK */}
       {showSubscriptionModal && (
         <BrokerSubscriptionModal
           isOpen={showSubscriptionModal}
