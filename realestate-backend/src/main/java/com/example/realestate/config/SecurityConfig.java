@@ -75,7 +75,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/property-images/**").permitAll()
                         .requestMatchers("/api/featured-properties/**").permitAll()
                         .requestMatchers("/api/agents/property/**").permitAll()
-
+                        .requestMatchers("/api/property-tracking/**").permitAll()
+                        .requestMatchers("/api/notifications/health").permitAll()
+                        .requestMatchers("/api/notifications/test").permitAll() // Or restrict to ADMIN only
 
                         .requestMatchers("/api/broker-subscription/**").permitAll()
 

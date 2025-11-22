@@ -33,9 +33,12 @@ function PropertyDetails() {
   const [modalImageIndex, setModalImageIndex] = useState(0);
   const [agent, setAgent] = useState(null);
   const [agentLoading, setAgentLoading] = useState(false);
+  // 🆕 NEW: State to track if notification feature is enabled
+  const [notificationFeatureEnabled, setNotificationFeatureEnabled] = useState(false);
 
   useEffect(() => {
     fetchPropertyDetails();
+    checkNotificationFeature(); // 🆕 Check if notification feature is enabled
   }, [propertyId]);
 
   useEffect(() => {
@@ -50,6 +53,17 @@ function PropertyDetails() {
       }
     }
   }, [property, user]);
+
+  // 🔔 NEW: Track Property View - Send Notifications (only if feature is enabled)
+  useEffect(() => {
+    // Only track if:
+    // 1. Property is loaded
+    // 2. Notification feature is enabled
+    // 3. User is NOT the owner (or not logged in)
+    if (property && notificationFeatureEnabled && (!user || property.user?.id !== user?.id)) {
+      trackPropertyView();
+    }
+  }, [property?.id, notificationFeatureEnabled]); // Track when property or feature flag changes
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -94,6 +108,53 @@ function PropertyDetails() {
       setError(err.message || "Failed to load property");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 🆕 NEW: Check if notification tracking feature is enabled
+  const checkNotificationFeature = async () => {
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/property-tracking/feature-status`);
+      if (response.ok) {
+        const data = await response.json();
+        setNotificationFeatureEnabled(data.enabled);
+        console.log(`📊 Property tracking feature: ${data.enabled ? 'ENABLED' : 'DISABLED'}`);
+      } else {
+        // Default to false if endpoint fails
+        setNotificationFeatureEnabled(false);
+        console.warn('⚠️ Could not check notification feature status, defaulting to disabled');
+      }
+    } catch (error) {
+      // Silently fail and disable feature
+      setNotificationFeatureEnabled(false);
+      console.error('❌ Error checking notification feature:', error);
+    }
+  };
+
+  // 🔔 NEW: Function to track property view
+  const trackPropertyView = async () => {
+    try {
+      console.log(`📊 Tracking view for property: ${property.id}`);
+
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/property-tracking/view/${property.id}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Property view tracked successfully:', data);
+      } else {
+        console.warn('⚠️ Failed to track property view');
+      }
+    } catch (error) {
+      // Silently fail - don't disrupt user experience
+      console.error('❌ Error tracking property view:', error);
     }
   };
 
