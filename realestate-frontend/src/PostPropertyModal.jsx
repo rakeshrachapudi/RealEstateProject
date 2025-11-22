@@ -5,7 +5,24 @@ import { BACKEND_BASE_URL } from "./config/config";
 import UserCreationModal from "./components/UserCreationModal";
 import "./PostPropertyModal.css";
 import BrokerSubscriptionModal from './components/BrokerSubscriptionModal';
-
+// ⭐ NEW: Property type icons helper function
+const getPropertyTypeIcon = (typeName) => {
+  const icons = {
+    'Apartment': '🏢',
+    'Villa': '🏡',
+    'Plot': '📐',
+    'Land': '🌾',
+    'Office': '🏢',
+    'Shop': '🏪',
+    'Warehouse': '🏭',
+    'Farm House': '🏡',
+    'Penthouse': '🌆',
+    'Studio': '🏠',
+    'Independent House': '🏠',
+    'Builder Floor': '🏢'
+  };
+  return icons[typeName] || '🏘️';
+};
 function PostPropertyModal({ onClose, onPropertyPosted }) {
   const { user, isAuthenticated } = useAuth();
   const authToken = localStorage.getItem("authToken");
@@ -49,6 +66,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     bathrooms: "",
     balconies: "",
     areaSqft: "",
+    amenitiesSqft: "",
     price: "",
     pricePerSqft: "",
     amenities: "",
@@ -286,14 +304,23 @@ const loadPropertyTypes = async () => {
     return "";
   };
 
-  const calculateTotalPrice = (pricePerSqft, areaSqft) => {
-    const ps = Number(pricePerSqft);
-    const a = Number(areaSqft);
-    if (ps > 0 && a > 0) {
-      return Math.round(ps * a);
+const calculateTotalPrice = (pricePerSqft, areaSqft, amenitiesPrice = 0, propertyType = "") => {
+  const ps = Number(pricePerSqft);
+  const a = Number(areaSqft);
+  const ap = Number(amenitiesPrice); // ⭐ Fixed amenities price
+
+  if (ps > 0 && a > 0) {
+    let totalPrice = ps * a; // Base calculation: Area × Price/Sqft
+
+    // ⭐ Add FIXED amenities price only for apartments
+    if (propertyType?.toLowerCase() === 'apartment' && ap > 0) {
+      totalPrice += ap; // Just add the fixed amount
     }
-    return "";
-  };
+
+    return Math.round(totalPrice);
+  }
+  return "";
+};
 
   const handlePriceChange = (e) => {
     const priceValue = e.target.value;
@@ -307,43 +334,73 @@ const loadPropertyTypes = async () => {
     setPriceInWords(priceValue ? convertToIndianWords(priceValue) : "");
   };
 
-  const handlePricePerSqftChange = (e) => {
-    const pricePerSqftValue = e.target.value;
-    const areaSqft = formData.areaSqft;
+const handlePricePerSqftChange = (e) => {
+  const pricePerSqftValue = e.target.value;
+  const areaSqft = formData.areaSqft;
+  const amenitiesPrice = formData.amenitiesPrice; // ⭐ Fixed price
+  const propertyType = formData.type;
 
-    setFormData((prev) => ({
-      ...prev,
-      pricePerSqft: pricePerSqftValue,
-      price: calculateTotalPrice(pricePerSqftValue, areaSqft),
-    }));
+  setFormData((prev) => ({
+    ...prev,
+    pricePerSqft: pricePerSqftValue,
+    price: calculateTotalPrice(pricePerSqftValue, areaSqft, amenitiesPrice, propertyType),
+  }));
 
-    const calculatedPrice = calculateTotalPrice(pricePerSqftValue, areaSqft);
-    setPriceInWords(calculatedPrice ? convertToIndianWords(calculatedPrice) : "");
-  };
+  const calculatedPrice = calculateTotalPrice(pricePerSqftValue, areaSqft, amenitiesPrice, propertyType);
+  setPriceInWords(calculatedPrice ? convertToIndianWords(calculatedPrice) : "");
+};
 
-  const handleAreaSqftChange = (e) => {
-    const areaSqftValue = e.target.value;
-    const price = formData.price;
-    const pricePerSqft = formData.pricePerSqft;
+const handleAreaSqftChange = (e) => {
+  const areaSqftValue = e.target.value;
+  const price = formData.price;
+  const pricePerSqft = formData.pricePerSqft;
+  const amenitiesPrice = formData.amenitiesPrice; // ⭐ Fixed price
+  const propertyType = formData.type;
 
-    let newPrice = price;
-    let newPricePerSqft = pricePerSqft;
+  let newPrice = price;
+  let newPricePerSqft = pricePerSqft;
 
-    if (pricePerSqft > 0) {
-      newPrice = calculateTotalPrice(pricePerSqft, areaSqftValue);
-    } else if (price > 0) {
-      newPricePerSqft = calculatePricePerSqft(price, areaSqftValue);
-    }
+  if (pricePerSqft > 0) {
+    newPrice = calculateTotalPrice(pricePerSqft, areaSqftValue, amenitiesPrice, propertyType);
+  } else if (price > 0) {
+    newPricePerSqft = calculatePricePerSqft(price, areaSqftValue);
+  }
 
-    setFormData((prev) => ({
-      ...prev,
-      areaSqft: areaSqftValue,
-      price: newPrice,
-      pricePerSqft: newPricePerSqft,
-    }));
+  setFormData((prev) => ({
+    ...prev,
+    areaSqft: areaSqftValue,
+    price: newPrice,
+    pricePerSqft: newPricePerSqft,
+  }));
 
-    setPriceInWords(newPrice ? convertToIndianWords(newPrice) : "");
-  };
+  setPriceInWords(newPrice ? convertToIndianWords(newPrice) : "");
+};
+
+// ⭐ NEW: Handle amenities price change (fixed amount for apartments)
+const handleAmenitiesPriceChange = (e) => {
+  const amenitiesPriceValue = e.target.value;
+  const pricePerSqft = formData.pricePerSqft;
+  const areaSqft = formData.areaSqft;
+  const propertyType = formData.type;
+
+  let newPrice = formData.price;
+
+  // Only recalculate if we have pricePerSqft and it's an apartment
+  if (pricePerSqft > 0 && areaSqft > 0 && propertyType?.toLowerCase() === 'apartment') {
+    newPrice = calculateTotalPrice(pricePerSqft, areaSqft, amenitiesPriceValue, propertyType);
+  }
+
+  setFormData((prev) => ({
+    ...prev,
+    amenitiesPrice: amenitiesPriceValue,
+    price: newPrice,
+  }));
+
+  setPriceInWords(newPrice ? convertToIndianWords(newPrice) : "");
+};
+
+
+
 
   const handleDecimalChange = (e) => {
     const { name, value } = e.target;
@@ -572,6 +629,7 @@ const loadPropertyTypes = async () => {
         price: Number(formData.price),
         pricePerSqft: formData.pricePerSqft ? Number(formData.pricePerSqft) : null,
         areaSqft: formData.areaSqft ? Number(formData.areaSqft) : null,
+         amenitiesPrice: formData.amenitiesPrice ? Number(formData.amenitiesPrice) : null, // ⭐ ADD THIS LINE
         bedrooms: formData.bedrooms ? Number(formData.bedrooms) : null,
         bathrooms: formData.bathrooms ? Number(formData.bathrooms) : null,
         balconies: formData.balconies ? Number(formData.balconies) : null,
@@ -775,9 +833,9 @@ const loadPropertyTypes = async () => {
   >
     <option value="">Select Property Type</option>
     {propertyTypes.map((pt) => (
-      <option key={pt.id ?? pt.name} value={pt.name}>
-        {pt.name}
-      </option>
+     <option key={pt.id ?? pt.name} value={pt.name}>
+       {getPropertyTypeIcon(pt.name)} {pt.name}
+     </option>
     ))}
   </select>
 )}
@@ -1088,6 +1146,26 @@ const loadPropertyTypes = async () => {
                   inputMode="numeric"
                 />
               </div>
+             {/* ⭐ NEW: FIXED Amenities Price Field (Only for Apartments) */}
+             {formData.type?.toLowerCase() === 'apartment' && (
+               <div className="ppm-field">
+                 <label className="ppm-label">💰 Amenities Price (₹)</label>
+                 <input
+                   type="number"
+                   name="amenitiesPrice"
+                   value={formData.amenitiesPrice}
+                   onChange={handleAmenitiesPriceChange}
+                   placeholder="e.g., 500000"
+                   className="ppm-input"
+                   max="10000000"
+                   inputMode="numeric"
+                 />
+                 <small style={{fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block'}}>
+                   Fixed price for amenities (balcony, club house, etc.)
+                 </small>
+               </div>
+             )}
+             {/* ⭐ END OF NEW BLOCK */}
 
               <div className="ppm-field">
                 <label className="ppm-label">💵 Price Per Sqft (₹)</label>

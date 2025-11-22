@@ -1,19 +1,17 @@
 package com.example.realestate.dto;
 
-import java.math.BigDecimal; // Not strictly needed here, but kept if you plan to use it later
-
 public class PropertyPostRequestDto {
 
     // ⭐ Nested DTO to match frontend JSON structure: { "user": { "id": 6 } }
     public static class UserReferenceDto {
-        private Long id; // Corresponds to the user who posted
+        private Long id;
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
     }
 
     // ⭐ Nested DTO to match frontend JSON structure: { "area": { "id": 1 } }
     public static class AreaReferenceDto {
-        private Long id; // Corresponds to the area selected
+        private Long id;
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
     }
@@ -31,7 +29,11 @@ public class PropertyPostRequestDto {
     private Double balconies;
 
     private Double areaSqft;
-    // ⭐ NEW: Price per square foot
+
+    // ⭐ NEW FIELD: Fixed Amenities Price (NOT sqft-based)
+    private Double amenitiesPrice;
+
+    // ⭐ Price per square foot
     private Double pricePerSqft;
 
     // --- Foreign Key fields / Core Type fields ---
@@ -48,16 +50,14 @@ public class PropertyPostRequestDto {
     private Boolean isFeatured = false;
     private Boolean isActive = true;
 
-    // ⭐ NEW FIELDS ADDED FROM FRONTEND
+    // ⭐ STATUS FIELDS
     private String ownerType = "owner"; // "owner" or "broker"
-    private Boolean isVerified = false; // Only agents can verify
+    private Boolean isVerified = false;
 
-    // ⭐ NEW: Construction Status and Possession Details
-    private String constructionStatus; // e.g., "ready_to_move", "under_construction"
+    // ⭐ CONSTRUCTION & REGULATORY FIELDS
+    private String constructionStatus;
     private String possessionYear;
     private String possessionMonth;
-
-    // ⭐ NEW: Regulatory IDs
     private String reraId;
     private String hmdaId;
 
@@ -78,7 +78,6 @@ public class PropertyPostRequestDto {
     public String getPriceDisplay() { return priceDisplay; }
     public void setPriceDisplay(String priceDisplay) { this.priceDisplay = priceDisplay; }
 
-    // ⭐ UPDATED GETTERS/SETTERS FOR DECIMAL SUPPORT
     public Double getBedrooms() { return bedrooms; }
     public void setBedrooms(Double bedrooms) { this.bedrooms = bedrooms; }
 
@@ -87,16 +86,16 @@ public class PropertyPostRequestDto {
 
     public Double getBalconies() { return balconies; }
     public void setBalconies(Double balconies) { this.balconies = balconies; }
-    // ---------------------------------------------
 
     public Double getAreaSqft() { return areaSqft; }
     public void setAreaSqft(Double areaSqft) { this.areaSqft = areaSqft; }
 
-    // ⭐ NEW GETTERS/SETTERS
+    // ⭐ NEW GETTERS/SETTERS for amenitiesPrice
+    public Double getAmenitiesPrice() { return amenitiesPrice; }
+    public void setAmenitiesPrice(Double amenitiesPrice) { this.amenitiesPrice = amenitiesPrice; }
+
     public Double getPricePerSqft() { return pricePerSqft; }
     public void setPricePerSqft(Double pricePerSqft) { this.pricePerSqft = pricePerSqft; }
-    // ---------------------------------------------
-
 
     public AreaReferenceDto getArea() { return area; }
     public void setArea(AreaReferenceDto area) { this.area = area; }
@@ -128,7 +127,6 @@ public class PropertyPostRequestDto {
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
 
-    // ⭐ NEW GETTERS AND SETTERS FOR STATUS AND REGULATORY IDs
     public String getOwnerType() { return ownerType; }
     public void setOwnerType(String ownerType) { this.ownerType = ownerType; }
 

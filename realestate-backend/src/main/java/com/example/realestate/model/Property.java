@@ -13,7 +13,7 @@ public class Property {
 
     // Existing fields (keep for backward compatibility)
     private String title;
-    private String type; // String type for backward compatibility (can also be mapped to propertyType entity name)
+    private String type; // String type for backward compatibility
     private String city;
     private String imageUrl;
     private String priceDisplay;
@@ -36,12 +36,16 @@ public class Property {
     @Column(name = "price", precision = 15, scale = 2)
     private BigDecimal price;
 
-    // ⭐ NEW FIELD: Price per square foot
+    // ⭐ Price per square foot
     @Column(name = "price_per_sqft", precision = 15, scale = 2)
     private BigDecimal pricePerSqft;
 
     @Column(name = "area_sqft", precision = 10, scale = 2)
     private BigDecimal areaSqft;
+
+    // ⭐ NEW FIELD: Fixed Amenities Price (NOT sqft-based)
+    @Column(name = "amenities_price", precision = 15, scale = 2)
+    private BigDecimal amenitiesPrice;
 
     // ⭐ UPDATED TYPE: Changed from Integer to Double to allow for 2.5, 3.5 etc.
     private Double bedrooms;
@@ -82,9 +86,9 @@ public class Property {
     @Column(name = "is_ready_to_move")
     private Boolean isReadyToMove = false;
 
-    // ⭐ NEW CONSTRUCTION & REGULATORY FIELDS
+    // ⭐ CONSTRUCTION & REGULATORY FIELDS
     @Column(name = "construction_status")
-    private String constructionStatus; // e.g., "ready_to_move", "under_construction"
+    private String constructionStatus;
 
     @Column(name = "possession_year")
     private String possessionYear;
@@ -147,14 +151,16 @@ public class Property {
     public BigDecimal getPrice() { return price; }
     public void setPrice(BigDecimal price) { this.price = price; }
 
-    // ⭐ NEW Getter/Setter for pricePerSqft
     public BigDecimal getPricePerSqft() { return pricePerSqft; }
     public void setPricePerSqft(BigDecimal pricePerSqft) { this.pricePerSqft = pricePerSqft; }
 
     public BigDecimal getAreaSqft() { return areaSqft; }
     public void setAreaSqft(BigDecimal areaSqft) { this.areaSqft = areaSqft; }
 
-    // ⭐ UPDATED: Double Getters/Setters
+    // ⭐ NEW Getter/Setter for amenitiesPrice
+    public BigDecimal getAmenitiesPrice() { return amenitiesPrice; }
+    public void setAmenitiesPrice(BigDecimal amenitiesPrice) { this.amenitiesPrice = amenitiesPrice; }
+
     public Double getBedrooms() { return bedrooms; }
     public void setBedrooms(Double bedrooms) { this.bedrooms = bedrooms; }
 
@@ -197,7 +203,6 @@ public class Property {
     public Boolean getIsReadyToMove() { return isReadyToMove; }
     public void setIsReadyToMove(Boolean isReadyToMove) { this.isReadyToMove = isReadyToMove; }
 
-    // ⭐ NEW Getters and Setters
     public String getConstructionStatus() { return constructionStatus; }
     public void setConstructionStatus(String constructionStatus) { this.constructionStatus = constructionStatus; }
 
