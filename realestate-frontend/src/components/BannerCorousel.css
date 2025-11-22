@@ -712,11 +712,13 @@
 
 /* final guard: if some content still forces height, cap the carousel visually */
 .banner-carousel-container {
-  max-height: 520px;
-  overflow: hidden;
+  min-height: auto !important;
+  height: auto !important;
 }
-
-/* small helper: slightly reduce overall font-weight inside carousel to save space */
 .banner-carousel-slide {
-  font-weight: 600;
+  min-height: auto !important;
+  height: auto !important;
+}
+.banner-carousel-track {
+  height: auto !important;
 }
