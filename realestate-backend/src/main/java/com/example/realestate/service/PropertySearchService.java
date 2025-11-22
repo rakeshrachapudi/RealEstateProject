@@ -3,9 +3,12 @@ package com.example.realestate.service;
 import com.example.realestate.dto.PropertyDTO;
 import com.example.realestate.dto.PropertySearchRequest;
 import com.example.realestate.model.Property;
+import com.example.realestate.model.PropertyImage;
+import com.example.realestate.repository.PropertyImageRepository;
 import com.example.realestate.repository.PropertyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +29,23 @@ public class PropertySearchService {
 
     private static final Logger logger = LoggerFactory.getLogger(PropertySearchService.class);
     private final PropertyRepository propertyRepository;
+    @Autowired
+    private PropertyImageRepository propertyImageRepository;
+    private String getPrimaryImageUrl(Long propertyId) {
+        try {
+            List<PropertyImage> images = propertyImageRepository.findByPropertyId(propertyId);
+            if (images == null || images.isEmpty()) return null;
+            PropertyImage primaryImage = images.stream()
+                    .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                    .findFirst()
+                    .orElse(images.get(0));
+            return primaryImage.getImageUrl();
+        } catch (Exception e) {
+            logger.warn("Could not resolve primary image for property {}: {}", propertyId, e.getMessage());
+            return null;
+        }
+    }
+
 
     public PropertySearchService(PropertyRepository propertyRepository) {
         this.propertyRepository = propertyRepository;
@@ -159,7 +179,10 @@ public class PropertySearchService {
         dto.setAddress(property.getAddress());
         dto.setStatus(property.getStatus());
         dto.setListingType(property.getListingType());
-        dto.setImageUrl(property.getImageUrl());
+        // Same pattern as in PropertyService
+        String imageUrl = getPrimaryImageUrl(property.getId());
+        dto.setImageUrl(imageUrl != null ? imageUrl : property.getImageUrl());
+
         dto.setAmenities(property.getAmenities());
         dto.setIsFeatured(property.getIsFeatured());
         dto.setCreatedAt(property.getCreatedAt());

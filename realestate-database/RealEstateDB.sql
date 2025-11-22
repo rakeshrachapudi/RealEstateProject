@@ -341,6 +341,9 @@ VALUES
 ('BROKER3FREE', '3 Months Free Trial for New Brokers', 'FREE_TRIAL', 3, NOW(), DATE_ADD(NOW(), INTERVAL 1 YEAR), 1000, TRUE),
 ('WELCOME2024', 'Welcome Offer - 3 Months Free', 'FREE_TRIAL', 3, NOW(), DATE_ADD(NOW(), INTERVAL 6 MONTH), 500, TRUE);
 
+ALTER TABLE propertydealzdb.property 
+ADD COLUMN amenities_price DECIMAL(15, 2) DEFAULT NULL 
+
 
 
 
