@@ -318,7 +318,7 @@ function Header({
             </button>
             {activeDropdown === "sell" && (
               <div
-                className="dropdown-menu"
+                className="dropdown-menu-col"
                 onMouseEnter={handleDropdownEnter}
                 onMouseLeave={handleMouseLeave}
               >
@@ -422,7 +422,7 @@ function Header({
                 <span className="user-name">{user?.firstName}</span>
                 {activeDropdown === "profile" && (
                   <div
-                    className="dropdown-menu user-dropdown"
+                    className="dropdown-menu-col user-dropdown"
                     onMouseEnter={handleDropdownEnter}
                     onMouseLeave={handleMouseLeave}
                   >
@@ -444,7 +444,9 @@ function Header({
                       My Agreements
                     </a>
                     <hr />
-                    <a onClick={handleLogout}>Logout</a>
+                    <a onClick={handleLogout} className="logout-link">
+                      Logout
+                    </a>
                   </div>
                 )}
               </div>
