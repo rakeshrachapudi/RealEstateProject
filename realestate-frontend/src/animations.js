@@ -465,13 +465,15 @@ export const injectAnimations = () => {
       }
 
       /* Button hover effects */
+            /* Button hover effects */
       button {
         position: relative;
         overflow: hidden;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
-      button::after {
+      /* Ripple ONLY on non-header buttons */
+      button:not(.nav-link)::after {
         content: '';
         position: absolute;
         top: 50%;
@@ -484,19 +486,20 @@ export const injectAnimations = () => {
         transition: width 0.6s ease, height 0.6s ease;
       }
 
-      button:hover::after {
+      button:hover:not(.nav-link)::after {
         width: 300px;
         height: 300px;
       }
 
-      button:hover {
+      button:hover:not(.nav-link) {
         transform: translateY(-2px);
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
       }
 
-      button:active {
+      button:active:not(.nav-link) {
         transform: translateY(0);
       }
+
 
       /* Smooth scrolling */
       html {
