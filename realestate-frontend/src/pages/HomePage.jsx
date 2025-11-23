@@ -70,6 +70,8 @@ function HomePage() {
   const searchDebounceRef = useRef(null);
   const searchAbortRef = useRef(null);
 
+  const [loadingTypes, setLoadingTypes] = useState(false);
+
   // Popular Areas
   const popularAreas = [
     { name: "Gachibowli", emoji: "🏢" },
@@ -80,6 +82,19 @@ function HomePage() {
     { name: "Miyapur", emoji: "🌇" },
     { name: "Jubilee Hills", emoji: "🏙️" },
   ];
+
+  // Property Type Icons Mapping
+  const propertyTypeIcons = {
+    Apartment: "🏢",
+    Villa: "🏡",
+    House: "🏠",
+    Plot: "📏",
+    Commercial: "🏪",
+    Penthouse: "🏰",
+    Studio: "🛋️",
+    Duplex: "🏘️",
+    PG: "🏨",
+  };
 
   const safeJsonParse = async (response) => {
     try {
@@ -135,11 +150,22 @@ function HomePage() {
             mobile: p.user.mobile ?? p.user.phone ?? "",
             primaryRole: p.user.role ?? p.user.userRole ?? null,
           }
-        : { id: null, firstName: "", lastName: "", mobile: "",primaryRole: null };
+        : {
+            id: null,
+            firstName: "",
+            lastName: "",
+            mobile: "",
+            primaryRole: null,
+          };
 
-    const bedrooms = Number.isFinite(p.bedrooms) ? p.bedrooms : Number(p.bedrooms) || 0;
-    const bathrooms = Number.isFinite(p.bathrooms) ? p.bathrooms : Number(p.bathrooms) || 0;
-    const postedByRole = p.postedByRole ?? p.role ?? userObj.primaryRole ?? null;
+    const bedrooms = Number.isFinite(p.bedrooms)
+      ? p.bedrooms
+      : Number(p.bedrooms) || 0;
+    const bathrooms = Number.isFinite(p.bathrooms)
+      ? p.bathrooms
+      : Number(p.bathrooms) || 0;
+    const postedByRole =
+      p.postedByRole ?? p.role ?? userObj.primaryRole ?? null;
     return {
       ...p,
       id,
@@ -195,7 +221,11 @@ function HomePage() {
         // ⭐ Combined filter for soft-delete and featured status
         .filter((p) => p.isActive !== false && p.isFeatured === true);
 
-      console.log("📋 Featured properties loaded:", normalized.length, "active properties");
+      console.log(
+        "📋 Featured properties loaded:",
+        normalized.length,
+        "active properties"
+      );
 
       setFeaturedPropsList(normalized);
       setShowSearchResults(false);
@@ -227,10 +257,11 @@ function HomePage() {
           props = await getPropertiesByType(selectedType);
         }
 
-        const normalized = Array.isArray(props) ? props.map(normalizeProperty) : [];
+        const normalized = Array.isArray(props)
+          ? props.map(normalizeProperty)
+          : [];
         // ⭐ Filter out soft-deleted properties
-        setProperties(normalized.filter(p => p.isActive !== false));
-
+        setProperties(normalized.filter((p) => p.isActive !== false));
       } catch (err) {
         console.error("Error loading properties for type:", err);
         setProperties([]);
@@ -238,6 +269,25 @@ function HomePage() {
     };
     load();
   }, [selectedType, activeTab]);
+
+  const handleBrowseTypeClick = (typeName) => {
+    setSelectedType(typeName);
+    setActiveTab("browse-by-type");
+    setShowSearchResults(false);
+    setShowQuickSearchResults(false);
+    setSelectedArea(null);
+
+    // Scroll to properties section
+    setTimeout(() => {
+      const propertiesSection = document.querySelector(".hp-properties");
+      if (propertiesSection) {
+        propertiesSection.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+    }, 100);
+  };
 
   // ============================================================================
   // ✅ FIX #4: fetchMyProperties - Filter out soft-deleted properties
@@ -249,7 +299,9 @@ function HomePage() {
     try {
       const token = localStorage.getItem("authToken");
       if (!token) {
-        console.warn("Authentication token missing. Cannot fetch user properties.");
+        console.warn(
+          "Authentication token missing. Cannot fetch user properties."
+        );
         setLoadingMyProperties(false);
         return;
       }
@@ -271,9 +323,11 @@ function HomePage() {
 
       const normalized = propertiesArray.map((p) => normalizeProperty(p));
       // ⭐ Filter out soft-deleted properties
-      const activeProperties = normalized.filter(p => p.isActive !== false);
+      const activeProperties = normalized.filter((p) => p.isActive !== false);
 
-      console.log(`📋 Loaded ${activeProperties.length} active properties for user ${user.id}`);
+      console.log(
+        `📋 Loaded ${activeProperties.length} active properties for user ${user.id}`
+      );
       setMyProperties(activeProperties);
     } catch (error) {
       console.error("Error fetching user properties:", error);
@@ -292,9 +346,11 @@ function HomePage() {
     // ⭐ FIX: Check for token immediately and exit if missing
     const token = localStorage.getItem("authToken");
     if (!token) {
-        console.warn("Authentication token missing. Cannot fetch user deals (403 fix).");
-        setLoadingMyDeals(false);
-        return;
+      console.warn(
+        "Authentication token missing. Cannot fetch user deals (403 fix)."
+      );
+      setLoadingMyDeals(false);
+      return;
     }
 
     setLoadingMyDeals(true);
@@ -344,7 +400,11 @@ function HomePage() {
       propertiesArray = results.data;
     }
 
-    console.log("Processing", propertiesArray.length, "properties from advanced search");
+    console.log(
+      "Processing",
+      propertiesArray.length,
+      "properties from advanced search"
+    );
     const normalized = propertiesArray.map((p) => normalizeProperty(p));
     setSearchResults(normalized);
     setShowSearchResults(true);
@@ -426,7 +486,9 @@ function HomePage() {
 
     try {
       const response = await fetch(
-        `${BACKEND_BASE_URL}/api/properties/search/quick?q=${encodeURIComponent(query)}`,
+        `${BACKEND_BASE_URL}/api/properties/search/quick?q=${encodeURIComponent(
+          query
+        )}`,
         { signal: controller.signal }
       );
 
@@ -524,10 +586,11 @@ function HomePage() {
     console.log("🗑️ Property deleted:", deletedPropertyId);
 
     // Remove from featured properties list immediately
-    setFeaturedPropsList(prev => {
-      const filtered = prev.filter(p =>
-        String(p.id) !== String(deletedPropertyId) &&
-        String(p.propertyId) !== String(deletedPropertyId)
+    setFeaturedPropsList((prev) => {
+      const filtered = prev.filter(
+        (p) =>
+          String(p.id) !== String(deletedPropertyId) &&
+          String(p.propertyId) !== String(deletedPropertyId)
       );
       console.log("Featured list updated:", prev.length, "→", filtered.length);
       return filtered;
@@ -535,37 +598,41 @@ function HomePage() {
 
     // Remove from search results if showing
     if (showSearchResults) {
-      setSearchResults(prev =>
-        prev.filter(p =>
-          String(p.id) !== String(deletedPropertyId) &&
-          String(p.propertyId) !== String(deletedPropertyId)
+      setSearchResults((prev) =>
+        prev.filter(
+          (p) =>
+            String(p.id) !== String(deletedPropertyId) &&
+            String(p.propertyId) !== String(deletedPropertyId)
         )
       );
     }
 
     // Remove from quick search results if showing
     if (showQuickSearchResults) {
-      setQuickSearchResults(prev =>
-        prev.filter(p =>
-          String(p.id) !== String(deletedPropertyId) &&
-          String(p.propertyId) !== String(deletedPropertyId)
+      setQuickSearchResults((prev) =>
+        prev.filter(
+          (p) =>
+            String(p.id) !== String(deletedPropertyId) &&
+            String(p.propertyId) !== String(deletedPropertyId)
         )
       );
     }
 
     // Remove from browse-by-type properties
-    setProperties(prev =>
-      prev.filter(p =>
-        String(p.id) !== String(deletedPropertyId) &&
-        String(p.propertyId) !== String(deletedPropertyId)
+    setProperties((prev) =>
+      prev.filter(
+        (p) =>
+          String(p.id) !== String(deletedPropertyId) &&
+          String(p.propertyId) !== String(deletedPropertyId)
       )
     );
 
     // Remove from my properties
-    setMyProperties(prev =>
-      prev.filter(p =>
-        String(p.id) !== String(deletedPropertyId) &&
-        String(p.propertyId) !== String(deletedPropertyId)
+    setMyProperties((prev) =>
+      prev.filter(
+        (p) =>
+          String(p.id) !== String(deletedPropertyId) &&
+          String(p.propertyId) !== String(deletedPropertyId)
       )
     );
 
@@ -599,7 +666,13 @@ function HomePage() {
     if (activeTab === "my-properties") return loadingMyProperties;
     if (activeTab === "my-deals") return loadingMyDeals;
     return false;
-  }, [searchLoading, quickSearchLoading, activeTab, loadingMyProperties, loadingMyDeals]);
+  }, [
+    searchLoading,
+    quickSearchLoading,
+    activeTab,
+    loadingMyProperties,
+    loadingMyDeals,
+  ]);
 
   // Determine which properties to show
   const propertiesWithDeals = useMemo(() => {
@@ -633,11 +706,15 @@ function HomePage() {
     if (selectedArea) {
       return `📍 Properties in ${selectedArea} (${searchResults.length})`;
     }
-    if (activeTab === "featured") return `⭐ Featured Properties (${featuredPropsList.length})`;
+    if (activeTab === "featured")
+      return `⭐ Featured Properties (${featuredPropsList.length})`;
     if (activeTab === "browse-by-type") {
-      return `🏘️ ${selectedType === "All" ? "All" : selectedType} Properties (${properties.length})`;
+      return `🏘️ ${selectedType === "All" ? "All" : selectedType} Properties (${
+        properties.length
+      })`;
     }
-    if (activeTab === "my-properties") return `📄 My Properties (${myProperties.length})`;
+    if (activeTab === "my-properties")
+      return `📄 My Properties (${myProperties.length})`;
     if (activeTab === "my-deals") return `📊 My Deals (${myDeals.length})`;
     return "Properties";
   }, [
@@ -659,9 +736,11 @@ function HomePage() {
   // 🚀 FIX APPLIED: Restrict visibility to Admin or Agent users
   const roleValue = user?.role;
   const roleLower = roleValue ? String(roleValue).toLowerCase() : "";
-  const isAuthorizedToCreateDeal = roleLower === "admin" || roleLower === "agent";
+  const isAuthorizedToCreateDeal =
+    roleLower === "admin" || roleLower === "agent";
 
-  const canCreateDeal = isAuthenticated && !isDisplayingDeals && isAuthorizedToCreateDeal;
+  const canCreateDeal =
+    isAuthenticated && !isDisplayingDeals && isAuthorizedToCreateDeal;
 
   return (
     <>
@@ -738,6 +817,45 @@ function HomePage() {
           </div>
         </section>
 
+        {/* ✅ BROWSE BY PROPERTY TYPE SECTION */}
+        <section className="hp-browse-types">
+          <h2 className="hp-section-title">
+            <span className="hp-section-ic">🏘️</span> Browse by Property Type
+          </h2>
+          <p className="hp-section-subtitle">
+            Find your perfect property from our diverse range of options
+          </p>
+
+          {loadingTypes ? (
+            <div className="hp-types-loading">
+              <span className="hp-loading-spinner">⏳</span> Loading property
+              types...
+            </div>
+          ) : propertyTypes.length === 0 ? (
+            <div className="hp-types-empty">
+              <span className="hp-empty-ic">📭</span>
+              <p>No property types available at the moment.</p>
+            </div>
+          ) : (
+            <div className="hp-types-grid">
+              {propertyTypes.map((type) => (
+                <button
+                  key={type}
+                  className="hp-type-card"
+                  onClick={() => handleBrowseTypeClick(type)}
+                  aria-label={`Browse ${type} properties`}
+                >
+                  <div className="hp-type-icon">
+                    {propertyTypeIcons[type] || "🏠"}
+                  </div>
+                  <div className="hp-type-name">{type}</div>
+                  <div className="hp-type-arrow">→</div>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
         {/* Properties / Deals Section */}
         <section className="hp-properties">
           {/* Tabs */}
@@ -745,9 +863,7 @@ function HomePage() {
             <div className="hp-tabs">
               <button
                 onClick={() => setActiveTab("featured")}
-                className={`hp-tab ${
-                  activeTab === "featured" ? "active" : ""
-                }`}
+                className={`hp-tab ${activeTab === "featured" ? "active" : ""}`}
               >
                 ⭐ Featured ({featuredPropsList.length})
               </button>
@@ -810,7 +926,9 @@ function HomePage() {
           <div className="hp-section-header">
             <h2 className="hp-section-title">{sectionTitle}</h2>
             <div className="hp-section-actions">
-              {(showSearchResults || showQuickSearchResults || selectedArea) && (
+              {(showSearchResults ||
+                showQuickSearchResults ||
+                selectedArea) && (
                 <button
                   onClick={handleResetSearch}
                   className="hp-btn hp-btn-clear"
@@ -868,10 +986,7 @@ function HomePage() {
 
         {/* EMI Button */}
         <div className="hp-emi">
-          <button
-            onClick={handleOpenEmiCalculatorPage}
-            className="hp-emi-btn"
-          >
+          <button onClick={handleOpenEmiCalculatorPage} className="hp-emi-btn">
             🧮 Open EMI Calculator
           </button>
         </div>
