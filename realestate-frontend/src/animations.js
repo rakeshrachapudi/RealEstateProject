@@ -514,13 +514,13 @@ export const injectAnimations = () => {
       }
 
       ::-webkit-scrollbar-thumb {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #000000;
         border-radius: 10px;
         transition: background 0.3s ease;
       }
 
       ::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        background: #4f4f4fff;
       }
 
       /* Loading skeleton animation */
