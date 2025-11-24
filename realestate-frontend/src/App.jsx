@@ -23,7 +23,6 @@ import CreateSaleAgreementPage from "./pages/CreateSaleAgreementPage.jsx";
 import EmiCalculatorPage from "./pages/EmiCalculatorPage.jsx";
 
 import Header from "./components/Header.jsx";
-import SubHeader from "./components/SubHeader.jsx";
 import PropertyDetails from "./components/PropertyDetails.jsx";
 import PropertyTypePage from "./components/PropertyTypePage.jsx";
 
@@ -164,20 +163,15 @@ function AppContent() {
 
   return (
     <div className="app-content">
-      <div className="sticky-header-container">
-        <Header
-          onLoginClick={() => setIsLoginModalOpen(true)}
-          onSignupClick={() => setIsSignupModalOpen(true)}
-          onPostPropertyClick={handlePostPropertyClick}
-          onProfileClick={() => setIsUserProfileModalOpen(true)}
-        />
-      </div>
-
-      <SubHeader />
+      <Header
+        onLoginClick={() => setIsLoginModalOpen(true)}
+        onSignupClick={() => setIsSignupModalOpen(true)}
+        onPostPropertyClick={handlePostPropertyClick}
+        onProfileClick={() => setIsUserProfileModalOpen(true)}
+      />
 
       <main className="main-content">
         <Routes>
-          {/* Main Pages */}
           <Route path="/" element={<HomePage />} />
           <Route path="/search" element={<SearchResultsPage />} />
           <Route
@@ -197,7 +191,6 @@ function AppContent() {
           <Route path="/area/:areaName" element={<PropertyTypePage />} />
           <Route path="/emi-calculator" element={<EmiCalculatorPage />} />
 
-          {/* User Properties */}
           <Route
             path="/my-properties"
             element={
@@ -211,29 +204,23 @@ function AppContent() {
             }
           />
 
-          {/* Deals Pages - Role Based */}
           <Route path="/my-deals" element={<MyDealsPage />} />
           <Route path="/buyer-deals" element={<BuyerDeals />} />
           <Route path="/seller-deals" element={<SellerDealsPage />} />
 
-          {/* Agent Dashboard */}
           <Route path="/agent-dashboard" element={<AgentDashboard />} />
 
-          {/* Admin Pages */}
           <Route path="/admin-deals" element={<AdminDealPanel />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
           <Route path="/admin-agents" element={<AdminAgentsPage />} />
           <Route path="/admin-users" element={<AdminUsersPage />} />
           <Route path="/admin/properties" element={<AdminPropertiesPage />} />
 
-          {/* Agreement Pages */}
           <Route path="/rental-agreement" element={<RentalAgreementPage />} />
           <Route path="/my-agreements" element={<MyAgreementsPage />} />
 
-          {/* Sale Agreement Creation */}
           <Route path="/sale-agreement" element={<CreateSaleAgreementPage />} />
 
-          {/* Legal Pages */}
           <Route
             path="/privacy"
             element={
@@ -253,7 +240,6 @@ function AppContent() {
             }
           />
 
-          {/* Placeholder Pages */}
           <Route
             path="/owner-plans"
             element={<PlaceholderPage title="Owner Plans" />}
@@ -288,7 +274,6 @@ function AppContent() {
 
       <Footer />
 
-      {/* Modals */}
       {isLoginModalOpen && (
         <LoginModal onClose={() => setIsLoginModalOpen(false)} />
       )}
