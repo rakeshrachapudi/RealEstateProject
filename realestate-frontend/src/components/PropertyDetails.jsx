@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
+import LoginModal from "../LoginModal.jsx";  // ✅ FIXED - Parent directory (src/)
 import { BACKEND_BASE_URL } from "../config/config";
 import "./PropertyDetails.css";
 
@@ -33,12 +34,13 @@ function PropertyDetails() {
   const [modalImageIndex, setModalImageIndex] = useState(0);
   const [agent, setAgent] = useState(null);
   const [agentLoading, setAgentLoading] = useState(false);
-  // 🆕 NEW: State to track if notification feature is enabled
-  const [notificationFeatureEnabled, setNotificationFeatureEnabled] = useState(false);
+
+  // ✅ NEW: Login and Tracking States
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [viewTracked, setViewTracked] = useState(false);
 
   useEffect(() => {
     fetchPropertyDetails();
-    checkNotificationFeature(); // 🆕 Check if notification feature is enabled
   }, [propertyId]);
 
   useEffect(() => {
@@ -54,16 +56,12 @@ function PropertyDetails() {
     }
   }, [property, user]);
 
-  // 🔔 NEW: Track Property View - Send Notifications (only if feature is enabled)
+  // ✅ NEW: Track Property View AFTER User Logs In (Buyer Detection)
   useEffect(() => {
-    // Only track if:
-    // 1. Property is loaded
-    // 2. Notification feature is enabled
-    // 3. User is NOT the owner (or not logged in)
-    if (property && notificationFeatureEnabled && (!user || property.user?.id !== user?.id)) {
+    if (user && property && !viewTracked && property.user?.id !== user.id) {
       trackPropertyView();
     }
-  }, [property?.id, notificationFeatureEnabled]); // Track when property or feature flag changes
+  }, [user, property, viewTracked]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -111,49 +109,39 @@ function PropertyDetails() {
     }
   };
 
-  // 🆕 NEW: Check if notification tracking feature is enabled
-  const checkNotificationFeature = async () => {
-    try {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/property-tracking/feature-status`);
-      if (response.ok) {
-        const data = await response.json();
-        setNotificationFeatureEnabled(data.enabled);
-        console.log(`📊 Property tracking feature: ${data.enabled ? 'ENABLED' : 'DISABLED'}`);
-      } else {
-        // Default to false if endpoint fails
-        setNotificationFeatureEnabled(false);
-        console.warn('⚠️ Could not check notification feature status, defaulting to disabled');
-      }
-    } catch (error) {
-      // Silently fail and disable feature
-      setNotificationFeatureEnabled(false);
-      console.error('❌ Error checking notification feature:', error);
-    }
-  };
-
-  // 🔔 NEW: Function to track property view
+  // ✅ NEW: Track Property View with User Authentication (Buyer Detection)
   const trackPropertyView = async () => {
-    try {
-      console.log(`📊 Tracking view for property: ${property.id}`);
+    if (!user) return;
 
+    try {
+      console.log('📊 Tracking property view for user:', user.id);
+
+      const token = localStorage.getItem("authToken");
       const response = await fetch(
-        `${BACKEND_BASE_URL}/api/property-tracking/view/${property.id}`,
+        `${BACKEND_BASE_URL}/api/property-tracking/view/${propertyId}`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
+          body: JSON.stringify({
+            userId: user.id,
+            userName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+            userMobile: user.mobileNumber || '',
+            userEmail: user.email || ''
+          })
         }
       );
 
       if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Property view tracked successfully:', data);
+        const result = await response.json();
+        console.log('✅ Property view tracked:', result);
+        setViewTracked(true);
       } else {
         console.warn('⚠️ Failed to track property view');
       }
     } catch (error) {
-      // Silently fail - don't disrupt user experience
       console.error('❌ Error tracking property view:', error);
     }
   };
@@ -416,6 +404,20 @@ function PropertyDetails() {
     setModalImageIndex((prev) => prev === 0 ? imageUrls.length - 1 : prev - 1);
   };
 
+  // ✅ NEW: Handle contact click - require login
+  const handleContactClick = (action) => {
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
+    // User is logged in, proceed with action
+    if (action === 'whatsapp' && waHref) {
+      window.open(waHref, "_blank");
+    } else if (action === 'call' && telHref) {
+      window.location.href = telHref;
+    }
+  };
+
   if (loading) {
     return (
       <div className="pd-page">
@@ -473,6 +475,11 @@ function PropertyDetails() {
 
   return (
     <>
+      {/* ✅ ADDED: Login Modal */}
+      {showLoginModal && (
+        <LoginModal onClose={() => setShowLoginModal(false)} />
+      )}
+
       <div className="pd-page">
         <div className="pd-container">
           <button onClick={() => navigate(-1)} className="pd-back">← Back</button>
@@ -588,7 +595,7 @@ function PropertyDetails() {
                   <span className="pd-key-ic">📏</span>
                   <div>
                     <div className="pd-key-label">Area</div>
-                    <div className="pd-key-val">{property.areaSqft} sq ft </div>
+                    <div className="pd-key-val">{property.areaSqft} sq ft</div>
                   </div>
                 </div>
                 <div className="pd-key">
@@ -636,32 +643,64 @@ function PropertyDetails() {
             <div className="pd-right">
               <div className="card pd-contact">
                 <h3 className="pd-contact-title">{contactLabel}</h3>
-                <div className="pd-owner">
-                  <div className="pd-avatar">{ownerInitial}</div>
-                  <div>
-                    <div className="pd-owner-label">{contactRoleLabel}</div>
-                    <div className="pd-owner-name">{ownerDisplayName}</div>
-                    {agentLoading ? (
-                      <div className="pd-owner-phone">Assigning agent…</div>
-                    ) : validContactPhone ? (
-                      <div className="pd-owner-phone">{contactPhone}</div>
-                    ) : (
-                      <div className="pd-owner-phone pd-muted">Agent contact will be assigned shortly.</div>
-                    )}
+
+                {/* ✅ MODIFIED: Show login prompt if not logged in */}
+                {!user ? (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '20px',
+                    background: '#f0f9ff',
+                    borderRadius: '12px',
+                    marginBottom: '16px'
+                  }}>
+                    <div style={{ fontSize: '48px', marginBottom: '12px' }}>🔒</div>
+                    <p style={{ fontSize: '14px', color: '#1e40af', fontWeight: '600', marginBottom: '16px' }}>
+                      Please login to view contact information
+                    </p>
+                    <button
+                      onClick={() => setShowLoginModal(true)}
+                      className="pd-btn pd-btn-primary"
+                      style={{ width: '100%' }}
+                    >
+                      Login to Contact
+                    </button>
                   </div>
-                </div>
-                <div className="pd-contact-actions">
-                  <button className="pd-btn pd-btn-wa" disabled={!validContactPhone}
-                          onClick={() => validContactPhone && window.open(waHref, "_blank")}
-                          title={validContactPhone ? "Chat on WhatsApp" : "Agent not assigned yet"}>
-                    <span>💬</span><span>WhatsApp</span>
-                  </button>
-                  <button className="pd-btn pd-btn-phone" disabled={!validContactPhone}
-                          onClick={() => validContactPhone && (window.location.href = telHref)}
-                          title={validContactPhone ? "Call Agent" : "Agent not assigned yet"}>
-                    <span>📞</span><span>Call</span>
-                  </button>
-                </div>
+                ) : (
+                  <>
+                    <div className="pd-owner">
+                      <div className="pd-avatar">{ownerInitial}</div>
+                      <div>
+                        <div className="pd-owner-label">{contactRoleLabel}</div>
+                        <div className="pd-owner-name">{ownerDisplayName}</div>
+                        {agentLoading ? (
+                          <div className="pd-owner-phone">Assigning agent…</div>
+                        ) : validContactPhone ? (
+                          <div className="pd-owner-phone">{contactPhone}</div>
+                        ) : (
+                          <div className="pd-owner-phone pd-muted">Agent contact will be assigned shortly.</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="pd-contact-actions">
+                      <button
+                        className="pd-btn pd-btn-wa"
+                        disabled={!validContactPhone}
+                        onClick={() => handleContactClick('whatsapp')}
+                        title={validContactPhone ? "Chat on WhatsApp" : "Agent not assigned yet"}
+                      >
+                        <span>💬</span><span>WhatsApp</span>
+                      </button>
+                      <button
+                        className="pd-btn pd-btn-phone"
+                        disabled={!validContactPhone}
+                        onClick={() => handleContactClick('call')}
+                        title={validContactPhone ? "Call Agent" : "Agent not assigned yet"}
+                      >
+                        <span>📞</span><span>Call</span>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
 
               {showFeaturedSection && !featuredStatus?.featured && (
@@ -772,7 +811,7 @@ function PropertyDetails() {
                 <div className="pd-details-list">
                   <div className="pd-detail-row">
                     <span>Property ID</span>
-                    <span>{property.id ||property.propertyId}</span>
+                    <span>{property.id || property.propertyId}</span>
                   </div>
                   <div className="pd-detail-row">
                     <span>Posted On</span>
@@ -786,7 +825,6 @@ function PropertyDetails() {
                           <span>{property.user.firstName || ""} {property.user.lastName || ""}</span>
                         </div>
                       )}
-
                     </>
                   )}
                   {property.yearBuilt && (
@@ -806,9 +844,13 @@ function PropertyDetails() {
             </div>
           </div>
 
-          <button className="pd-fab" onClick={() => validContactPhone && window.open(waHref, "_blank")}
-                  disabled={!validContactPhone}
-                  title={validContactPhone ? "Chat on WhatsApp" : "Agent not assigned yet"}>
+          {/* ✅ MODIFIED: Floating button requires login */}
+          <button
+            className="pd-fab"
+            onClick={() => user ? (validContactPhone && window.open(waHref, "_blank")) : setShowLoginModal(true)}
+            disabled={user && !validContactPhone}
+            title={!user ? "Login to contact" : (validContactPhone ? "Chat on WhatsApp" : "Agent not assigned yet")}
+          >
             💬
           </button>
         </div>
