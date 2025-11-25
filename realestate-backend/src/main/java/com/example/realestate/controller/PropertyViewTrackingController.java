@@ -23,7 +23,6 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/property-tracking")
-@CrossOrigin(origins = "*")
 public class PropertyViewTrackingController {
 
     private static final Logger logger = LoggerFactory.getLogger(PropertyViewTrackingController.class);

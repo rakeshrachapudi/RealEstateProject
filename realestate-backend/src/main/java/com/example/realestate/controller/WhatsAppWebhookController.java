@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/webhooks")
-@CrossOrigin(origins = "*")
 public class WhatsAppWebhookController {
 
     private static final Logger logger = LoggerFactory.getLogger(WhatsAppWebhookController.class);

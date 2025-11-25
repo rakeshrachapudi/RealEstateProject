@@ -177,12 +177,19 @@ function PropertyDetails() {
       return;
     }
     try {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/deals/property/${propertyId}/buyer/${user.id}`, {
+      // ✅ FIXED: Use the existing endpoint that returns all deals for this property
+      const response = await fetch(`${BACKEND_BASE_URL}/api/deals/property/${propertyId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
       });
       if (response.ok) {
-        const deal = await response.json();
-        setExistingDeal(deal);
+        const apiResponse = await response.json();
+        // The API returns { success: true, data: [...] }
+        const deals = apiResponse.data || [];
+
+        // Filter to find deal for this specific buyer
+        const userDeal = deals.find(deal => deal.buyerId === user.id);
+
+        setExistingDeal(userDeal || null);
       } else {
         setExistingDeal(null);
       }
