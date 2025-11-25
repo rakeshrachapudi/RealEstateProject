@@ -12,11 +12,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,68 +27,91 @@ public class NotificationService {
     private SESService sesService;
 
     @Autowired
-    private WhatsAppCloudService whatsAppCloudService;
-
-    @Autowired
-    private UserRepository userRepository;
+    private WhatsAppCloudService whatsAppService;
 
     @Autowired
     private PropertyRepository propertyRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Value("${notification.enabled:true}")
     private boolean notificationEnabled;
 
     @Value("${notification.admins.emails:}")
-    private String adminEmails;
+    private String adminEmailsConfig;
 
     @Value("${notification.admins.phones:}")
-    private String adminPhones;
+    private String adminPhonesConfig;
 
     @Value("${frontend.base.url:https://propertydealz.in}")
     private String frontendBaseUrl;
 
     /**
-     * Send property view notification to all agents and admins
+     * ✅ Send property view notification for BUYER
      */
     @Async
-    public void sendPropertyViewNotification(Long propertyId, String guestIp, String guestDevice) {
-        if (!notificationEnabled) {
-            logger.info("ℹ️ Notifications are disabled");
-            return;
-        }
-
-        logger.info("🔔 Processing property view notification for Property ID: {}", propertyId);
+    public void sendPropertyViewNotificationForBuyer(
+            Long propertyId,
+            Long buyerId,
+            String buyerName,
+            String buyerMobile,
+            String buyerEmail) {
 
         try {
+            if (!notificationEnabled) {
+                logger.info("Notifications are disabled");
+                return;
+            }
+
+            logger.info("📧 Preparing to send property view notification for buyer: {}", buyerName);
+
             // Fetch property details
-            Property property = propertyRepository.findById(propertyId)
-                    .orElseThrow(() -> new RuntimeException("Property not found"));
+            Optional<Property> propertyOpt = propertyRepository.findById(propertyId);
+            if (!propertyOpt.isPresent()) {
+                logger.error("Property not found with ID: {}", propertyId);
+                return;
+            }
 
-            // Build notification data
-            PropertyViewNotificationDTO notificationData = buildNotificationData(property, guestIp, guestDevice);
+            Property property = propertyOpt.get();
+            User owner = property.getUser();
 
-            // Get all agents and admins
-            List<User> agents = userRepository.findByRole(User.UserRole.AGENT);
-            List<User> admins = userRepository.findByRole(User.UserRole.ADMIN);
+            // Build notification DTO
+            PropertyViewNotificationDTO notificationDTO = PropertyViewNotificationDTO.builder()
+                    .propertyId(propertyId)
+                    .propertyTitle(property.getTitle())
+                    .propertyArea(property.getArea().getAreaName())  // Area object
+                    .propertyCity(property.getCity())
+                    .propertyPrice(property.getPrice())  // BigDecimal
+                    .propertyUrl(frontendBaseUrl + "/property/" + propertyId)
+                    .buyerId(buyerId)
+                    .buyerName(buyerName)
+                    .buyerMobile(buyerMobile)
+                    .buyerEmail(buyerEmail)
+                    .ownerName(owner != null ? owner.getFirstName() + " " + owner.getLastName() : "N/A")
+                    .ownerPhone(owner != null ? owner.getMobileNumber() : "N/A")
+                    .ownerEmail(owner != null ? owner.getEmail() : "N/A")
+                    .viewedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy hh:mm a")))
+                    .build();
 
-            // Combine lists
-            List<User> recipients = new ArrayList<>();
-            recipients.addAll(agents);
-            recipients.addAll(admins);
+            // Get recipients (Agents and Admins)
+            List<String> recipientEmails = getRecipientEmails();
+            List<String> recipientPhones = getRecipientPhones();
 
-            // Add configured admin emails/phones
-            addConfiguredAdmins(recipients);
+            logger.info("📧 Sending notifications to {} emails and {} phones",
+                    recipientEmails.size(), recipientPhones.size());
 
-            logger.info("📊 Total recipients: {} (Agents: {}, Admins: {})",
-                    recipients.size(), agents.size(), admins.size());
+            // Send Email Notifications
+            if (!recipientEmails.isEmpty()) {
+                sendBuyerViewEmailNotifications(recipientEmails, notificationDTO);
+            }
 
-            // Send email notifications
-            sendEmailNotifications(recipients, notificationData);
+            // Send WhatsApp Notifications
+            if (!recipientPhones.isEmpty()) {
+                sendBuyerViewWhatsAppNotifications(recipientPhones, notificationDTO);
+            }
 
-            // Send WhatsApp notifications
-            sendWhatsAppNotifications(recipients, notificationData);
-
-            logger.info("✅ Property view notifications sent successfully");
+            logger.info("✅ Property view notifications sent successfully for buyer: {}", buyerName);
 
         } catch (Exception e) {
             logger.error("❌ Error sending property view notification: {}", e.getMessage(), e);
@@ -97,408 +119,295 @@ public class NotificationService {
     }
 
     /**
-     * Build notification data from property
-     */
-    private PropertyViewNotificationDTO buildNotificationData(Property property, String guestIp, String guestDevice) {
-        String propertyUrl = frontendBaseUrl + "/property/" + property.getId();
-
-        PropertyViewNotificationDTO dto = PropertyViewNotificationDTO.builder()
-                .propertyId(property.getId())
-                .propertyTitle(property.getTitle())
-                .propertyCity(property.getCity())
-                .propertyPrice(property.getPriceDisplay())
-                .propertyUrl(propertyUrl)
-                .guestIp(guestIp)
-                .guestDevice(guestDevice)
-                .viewedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss")))
-                .build();
-
-        // Add area information
-        if (property.getArea() != null) {
-            dto.setPropertyArea(property.getArea().getAreaName());
-        }
-
-        // Add owner information
-        if (property.getUser() != null) {
-            User owner = property.getUser();
-            dto.setOwnerName(owner.getFirstName() + " " + owner.getLastName());
-            dto.setOwnerPhone(owner.getMobileNumber());
-            dto.setOwnerEmail(owner.getEmail());
-        }
-
-        return dto;
-    }
-
-    /**
      * Send email notifications to all recipients
      */
-    private void sendEmailNotifications(List<User> recipients, PropertyViewNotificationDTO data) {
-        logger.info("📧 Sending email notifications to {} recipients", recipients.size());
+    private void sendBuyerViewEmailNotifications(
+            List<String> recipientEmails,
+            PropertyViewNotificationDTO dto) {
 
-        String subject = "🏠 Property Viewed: " + data.getPropertyTitle();
+        String subject = "🎯 Buyer Viewed Property: " + dto.getPropertyTitle();
+        String htmlBody = buildBuyerViewEmailTemplate(dto);
+        String textBody = buildBuyerViewTextTemplate(dto);
 
-        String htmlBody = buildEmailHtml(data);
-        String textBody = buildEmailText(data);
-
-        List<String> emails = recipients.stream()
-                .map(User::getEmail)
-                .filter(email -> email != null && !email.isEmpty())
-                .distinct()
-                .collect(Collectors.toList());
-
-        logger.info("   Valid emails: {}", emails.size());
-        sesService.sendBulkEmail(emails, subject, htmlBody, textBody);
+        for (String email : recipientEmails) {
+            try {
+                sesService.sendEmail(email, subject, htmlBody, textBody);
+                logger.info("✅ Email sent to: {}", email);
+            } catch (Exception e) {
+                logger.error("❌ Failed to send email to {}: {}", email, e.getMessage());
+            }
+        }
     }
 
     /**
      * Send WhatsApp notifications to all recipients
      */
-    private void sendWhatsAppNotifications(List<User> recipients, PropertyViewNotificationDTO data) {
-        logger.info("📱 Sending WhatsApp notifications to {} recipients", recipients.size());
+    private void sendBuyerViewWhatsAppNotifications(
+            List<String> recipientPhones,
+            PropertyViewNotificationDTO dto) {
 
-        String message = buildWhatsAppMessage(data);
+        String message = buildBuyerViewWhatsAppMessage(dto);
 
-        List<String> phones = recipients.stream()
-                .map(User::getMobileNumber)
-                .filter(phone -> phone != null && !phone.isEmpty())
-                .distinct()
-                .collect(Collectors.toList());
-
-        logger.info("   Valid phones: {}", phones.size());
-        whatsAppCloudService.sendBulkMessages(phones, message);
+        for (String phone : recipientPhones) {
+            try {
+                whatsAppService.sendTextMessage(phone, message);
+                logger.info("✅ WhatsApp sent to: {}", phone);
+            } catch (Exception e) {
+                logger.error("❌ Failed to send WhatsApp to {}: {}", phone, e.getMessage());
+            }
+        }
     }
 
     /**
-     * Build HTML email body
+     * Build HTML email template for buyer view notification
      */
-    private String buildEmailHtml(PropertyViewNotificationDTO data) {
-        return String.format("""
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <style>
-                        body { 
-                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                            line-height: 1.6; 
-                            color: #333; 
-                            margin: 0;
-                            padding: 0;
-                            background-color: #f5f5f5;
-                        }
-                        .container { 
-                            max-width: 600px; 
-                            margin: 20px auto; 
-                            background: white;
-                            border-radius: 8px;
-                            overflow: hidden;
-                            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                        }
-                        .header { 
-                            background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); 
-                            color: white; 
-                            padding: 30px 20px; 
-                            text-align: center;
-                        }
-                        .header h2 {
-                            margin: 0;
-                            font-size: 24px;
-                            font-weight: 600;
-                        }
-                        .content { 
-                            padding: 30px 20px;
-                        }
-                        .alert-badge {
-                            display: inline-block;
-                            background: #fef3c7;
-                            color: #92400e;
-                            padding: 8px 16px;
-                            border-radius: 20px;
-                            font-size: 14px;
-                            font-weight: 600;
-                            margin-bottom: 20px;
-                        }
-                        .property-card { 
-                            background: #f9fafb; 
-                            padding: 20px; 
-                            margin: 20px 0; 
-                            border-left: 4px solid #667eea;
-                            border-radius: 4px;
-                        }
-                        .property-card h3 {
-                            margin: 0 0 15px 0;
-                            color: #667eea;
-                            font-size: 18px;
-                        }
-                        .detail-row { 
-                            margin: 12px 0;
-                            display: flex;
-                            align-items: start;
-                        }
-                        .label { 
-                            font-weight: 600; 
-                            color: #4b5563;
-                            min-width: 120px;
-                            display: inline-block;
-                        }
-                        .value {
-                            color: #1f2937;
-                            flex: 1;
-                        }
-                        .button { 
-                            display: inline-block; 
-                            padding: 14px 32px; 
-                            background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%);
-                            color: white; 
-                            text-decoration: none; 
-                            border-radius: 6px; 
-                            margin: 20px 0;
-                            font-weight: 600;
-                            box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
-                        }
-                        .button:hover {
-                            box-shadow: 0 6px 8px rgba(102, 126, 234, 0.4);
-                        }
-                        .viewer-info {
-                            background: #f3f4f6;
-                            padding: 15px;
-                            border-radius: 4px;
-                            margin-top: 20px;
-                            font-size: 13px;
-                            color: #6b7280;
-                        }
-                        .footer { 
-                            text-align: center; 
-                            padding: 20px; 
-                            background: #f9fafb;
-                            color: #6b7280; 
-                            font-size: 13px;
-                            border-top: 1px solid #e5e7eb;
-                        }
-                        .footer p {
-                            margin: 5px 0;
-                        }
-                        @media only screen and (max-width: 600px) {
-                            .container {
-                                margin: 0;
-                                border-radius: 0;
-                            }
-                            .content {
-                                padding: 20px 15px;
-                            }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <div class="header">
-                            <h2>🏠 PropertyDealz.in</h2>
-                            <p style="margin: 10px 0 0 0; opacity: 0.9;">Property View Alert</p>
-                        </div>
-                        
-                        <div class="content">
-                            <div class="alert-badge">
-                                🔔 NEW PROPERTY VIEW
-                            </div>
-                            
-                            <p style="font-size: 16px; color: #1f2937; margin-bottom: 20px;">
-                                A guest has just viewed a property on your platform!
-                            </p>
-                            
-                            <div class="property-card">
-                                <h3>📋 Property Details</h3>
-                                <div class="detail-row">
-                                    <span class="label">Property ID:</span>
-                                    <span class="value">#%s</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="label">Title:</span>
-                                    <span class="value">%s</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="label">Location:</span>
-                                    <span class="value">%s, %s</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="label">Price:</span>
-                                    <span class="value">%s</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="label">Viewed At:</span>
-                                    <span class="value">%s</span>
-                                </div>
-                            </div>
-                            
-                            <div class="property-card">
-                                <h3>👤 Owner Information</h3>
-                                <div class="detail-row">
-                                    <span class="label">Name:</span>
-                                    <span class="value">%s</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="label">Phone:</span>
-                                    <span class="value">%s</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="label">Email:</span>
-                                    <span class="value">%s</span>
-                                </div>
-                            </div>
-                            
-                            <div style="text-align: center; margin: 30px 0;">
-                                <a href="%s" class="button">View Property Details →</a>
-                            </div>
-                            
-                            <div class="viewer-info">
-                                <strong>🌐 Visitor Information</strong><br>
-                                IP Address: %s<br>
-                                Device: %s
-                            </div>
-                        </div>
-                        
-                        <div class="footer">
-                            <p><strong>PropertyDealz.in</strong> - Your Trusted Real Estate Platform</p>
-                            <p>© 2025 PropertyDealz.in. All Rights Reserved.</p>
-                            <p style="margin-top: 10px;">
-                                This is an automated notification. Please do not reply to this email.
-                            </p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-                """,
-                data.getPropertyId(),
-                data.getPropertyTitle(),
-                data.getPropertyArea() != null ? data.getPropertyArea() : "N/A",
-                data.getPropertyCity(),
-                data.getPropertyPrice(),
-                data.getViewedAt(),
-                data.getOwnerName() != null ? data.getOwnerName() : "N/A",
-                data.getOwnerPhone() != null ? data.getOwnerPhone() : "N/A",
-                data.getOwnerEmail() != null ? data.getOwnerEmail() : "N/A",
-                data.getPropertyUrl(),
-                data.getGuestIp() != null ? data.getGuestIp() : "Unknown",
-                data.getGuestDevice() != null ? data.getGuestDevice() : "Unknown"
-        );
+    private String buildBuyerViewEmailTemplate(PropertyViewNotificationDTO dto) {
+        // Format location: Get area name
+        String location = getAreaName(dto.getPropertyArea()) + ", " + dto.getPropertyCity();
+
+        // Format price
+        String formattedPrice = formatPrice(dto.getPropertyPrice());
+
+        return "<!DOCTYPE html>" +
+                "<html>" +
+                "<head>" +
+                "<style>" +
+                "body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }" +
+                ".container { max-width: 600px; margin: 0 auto; padding: 20px; }" +
+                ".header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }" +
+                ".content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }" +
+                ".buyer-section { background: #e3f2fd; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2196F3; }" +
+                ".property-section { background: #fff3e0; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ff9800; }" +
+                ".owner-section { background: #f1f8e9; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #8bc34a; }" +
+                ".info-row { margin: 10px 0; }" +
+                ".label { font-weight: bold; color: #555; }" +
+                ".value { color: #333; }" +
+                ".button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin-top: 20px; }" +
+                ".footer { text-align: center; padding: 20px; color: #999; font-size: 12px; }" +
+                "</style>" +
+                "</head>" +
+                "<body>" +
+                "<div class='container'>" +
+                "<div class='header'>" +
+                "<h1>🎯 New Buyer Interest!</h1>" +
+                "<p>A potential buyer has viewed a property</p>" +
+                "</div>" +
+                "<div class='content'>" +
+
+                "<div class='buyer-section'>" +
+                "<h2>👤 Buyer Information</h2>" +
+                "<div class='info-row'><span class='label'>Name:</span> <span class='value'>" + dto.getBuyerName() + "</span></div>" +
+                "<div class='info-row'><span class='label'>Mobile:</span> <span class='value'>" + dto.getBuyerMobile() + "</span></div>" +
+                "<div class='info-row'><span class='label'>Email:</span> <span class='value'>" + dto.getBuyerEmail() + "</span></div>" +
+                "<div class='info-row'><span class='label'>Viewed At:</span> <span class='value'>" + dto.getViewedAt() + "</span></div>" +
+                "</div>" +
+
+                "<div class='property-section'>" +
+                "<h2>🏠 Property Details</h2>" +
+                "<div class='info-row'><span class='label'>Title:</span> <span class='value'>" + dto.getPropertyTitle() + "</span></div>" +
+                "<div class='info-row'><span class='label'>ID:</span> <span class='value'>#" + dto.getPropertyId() + "</span></div>" +
+                "<div class='info-row'><span class='label'>Location:</span> <span class='value'>" + location + "</span></div>" +
+                "<div class='info-row'><span class='label'>Price:</span> <span class='value'>" + formattedPrice + "</span></div>" +
+                "</div>" +
+
+                "<div class='owner-section'>" +
+                "<h2>👨‍💼 Owner Details</h2>" +
+                "<div class='info-row'><span class='label'>Name:</span> <span class='value'>" + dto.getOwnerName() + "</span></div>" +
+                "<div class='info-row'><span class='label'>Phone:</span> <span class='value'>" + dto.getOwnerPhone() + "</span></div>" +
+                "<div class='info-row'><span class='label'>Email:</span> <span class='value'>" + dto.getOwnerEmail() + "</span></div>" +
+                "</div>" +
+
+                "<div style='text-align: center;'>" +
+                "<a href='" + dto.getPropertyUrl() + "' class='button'>View Property Details</a>" +
+                "</div>" +
+
+                "</div>" +
+                "<div class='footer'>" +
+                "<p>This is an automated notification from PropertyDealz.in</p>" +
+                "<p>&copy; 2024 PropertyDealz. All rights reserved.</p>" +
+                "</div>" +
+                "</div>" +
+                "</body>" +
+                "</html>";
     }
 
     /**
-     * Build plain text email body
+     * Build text email template for buyer view notification
      */
-    private String buildEmailText(PropertyViewNotificationDTO data) {
-        return String.format("""
-                PropertyDealz.in - Property View Alert
-                =====================================
-                
-                🔔 A guest has just viewed a property!
-                
-                📋 PROPERTY DETAILS
-                -------------------
-                Property ID: #%s
-                Title: %s
-                Location: %s, %s
-                Price: %s
-                Viewed At: %s
-                
-                👤 OWNER INFORMATION
-                --------------------
-                Name: %s
-                Phone: %s
-                Email: %s
-                
-                🔗 View Property:
-                %s
-                
-                🌐 VISITOR INFORMATION
-                ----------------------
-                IP Address: %s
-                Device: %s
-                
-                ---
-                © 2025 PropertyDealz.in - Your Trusted Real Estate Platform
-                This is an automated notification. Please do not reply.
-                """,
-                data.getPropertyId(),
-                data.getPropertyTitle(),
-                data.getPropertyArea() != null ? data.getPropertyArea() : "N/A",
-                data.getPropertyCity(),
-                data.getPropertyPrice(),
-                data.getViewedAt(),
-                data.getOwnerName() != null ? data.getOwnerName() : "N/A",
-                data.getOwnerPhone() != null ? data.getOwnerPhone() : "N/A",
-                data.getOwnerEmail() != null ? data.getOwnerEmail() : "N/A",
-                data.getPropertyUrl(),
-                data.getGuestIp() != null ? data.getGuestIp() : "Unknown",
-                data.getGuestDevice() != null ? data.getGuestDevice() : "Unknown"
-        );
+    private String buildBuyerViewTextTemplate(PropertyViewNotificationDTO dto) {
+        // Format location
+        String location = getAreaName(dto.getPropertyArea()) + ", " + dto.getPropertyCity();
+
+        // Format price
+        String formattedPrice = formatPrice(dto.getPropertyPrice());
+
+        return "NEW BUYER INTEREST ALERT!\n\n" +
+                "BUYER INFORMATION:\n" +
+                "Name: " + dto.getBuyerName() + "\n" +
+                "Mobile: " + dto.getBuyerMobile() + "\n" +
+                "Email: " + dto.getBuyerEmail() + "\n" +
+                "Viewed At: " + dto.getViewedAt() + "\n\n" +
+
+                "PROPERTY DETAILS:\n" +
+                "Title: " + dto.getPropertyTitle() + "\n" +
+                "ID: #" + dto.getPropertyId() + "\n" +
+                "Location: " + location + "\n" +
+                "Price: " + formattedPrice + "\n\n" +
+
+                "OWNER DETAILS:\n" +
+                "Name: " + dto.getOwnerName() + "\n" +
+                "Phone: " + dto.getOwnerPhone() + "\n" +
+                "Email: " + dto.getOwnerEmail() + "\n\n" +
+
+                "View Property: " + dto.getPropertyUrl() + "\n\n" +
+                "---\n" +
+                "This is an automated notification from PropertyDealz.in\n" +
+                "(c) 2024 PropertyDealz. All rights reserved.";
     }
 
     /**
-     * Build WhatsApp message
+     * Build WhatsApp message for buyer view notification
      */
-    private String buildWhatsAppMessage(PropertyViewNotificationDTO data) {
-        return String.format("""
-                🏠 *PropertyDealz.in*
-                🔔 *Property View Alert*
-                
-                A guest just viewed a property!
-                
-                📋 *Property Details*
-                • ID: #%s
-                • Title: %s
-                • Location: %s, %s
-                • Price: %s
-                • Viewed: %s
-                
-                👤 *Owner Info*
-                • Name: %s
-                • Phone: %s
-                
-                🔗 View: %s
-                
-                _PropertyDealz.in - Your Real Estate Partner_
-                """,
-                data.getPropertyId(),
-                data.getPropertyTitle(),
-                data.getPropertyArea() != null ? data.getPropertyArea() : "N/A",
-                data.getPropertyCity(),
-                data.getPropertyPrice(),
-                data.getViewedAt(),
-                data.getOwnerName() != null ? data.getOwnerName() : "N/A",
-                data.getOwnerPhone() != null ? data.getOwnerPhone() : "N/A",
-                data.getPropertyUrl()
-        );
+    private String buildBuyerViewWhatsAppMessage(PropertyViewNotificationDTO dto) {
+        // Format location
+        String location = getAreaName(dto.getPropertyArea()) + ", " + dto.getPropertyCity();
+
+        // Format price
+        String formattedPrice = formatPrice(dto.getPropertyPrice());
+
+        return "🎯 *New Buyer Interest Alert!*\n\n" +
+                "👤 *Buyer Information:*\n" +
+                "• Name: " + dto.getBuyerName() + "\n" +
+                "• Mobile: " + dto.getBuyerMobile() + "\n" +
+                "• Email: " + dto.getBuyerEmail() + "\n" +
+                "• Viewed: " + dto.getViewedAt() + "\n\n" +
+
+                "🏠 *Property Details:*\n" +
+                "• ID: #" + dto.getPropertyId() + "\n" +
+                "• Title: " + dto.getPropertyTitle() + "\n" +
+                "• Location: " + location + "\n" +
+                "• Price: " + formattedPrice + "\n\n" +
+
+                "👨‍💼 *Owner Details:*\n" +
+                "• Name: " + dto.getOwnerName() + "\n" +
+                "• Phone: " + dto.getOwnerPhone() + "\n" +
+                "• Email: " + dto.getOwnerEmail() + "\n\n" +
+
+                "🔗 View Property: " + dto.getPropertyUrl() + "\n\n" +
+                "---\n" +
+                "PropertyDealz.in - Automated Notification";
     }
 
     /**
-     * Add configured admin emails and phones from application.properties
+     * Get all recipient emails (Agents + Admins)
      */
-    private void addConfiguredAdmins(List<User> recipients) {
-        // Add admin emails
-        if (adminEmails != null && !adminEmails.isEmpty()) {
-            Arrays.stream(adminEmails.split(","))
-                    .map(String::trim)
-                    .filter(email -> !email.isEmpty())
-                    .forEach(email -> {
-                        User admin = new User();
-                        admin.setEmail(email);
-                        admin.setRole(User.UserRole.ADMIN);
-                        recipients.add(admin);
-                    });
+    private List<String> getRecipientEmails() {
+        Set<String> emails = new HashSet<>();
+
+        try {
+            // Add AGENT and ADMIN users from database
+            List<User> agents = userRepository.findByRole(User.UserRole.AGENT);
+            List<User> admins = userRepository.findByRole(User.UserRole.ADMIN);
+
+            emails.addAll(agents.stream()
+                    .map(User::getEmail)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList()));
+
+            emails.addAll(admins.stream()
+                    .map(User::getEmail)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList()));
+        } catch (Exception e) {
+            logger.warn("⚠️ Could not fetch agents/admins from database: {}", e.getMessage());
         }
 
-        // Add admin phones
-        if (adminPhones != null && !adminPhones.isEmpty()) {
-            Arrays.stream(adminPhones.split(","))
-                    .map(String::trim)
-                    .filter(phone -> !phone.isEmpty())
-                    .forEach(phone -> {
-                        User admin = new User();
-                        admin.setMobileNumber(phone);
-                        admin.setRole(User.UserRole.ADMIN);
-                        recipients.add(admin);
-                    });
+        // Add configured admin emails
+        if (adminEmailsConfig != null && !adminEmailsConfig.trim().isEmpty()) {
+            String[] configEmails = adminEmailsConfig.split(",");
+            for (String email : configEmails) {
+                if (email != null && !email.trim().isEmpty()) {
+                    emails.add(email.trim());
+                }
+            }
+        }
+
+        logger.info("📧 Found {} recipient emails", emails.size());
+        return new ArrayList<>(emails);
+    }
+
+    /**
+     * Get all recipient phones (Agents + Admins)
+     */
+    private List<String> getRecipientPhones() {
+        Set<String> phones = new HashSet<>();
+
+        try {
+            // Add AGENT and ADMIN users from database
+            List<User> agents = userRepository.findByRole(User.UserRole.AGENT);
+            List<User> admins = userRepository.findByRole(User.UserRole.ADMIN);
+
+            phones.addAll(agents.stream()
+                    .map(User::getMobileNumber)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList()));
+
+            phones.addAll(admins.stream()
+                    .map(User::getMobileNumber)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList()));
+        } catch (Exception e) {
+            logger.warn("⚠️ Could not fetch agents/admins from database: {}", e.getMessage());
+        }
+
+        // Add configured admin phones
+        if (adminPhonesConfig != null && !adminPhonesConfig.trim().isEmpty()) {
+            String[] configPhones = adminPhonesConfig.split(",");
+            for (String phone : configPhones) {
+                if (phone != null && !phone.trim().isEmpty()) {
+                    phones.add(phone.trim());
+                }
+            }
+        }
+
+        logger.info("📱 Found {} recipient phones", phones.size());
+        return new ArrayList<>(phones);
+    }
+
+    /**
+     * Get area name from Area object
+     */
+    private String getAreaName(Object areaObj) {
+        if (areaObj == null) return "N/A";
+
+        try {
+            // Try to get name property using reflection
+            return areaObj.getClass().getMethod("getName").invoke(areaObj).toString();
+        } catch (Exception e) {
+            // Fallback to toString()
+            return areaObj.toString();
+        }
+    }
+
+    /**
+     * Format price for display (handles BigDecimal)
+     */
+    private String formatPrice(Object priceObj) {
+        if (priceObj == null) return "N/A";
+
+        try {
+            BigDecimal price = (BigDecimal) priceObj;
+            long priceValue = price.longValue();
+
+            if (priceValue >= 10000000) { // >= 1 Crore
+                return String.format("₹%.2f Cr", priceValue / 10000000.0);
+            } else if (priceValue >= 100000) { // >= 1 Lakh
+                return String.format("₹%.2f L", priceValue / 100000.0);
+            } else {
+                return String.format("₹%,d", priceValue);
+            }
+        } catch (Exception e) {
+            return "₹" + priceObj.toString();
         }
     }
 }
