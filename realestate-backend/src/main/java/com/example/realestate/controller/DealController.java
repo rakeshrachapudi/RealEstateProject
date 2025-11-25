@@ -93,6 +93,59 @@ public class DealController {
         }
     }
 
+    /**
+     * ==================== GET DEALS BY USER ID ONLY (NEW) ====================
+     * Simplified endpoint that fetches user's role automatically from database.
+     * Endpoint: GET /api/deals/user/{userId}
+     * This is simpler than the /user/{userId}/role/{userRole} endpoint as it auto-detects role.
+     */
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<?> getDealsByUserId(
+            @PathVariable Long userId,
+            Authentication authentication) {
+
+        logger.info("📊 Fetching deals for user {} (auto-detecting role)", userId);
+
+        try {
+            // Validate userId
+            if (userId == null || userId <= 0) {
+                logger.warn("Invalid user ID provided: {}", userId);
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Valid user ID is required"));
+            }
+
+            // Fetch user by ID to get their ACTUAL role
+            User currentUser = userRepository.findById(userId)
+                    .orElseThrow(() -> {
+                        logger.error("❌ User not found with ID: {}", userId);
+                        return new RuntimeException("User not found with ID: " + userId);
+                    });
+
+            // Get the ACTUAL role from the fetched user object
+            String actualUserRole = currentUser.getRole().name(); // e.g., "USER", "AGENT", "ADMIN"
+            logger.info("✅ User {} has role: {}", userId, actualUserRole);
+
+            // Pass the ACTUAL role to the service method
+            List<DealDetailDTO> deals = dealService.getDealsByRole(userId, actualUserRole);
+
+            logger.info("✅ Found {} deals for user {} with role {}", deals.size(), userId, actualUserRole);
+            return ResponseEntity.ok(ApiResponse.success(deals));
+
+        } catch (RuntimeException e) {
+            logger.error("❌ Error fetching deals for user {}: ", userId, e);
+            if (e.getMessage().startsWith("User not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error(e.getMessage()));
+            }
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("❌ Unexpected error fetching deals for user {}: ", userId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("An unexpected error occurred"));
+        }
+    }
+
 
     // ==================== CREATE DEAL WITH PRICE ====================
     @PostMapping("/create-with-price")

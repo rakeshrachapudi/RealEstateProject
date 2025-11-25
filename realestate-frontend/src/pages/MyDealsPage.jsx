@@ -1,4 +1,4 @@
-// src/pages/MyDealsPage.jsx - ENHANCED DATA FETCHING
+// src/pages/MyDealsPage.jsx - FIXED TO WORK WITH EXISTING BACKEND
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { BACKEND_BASE_URL } from "../config/config";
@@ -14,7 +14,7 @@ const MyDealsPage = () => {
   const [selectedDeal, setSelectedDeal] = useState(null);
 
   useEffect(() => {
-    if (user?.id && user?.role) {
+    if (user?.id) {
       fetchMyDeals();
     }
   }, [user]);
@@ -29,10 +29,33 @@ const MyDealsPage = () => {
         throw new Error("No authentication token found");
       }
 
-      // ✅ STEP 1: Get deals data
-      const endpoint = `${BACKEND_BASE_URL}/api/deals/user/${
-        user.id
-      }/role/${user.role.toUpperCase()}`;
+      // ✅ FIX: Ensure role is available, use default if not present
+      let userRole = user?.role;
+
+      // If role is not in user object, try to get it from localStorage
+      if (!userRole) {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            userRole = parsedUser.role;
+          } catch (e) {
+            console.warn("Could not parse stored user data");
+          }
+        }
+      }
+
+      // If still no role, default to USER
+      if (!userRole) {
+        console.warn("⚠️ User role not found, defaulting to USER");
+        userRole = "USER";
+      }
+
+      // ✅ CORRECT: Build endpoint with role parameter (as backend expects)
+      const endpoint = `${BACKEND_BASE_URL}/api/deals/user/${user.id}/role/${userRole.toUpperCase()}`;
+
+      console.log("📡 Fetching deals from:", endpoint);
+      console.log("🔑 User Role:", userRole);
 
       const response = await fetch(endpoint, {
         headers: {
