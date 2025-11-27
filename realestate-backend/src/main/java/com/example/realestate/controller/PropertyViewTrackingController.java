@@ -119,7 +119,7 @@ public class PropertyViewTrackingController {
             PropertyViewTracking tracking = PropertyViewTracking.builder()
                     .propertyId(propertyId)
                     .propertyTitle(property.getTitle())
-                    .propertyArea(getAreaName(property.getArea()))
+                    .propertyArea(getAreaName(property.getArea().getAreaName()))
                     .propertyCity(property.getCity())
                     .propertyPrice(formatPrice(property.getPrice()))
                     .propertyUrl(frontendBaseUrl + "/property/" + propertyId)

@@ -1173,4 +1173,14 @@
     color: #ff6f00; /* Vibrant orange text */
 }
 
+/* Add to your global CSS or PropertyCard.css */
+.lazy-loading {
+  filter: blur(5px);
+  transition: filter 0.3s;
+}
+
+.lazy-loaded {
+  filter: blur(0);
+}
+
 /* --- END: STYLES FOR RERA/HMDA ID BADGES (ADDED FOR HIGHLIGHTING) --- */

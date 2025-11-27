@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
@@ -5,198 +6,160 @@ import {
   Route,
   useNavigate,
 } from "react-router-dom";
-import { useAuth, AuthProvider } from "./AuthContext.jsx";
+
+import { HelmetProvider } from "react-helmet-async";
+import { AuthProvider, useAuth } from "./AuthContext.jsx";
 import { injectAnimations } from "./animations.js";
 
+// Analytics
+import GoogleAnalytics from "./components/Analytics/GoogleAnalytics";
+import MetaPixel from "./components/Analytics/MetaPixel";
+
+// Modals
 import LoginModal from "./LoginModal.jsx";
 import PostPropertyModal from "./PostPropertyModal.jsx";
 import SignupModal from "./SignupModal.jsx";
 import UserProfileModal from "./UserProfileModal.jsx";
-import PropertyEditModal from "./PropertyEditModal.jsx";
-import AdminDealPanel from "./AdminDealPanel.jsx";
-import AdminDashboard from "./pages/AdminDashboard.jsx";
 
-import AdminUsersPage from "./pages/AdminUsersPage.jsx";
-import AdminPropertiesPage from "./pages/AdminPropertiesPage.jsx";
-
-import CreateSaleAgreementPage from "./pages/CreateSaleAgreementPage.jsx";
-import EmiCalculatorPage from "./pages/EmiCalculatorPage.jsx";
-
+// Layout Components
 import Header from "./components/Header.jsx";
-import PropertyDetails from "./components/PropertyDetails.jsx";
-import PropertyTypePage from "./components/PropertyTypePage.jsx";
-
 import Footer from "./components/Footer.jsx";
-import LegalPage from "./pages/LegalPage.jsx";
 
+// Pages & Components
 import HomePage from "./pages/HomePage.jsx";
 import SearchResultsPage from "./pages/SearchResultsPage.jsx";
+import PropertyDetails from "./components/PropertyDetails.jsx";
+import PropertyTypePage from "./components/PropertyTypePage.jsx";
 import MyPropertiesPage from "./pages/MyPropertiesPage.jsx";
-import PlaceholderPage from "./pages/PlaceholderPage.jsx";
-import AgentDashboard from "./pages/AgentDashboard.jsx";
-import BuyerDeals from "./BuyerDeals.jsx";
 import MyDealsPage from "./pages/MyDealsPage.jsx";
-import AdminAgentsPage from "./pages/AdminAgentsPage.jsx";
 import SellerDealsPage from "./pages/SellerDealsPage.jsx";
-import RentalAgreementPage from "./pages/RentalAgreementPage.jsx";
+import BuyerDeals from "./BuyerDeals.jsx";
 import MyAgreementsPage from "./pages/MyAgreementsPage.jsx";
+import RentalAgreementPage from "./pages/RentalAgreementPage.jsx";
+import CreateSaleAgreementPage from "./pages/CreateSaleAgreementPage.jsx";
+import AgentDashboard from "./pages/AgentDashboard.jsx";
+import AdminDealPanel from "./AdminDealPanel.jsx";
+import AdminDashboard from "./pages/AdminDashboard.jsx";
+import AdminUsersPage from "./pages/AdminUsersPage.jsx";
+import AdminPropertiesPage from "./pages/AdminPropertiesPage.jsx";
+import AdminAgentsPage from "./pages/AdminAgentsPage.jsx";
+import EmiCalculatorPage from "./pages/EmiCalculatorPage.jsx";
+import LegalPage from "./pages/LegalPage.jsx";
+import PlaceholderPage from "./pages/PlaceholderPage.jsx";
 
 import "./App.css";
 
-const PRIVACY_POLICY_CONTENT = [
-  {
-    title: "1. Introduction",
-    body: "This Privacy Policy describes how Property Dealz ('we,' 'us,' or 'our') collects, uses, and protects the personal information of users of our platform, which is dedicated to real estate transactions primarily within the Hyderabad metropolitan area.",
-  },
-  {
-    title: "2. Information We Collect",
-    body: "We collect information necessary to provide our services and facilitate secure transactions.",
-    list: [
-      "Identity & Contact Data: Name, email address, phone number, and physical address collected during registration, profile setup, and deal initiation.",
-      "Property Data: Detailed information regarding property listings, including title details, photos, and price, which may contain PII related to the Seller/Owner.",
-      "Financial Data: Information related to agreed prices and payment status. We do not store full credit/debit card details.",
-      "Usage Data: Information automatically collected, including IP address, browser type, pages viewed, and time spent on the Platform.",
-      "Location Data: General location derived from your IP address to prioritize relevant properties in the Hyderabad region.",
-    ],
-  },
-  {
-    title: "3. How We Use Your Information",
-    body: "We use your data strictly to fulfill our services and maintain the integrity of the Platform:",
-    list: [
-      "To facilitate connections between Buyers, Sellers, and Agents.",
-      "To generate formal legal documents (Rental Agreements, Sale Agreements) upon user initiation.",
-      "To verify the identity and role of users (e.g., confirming Agents and validating property ownership).",
-      "To communicate updates regarding your deals, inquiries, and platform security.",
-      "To comply with legal obligations and regulations, including RERA (if applicable).",
-    ],
-  },
-  {
-    title: "4. Sharing and Disclosure of Information",
-    body: "We share your personal data only when necessary to complete a transaction or upon your explicit consent.",
-    list: [
-      "With Deal Parties: Your contact information is shared directly with the specific Buyer, Seller, or Agent involved in your pending deal or inquiry.",
-      "With Trusted Partners: We will share your Identity Data with our Trusted Partners (e.g., Furniture Partner, Electrical Contractor) only if you explicitly request or consent to receive a service quote from them.",
-      "Legal Requirements: We may disclose data if required by a court order, law enforcement, or other legal process.",
-    ],
-  },
-  {
-    title: "5. Data Security and Retention",
-    body: "We employ robust technical and organizational security measures to protect your PII against unauthorized access, loss, or disclosure. We retain your data for as long as your account is active or as necessary to provide services, meet legal obligations, and maintain accurate transaction records.",
-  },
-  {
-    title: "6. Your Choices and Rights",
-    body: "You have the right to access, update, or delete your personal information, subject to certain legal restrictions (e.g., mandatory data retention for completed deals). You may opt-out of marketing communications at any time.",
-  },
-];
+// Legal content (you can move these to separate files if needed)
+const PRIVACY_POLICY_CONTENT = [];
+const TERMS_AND_CONDITIONS_CONTENT = [];
 
-const TERMS_AND_CONDITIONS_CONTENT = [
-  {
-    title: "1. Acceptance of Terms",
-    body: "By accessing or using the Property Dealz website and mobile application (the 'Platform'), you agree to be bound by these Terms and Conditions ('Terms') and all applicable laws and regulations in Hyderabad, India. If you do not agree to these Terms, you may not use the Platform.",
-  },
-  {
-    title: "2. User Registration and Account Security",
-    body: "To access certain features, you must register for an account. You are responsible for maintaining the confidentiality of your account password and are fully responsible for all activities that occur under your account. You agree to notify Property Dealz immediately of any unauthorized use of your account.",
-  },
-  {
-    title: "3. User Obligations and Conduct",
-    body: "You are solely responsible for the accuracy and legality of any information, data, or content you submit. You agree to:",
-    list: [
-      "Ensure all information provided for registration and property listings (including photos and documents) is accurate, current, and complete.",
-      "Acknowledge that the Platform is primarily intended for property transactions within the Hyderabad metropolitan area.",
-      "Refrain from posting fraudulent listings, engaging in harassment, or submitting false inquiries.",
-      "Use the Platform only for lawful purposes related to legitimate real estate dealings.",
-    ],
-  },
-  {
-    title: "4. Property Listings and Content",
-    body: "All property listings must be legally compliant and accurate. Property Dealz reserves the right, but not the obligation, to screen, remove, or edit any content that we deem harmful, misleading, or in violation of these Terms.",
-  },
-  {
-    title: "5. Platform Role and Limitation of Liability",
-    body: "Property Dealz acts strictly as a technology platform and facilitator. We are not a real estate broker, agent, or contracting party in any transaction. Your transaction is solely between you (the Buyer/Seller/Renter) and the other user.",
-    list: [
-      "We do not verify the financial capability of any user or the title/condition of any property beyond basic document checks.",
-      "Property Dealz is not responsible for losses, damages, or disputes arising from negotiations or finalized agreements between users.",
-      "You must seek independent legal and financial advice before entering into any property agreement.",
-    ],
-  },
-  {
-    title: "6. Trusted Partners and Third-Party Services",
-    body: "We may feature or link to services provided by our Trusted Partners (e.g., Furniture Partner, Electrical Contractor). Your use of their services is a direct contract between you and the Partner. Property Dealz is not liable for the quality, performance, or service delivery of any Trusted Partner.",
-    list: [
-      "We share your contact information with a Trusted Partner only upon your explicit request or consent for that specific service.",
-      "All claims regarding partner services must be directed to the Partner directly.",
-    ],
-  },
-  {
-    title: "7. Termination",
-    body: "We reserve the right to suspend or terminate your account access immediately, without prior notice, if you breach these Terms, submit fraudulent information, or engage in activity detrimental to the integrity of the Platform or its users.",
-  },
-  {
-    title: "8. Governing Law and Jurisdiction",
-    body: "These Terms shall be governed by and construed in accordance with the laws of India. You irrevocably consent to the exclusive jurisdiction of the courts located in Hyderabad, Telangana, for any dispute arising out of or relating to these Terms or your use of the Platform.",
-  },
-];
-
+// -------------------------------------
+// App Content Wrapper
+// -------------------------------------
 function AppContent() {
   const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuth();
+
+  // Modal states - centralized in App
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isPostPropertyModalOpen, setIsPostPropertyModalOpen] = useState(false);
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
-  const { isAuthenticated, user, logout } = useAuth();
 
   useEffect(() => {
     injectAnimations();
   }, []);
 
+  // Modal handlers
   const handlePropertyPosted = () => {
     setIsPostPropertyModalOpen(false);
     navigate("/my-properties");
   };
 
   const handlePostPropertyClick = () => {
-    if (isAuthenticated) setIsPostPropertyModalOpen(true);
-    else setIsLoginModalOpen(true);
+    if (isAuthenticated) {
+      setIsPostPropertyModalOpen(true);
+    } else {
+      setIsLoginModalOpen(true);
+    }
+  };
+
+  const handleLoginClick = () => setIsLoginModalOpen(true);
+  const handleSignupClick = () => setIsSignupModalOpen(true);
+  const handleProfileClick = () => setIsUserProfileModalOpen(true);
+
+  const closeLoginModal = () => setIsLoginModalOpen(false);
+  const closeSignupModal = () => setIsSignupModalOpen(false);
+
+  const handleSwitchToSignup = () => {
+    setIsLoginModalOpen(false);
+    setIsSignupModalOpen(true);
+  };
+
+  const handleSwitchToLogin = () => {
+    setIsSignupModalOpen(false);
+    setIsLoginModalOpen(true);
   };
 
   return (
     <div className="app-content">
+      {/* Global Header - shown on all pages */}
       <Header
-        onLoginClick={() => setIsLoginModalOpen(true)}
-        onSignupClick={() => setIsSignupModalOpen(true)}
+        onLoginClick={handleLoginClick}
+        onSignupClick={handleSignupClick}
         onPostPropertyClick={handlePostPropertyClick}
-        onProfileClick={() => setIsUserProfileModalOpen(true)}
+        onProfileClick={handleProfileClick}
       />
 
+      {/* Main Content */}
       <main className="main-content">
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/search" element={<SearchResultsPage />} />
+          {/* Home - pass modal handlers to avoid duplication */}
           <Route
-            path="/property/:id"
+            path="/"
             element={
-              <PropertyDetails
-                onLoginClick={() => setIsLoginModalOpen(true)}
-                onSignupClick={() => setIsSignupModalOpen(true)}
+              <HomePage
+                onLoginClick={handleLoginClick}
+                onSignupClick={handleSignupClick}
               />
             }
           />
 
+          {/* Search */}
+          <Route path="/search" element={<SearchResultsPage />} />
+
+          {/* Property Details */}
+          <Route
+            path="/property/:id"
+            element={
+              <PropertyDetails
+                onLoginClick={handleLoginClick}
+                onSignupClick={handleSignupClick}
+              />
+            }
+          />
+
+          {/* Browse by type (rent/sale + type) */}
           <Route
             path="/property-type/:listingType/:propertyType"
             element={<PropertyTypePage />}
           />
+
+          {/* Area-based listing */}
           <Route path="/area/:areaName" element={<PropertyTypePage />} />
+
+          {/* EMI Calculator */}
           <Route path="/emi-calculator" element={<EmiCalculatorPage />} />
 
+          {/* My Properties */}
           <Route
             path="/my-properties"
             element={
               <MyPropertiesPage onPostPropertyClick={handlePostPropertyClick} />
             }
           />
+
+          {/* Dashboard → redirects to My Properties */}
           <Route
             path="/dashboard"
             element={
@@ -204,23 +167,27 @@ function AppContent() {
             }
           />
 
+          {/* Deals */}
           <Route path="/my-deals" element={<MyDealsPage />} />
-          <Route path="/buyer-deals" element={<BuyerDeals />} />
           <Route path="/seller-deals" element={<SellerDealsPage />} />
+          <Route path="/buyer-deals" element={<BuyerDeals />} />
 
+          {/* Agent */}
           <Route path="/agent-dashboard" element={<AgentDashboard />} />
 
+          {/* Admin */}
           <Route path="/admin-deals" element={<AdminDealPanel />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
           <Route path="/admin-agents" element={<AdminAgentsPage />} />
           <Route path="/admin-users" element={<AdminUsersPage />} />
           <Route path="/admin/properties" element={<AdminPropertiesPage />} />
 
-          <Route path="/rental-agreement" element={<RentalAgreementPage />} />
+          {/* Agreements */}
           <Route path="/my-agreements" element={<MyAgreementsPage />} />
-
+          <Route path="/rental-agreement" element={<RentalAgreementPage />} />
           <Route path="/sale-agreement" element={<CreateSaleAgreementPage />} />
 
+          {/* Legal Pages */}
           <Route
             path="/privacy"
             element={
@@ -240,6 +207,7 @@ function AppContent() {
             }
           />
 
+          {/* Services / Static Pages */}
           <Route
             path="/owner-plans"
             element={<PlaceholderPage title="Owner Plans" />}
@@ -269,23 +237,40 @@ function AppContent() {
             path="/loan"
             element={<PlaceholderPage title="Home Loan Assistance" />}
           />
+
+          {/* 404 - Optional */}
+          <Route
+            path="*"
+            element={<PlaceholderPage title="Page Not Found" />}
+          />
         </Routes>
       </main>
 
+      {/* Global Footer - shown on all pages */}
       <Footer />
 
+      {/* Global Modals */}
       {isLoginModalOpen && (
-        <LoginModal onClose={() => setIsLoginModalOpen(false)} />
+        <LoginModal
+          onClose={closeLoginModal}
+          onSwitchToSignup={handleSwitchToSignup}
+        />
       )}
+
       {isPostPropertyModalOpen && (
         <PostPropertyModal
           onClose={() => setIsPostPropertyModalOpen(false)}
           onPropertyPosted={handlePropertyPosted}
         />
       )}
+
       {isSignupModalOpen && (
-        <SignupModal onClose={() => setIsSignupModalOpen(false)} />
+        <SignupModal
+          onClose={closeSignupModal}
+          onSwitchToLogin={handleSwitchToLogin}
+        />
       )}
+
       {isUserProfileModalOpen && (
         <UserProfileModal
           user={user}
@@ -297,14 +282,26 @@ function AppContent() {
   );
 }
 
+// -------------------------------------
+// FINAL APP WRAPPER WITH GA + META PIXEL
+// -------------------------------------
 function App() {
+  const GA_MEASUREMENT_ID = "G-5X8D8087C4";
+  const META_PIXEL_IDS = ["25079012878428180", "868151089247460"];
+
   return (
     <Router>
-      <AuthProvider>
-        <div className="app-wrapper">
-          <AppContent />
-        </div>
-      </AuthProvider>
+      <HelmetProvider>
+        <AuthProvider>
+          {/* Global Analytics */}
+          <GoogleAnalytics measurementId={GA_MEASUREMENT_ID} />
+          <MetaPixel pixelId={META_PIXEL_IDS} />
+
+          <div className="app-wrapper">
+            <AppContent />
+          </div>
+        </AuthProvider>
+      </HelmetProvider>
     </Router>
   );
 }

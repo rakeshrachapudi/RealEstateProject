@@ -5,6 +5,7 @@ import { useAuth } from "../AuthContext";
 import PropertyEditModal from "../PropertyEditModal";
 import { BACKEND_BASE_URL } from "../config/config";
 import "./PropertyCard.css";
+import LazyImage from './LazyImage';
 
 const PropertyCard = ({
   property,
@@ -173,14 +174,12 @@ const PropertyCard = ({
         </div>
 
         {/* Image Section */}
-        <div className="pc-image-wrap">
-          <img
-            className="pc-image"
-            src={getImageUrl()}
-            alt={property.title || "Property"}
-            onError={handleImageError}
-            loading="lazy"
-          />
+      <LazyImage
+        className="pc-image"
+        src={getImageUrl()}
+        alt={property.title || "Property"}
+        onError={handleImageError}
+      />
           <div className="pc-image-overlay" />
 
           {/* Deal Stage Badge on Image */}
@@ -189,7 +188,7 @@ const PropertyCard = ({
               Stage: {dealInfo.stage || dealInfo.currentStage || "INQUIRY"}
             </span>
           )}
-        </div>
+
 
         {/* Content Section */}
         <div className="pc-content">

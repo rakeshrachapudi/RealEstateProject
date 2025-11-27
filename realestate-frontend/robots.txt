@@ -1,4 +1,23 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /my-properties
+Disallow: /login
 
-Sitemap: https://propertydealz.in/sitemap.xml
+# Crawl-delay for politeness
+Crawl-delay: 1
+
+# Sitemaps
+Sitemap: https://www.propertydealz.in/sitemap.xml
+
+# Block AI crawlers if desired (optional)
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: CCBot
+Disallow: /

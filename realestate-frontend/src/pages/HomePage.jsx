@@ -1,31 +1,34 @@
 // src/pages/HomePage.jsx
-// ✅ COMPLETE FILE WITH ALL SOFT-DELETE FIXES APPLIED & 403 FIX
-//
-// FIXES APPLIED:
-// 1. fetchFeaturedProperties - Filter out soft-deleted and combine featured filtering
-// 2. handlePropertyDeleted - Removed handlePropertyUpdated() call
-// 3. Browse by Type useEffect - Filter out soft-deleted
-// 4. fetchMyProperties - Filter out soft-deleted
-// 5. Create Deal Button - Restricted visibility to Admin/Agent only.
-// 6. fetchMyDeals - Added pre-fetch token check (Fixes 403 Error)
-
+// ✅ COMPLETE PRODUCTION VERSION - All sections included
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
+
+// SEO Components
+import SEOHead from "../components/SEO/SEOHead";
+import {
+  generateOrganizationSchema,
+  generateSearchActionSchema,
+} from "../components/SEO/StructuredData";
+
+// Components
 import PropertySearch from "../components/PropertySearch";
 import PropertyList from "../components/PropertyList";
 import FurniturePartner from "../components/FurniturePartner.jsx";
 import DealStatusCard from "../DealStatusCard.jsx";
 import BrowsePropertiesForDeal from "../pages/BrowsePropertiesForDeal";
 import DealDetailModal from "../DealDetailModal.jsx";
-import { BACKEND_BASE_URL } from "../config/config";
 import BannerCarousel from "../components/BannerCorousel.jsx";
+
+// API and Config
+import { BACKEND_BASE_URL } from "../config/config";
 import {
   getPropertyTypes,
   getPropertiesByType,
   getFeaturedProperties,
   getAllProperties,
 } from "../services/api";
+
 import "./HomePage.css";
 
 function HomePage() {
@@ -94,6 +97,18 @@ function HomePage() {
     Studio: "🛋️",
     Duplex: "🏘️",
     PG: "🏨",
+  };
+
+  // SEO Configuration
+  const seoConfig = {
+    title:
+      "PropertyDealz - Zero Brokerage Property Listings in Hyderabad | Buy, Sell, Rent",
+    description:
+      "Find verified property listings with zero brokerage in Hyderabad. Direct owner properties for sale and rent in Gachibowli, HITEC City, Madhapur, and more areas.",
+    keywords:
+      "property dealz, zero brokerage properties, Hyderabad real estate, buy property Hyderabad, rent property Hyderabad, verified properties, direct owner properties",
+    canonical: "https://propertydealz.in/",
+    ogImage: "https://propertydealz.in/og-image.jpg",
   };
 
   const safeJsonParse = async (response) => {
@@ -186,10 +201,9 @@ function HomePage() {
     };
   };
 
-  // --- Data loaders / effects ---
-
-  // Load property types once
+  // Load property types
   useEffect(() => {
+    setLoadingTypes(true);
     getPropertyTypes()
       .then((types) => {
         let names = [];
@@ -207,26 +221,21 @@ function HomePage() {
       .catch((err) => {
         console.error("Error loading property types:", err);
         setPropertyTypes(["All"]);
+      })
+      .finally(() => {
+        setLoadingTypes(false);
       });
   }, []);
 
-  // ============================================================================
-  // ✅ FIX #1: fetchFeaturedProperties - Filter out soft-deleted properties (Combined filter)
-  // ============================================================================
+  // Fetch featured properties
   const fetchFeaturedProperties = async () => {
     try {
       const allList = await getAllProperties();
       const normalized = (Array.isArray(allList) ? allList : [])
         .map((p) => normalizeProperty(p))
-        // ⭐ Combined filter for soft-delete and featured status
         .filter((p) => p.isActive !== false && p.isFeatured === true);
 
-      console.log(
-        "📋 Featured properties loaded:",
-        normalized.length,
-        "active properties"
-      );
-
+      console.log("📋 Featured properties loaded:", normalized.length);
       setFeaturedPropsList(normalized);
       setShowSearchResults(false);
       setShowQuickSearchResults(false);
@@ -242,13 +251,12 @@ function HomePage() {
     fetchFeaturedProperties();
   }, []);
 
-  // ============================================================================
-  // ✅ FIX #3: Browse by Type - Filter out soft-deleted properties
-  // ============================================================================
+  // Browse by type effect
   useEffect(() => {
     if (activeTab !== "browse-by-type") return;
 
     const load = async () => {
+      setLoadingAllProps(true);
       try {
         let props;
         if (selectedType === "All") {
@@ -260,11 +268,12 @@ function HomePage() {
         const normalized = Array.isArray(props)
           ? props.map(normalizeProperty)
           : [];
-        // ⭐ Filter out soft-deleted properties
         setProperties(normalized.filter((p) => p.isActive !== false));
       } catch (err) {
         console.error("Error loading properties for type:", err);
         setProperties([]);
+      } finally {
+        setLoadingAllProps(false);
       }
     };
     load();
@@ -277,7 +286,6 @@ function HomePage() {
     setShowQuickSearchResults(false);
     setSelectedArea(null);
 
-    // Scroll to properties section
     setTimeout(() => {
       const propertiesSection = document.querySelector(".hp-properties");
       if (propertiesSection) {
@@ -289,9 +297,7 @@ function HomePage() {
     }, 100);
   };
 
-  // ============================================================================
-  // ✅ FIX #4: fetchMyProperties - Filter out soft-deleted properties
-  // ============================================================================
+  // Fetch user properties
   const fetchMyProperties = async () => {
     if (!user?.id) return;
     setLoadingMyProperties(true);
@@ -299,9 +305,7 @@ function HomePage() {
     try {
       const token = localStorage.getItem("authToken");
       if (!token) {
-        console.warn(
-          "Authentication token missing. Cannot fetch user properties."
-        );
+        console.warn("Authentication token missing. Cannot fetch user properties.");
         setLoadingMyProperties(false);
         return;
       }
@@ -322,12 +326,9 @@ function HomePage() {
         (Array.isArray(data) ? data : data?.success ? data.data : []) || [];
 
       const normalized = propertiesArray.map((p) => normalizeProperty(p));
-      // ⭐ Filter out soft-deleted properties
       const activeProperties = normalized.filter((p) => p.isActive !== false);
 
-      console.log(
-        `📋 Loaded ${activeProperties.length} active properties for user ${user.id}`
-      );
+      console.log(`📋 Loaded ${activeProperties.length} active properties for user ${user.id}`);
       setMyProperties(activeProperties);
     } catch (error) {
       console.error("Error fetching user properties:", error);
@@ -337,18 +338,13 @@ function HomePage() {
     }
   };
 
-  // ============================================================================
-  // ✅ FIX #6: fetchMyDeals - Added pre-fetch token check (Fixes 403 Error)
-  // ============================================================================
+  // Fetch user deals
   const fetchMyDeals = async () => {
     if (!user?.id) return;
 
-    // ⭐ FIX: Check for token immediately and exit if missing
     const token = localStorage.getItem("authToken");
     if (!token) {
-      console.warn(
-        "Authentication token missing. Cannot fetch user deals (403 fix)."
-      );
+      console.warn("Authentication token missing. Cannot fetch user deals.");
       setLoadingMyDeals(false);
       return;
     }
@@ -366,7 +362,6 @@ function HomePage() {
         }
       );
       if (!response.ok)
-        // Throw with status text for clearer error logging
         throw new Error(`API Error ${response.status}: ${response.statusText}`);
 
       const data = await safeJsonParse(response);
@@ -392,7 +387,6 @@ function HomePage() {
   const handleSearchResults = (results) => {
     console.log("Advanced search results:", results);
 
-    // Handle multiple response formats
     let propertiesArray = [];
     if (Array.isArray(results)) {
       propertiesArray = results;
@@ -400,11 +394,7 @@ function HomePage() {
       propertiesArray = results.data;
     }
 
-    console.log(
-      "Processing",
-      propertiesArray.length,
-      "properties from advanced search"
-    );
+    console.log("Processing", propertiesArray.length, "properties from advanced search");
     const normalized = propertiesArray.map((p) => normalizeProperty(p));
     setSearchResults(normalized);
     setShowSearchResults(true);
@@ -443,7 +433,6 @@ function HomePage() {
       if (!response.ok) throw new Error("Failed to fetch area properties");
       const data = await response.json();
 
-      // Handle multiple response formats
       let propertiesArray = [];
       if (data.success && Array.isArray(data.data)) {
         propertiesArray = data.data;
@@ -465,7 +454,7 @@ function HomePage() {
     }
   };
 
-  // Quick Search handlers with debounce
+  // Quick Search
   const performQuickSearch = async (query) => {
     if (!query || query.trim() === "") {
       setQuickSearchResults([]);
@@ -475,20 +464,16 @@ function HomePage() {
 
     setQuickSearchLoading(true);
 
-    // Abort previous request if exists
     if (searchAbortRef.current) {
       searchAbortRef.current.abort();
     }
 
-    // Create new AbortController
     const controller = new AbortController();
     searchAbortRef.current = controller;
 
     try {
       const response = await fetch(
-        `${BACKEND_BASE_URL}/api/properties/search/quick?q=${encodeURIComponent(
-          query
-        )}`,
+        `${BACKEND_BASE_URL}/api/properties/search/quick?q=${encodeURIComponent(query)}`,
         { signal: controller.signal }
       );
 
@@ -499,17 +484,12 @@ function HomePage() {
       const data = await response.json();
       console.log("Quick search response:", data);
 
-      // Handle multiple response formats
       let propertiesArray = [];
-
       if (data.success && Array.isArray(data.data)) {
-        // Format: {success: true, data: [...]}
         propertiesArray = data.data;
       } else if (Array.isArray(data.data)) {
-        // Format: {data: [...]}
         propertiesArray = data.data;
       } else if (Array.isArray(data)) {
-        // Format: [...]
         propertiesArray = data;
       }
 
@@ -536,26 +516,21 @@ function HomePage() {
     }
   };
 
-  // Debounced quick search effect
   useEffect(() => {
-    // Clear previous timeout
     if (searchDebounceRef.current) {
       clearTimeout(searchDebounceRef.current);
     }
 
-    // If input is empty, clear results immediately
     if (!quickSearchInput || quickSearchInput.trim() === "") {
       setQuickSearchResults([]);
       setShowQuickSearchResults(false);
       return;
     }
 
-    // Set new timeout for debounce
     searchDebounceRef.current = setTimeout(() => {
       performQuickSearch(quickSearchInput.trim());
-    }, 500); // 500ms debounce
+    }, 500);
 
-    // Cleanup
     return () => {
       if (searchDebounceRef.current) {
         clearTimeout(searchDebounceRef.current);
@@ -569,7 +544,7 @@ function HomePage() {
     setShowQuickSearchResults(false);
   };
 
-  // Property/Deal update handlers
+  // Property/Deal handlers
   const handlePropertyUpdated = () => {
     if (activeTab === "my-properties") fetchMyProperties();
     else if (activeTab === "featured") fetchFeaturedProperties();
@@ -579,24 +554,17 @@ function HomePage() {
     }
   };
 
-  // ============================================================================
-  // ✅ FIX #2: handlePropertyDeleted - REMOVED handlePropertyUpdated() call
-  // ============================================================================
   const handlePropertyDeleted = (deletedPropertyId) => {
     console.log("🗑️ Property deleted:", deletedPropertyId);
 
-    // Remove from featured properties list immediately
-    setFeaturedPropsList((prev) => {
-      const filtered = prev.filter(
+    setFeaturedPropsList((prev) =>
+      prev.filter(
         (p) =>
           String(p.id) !== String(deletedPropertyId) &&
           String(p.propertyId) !== String(deletedPropertyId)
-      );
-      console.log("Featured list updated:", prev.length, "→", filtered.length);
-      return filtered;
-    });
+      )
+    );
 
-    // Remove from search results if showing
     if (showSearchResults) {
       setSearchResults((prev) =>
         prev.filter(
@@ -607,7 +575,6 @@ function HomePage() {
       );
     }
 
-    // Remove from quick search results if showing
     if (showQuickSearchResults) {
       setQuickSearchResults((prev) =>
         prev.filter(
@@ -618,7 +585,6 @@ function HomePage() {
       );
     }
 
-    // Remove from browse-by-type properties
     setProperties((prev) =>
       prev.filter(
         (p) =>
@@ -627,7 +593,6 @@ function HomePage() {
       )
     );
 
-    // Remove from my properties
     setMyProperties((prev) =>
       prev.filter(
         (p) =>
@@ -636,8 +601,7 @@ function HomePage() {
       )
     );
 
-    // ⭐ REMOVED: handlePropertyUpdated() call (Avoids refetching soft-deleted item)
-    console.log("✅ Property removed from UI (soft delete - not refetching)");
+    console.log("✅ Property removed from UI (soft delete)");
   };
 
   const handleViewDealDetails = (deal) => {
@@ -660,11 +624,12 @@ function HomePage() {
     navigate("/emi-calculator");
   };
 
-  // Compute isLoading
+  // Computed values
   const isLoading = useMemo(() => {
     if (searchLoading || quickSearchLoading) return true;
     if (activeTab === "my-properties") return loadingMyProperties;
     if (activeTab === "my-deals") return loadingMyDeals;
+    if (activeTab === "browse-by-type") return loadingAllProps;
     return false;
   }, [
     searchLoading,
@@ -672,9 +637,9 @@ function HomePage() {
     activeTab,
     loadingMyProperties,
     loadingMyDeals,
+    loadingAllProps,
   ]);
 
-  // Determine which properties to show
   const propertiesWithDeals = useMemo(() => {
     if (showQuickSearchResults) return quickSearchResults;
     if (showSearchResults) return searchResults;
@@ -695,7 +660,6 @@ function HomePage() {
     myProperties,
   ]);
 
-  // Section title
   const sectionTitle = useMemo(() => {
     if (showQuickSearchResults) {
       return `🔍 Quick Search Results (${quickSearchResults.length})`;
@@ -733,7 +697,6 @@ function HomePage() {
 
   const isDisplayingDeals = activeTab === "my-deals";
 
-  // 🚀 FIX APPLIED: Restrict visibility to Admin or Agent users
   const roleValue = user?.role;
   const roleLower = roleValue ? String(roleValue).toLowerCase() : "";
   const isAuthorizedToCreateDeal =
@@ -744,6 +707,19 @@ function HomePage() {
 
   return (
     <>
+      {/* SEO Head */}
+      <SEOHead
+        title={seoConfig.title}
+        description={seoConfig.description}
+        keywords={seoConfig.keywords}
+        canonical={seoConfig.canonical}
+        ogImage={seoConfig.ogImage}
+        structuredData={[
+          generateOrganizationSchema(),
+          generateSearchActionSchema(),
+        ]}
+      />
+
       <div className="hp-wrapper">
         {/* Banner Carousel */}
         <BannerCarousel />
@@ -755,43 +731,22 @@ function HomePage() {
           onReset={handleResetSearch}
         />
 
-        {/* Popular Areas */}
-        <section className="hp-popular-areas">
-          <h2 className="hp-section-title">
-            <span className="hp-section-ic">📍</span> Popular Areas in Hyderabad
-          </h2>
-          <div className="hp-area-grid">
-            {popularAreas.map((area) => (
-              <button
-                key={area.name}
-                className={`hp-area-btn ${
-                  selectedArea === area.name ? "active" : ""
-                }`}
-                onClick={() => handleAreaClick(area)}
-              >
-                <span className="hp-area-emoji">{area.emoji}</span>
-                {area.name}
-              </button>
-            ))}
-          </div>
-        </section>
-
         {/* Quick Search */}
         <section className="hp-quick-search">
           <h2 className="hp-section-title">
-            <span className="hp-section-ic">🔍</span> Quick Search
+            <span className="hp-section-ic">🔍</span> Quick Property Search
           </h2>
+          <p className="hp-section-subtitle">
+            Search by area, property type, or keywords
+          </p>
           <div className="hp-quick-search-container">
             <div className="hp-quick-search-form">
               <div className="hp-quick-search-field">
-                <label className="hp-quick-search-label">
-                  Search by Property ID, Name, or Area
-                </label>
                 <input
                   type="text"
                   value={quickSearchInput}
                   onChange={(e) => setQuickSearchInput(e.target.value)}
-                  placeholder="e.g., 20132, Palm Residency, Gachibowli"
+                  placeholder="Try 'Gachibowli apartment' or '3BHK Madhapur'..."
                   className="hp-quick-search-input"
                 />
               </div>
@@ -817,7 +772,31 @@ function HomePage() {
           </div>
         </section>
 
-        {/* ✅ BROWSE BY PROPERTY TYPE SECTION */}
+        {/* Popular Areas */}
+        <section className="hp-popular-areas">
+          <h2 className="hp-section-title">
+            <span className="hp-section-ic">📍</span> Popular Areas in Hyderabad
+          </h2>
+          <p className="hp-section-subtitle">
+            Explore properties in the most sought-after locations
+          </p>
+          <div className="hp-area-grid">
+            {popularAreas.map((area) => (
+              <button
+                key={area.name}
+                className={`hp-area-btn ${
+                  selectedArea === area.name ? "active" : ""
+                }`}
+                onClick={() => handleAreaClick(area)}
+              >
+                <span className="hp-area-emoji">{area.emoji}</span>
+                {area.name}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Browse by Property Type */}
         <section className="hp-browse-types">
           <h2 className="hp-section-title">
             <span className="hp-section-ic">🏘️</span> Browse by Property Type
@@ -828,8 +807,7 @@ function HomePage() {
 
           {loadingTypes ? (
             <div className="hp-types-loading">
-              <span className="hp-loading-spinner">⏳</span> Loading property
-              types...
+              <span className="hp-loading-spinner">⏳</span> Loading property types...
             </div>
           ) : propertyTypes.length === 0 ? (
             <div className="hp-types-empty">

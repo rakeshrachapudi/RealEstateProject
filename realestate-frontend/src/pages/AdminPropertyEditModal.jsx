@@ -714,6 +714,7 @@ const [formData, setFormData] = useState({
               >
                 <option value="owner">Owner</option>
                 <option value="builder">Builder</option>
+                <option value="broker">Broker</option>
                 <option value="agent">Agent</option>
               </select>
             </div>

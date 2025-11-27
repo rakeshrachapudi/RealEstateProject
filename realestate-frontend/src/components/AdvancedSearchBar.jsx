@@ -1,7 +1,18 @@
 // src/components/AdvancedSearchBar.jsx
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import "./AdvancedSearchBar.css";
 import { BACKEND_BASE_URL } from "../config/config";
+import { trackPropertySearch } from '../components/Analytics/GoogleAnalytics';
+import { trackFBPropertySearch } from '../utils/fbPixelEvents';
+
+// Add debounce utility
+const debounce = (func, wait) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
 
 const AdvancedSearchBar = ({ onSearchResults }) => {
   const [location, setLocation] = useState("Hyderabad");
@@ -10,6 +21,7 @@ const AdvancedSearchBar = ({ onSearchResults }) => {
   const [newLocation, setNewLocation] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [budget, setBudget] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
 
   const propertyTypes = [
     "Apartment",
@@ -51,14 +63,27 @@ const AdvancedSearchBar = ({ onSearchResults }) => {
     };
   };
 
-  const handleSearch = async () => {
+  const performSearch = async () => {
+    setIsSearching(true);
     const allLocations = [location, ...additionalLocations].filter(Boolean);
-
     const { minPrice, maxPrice } = parseBudget(budget);
+
+    // Track search events
+    const searchParams = {
+      area: allLocations[0] || '',
+      propertyType: propertyType || null,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
+      city: 'Hyderabad'
+    };
+
+    trackPropertySearch(searchParams);
+    trackFBPropertySearch(searchParams);
+
     const params = {
       city: "Hyderabad",
-      area: allLocations[0] || "", // primary location as area
-      listingType: "", // can be set by parent if needed
+      area: allLocations[0] || "",
+      listingType: "",
       propertyType: propertyType || null,
       minPrice,
       maxPrice,
@@ -89,7 +114,19 @@ const AdvancedSearchBar = ({ onSearchResults }) => {
     } catch (error) {
       console.error("Error during search:", error);
       onSearchResults && onSearchResults([]);
+    } finally {
+      setIsSearching(false);
     }
+  };
+
+  // Debounced search - triggers 500ms after user stops typing
+  const debouncedSearch = useCallback(
+    debounce(() => performSearch(), 500),
+    [location, propertyType, budget]
+  );
+
+  const handleSearch = () => {
+    performSearch();
   };
 
   const handleKeyDownAdd = (e) => {
@@ -224,8 +261,13 @@ const AdvancedSearchBar = ({ onSearchResults }) => {
         </div>
 
         {/* Search */}
-        <button type="button" className="asb-search" onClick={handleSearch}>
-          🔍 Search
+        <button
+          type="button"
+          className="asb-search"
+          onClick={handleSearch}
+          disabled={isSearching}
+        >
+          {isSearching ? '⏳ Searching...' : '🔍 Search'}
         </button>
       </div>
     </section>

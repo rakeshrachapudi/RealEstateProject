@@ -118,7 +118,18 @@ public class PropertyService {
         property.setIsActive(dto.getIsActive());
 
         // status/owner/regulatory fields
-        property.setOwnerType(dto.getOwnerType());
+        // ✅ VALIDATE OWNER TYPE (supports: owner, builder, broker, agent)
+        String ownerType = dto.getOwnerType();
+        if (ownerType != null && !ownerType.isEmpty()) {
+            List<String> validOwnerTypes = Arrays.asList("owner", "builder", "broker", "agent");
+            if (!validOwnerTypes.contains(ownerType.toLowerCase())) {
+                logger.warn("Invalid ownerType '{}' provided. Defaulting to 'owner'", ownerType);
+                ownerType = "owner";
+            }
+        } else {
+            ownerType = "owner"; // default
+        }
+        property.setOwnerType(ownerType);
         property.setIsVerified(dto.getIsVerified());
         property.setIsReadyToMove("ready_to_move".equalsIgnoreCase(dto.getConstructionStatus()));
         property.setConstructionStatus(dto.getConstructionStatus());
@@ -341,7 +352,16 @@ public class PropertyService {
         if (propertyDetails.getStatus() != null) property.setStatus(propertyDetails.getStatus());
         if (propertyDetails.getListingType() != null) property.setListingType(propertyDetails.getListingType());
         if (propertyDetails.getIsFeatured() != null) property.setIsFeatured(propertyDetails.getIsFeatured());
-        if (propertyDetails.getOwnerType() != null) property.setOwnerType(propertyDetails.getOwnerType());
+        // ✅ VALIDATE OWNER TYPE on update
+        if (propertyDetails.getOwnerType() != null) {
+            String newOwnerType = propertyDetails.getOwnerType();
+            List<String> validOwnerTypes = Arrays.asList("owner", "builder", "broker", "agent");
+            if (validOwnerTypes.contains(newOwnerType.toLowerCase())) {
+                property.setOwnerType(newOwnerType);
+            } else {
+                logger.warn("Invalid ownerType in update. Keeping existing value", newOwnerType);
+            }
+        }
         if (propertyDetails.getIsReadyToMove() != null) property.setIsReadyToMove(propertyDetails.getIsReadyToMove());
         if (propertyDetails.getIsVerified() != null) property.setIsVerified(propertyDetails.getIsVerified());
         if (propertyDetails.getConstructionStatus() != null) property.setConstructionStatus(propertyDetails.getConstructionStatus());

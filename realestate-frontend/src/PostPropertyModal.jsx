@@ -4,24 +4,26 @@ import { useAuth } from "./AuthContext.jsx";
 import { BACKEND_BASE_URL } from "./config/config";
 import UserCreationModal from "./components/UserCreationModal";
 import "./PostPropertyModal.css";
-import BrokerSubscriptionModal from "./components/BrokerSubscriptionModal";
+import BrokerSubscriptionModal from './components/BrokerSubscriptionModal';
+import { trackPropertyPost } from './components/Analytics/GoogleAnalytics';
+
 // ⭐ NEW: Property type icons helper function
 const getPropertyTypeIcon = (typeName) => {
   const icons = {
-    Apartment: "🏢",
-    Villa: "🏡",
-    Plot: "📐",
-    Land: "🌾",
-    Office: "🏢",
-    Shop: "🏪",
-    Warehouse: "🏭",
-    "Farm House": "🏡",
-    Penthouse: "🌆",
-    Studio: "🏠",
-    "Independent House": "🏠",
-    "Builder Floor": "🏢",
+    'Apartment': '🏢',
+    'Villa': '🏡',
+    'Plot': '📐',
+    'Land': '🌾',
+    'Office': '🏢',
+    'Shop': '🏪',
+    'Warehouse': '🏭',
+    'Farm House': '🏡',
+    'Penthouse': '🌆',
+    'Studio': '🏠',
+    'Independent House': '🏠',
+    'Builder Floor': '🏢'
   };
-  return icons[typeName] || "🏘️";
+  return icons[typeName] || '🏘️';
 };
 function PostPropertyModal({ onClose, onPropertyPosted }) {
   const { user, isAuthenticated } = useAuth();
@@ -42,7 +44,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
   const handleSubscriptionSuccess = (subscription) => {
     setShowSubscriptionModal(false);
-    alert("✅ Subscription activated! You can now post properties.");
+    alert('✅ Subscription activated! You can now post properties.');
   };
 
   // User selection for agents/admins
@@ -104,18 +106,8 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
   const isBroker = user?.role === "BROKER";
 
   const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
   ];
 
   const currentYear = new Date().getFullYear();
@@ -142,13 +134,13 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
   useEffect(() => {
     if (user?.role === "BROKER") {
-      setFormData((prev) => ({ ...prev, ownerType: "broker" }));
+      setFormData(prev => ({ ...prev, ownerType: "broker" }));
     }
   }, [user]);
 
   // ✅ NEW: Load Property Types from Database
 
-  const loadPropertyTypes = async () => {
+const loadPropertyTypes = async () => {
     setPropertyTypesLoading(true);
     try {
       const res = await fetch(`${BACKEND_BASE_URL}/api/property-types`);
@@ -164,12 +156,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         .filter(Boolean)
         .map((t) => {
           const id = t.propertyTypeId ?? t.property_type_id ?? t.id ?? null;
-          const name =
-            t.typeName ??
-            t.type_name ??
-            t.name ??
-            t.type ??
-            (typeof t === "string" ? t : "");
+          const name = t.typeName ?? t.type_name ?? t.name ?? t.type ?? (typeof t === "string" ? t : "");
           return { id, name };
         })
         .filter((t) => t.name && t.name.length > 0);
@@ -186,6 +173,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       setPropertyTypesLoading(false);
     }
   };
+
 
   const loadAreas = async () => {
     setAreasLoading(true);
@@ -318,28 +306,23 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     return "";
   };
 
-  const calculateTotalPrice = (
-    pricePerSqft,
-    areaSqft,
-    amenitiesPrice = 0,
-    propertyType = ""
-  ) => {
-    const ps = Number(pricePerSqft);
-    const a = Number(areaSqft);
-    const ap = Number(amenitiesPrice); // ⭐ Fixed amenities price
+const calculateTotalPrice = (pricePerSqft, areaSqft, amenitiesPrice = 0, propertyType = "") => {
+  const ps = Number(pricePerSqft);
+  const a = Number(areaSqft);
+  const ap = Number(amenitiesPrice); // ⭐ Fixed amenities price
 
-    if (ps > 0 && a > 0) {
-      let totalPrice = ps * a; // Base calculation: Area × Price/Sqft
+  if (ps > 0 && a > 0) {
+    let totalPrice = ps * a; // Base calculation: Area × Price/Sqft
 
-      // ⭐ Add FIXED amenities price only for apartments
-      if (propertyType?.toLowerCase() === "apartment" && ap > 0) {
-        totalPrice += ap; // Just add the fixed amount
-      }
-
-      return Math.round(totalPrice);
+    // ⭐ Add FIXED amenities price only for apartments
+    if (propertyType?.toLowerCase() === 'apartment' && ap > 0) {
+      totalPrice += ap; // Just add the fixed amount
     }
-    return "";
-  };
+
+    return Math.round(totalPrice);
+  }
+  return "";
+};
 
   const handlePriceChange = (e) => {
     const priceValue = e.target.value;
@@ -353,105 +336,82 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     setPriceInWords(priceValue ? convertToIndianWords(priceValue) : "");
   };
 
-  const handlePricePerSqftChange = (e) => {
-    const pricePerSqftValue = e.target.value;
-    const areaSqft = formData.areaSqft;
-    const amenitiesPrice = formData.amenitiesPrice; // ⭐ Fixed price
-    const propertyType = formData.type;
+const handlePricePerSqftChange = (e) => {
+  const pricePerSqftValue = e.target.value;
+  const areaSqft = formData.areaSqft;
+  const amenitiesPrice = formData.amenitiesPrice; // ⭐ Fixed price
+  const propertyType = formData.type;
 
-    setFormData((prev) => ({
-      ...prev,
-      pricePerSqft: pricePerSqftValue,
-      price: calculateTotalPrice(
-        pricePerSqftValue,
-        areaSqft,
-        amenitiesPrice,
-        propertyType
-      ),
-    }));
+  setFormData((prev) => ({
+    ...prev,
+    pricePerSqft: pricePerSqftValue,
+    price: calculateTotalPrice(pricePerSqftValue, areaSqft, amenitiesPrice, propertyType),
+  }));
 
-    const calculatedPrice = calculateTotalPrice(
-      pricePerSqftValue,
-      areaSqft,
-      amenitiesPrice,
-      propertyType
-    );
-    setPriceInWords(
-      calculatedPrice ? convertToIndianWords(calculatedPrice) : ""
-    );
-  };
+  const calculatedPrice = calculateTotalPrice(pricePerSqftValue, areaSqft, amenitiesPrice, propertyType);
+  setPriceInWords(calculatedPrice ? convertToIndianWords(calculatedPrice) : "");
+};
 
-  const handleAreaSqftChange = (e) => {
-    const areaSqftValue = e.target.value;
-    const price = formData.price;
-    const pricePerSqft = formData.pricePerSqft;
-    const amenitiesPrice = formData.amenitiesPrice; // ⭐ Fixed price
-    const propertyType = formData.type;
+const handleAreaSqftChange = (e) => {
+  const areaSqftValue = e.target.value;
+  const price = formData.price;
+  const pricePerSqft = formData.pricePerSqft;
+  const amenitiesPrice = formData.amenitiesPrice; // ⭐ Fixed price
+  const propertyType = formData.type;
 
-    let newPrice = price;
-    let newPricePerSqft = pricePerSqft;
+  let newPrice = price;
+  let newPricePerSqft = pricePerSqft;
 
-    if (pricePerSqft > 0) {
-      newPrice = calculateTotalPrice(
-        pricePerSqft,
-        areaSqftValue,
-        amenitiesPrice,
-        propertyType
-      );
-    } else if (price > 0) {
-      newPricePerSqft = calculatePricePerSqft(price, areaSqftValue);
-    }
+  if (pricePerSqft > 0) {
+    newPrice = calculateTotalPrice(pricePerSqft, areaSqftValue, amenitiesPrice, propertyType);
+  } else if (price > 0) {
+    newPricePerSqft = calculatePricePerSqft(price, areaSqftValue);
+  }
 
-    setFormData((prev) => ({
-      ...prev,
-      areaSqft: areaSqftValue,
-      price: newPrice,
-      pricePerSqft: newPricePerSqft,
-    }));
+  setFormData((prev) => ({
+    ...prev,
+    areaSqft: areaSqftValue,
+    price: newPrice,
+    pricePerSqft: newPricePerSqft,
+  }));
 
-    setPriceInWords(newPrice ? convertToIndianWords(newPrice) : "");
-  };
+  setPriceInWords(newPrice ? convertToIndianWords(newPrice) : "");
+};
 
-  // ⭐ NEW: Handle amenities price change (fixed amount for apartments)
-  const handleAmenitiesPriceChange = (e) => {
-    const amenitiesPriceValue = e.target.value;
-    const pricePerSqft = formData.pricePerSqft;
-    const areaSqft = formData.areaSqft;
-    const propertyType = formData.type;
+// ⭐ NEW: Handle amenities price change (fixed amount for apartments)
+const handleAmenitiesPriceChange = (e) => {
+  const amenitiesPriceValue = e.target.value;
+  const pricePerSqft = formData.pricePerSqft;
+  const areaSqft = formData.areaSqft;
+  const propertyType = formData.type;
 
-    let newPrice = formData.price;
+  let newPrice = formData.price;
 
-    // Only recalculate if we have pricePerSqft and it's an apartment
-    if (
-      pricePerSqft > 0 &&
-      areaSqft > 0 &&
-      propertyType?.toLowerCase() === "apartment"
-    ) {
-      newPrice = calculateTotalPrice(
-        pricePerSqft,
-        areaSqft,
-        amenitiesPriceValue,
-        propertyType
-      );
-    }
+  // Only recalculate if we have pricePerSqft and it's an apartment
+  if (pricePerSqft > 0 && areaSqft > 0 && propertyType?.toLowerCase() === 'apartment') {
+    newPrice = calculateTotalPrice(pricePerSqft, areaSqft, amenitiesPriceValue, propertyType);
+  }
 
-    setFormData((prev) => ({
-      ...prev,
-      amenitiesPrice: amenitiesPriceValue,
-      price: newPrice,
-    }));
+  setFormData((prev) => ({
+    ...prev,
+    amenitiesPrice: amenitiesPriceValue,
+    price: newPrice,
+  }));
 
-    setPriceInWords(newPrice ? convertToIndianWords(newPrice) : "");
-  };
+  setPriceInWords(newPrice ? convertToIndianWords(newPrice) : "");
+};
+
+
+
 
   const handleDecimalChange = (e) => {
     const { name, value } = e.target;
     let newValue = value;
 
-    if (newValue.includes(".")) {
-      const parts = newValue.split(".");
+    if (newValue.includes('.')) {
+      const parts = newValue.split('.');
       if (parts.length > 1 && parts[1].length > 1) {
-        newValue = parts[0] + "." + parts[1].substring(0, 1);
+        newValue = parts[0] + '.' + parts[1].substring(0, 1);
       }
     }
 
@@ -560,7 +520,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
           `${BACKEND_BASE_URL}/api/upload/property-image`,
           {
             method: "POST",
-            headers: { Authorization: `Bearer ${authToken}` },
+            headers: { 'Authorization': `Bearer ${authToken}` },
             body: formDataImage,
           }
         );
@@ -609,6 +569,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     setLoading(true);
     setError(null);
 
+
     try {
       if (!isAuthenticated || !user) {
         setError("Please login to post.");
@@ -645,26 +606,16 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         }
       }
 
-      if (
-        !formData.title ||
-        !formData.price ||
-        !formData.areaId ||
-        !formData.description
-      ) {
+      if (!formData.title || !formData.price || !formData.areaId || !formData.description) {
         setError("Please fill in Title, Price, Area, and Description");
         setLoading(false);
         return;
       }
 
-      if (
-        formData.constructionStatus === "under_construction" &&
-        (!formData.possessionYear || !formData.possessionMonth)
-      ) {
-        setError(
-          "Please specify the Possession Year and Month for 'Under Construction' properties."
-        );
-        setLoading(false);
-        return;
+      if (formData.constructionStatus === "under_construction" && (!formData.possessionYear || !formData.possessionMonth)) {
+         setError("Please specify the Possession Year and Month for 'Under Construction' properties.");
+         setLoading(false);
+         return;
       }
 
       if (selectedImages.length === 0) {
@@ -676,25 +627,16 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       const propertyPayload = {
         ...formData,
         imageUrl: null,
-        user: {
-          id:
-            user?.role === "AGENT" || user?.role === "ADMIN"
-              ? selectedUserId
-              : user.id,
-        },
+        user: { id: (user?.role === "AGENT" || user?.role === "ADMIN") ? selectedUserId : user.id },
         area: { id: formData.areaId },
         price: Number(formData.price),
-        pricePerSqft: formData.pricePerSqft
-          ? Number(formData.pricePerSqft)
-          : null,
+        pricePerSqft: formData.pricePerSqft ? Number(formData.pricePerSqft) : null,
         areaSqft: formData.areaSqft ? Number(formData.areaSqft) : null,
-        amenitiesPrice: formData.amenitiesPrice
-          ? Number(formData.amenitiesPrice)
-          : null, // ⭐ ADD THIS LINE
+         amenitiesPrice: formData.amenitiesPrice ? Number(formData.amenitiesPrice) : null, // ⭐ ADD THIS LINE
         bedrooms: formData.bedrooms ? Number(formData.bedrooms) : null,
         bathrooms: formData.bathrooms ? Number(formData.bathrooms) : null,
         balconies: formData.balconies ? Number(formData.balconies) : null,
-        isReadyToMove: formData.constructionStatus === "ready_to_move",
+        isReadyToMove: formData.constructionStatus === 'ready_to_move',
       };
 
       const createResponse = await fetch(`${BACKEND_BASE_URL}/api/properties`, {
@@ -765,6 +707,12 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       alert("Property posted successfully!");
       onPropertyPosted && onPropertyPosted();
       onClose && onClose();
+        trackPropertyPost(
+          response.propertyId,
+          formData.propertyType,
+          formData.listingType
+        );
+
     } catch (err) {
       console.error("Error posting property:", err);
       setError(err?.message || "An error occurred. Please try again.");
@@ -923,9 +871,14 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                 onChange={handleChange}
                 className="ppm-select"
                 required
-                disabled={isBroker || user?.role === "USER"}
+                disabled={isBroker}
               >
-                {!isBroker && <option value="owner">Owner</option>}
+                {!isBroker && (
+                  <>
+                    <option value="owner">Owner</option>
+                    <option value="builder">Builder</option>
+                  </>
+                )}
                 {isBroker && <option value="broker">Broker</option>}
               </select>
             </div>
@@ -1129,8 +1082,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
               {selectedImages.length > 0 && (
                 <p className="ppm-img-count">
-                  {selectedImages.length} image(s) selected (First image will be
-                  the primary image)
+                  {selectedImages.length} image(s) selected (First image will be the primary image)
                 </p>
               )}
 
@@ -1224,33 +1176,26 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
                   inputMode="numeric"
                 />
               </div>
-              {/* ⭐ NEW: FIXED Amenities Price Field (Only for Apartments) */}
-              {formData.type?.toLowerCase() === "apartment" && (
-                <div className="ppm-field">
-                  <label className="ppm-label">💰 Amenities Price (₹)</label>
-                  <input
-                    type="number"
-                    name="amenitiesPrice"
-                    value={formData.amenitiesPrice}
-                    onChange={handleAmenitiesPriceChange}
-                    placeholder="e.g., 500000"
-                    className="ppm-input"
-                    max="10000000"
-                    inputMode="numeric"
-                  />
-                  <small
-                    style={{
-                      fontSize: "11px",
-                      color: "#64748b",
-                      marginTop: "4px",
-                      display: "block",
-                    }}
-                  >
-                    Fixed price for amenities (balcony, club house, etc.)
-                  </small>
-                </div>
-              )}
-              {/* ⭐ END OF NEW BLOCK */}
+             {/* ⭐ NEW: FIXED Amenities Price Field (Only for Apartments) */}
+             {formData.type?.toLowerCase() === 'apartment' && (
+               <div className="ppm-field">
+                 <label className="ppm-label">💰 Amenities Price (₹)</label>
+                 <input
+                   type="number"
+                   name="amenitiesPrice"
+                   value={formData.amenitiesPrice}
+                   onChange={handleAmenitiesPriceChange}
+                   placeholder="e.g., 500000"
+                   className="ppm-input"
+                   max="10000000"
+                   inputMode="numeric"
+                 />
+                 <small style={{fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block'}}>
+                   Fixed price for amenities (balcony, club house, etc.)
+                 </small>
+               </div>
+             )}
+             {/* ⭐ END OF NEW BLOCK */}
 
               <div className="ppm-field">
                 <label className="ppm-label">💵 Price Per Sqft (₹)</label>
@@ -1267,9 +1212,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
               </div>
 
               <div className="ppm-field">
-                <label className="ppm-label required">
-                  💰 Expected Price (₹)
-                </label>
+                <label className="ppm-label required">💰 Expected Price (₹)</label>
                 <input
                   type="number"
                   name="price"

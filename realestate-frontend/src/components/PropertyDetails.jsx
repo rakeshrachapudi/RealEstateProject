@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
-import LoginModal from "../LoginModal.jsx";  // ✅ FIXED - Parent directory (src/)
+import LoginModal from "../LoginModal.jsx";
 import { BACKEND_BASE_URL } from "../config/config";
 import "./PropertyDetails.css";
 
@@ -35,7 +35,7 @@ function PropertyDetails() {
   const [agent, setAgent] = useState(null);
   const [agentLoading, setAgentLoading] = useState(false);
 
-  // ✅ NEW: Login and Tracking States
+  // Login and Tracking States
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [viewTracked, setViewTracked] = useState(false);
 
@@ -56,7 +56,7 @@ function PropertyDetails() {
     }
   }, [property, user]);
 
-  // ✅ NEW: Track Property View AFTER User Logs In (Buyer Detection)
+  // Track Property View AFTER User Logs In
   useEffect(() => {
     if (user && property && !viewTracked && property.user?.id !== user.id) {
       trackPropertyView();
@@ -94,6 +94,8 @@ function PropertyDetails() {
       const response = await fetch(`${BACKEND_BASE_URL}/api/properties/${propertyId}`);
       if (!response.ok) throw new Error("Property not found");
       const data = await response.json();
+
+      // Fetch images
       const imageResponse = await fetch(`${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`);
       let images = [];
       if (imageResponse.ok) {
@@ -109,7 +111,7 @@ function PropertyDetails() {
     }
   };
 
-  // ✅ NEW: Track Property View with User Authentication (Buyer Detection)
+  // Track Property View with User Authentication
   const trackPropertyView = async () => {
     if (!user) return;
 
@@ -177,18 +179,13 @@ function PropertyDetails() {
       return;
     }
     try {
-      // ✅ FIXED: Use the existing endpoint that returns all deals for this property
       const response = await fetch(`${BACKEND_BASE_URL}/api/deals/property/${propertyId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
       });
       if (response.ok) {
         const apiResponse = await response.json();
-        // The API returns { success: true, data: [...] }
         const deals = apiResponse.data || [];
-
-        // Filter to find deal for this specific buyer
         const userDeal = deals.find(deal => deal.buyerId === user.id);
-
         setExistingDeal(userDeal || null);
       } else {
         setExistingDeal(null);
@@ -411,7 +408,7 @@ function PropertyDetails() {
     setModalImageIndex((prev) => prev === 0 ? imageUrls.length - 1 : prev - 1);
   };
 
-  // ✅ NEW: Handle contact click - require login
+  // Handle contact click - require login
   const handleContactClick = (action) => {
     if (!user) {
       setShowLoginModal(true);
@@ -482,7 +479,7 @@ function PropertyDetails() {
 
   return (
     <>
-      {/* ✅ ADDED: Login Modal */}
+      {/* Login Modal */}
       {showLoginModal && (
         <LoginModal onClose={() => setShowLoginModal(false)} />
       )}
@@ -586,7 +583,11 @@ function PropertyDetails() {
                   fontSize: '14px', color: '#4b5563', fontWeight: '600', padding: '8px 12px',
                   background: '#f3f4f6', borderRadius: '8px', marginBottom: '16px', width: 'fit-content'
                 }}>
-                  👤 Posted by: {property.ownerType === "broker" ? "Broker" : "Owner"}
+                  👤 Posted by: {
+                    property.ownerType === "broker" ? "Broker" :
+                    property.ownerType === "builder" ? "Builder" :
+                    property.ownerType === "agent" ? "Agent" : "Owner"
+                  }
                 </div>
               )}
 
@@ -651,7 +652,7 @@ function PropertyDetails() {
               <div className="card pd-contact">
                 <h3 className="pd-contact-title">{contactLabel}</h3>
 
-                {/* ✅ MODIFIED: Show login prompt if not logged in */}
+                {/* Show login prompt if not logged in */}
                 {!user ? (
                   <div style={{
                     textAlign: 'center',
@@ -851,7 +852,7 @@ function PropertyDetails() {
             </div>
           </div>
 
-          {/* ✅ MODIFIED: Floating button requires login */}
+          {/* Floating WhatsApp button */}
           <button
             className="pd-fab"
             onClick={() => user ? (validContactPhone && window.open(waHref, "_blank")) : setShowLoginModal(true)}
