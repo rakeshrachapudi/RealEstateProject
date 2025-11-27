@@ -896,7 +896,6 @@
   letter-spacing: -0.02em;
   display: flex;
   align-items: center;
-  gap: 10px;
 }
 
 .hp-section-ic {
@@ -1596,6 +1595,11 @@
     top: 12px;
     right: 12px;
   }
+
+  .hp-types-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1640,6 +1644,10 @@
 
   .hp-coupon-copy {
     width: 100%;
+  }
+
+  .hp-types-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -3381,14 +3389,13 @@ body {
    BROWSE BY PROPERTY TYPE SECTION
    Add this to the end of HomePage.css
 ======================================== */
-
 .hp-browse-types {
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  padding: clamp(32px, 4vw, 48px) clamp(24px, 3.5vw, 40px);
-  border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+  padding: clamp(20px, 3vw, 32px);
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
   border: 1px solid #e2e8f0;
-  margin-bottom: clamp(24px, 3vw, 36px);
+  margin-bottom: clamp(24px, 3vw, 40px);
   position: relative;
   overflow: hidden;
 }
@@ -3418,10 +3425,10 @@ body {
   position: relative;
   z-index: 1;
   text-align: center;
-  font-size: clamp(26px, 3.5vw, 38px);
+  font-size: clamp(20px, 2.8vw, 32px);
   font-weight: 900;
   color: #1e293b;
-  margin: 0 0 8px 0;
+  margin: 0 0 20px 0;
   line-height: 1.2;
 }
 
@@ -3456,28 +3463,28 @@ body {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
-  gap: clamp(16px, 2.5vw, 24px);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
   padding: 0;
   margin: 0;
 }
 
 .hp-type-card {
-  background: white;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border: 2px solid #e2e8f0;
-  border-radius: 20px;
-  padding: clamp(20px, 3vw, 28px) clamp(16px, 2.5vw, 20px);
+  border-radius: 16px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  min-height: 140px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  min-height: auto;
 }
 
 .hp-type-card::before {
@@ -3494,8 +3501,8 @@ body {
 }
 
 .hp-type-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 28px rgba(102, 126, 234, 0.25);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
   border-color: #667eea;
 }
 
@@ -3504,8 +3511,7 @@ body {
 }
 
 .hp-type-card:hover .hp-type-icon,
-.hp-type-card:hover .hp-type-name,
-.hp-type-card:hover .hp-type-arrow {
+.hp-type-card:hover .hp-type-name {
   color: white;
   position: relative;
   z-index: 1;

@@ -30,7 +30,7 @@ const BannerCarousel = () => {
     "Get Direct Buyer Contact Numbers",
     "Unlimited Listings",
     "Instant Lead Access — No middle agent involved",
-    "Use coupon codes BROKER3FREE or WELCOME2024 to enjoy exclusive subscription discounts.",
+    "Use coupon codes BROKER3FREE or WELCOME2026 to enjoy exclusive subscription discounts.",
   ];
 
   // Auto-slide effect
