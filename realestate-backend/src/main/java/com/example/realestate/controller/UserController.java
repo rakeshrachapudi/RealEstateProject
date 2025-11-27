@@ -57,6 +57,19 @@ public class UserController {
                         .body(ApiResponse.error("Email already registered"));
             }
 
+            // Username validation
+            if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Username is required"));
+            }
+
+// Prevent duplicate usernames
+            if (userRepository.existsByUsername(request.getUsername().trim())) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Username already taken"));
+            }
+
+
             Optional<User> existingByPhone = userRepository.findByMobileNumber(request.getMobileNumber());
             if (existingByPhone.isPresent()) {
                 logger.warn("User creation failed - Mobile number already exists: {}", request.getMobileNumber());
@@ -65,7 +78,7 @@ public class UserController {
             }
 
             User newUser = new User();
-            newUser.setUsername(request.getEmail());
+            newUser.setUsername(request.getUsername().trim());
             newUser.setEmail(request.getEmail());
             newUser.setFirstName(request.getFirstName());
             newUser.setLastName(request.getLastName());
@@ -208,6 +221,9 @@ public class UserController {
             }
             if (userDetails.getEmail() != null && !userDetails.getEmail().isEmpty()) {
                 user.setEmail(userDetails.getEmail());
+            }
+            if (userDetails.getUsername() != null && !userDetails.getUsername().isEmpty()) {
+                user.setUsername(userDetails.getUsername());
             }
             if (userDetails.getMobileNumber() != null && !userDetails.getMobileNumber().isEmpty()) {
                 user.setMobileNumber(userDetails.getMobileNumber());
@@ -409,12 +425,16 @@ public class UserController {
         private String email;
         private String firstName;
         private String lastName;
+        private String username;
         private String mobileNumber;
         private String address;
         private String role;
 
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
+
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
 
         public String getFirstName() { return firstName; }
         public void setFirstName(String firstName) { this.firstName = firstName; }

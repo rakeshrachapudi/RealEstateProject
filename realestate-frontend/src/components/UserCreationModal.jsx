@@ -9,6 +9,7 @@ const UserCreationModal = ({ onClose, onUserCreated }) => {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    username: "",
     email: "",
     mobileNumber: "",
     address: "",
@@ -31,6 +32,12 @@ const UserCreationModal = ({ onClose, onUserCreated }) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    if (!formData.username.trim()) {
+      setError("Username is required");
+      setLoading(false);
+      return;
+    }
 
     // Basic validation
     if (!formData.email || !formData.firstName || !formData.mobileNumber) {
@@ -157,6 +164,21 @@ const UserCreationModal = ({ onClose, onUserCreated }) => {
 
             <div style={styles.formGroup}>
               <label style={styles.label}>
+                Username <span style={styles.required}>*</span>
+              </label>
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                style={styles.input}
+                required
+                placeholder="Enter username"
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>
                 Email <span style={styles.required}>*</span>
               </label>
               <input
@@ -192,7 +214,11 @@ const UserCreationModal = ({ onClose, onUserCreated }) => {
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                style={{ ...styles.input, minHeight: "80px", resize: "vertical" }}
+                style={{
+                  ...styles.input,
+                  minHeight: "80px",
+                  resize: "vertical",
+                }}
                 placeholder="Enter complete address"
               />
             </div>
@@ -205,9 +231,7 @@ const UserCreationModal = ({ onClose, onUserCreated }) => {
                 onChange={handleChange}
                 style={styles.input}
               >
-                <option value="USER">User (Default)</option>
-                <option value="AGENT">Agent</option>
-                <option value="ADMIN">Admin</option>
+                <option value="USER">User</option>
               </select>
               <p style={styles.helperText}>
                 Default role is USER for property owners
@@ -223,11 +247,7 @@ const UserCreationModal = ({ onClose, onUserCreated }) => {
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                style={styles.submitBtn}
-                disabled={loading}
-              >
+              <button type="submit" style={styles.submitBtn} disabled={loading}>
                 {loading ? "Creating..." : "✨ Create User"}
               </button>
             </div>
