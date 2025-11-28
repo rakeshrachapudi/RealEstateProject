@@ -1194,7 +1194,7 @@
 }
 
 .hp-tab.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3e3e3e 0%, #1a1a1a 100%);
   color: #fff;
   box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
   transform: translateY(-2px);
@@ -1228,9 +1228,9 @@
 }
 
 .hp-type-chip.selected {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3e3e3e 0%, #1a1a1a 100%);
   color: #fff;
-  border-color: #667eea;
+  border-color: #1e293b;
   box-shadow: 0 6px 18px rgba(102, 126, 234, 0.3);
 }
 
@@ -2024,13 +2024,13 @@ body {
   transform: translateY(-3px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
   border-color: #667eea;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3e3e3e 0%, #1a1a1a 100%);
   color: white;
 }
 
 .hp-area-btn.active {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  border-color: #4f46e5;
+  background: linear-gradient(135deg, #3e3e3e 0%, #1a1a1a 100%);
+  border-color: #5b5b5b;
   color: white;
   box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
 }
@@ -2202,8 +2202,8 @@ body {
 }
 
 .hp-tab.active {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  border-color: #4f46e5;
+  background: linear-gradient(135deg, #3e3e3e 0%, #1a1a1a 100%);
+  border-color: #1e293b;
   color: white;
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
 }
@@ -2270,7 +2270,7 @@ body {
 }
 
 .hp-btn-primary {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #3e3e3e 0%, #1a1a1a 100%);
   color: white;
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
 }
@@ -3195,7 +3195,7 @@ body {
 .hp-search input:focus,
 .hp-search select:focus {
   background: #ffffff !important;
-  border-color: #667eea !important;
+  border-color: #1e293b !important;
   box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1) !important;
 }
 
@@ -3494,7 +3494,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #000000 0%, #000000 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
   z-index: 0;
@@ -3503,7 +3503,7 @@ body {
 .hp-type-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-  border-color: #667eea;
+  border-color: #1e293b;
 }
 
 .hp-type-card:hover::before {
@@ -3542,7 +3542,7 @@ body {
 .hp-type-arrow {
   font-size: clamp(18px, 2.2vw, 22px);
   font-weight: 900;
-  color: #667eea;
+  color: #1e293b;
   transition: all 0.3s ease;
   position: relative;
   z-index: 1;
@@ -3555,7 +3555,7 @@ body {
 
 /* Focus state for accessibility */
 .hp-type-card:focus {
-  outline: 3px solid #667eea;
+  outline: 3px solid #1e293b;
   outline-offset: 3px;
 }
 
