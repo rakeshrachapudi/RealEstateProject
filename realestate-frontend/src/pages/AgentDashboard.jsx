@@ -46,11 +46,14 @@ export default function AgentDashboard() {
     setErr(null);
 
     try {
-      // Fetch agent's deals - try multiple possible endpoints
+      console.log('🎯 Fetching deals for agent:', user.id);
+
+      // Try multiple possible endpoints
       const endpoints = [
-        `${BACKEND_BASE_URL}/api/deals/user/${user.id}/role/AGENT`,
         `${BACKEND_BASE_URL}/api/deals/agent/${user.id}`,
-        `${BACKEND_BASE_URL}/api/deals/my-deals?userRole=AGENT`,
+        `${BACKEND_BASE_URL}/api/deals/user/${user.id}/role/AGENT`,
+        `${BACKEND_BASE_URL}/api/deals/my-deals`,
+        `${BACKEND_BASE_URL}/api/deals`,
       ];
 
       let dealsData = [];
@@ -58,7 +61,7 @@ export default function AgentDashboard() {
 
       for (const endpoint of endpoints) {
         try {
-          console.log(`🎯 Trying endpoint: ${endpoint}`);
+          console.log(`🔍 Trying endpoint: ${endpoint}`);
 
           const response = await fetch(endpoint, {
             headers: { Authorization: `Bearer ${token}` },
@@ -66,22 +69,46 @@ export default function AgentDashboard() {
 
           if (response.ok) {
             const data = await safeParse(response);
-            console.log(`✅ Success with ${endpoint}:`, data);
+            console.log(`✅ Response from ${endpoint}:`, data);
 
             if (Array.isArray(data)) {
-              dealsData = data;
+              // Direct array of deals - filter for agent
+              dealsData = data.filter(deal =>
+                deal.agentId === user.id ||
+                deal.agent?.id === user.id ||
+                deal.agent?.agentId === user.id
+              );
             } else if (data?.success && Array.isArray(data.data)) {
-              dealsData = data.data;
+              // Wrapped response - filter for agent
+              dealsData = data.data.filter(deal =>
+                deal.agentId === user.id ||
+                deal.agent?.id === user.id ||
+                deal.agent?.agentId === user.id
+              );
             } else if (Array.isArray(data?.data)) {
-              dealsData = data.data;
+              // Another wrapped format - filter for agent
+              dealsData = data.data.filter(deal =>
+                deal.agentId === user.id ||
+                deal.agent?.id === user.id ||
+                deal.agent?.agentId === user.id
+              );
+            } else if (data?.dealId || data?.id) {
+              // Single deal response
+              if (data.agentId === user.id || data.agent?.id === user.id) {
+                dealsData = [data];
+              }
             } else {
               console.log(`⚠️ Unexpected data format from ${endpoint}:`, data);
               continue;
             }
 
-            endpointWorked = true;
-            console.log(`🎉 Found ${dealsData.length} deals from ${endpoint}`);
-            break;
+            if (dealsData.length > 0) {
+              endpointWorked = true;
+              console.log(`🎉 Found ${dealsData.length} deals for agent from ${endpoint}`);
+              break;
+            } else {
+              console.log(`ℹ️ ${endpoint} returned data but no deals for this agent`);
+            }
           } else {
             console.log(`❌ ${endpoint} failed with status ${response.status}`);
           }
@@ -92,15 +119,33 @@ export default function AgentDashboard() {
       }
 
       if (!endpointWorked) {
-        // Fallback: empty array if no endpoint works
-        console.log("⚠️ No agent deal endpoints worked, using empty array");
-        dealsData = [];
+        // Final fallback: try to get all deals and filter client-side
+        console.log("⚠️ Trying final fallback: get all deals and filter");
+        try {
+          const response = await fetch(`${BACKEND_BASE_URL}/api/deals`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (response.ok) {
+            const data = await safeParse(response);
+            const allDeals = Array.isArray(data) ? data : (data?.data || []);
+            dealsData = allDeals.filter(deal =>
+              deal.agentId === user.id ||
+              deal.agent?.id === user.id ||
+              deal.agent?.agentId === user.id
+            );
+            console.log(`ℹ️ Fallback: filtered ${dealsData.length} deals from all deals`);
+          }
+        } catch (e) {
+          console.log("❌ Final fallback also failed");
+        }
       }
 
       // Sort by creation date (newest first)
       dealsData.sort(
         (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
       );
+
+      console.log(`📊 Final agent deals count: ${dealsData.length}`);
       setDeals(dealsData);
     } catch (e) {
       console.error("❌ Agent deals fetch error:", e);
@@ -110,6 +155,7 @@ export default function AgentDashboard() {
       setLoading(false);
     }
   };
+
 
   // Calculate metrics
   const metrics = useMemo(() => {

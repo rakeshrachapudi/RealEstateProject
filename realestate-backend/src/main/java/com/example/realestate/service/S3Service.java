@@ -6,17 +6,28 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * S3 helper service using AWS SDK v2.
+ *
+ * Provides methods for:
+ * - Basic file operations (upload, move, delete)
+ * - Property-specific uploads (images, documents)
+ * - Deal document uploads
+ * - URL generation and key extraction
+ */
 @Service
 public class S3Service {
 
@@ -47,27 +58,39 @@ public class S3Service {
      * Upload file to S3 with custom key
      */
     public String uploadFile(String key, Path filePath, String contentType) throws IOException {
+        Objects.requireNonNull(key, "key is required");
+        Objects.requireNonNull(filePath, "filePath is required");
+
         logger.info("📤 Uploading file to S3");
         logger.info("   Bucket: {}", bucketName);
         logger.info("   Key: {}", key);
         logger.info("   ContentType: {}", contentType);
         logger.info("   FilePath: {}", filePath);
 
-        PutObjectRequest putRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
-                .key(key)
-                .contentType(contentType)
-                .acl("public-read")
-                .build();
+        try {
+            PutObjectRequest.Builder requestBuilder = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .acl(ObjectCannedACL.PUBLIC_READ);
 
-        PutObjectResponse response = s3Client.putObject(putRequest, filePath);
-        String fileUrl = String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, awsRegion.id(), key);
+            if (contentType != null) {
+                requestBuilder.contentType(contentType);
+            }
 
-        logger.info("✅ File uploaded successfully!");
-        logger.info("   URL: {}", fileUrl);
-        logger.info("   ETag: {}", response.eTag());
+            PutObjectRequest putRequest = requestBuilder.build();
+            PutObjectResponse response = s3Client.putObject(putRequest, RequestBody.fromFile(filePath));
 
-        return fileUrl;
+            String fileUrl = getFileUrl(key);
+
+            logger.info("✅ File uploaded successfully!");
+            logger.info("   URL: {}", fileUrl);
+            logger.info("   ETag: {}", response.eTag());
+
+            return fileUrl;
+        } catch (Exception e) {
+            logger.error("Failed to upload file to S3. key={}, cause={}", key, e.getMessage(), e);
+            throw new RuntimeException("Failed to upload file to S3: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -136,6 +159,167 @@ public class S3Service {
         logger.info("   Generated S3 Key: {}", key);
 
         return uploadFile(key, filePath, contentType);
+    }
+
+    /**
+     * Move (copy then delete) an object within the same bucket.
+     * Returns public URL of destination object.
+     */
+    public String moveFile(String sourceKey, String destinationKey) {
+        Objects.requireNonNull(sourceKey, "sourceKey is required");
+        Objects.requireNonNull(destinationKey, "destinationKey is required");
+
+        try {
+            // 1) Copy
+            CopyObjectRequest copyRequest = CopyObjectRequest.builder()
+                    .sourceBucket(bucketName)
+                    .sourceKey(sourceKey)
+                    .destinationBucket(bucketName)
+                    .destinationKey(destinationKey)
+                    .build();
+
+            s3Client.copyObject(copyRequest);
+
+            // 2) Delete source
+            DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(sourceKey)
+                    .build();
+
+            s3Client.deleteObject(deleteRequest);
+
+            String newUrl = getFileUrl(destinationKey);
+            logger.info("Moved S3 object from {} to {} (url={})", sourceKey, destinationKey, newUrl);
+            return newUrl;
+        } catch (Exception e) {
+            logger.error("Failed to move file in S3. src={}, dest={}, cause={}", sourceKey, destinationKey, e.getMessage(), e);
+            throw new RuntimeException("Failed to move file in S3: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Delete an object from S3.
+     */
+    public void deleteFile(String key) {
+        Objects.requireNonNull(key, "key is required");
+
+        try {
+            DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build();
+
+            s3Client.deleteObject(deleteRequest);
+            logger.info("Deleted S3 object: {}", key);
+        } catch (Exception e) {
+            logger.error("Failed to delete file from S3. key={}, cause={}", key, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete file from S3: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Build public URL for a given key.
+     */
+    public String getFileUrl(String key) {
+        try {
+            // Build the standard S3 URL format
+            return String.format("https://%s.s3.%s.amazonaws.com/%s",
+                    bucketName, awsRegion.id(), key);
+        } catch (Exception e) {
+            logger.warn("Failed to build URL for bucket={}, key={}, cause={}", bucketName, key, e.getMessage());
+            // fallback without region
+            return String.format("https://%s.s3.amazonaws.com/%s", bucketName, key);
+        }
+    }
+
+    /**
+     * Extract S3 key from a public URL returned by S3 or stored previously.
+     *
+     * This handles:
+     * - https://bucket.s3.region.amazonaws.com/key/path
+     * - https://s3.region.amazonaws.com/bucket/key/path
+     * - https://bucket.s3.amazonaws.com/key/path
+     * - https://<cdn>/bucket/key/path
+     *
+     * Returns the key portion (e.g. "temp/images/xxx.jpg").
+     * If extraction fails, returns null.
+     */
+    public String getKeyFromUrl(String url) {
+        if (url == null) {
+            return null;
+        }
+
+        try {
+            String lower = url.toLowerCase();
+
+            // If url contains the bucketName directly like .../{bucketName}/...
+            String marker = "/" + bucketName.toLowerCase() + "/";
+            int idx = lower.indexOf(marker);
+            if (idx != -1) {
+                return url.substring(idx + marker.length());
+            }
+
+            // if URL has bucket as subdomain: https://bucket.s3.region.amazonaws.com/key
+            idx = lower.indexOf(".s3");
+            if (idx != -1) {
+                // find the first slash after domain
+                int slash = lower.indexOf("/", idx);
+                if (slash != -1 && slash + 1 < lower.length()) {
+                    return url.substring(slash + 1);
+                }
+            }
+
+            // if URL uses s3.amazonaws.com/bucket/key
+            idx = lower.indexOf("s3.amazonaws.com/");
+            if (idx != -1) {
+                int start = idx + "s3.amazonaws.com/".length();
+                // check if next portion is bucketName
+                String bucketMarker = bucketName.toLowerCase() + "/";
+                if (lower.startsWith(bucketMarker, start)) {
+                    return url.substring(start + bucketName.length() + 1);
+                } else {
+                    // assume the rest is key (if bucket is not present)
+                    return url.substring(start);
+                }
+            }
+
+            // fallback: return substring after first single slash after host
+            int proto = lower.indexOf("://");
+            if (proto != -1) {
+                int firstSlash = lower.indexOf("/", proto + 3);
+                if (firstSlash != -1 && firstSlash + 1 < lower.length()) {
+                    return url.substring(firstSlash + 1);
+                }
+            }
+
+            // last resort - return null
+            return null;
+        } catch (Exception e) {
+            logger.warn("Failed to extract key from url={} cause={}", url, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Check if an object exists in S3.
+     */
+    public boolean fileExists(String key) {
+        Objects.requireNonNull(key, "key is required");
+
+        try {
+            HeadObjectRequest headRequest = HeadObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build();
+
+            s3Client.headObject(headRequest);
+            return true;
+        } catch (NoSuchKeyException e) {
+            return false;
+        } catch (Exception e) {
+            logger.error("Failed to check if file exists. key={}, cause={}", key, e.getMessage(), e);
+            return false;
+        }
     }
 
     /**

@@ -3,6 +3,10 @@ package com.example.realestate.model;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "property")
@@ -217,4 +221,54 @@ public class Property {
 
     public String getHmdaId() { return hmdaId; }
     public void setHmdaId(String hmdaId) { this.hmdaId = hmdaId; }
+    // Add this field to your Property.java entity class
+
+    /**
+     * ⭐ NEW: Document URLs field
+     * Stores comma-separated URLs of property documents (brochures, PDFs, floor plans)
+     */
+    @Column(name = "document_urls", columnDefinition = "TEXT")
+    private String documentUrls;
+
+    // Add getter and setter
+    public String getDocumentUrls() {
+        return documentUrls;
+    }
+
+    public void setDocumentUrls(String documentUrls) {
+        this.documentUrls = documentUrls;
+    }
+
+    /**
+     * ⭐ NEW: Helper method to get document URLs as a list
+     * @return List of document URLs
+     */
+    @Transient
+    public List<String> getDocumentUrlsList() {
+        if (documentUrls == null || documentUrls.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        return Arrays.stream(documentUrls.split(","))
+                .map(String::trim)
+                .filter(url -> !url.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * ⭐ NEW: Helper method to check if property has documents
+     * @return true if property has at least one document
+     */
+    @Transient
+    public boolean hasDocuments() {
+        return documentUrls != null && !documentUrls.trim().isEmpty();
+    }
+
+    /**
+     * ⭐ NEW: Helper method to get document count
+     * @return Number of documents attached to this property
+     */
+    @Transient
+    public int getDocumentCount() {
+        return getDocumentUrlsList().size();
+    }
 }

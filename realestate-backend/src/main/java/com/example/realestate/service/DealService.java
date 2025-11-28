@@ -36,11 +36,10 @@ public class DealService {
     @Autowired
     private UserRepository userRepository;
 
-    // ==================== ⭐ CASCADE DELETE METHODS (NEW) ====================
+    // ==================== CASCADE DELETE METHODS ====================
 
     /**
-     * ⭐ DELETE ALL DEALS FOR AN AGENT (CASCADE DELETE)
-     * Called when an agent is deleted
+     * DELETE ALL DEALS FOR AN AGENT (CASCADE DELETE)
      */
     @Transactional
     public void deleteAllDealsForAgent(Long agentId) {
@@ -67,25 +66,18 @@ public class DealService {
     }
 
     /**
-     * ⭐ DELETE ALL DEALS FOR A USER (CASCADE DELETE)
-     * Deletes deals where the user is:
-     * 1. The buyer
-     * 2. The seller (property owner)
-     * Called when a user is deleted
+     * DELETE ALL DEALS FOR A USER (CASCADE DELETE)
      */
     @Transactional
     public void deleteAllDealsForUser(Long userId) {
         logger.info("🗑️ CASCADE DELETE: Deleting all deals for user ID: {}", userId);
 
-        // 1. Find all deals where user is the buyer
         List<DealStatus> buyerDeals = dealStatusRepository.findByBuyerId(userId);
         logger.info("Found {} deals where user {} is the BUYER", buyerDeals.size(), userId);
 
-        // 2. Find all properties owned by this user
         List<Property> userProperties = propertyRepository.findByUserId(userId);
         logger.info("Found {} properties owned by user {}", userProperties.size(), userId);
 
-        // 3. Find all deals for those properties (where user is the seller)
         List<DealStatus> sellerDeals = new ArrayList<>();
         for (Property property : userProperties) {
             List<DealStatus> propertyDeals = dealStatusRepository.findByPropertyId(property.getId());
@@ -93,7 +85,6 @@ public class DealService {
         }
         logger.info("Found {} deals where user {} is the SELLER", sellerDeals.size(), userId);
 
-        // 4. Combine and remove duplicates
         Set<DealStatus> allDealsToDelete = new HashSet<>();
         allDealsToDelete.addAll(buyerDeals);
         allDealsToDelete.addAll(sellerDeals);
@@ -117,8 +108,7 @@ public class DealService {
     }
 
     /**
-     * ⭐ DELETE ALL DEALS FOR A PROPERTY (CASCADE DELETE)
-     * Called when a property is deleted
+     * DELETE ALL DEALS FOR A PROPERTY (CASCADE DELETE)
      */
     @Transactional
     public void deleteAllDealsForProperty(Long propertyId) {
@@ -147,7 +137,7 @@ public class DealService {
 
     // ==================== CREATE DEAL WITH PRICE ====================
     /**
-     * Creates a new deal, typically by an agent, including an agreed price.
+     * Creates a new deal with agreed price (typically by an agent)
      */
     public DealStatus createDealWithPrice(CreateDealWithPriceRequestDto dto, Long agentId) {
         logger.info("Creating deal with price - Property: {}, Buyer: {}, Agent: {}, Price: {}",
@@ -203,7 +193,10 @@ public class DealService {
         return savedDeal;
     }
 
-    // ==================== ORIGINAL CREATE DEAL ====================
+    // ==================== CREATE DEAL (3 PARAMETERS - BACKWARD COMPATIBLE) ====================
+    /**
+     * Creates a basic deal without agreed price (backward compatible)
+     */
     public DealStatus createDeal(Long propertyId, Long buyerId, Long agentId) {
         logger.info("Creating basic deal - Property: {}, Buyer: {}, Agent: {}",
                 propertyId, buyerId, agentId);
@@ -242,6 +235,80 @@ public class DealService {
         DealStatus savedDeal = dealStatusRepository.save(deal);
         logger.info("✅ Basic Deal created - Deal ID: {}, Property ID: {}, Buyer ID: {}",
                 savedDeal.getId(), property.getId(), buyer.getId());
+        return savedDeal;
+    }
+
+    // ==================== ⭐ NEW: CREATE DEAL WITH AGREED PRICE (4 PARAMETERS) ====================
+    /**
+     * ⭐ CRITICAL: Overloaded method that accepts agreed price
+     * This is called from the frontend when users create deals with offer amounts
+     */
+    public DealStatus createDeal(Long propertyId, Long buyerId, Long agentId, Double agreedPrice) {
+        logger.info("📝 Creating deal with agreed price - Property: {}, Buyer: {}, Agent: {}, AgreedPrice: {}",
+                propertyId, buyerId, agentId, agreedPrice);
+
+        // Validate property exists
+        Property property = propertyRepository.findById(propertyId)
+                .orElseThrow(() -> {
+                    logger.error("❌ Property not found with ID: {}", propertyId);
+                    return new RuntimeException("Property not found with ID: " + propertyId);
+                });
+
+        // Validate buyer exists
+        User buyer = userRepository.findById(buyerId)
+                .orElseThrow(() -> {
+                    logger.error("❌ Buyer user not found with ID: {}", buyerId);
+                    return new RuntimeException("Buyer user not found with ID: " + buyerId);
+                });
+
+        // Check for duplicate deal
+        if (dealStatusRepository.existsByPropertyIdAndBuyerId(propertyId, buyerId)) {
+            logger.warn("⚠️ Deal already exists for property {} and buyer {}", propertyId, buyerId);
+            throw new RuntimeException("Deal already exists for this property and buyer");
+        }
+
+        // Validate buyer is not the property owner
+        if (property.getUser() != null && property.getUser().getId().equals(buyerId)) {
+            logger.warn("❌ Buyer {} cannot create deal on their own property {}", buyerId, propertyId);
+            throw new RuntimeException("Cannot create deal on your own property");
+        }
+
+        // Handle optional agent
+        User agent = null;
+        if (agentId != null) {
+            agent = userRepository.findById(agentId)
+                    .orElseThrow(() -> new RuntimeException("Agent user not found with ID: " + agentId));
+
+            if (!agent.getRole().equals(User.UserRole.AGENT) && !agent.getRole().equals(User.UserRole.ADMIN)) {
+                logger.warn("❌ User {} is not an agent or admin", agentId);
+                throw new RuntimeException("Assigned user is not an agent or admin");
+            }
+        }
+
+        // Create the deal
+        DealStatus deal = new DealStatus();
+        deal.setProperty(property);
+        deal.setBuyer(buyer);
+        deal.setAgent(agent);
+        deal.setStage(DealStatus.DealStage.SHORTLIST);  // Start at SHORTLIST when buyer makes offer
+
+        // Set agreed price if provided
+        if (agreedPrice != null && agreedPrice > 0) {
+            deal.setAgreedPrice(BigDecimal.valueOf(agreedPrice));
+            deal.setNotes("Deal initiated by buyer with offer amount: ₹" + agreedPrice);
+            logger.info("💰 Agreed price set: ₹{}", agreedPrice);
+        } else {
+            deal.setNotes("Deal initiated - Initial Inquiry");
+        }
+
+        deal.setLastUpdatedBy(buyer.getUsername());
+        deal.setInquiryDate(LocalDateTime.now());
+        deal.setShortlistDate(LocalDateTime.now());
+
+        DealStatus savedDeal = dealStatusRepository.save(deal);
+        logger.info("✅ Deal created successfully - Deal ID: {}, Property: {}, Buyer: {}, AgreedPrice: {}",
+                savedDeal.getId(), propertyId, buyerId, savedDeal.getAgreedPrice());
+
         return savedDeal;
     }
 
@@ -319,8 +386,7 @@ public class DealService {
             dto.setPropertyId(property.getId());
             dto.setPropertyTitle(property.getTitle());
             dto.setPropertyPrice(property.getPrice());
-            dto.setPropertyCity(property.getCity()); // ⭐ Using propertyCity instead of propertyAddress
-            // Note: DealDetailDTO doesn't have propertyImageUrl field
+            dto.setPropertyCity(property.getCity());
 
             User seller = property.getUser();
             if (seller != null) {
@@ -352,7 +418,7 @@ public class DealService {
         dto.setPaymentDate(deal.getPaymentDate());
         dto.setCompletedDate(deal.getCompletedDate());
 
-        // ⭐ NEW: Set document upload flags
+        // Document upload flags
         dto.setAgreementUploaded(deal.isAgreementUploaded());
         dto.setRegistrationUploaded(deal.isRegistrationUploaded());
 
@@ -417,8 +483,6 @@ public class DealService {
         return updatedDeal;
     }
 
-    // ==================== OTHER DEAL METHODS ====================
-
     // ==================== ADMIN DASHBOARD & METRICS ====================
 
     /**
@@ -430,11 +494,9 @@ public class DealService {
         AdminDealDashboardDTO dashboard = new AdminDealDashboardDTO();
 
         try {
-            // Total deals
             long totalDeals = dealStatusRepository.count();
             dashboard.setTotalDeals(totalDeals);
 
-            // Deals by stage
             for (DealStatus.DealStage stage : DealStatus.DealStage.values()) {
                 Long count = dealStatusRepository.countByStage(stage);
                 switch (stage) {
@@ -473,23 +535,19 @@ public class DealService {
                         dto.setAgentName(agent.getFirstName() + " " + agent.getLastName());
                         dto.setAgentEmail(agent.getEmail());
 
-                        // Get deals for this agent
                         List<DealStatus> agentDeals = dealStatusRepository.findByAgentId(agent.getId());
                         dto.setTotalDeals((long) agentDeals.size());
 
-                        // Count active deals (not completed)
                         long activeDeals = agentDeals.stream()
                                 .filter(deal -> deal.getStage() != DealStatus.DealStage.COMPLETED)
                                 .count();
                         dto.setActiveDeals(activeDeals);
 
-                        // Count completed deals
                         long completedDeals = agentDeals.stream()
                                 .filter(deal -> deal.getStage() == DealStatus.DealStage.COMPLETED)
                                 .count();
                         dto.setCompletedDeals(completedDeals);
 
-                        // Calculate total deal value (sum of agreed prices)
                         BigDecimal totalValue = agentDeals.stream()
                                 .filter(deal -> deal.getAgreedPrice() != null)
                                 .map(DealStatus::getAgreedPrice)
@@ -620,11 +678,9 @@ public class DealService {
         deal.setUpdatedAt(LocalDateTime.now());
         dealStatusRepository.save(deal);
     }
-    // Add this method to your DealService.java
 
     /**
-     * ⭐ DELETE A SINGLE DEAL BY ID (NEW)
-     * Deletes a specific deal
+     * DELETE A SINGLE DEAL BY ID
      */
     @Transactional
     public void deleteDeal(Long dealId) {

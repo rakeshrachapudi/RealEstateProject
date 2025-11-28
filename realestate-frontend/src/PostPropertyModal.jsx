@@ -25,6 +25,23 @@ const getPropertyTypeIcon = (typeName) => {
   };
   return icons[typeName] || '🏘️';
 };
+
+// ⭐ NEW: Document type icons and validation
+const DOCUMENT_CONFIG = {
+  maxDocuments: 5,
+  maxSizeMB: 10,
+  allowedTypes: {
+    'application/pdf': { ext: '.pdf', icon: '📄', name: 'PDF' },
+    'application/msword': { ext: '.doc', icon: '📝', name: 'Word Doc' },
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { ext: '.docx', icon: '📝', name: 'Word Doc' },
+    'application/vnd.ms-excel': { ext: '.xls', icon: '📊', name: 'Excel' },
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { ext: '.xlsx', icon: '📊', name: 'Excel' },
+    'text/plain': { ext: '.txt', icon: '📋', name: 'Text' },
+    'image/jpeg': { ext: '.jpg', icon: '🖼️', name: 'Image' },
+    'image/png': { ext: '.png', icon: '🖼️', name: 'Image' },
+  }
+};
+
 function PostPropertyModal({ onClose, onPropertyPosted }) {
   const { user, isAuthenticated } = useAuth();
   const authToken = localStorage.getItem("authToken");
@@ -41,6 +58,12 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
   // ✅ NEW: Property Types State
   const [propertyTypes, setPropertyTypes] = useState([]);
   const [propertyTypesLoading, setPropertyTypesLoading] = useState(true);
+
+  // ⭐ NEW: Document upload states
+  const [selectedDocuments, setSelectedDocuments] = useState([]);
+  const [documentPreviews, setDocumentPreviews] = useState([]);
+  const [documentUploading, setDocumentUploading] = useState(false);
+  const [documentUploadProgress, setDocumentUploadProgress] = useState(0);
 
   const handleSubscriptionSuccess = (subscription) => {
     setShowSubscriptionModal(false);
@@ -68,7 +91,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     bathrooms: "",
     balconies: "",
     areaSqft: "",
-    amenitiesSqft: "",
+    amenitiesPrice: "",
     price: "",
     pricePerSqft: "",
     amenities: "",
@@ -79,6 +102,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     possessionMonth: "",
     reraId: "",
     hmdaId: "",
+    documentUrls: "", // ⭐ NEW: For storing document URLs
   });
 
   const commonAmenities = [
@@ -123,7 +147,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
   useEffect(() => {
     loadAreas();
-    loadPropertyTypes(); // ✅ NEW: Load property types
+    loadPropertyTypes();
   }, []);
 
   useEffect(() => {
@@ -138,9 +162,8 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     }
   }, [user]);
 
-  // ✅ NEW: Load Property Types from Database
-
-const loadPropertyTypes = async () => {
+  // ✅ Load Property Types from Database
+  const loadPropertyTypes = async () => {
     setPropertyTypesLoading(true);
     try {
       const res = await fetch(`${BACKEND_BASE_URL}/api/property-types`);
@@ -173,7 +196,6 @@ const loadPropertyTypes = async () => {
       setPropertyTypesLoading(false);
     }
   };
-
 
   const loadAreas = async () => {
     setAreasLoading(true);
@@ -237,6 +259,8 @@ const loadPropertyTypes = async () => {
       "Seven",
       "Eight",
       "Nine",
+    ];
+    const teens = [
       "Ten",
       "Eleven",
       "Twelve",
@@ -261,202 +285,312 @@ const loadPropertyTypes = async () => {
       "Ninety",
     ];
 
-    const numToWords = (n) => {
-      let str = "";
-      if (n > 99) {
-        str += ones[Math.floor(n / 100)] + " Hundred ";
-        n %= 100;
-      }
-      if (n > 19) {
-        str += tens[Math.floor(n / 10)] + " ";
-        n %= 10;
-      }
-      if (n > 0) {
-        str += ones[n] + " ";
-      }
-      return str;
+    const convert = (n) => {
+      if (n < 10) return ones[n];
+      if (n < 20) return teens[n - 10];
+      if (n < 100)
+        return tens[Math.floor(n / 10)] + (n % 10 ? " " + ones[n % 10] : "");
+      if (n < 1000)
+        return (
+          ones[Math.floor(n / 100)] +
+          " Hundred" +
+          (n % 100 ? " " + convert(n % 100) : "")
+        );
+      return "";
     };
 
-    let words = "";
-    let tempNum = num;
-    if (tempNum >= 10000000) {
-      words += numToWords(Math.floor(tempNum / 10000000)) + "Crore ";
-      tempNum %= 10000000;
+    if (num < 1000) return convert(num) + " Rupees";
+    if (num < 100000) {
+      const thousands = Math.floor(num / 1000);
+      const remainder = num % 1000;
+      return (
+        convert(thousands) +
+        " Thousand" +
+        (remainder ? " " + convert(remainder) : "") +
+        " Rupees"
+      );
     }
-    if (tempNum >= 100000) {
-      words += numToWords(Math.floor(tempNum / 100000)) + "Lakh ";
-      tempNum %= 100000;
+    if (num < 10000000) {
+      const lakhs = Math.floor(num / 100000);
+      const remainder = num % 100000;
+      let result = convert(lakhs) + " Lakh";
+      if (remainder >= 1000) {
+        const thousands = Math.floor(remainder / 1000);
+        const final = remainder % 1000;
+        result +=
+          " " +
+          convert(thousands) +
+          " Thousand" +
+          (final ? " " + convert(final) : "");
+      } else if (remainder > 0) {
+        result += " " + convert(remainder);
+      }
+      return result + " Rupees";
     }
-    if (tempNum >= 1000) {
-      words += numToWords(Math.floor(tempNum / 1000)) + "Thousand ";
-      tempNum %= 1000;
+    const crores = Math.floor(num / 10000000);
+    const remainder = num % 10000000;
+    let result = convert(crores) + " Crore";
+    if (remainder >= 100000) {
+      const lakhs = Math.floor(remainder / 100000);
+      const final = remainder % 100000;
+      result += " " + convert(lakhs) + " Lakh";
+      if (final >= 1000) {
+        const thousands = Math.floor(final / 1000);
+        const last = final % 1000;
+        result +=
+          " " +
+          convert(thousands) +
+          " Thousand" +
+          (last ? " " + convert(last) : "");
+      } else if (final > 0) {
+        result += " " + convert(final);
+      }
+    } else if (remainder > 0) {
+      if (remainder >= 1000) {
+        const thousands = Math.floor(remainder / 1000);
+        const last = remainder % 1000;
+        result +=
+          " " +
+          convert(thousands) +
+          " Thousand" +
+          (last ? " " + convert(last) : "");
+      } else {
+        result += " " + convert(remainder);
+      }
     }
-    if (tempNum > 0) {
-      words += numToWords(tempNum);
-    }
-    return words.trim() + " Rupees Only";
+    return result + " Rupees";
   };
 
-  const calculatePricePerSqft = (price, areaSqft) => {
-    const p = Number(price);
-    const a = Number(areaSqft);
-    if (p > 0 && a > 0) {
-      return Math.round(p / a);
-    }
-    return "";
-  };
-
-const calculateTotalPrice = (pricePerSqft, areaSqft, amenitiesPrice = 0, propertyType = "") => {
-  const ps = Number(pricePerSqft);
-  const a = Number(areaSqft);
-  const ap = Number(amenitiesPrice); // ⭐ Fixed amenities price
-
-  if (ps > 0 && a > 0) {
-    let totalPrice = ps * a; // Base calculation: Area × Price/Sqft
-
-    // ⭐ Add FIXED amenities price only for apartments
-    if (propertyType?.toLowerCase() === 'apartment' && ap > 0) {
-      totalPrice += ap; // Just add the fixed amount
-    }
-
-    return Math.round(totalPrice);
-  }
-  return "";
-};
-
-  const handlePriceChange = (e) => {
-    const priceValue = e.target.value;
-    const areaSqft = formData.areaSqft;
-
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      price: priceValue,
-      pricePerSqft: calculatePricePerSqft(priceValue, areaSqft),
+      [name]: type === "checkbox" ? checked : value,
     }));
-    setPriceInWords(priceValue ? convertToIndianWords(priceValue) : "");
   };
-
-const handlePricePerSqftChange = (e) => {
-  const pricePerSqftValue = e.target.value;
-  const areaSqft = formData.areaSqft;
-  const amenitiesPrice = formData.amenitiesPrice; // ⭐ Fixed price
-  const propertyType = formData.type;
-
-  setFormData((prev) => ({
-    ...prev,
-    pricePerSqft: pricePerSqftValue,
-    price: calculateTotalPrice(pricePerSqftValue, areaSqft, amenitiesPrice, propertyType),
-  }));
-
-  const calculatedPrice = calculateTotalPrice(pricePerSqftValue, areaSqft, amenitiesPrice, propertyType);
-  setPriceInWords(calculatedPrice ? convertToIndianWords(calculatedPrice) : "");
-};
-
-const handleAreaSqftChange = (e) => {
-  const areaSqftValue = e.target.value;
-  const price = formData.price;
-  const pricePerSqft = formData.pricePerSqft;
-  const amenitiesPrice = formData.amenitiesPrice; // ⭐ Fixed price
-  const propertyType = formData.type;
-
-  let newPrice = price;
-  let newPricePerSqft = pricePerSqft;
-
-  if (pricePerSqft > 0) {
-    newPrice = calculateTotalPrice(pricePerSqft, areaSqftValue, amenitiesPrice, propertyType);
-  } else if (price > 0) {
-    newPricePerSqft = calculatePricePerSqft(price, areaSqftValue);
-  }
-
-  setFormData((prev) => ({
-    ...prev,
-    areaSqft: areaSqftValue,
-    price: newPrice,
-    pricePerSqft: newPricePerSqft,
-  }));
-
-  setPriceInWords(newPrice ? convertToIndianWords(newPrice) : "");
-};
-
-// ⭐ NEW: Handle amenities price change (fixed amount for apartments)
-const handleAmenitiesPriceChange = (e) => {
-  const amenitiesPriceValue = e.target.value;
-  const pricePerSqft = formData.pricePerSqft;
-  const areaSqft = formData.areaSqft;
-  const propertyType = formData.type;
-
-  let newPrice = formData.price;
-
-  // Only recalculate if we have pricePerSqft and it's an apartment
-  if (pricePerSqft > 0 && areaSqft > 0 && propertyType?.toLowerCase() === 'apartment') {
-    newPrice = calculateTotalPrice(pricePerSqft, areaSqft, amenitiesPriceValue, propertyType);
-  }
-
-  setFormData((prev) => ({
-    ...prev,
-    amenitiesPrice: amenitiesPriceValue,
-    price: newPrice,
-  }));
-
-  setPriceInWords(newPrice ? convertToIndianWords(newPrice) : "");
-};
-
-
-
 
   const handleDecimalChange = (e) => {
     const { name, value } = e.target;
-    let newValue = value;
-
-    if (newValue.includes('.')) {
-      const parts = newValue.split('.');
-      if (parts.length > 1 && parts[1].length > 1) {
-        newValue = parts[0] + '.' + parts[1].substring(0, 1);
-      }
+    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: newValue,
-    }));
-    setError(null);
   };
 
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
+  const handlePriceChange = (e) => {
+    const value = e.target.value;
+    if (value === "" || /^\d+$/.test(value)) {
+      const numValue = Number(value);
+      if (numValue <= 1000000000) {
+        setFormData((prev) => ({ ...prev, price: value }));
+        setPriceInWords(value ? convertToIndianWords(value) : "");
+      }
+    }
+  };
 
-    if (selectedImages.length + files.length > 10) {
-      alert("You can upload maximum 10 images");
+  const handleAreaSqftChange = (e) => {
+    const value = e.target.value;
+    if (value === "" || /^\d+$/.test(value)) {
+      const numValue = Number(value);
+      if (numValue <= 99999) {
+        setFormData((prev) => ({ ...prev, areaSqft: value }));
+        if (formData.pricePerSqft && value) {
+          const calculatedPrice = Number(formData.pricePerSqft) * numValue;
+          const amenitiesPrice = Number(formData.amenitiesPrice) || 0;
+          const totalPrice = calculatedPrice + amenitiesPrice;
+          setFormData((prev) => ({ ...prev, price: String(totalPrice) }));
+          setPriceInWords(convertToIndianWords(String(totalPrice)));
+        }
+      }
+    }
+  };
+
+  const handleAmenitiesPriceChange = (e) => {
+    const value = e.target.value;
+    if (value === "" || /^\d+$/.test(value)) {
+      const numValue = Number(value);
+      if (numValue <= 10000000) {
+        setFormData((prev) => ({ ...prev, amenitiesPrice: value }));
+        if (formData.pricePerSqft && formData.areaSqft) {
+          const basePrice =
+            Number(formData.pricePerSqft) * Number(formData.areaSqft);
+          const totalPrice = basePrice + numValue;
+          setFormData((prev) => ({ ...prev, price: String(totalPrice) }));
+          setPriceInWords(convertToIndianWords(String(totalPrice)));
+        }
+      }
+    }
+  };
+
+  const handlePricePerSqftChange = (e) => {
+    const value = e.target.value;
+    if (value === "" || /^\d+$/.test(value)) {
+      const numValue = Number(value);
+      if (numValue <= 99999) {
+        setFormData((prev) => ({ ...prev, pricePerSqft: value }));
+        if (formData.areaSqft && value) {
+          const calculatedPrice = numValue * Number(formData.areaSqft);
+          const amenitiesPrice = Number(formData.amenitiesPrice) || 0;
+          const totalPrice = calculatedPrice + amenitiesPrice;
+          setFormData((prev) => ({ ...prev, price: String(totalPrice) }));
+          setPriceInWords(convertToIndianWords(String(totalPrice)));
+        }
+      }
+    }
+  };
+
+  const handleAmenityChange = (amenity) => {
+    const currentAmenities = formData.amenities
+      ? formData.amenities.split(",").map((a) => a.trim())
+      : [];
+    let updatedAmenities;
+    if (currentAmenities.includes(amenity)) {
+      updatedAmenities = currentAmenities.filter((a) => a !== amenity);
+    } else {
+      updatedAmenities = [...currentAmenities, amenity];
+    }
+    setFormData((prev) => ({
+      ...prev,
+      amenities: updatedAmenities.join(", "),
+    }));
+  };
+
+  // ⭐ NEW: Document Upload Handler
+  const handleDocumentChange = (e) => {
+    const files = Array.from(e.target.files);
+
+    // Validate number of documents
+    if (selectedDocuments.length + files.length > DOCUMENT_CONFIG.maxDocuments) {
+      alert(`Maximum ${DOCUMENT_CONFIG.maxDocuments} documents allowed`);
       return;
     }
 
+    // Validate each file
     const validFiles = [];
-    const newPreviews = [];
+    const errors = [];
 
-    for (const file of files) {
-      if (!file.type.startsWith("image/")) {
-        alert(`"${file.name}" is not an image file`);
-        continue;
+    files.forEach(file => {
+      // Check file type
+      if (!DOCUMENT_CONFIG.allowedTypes[file.type]) {
+        errors.push(`${file.name}: Unsupported file type`);
+        return;
       }
-      if (file.size > 10 * 1024 * 1024) {
-        alert(`"${file.name}" is too large (max 10MB)`);
-        continue;
+
+      // Check file size (in MB)
+      const sizeMB = file.size / (1024 * 1024);
+      if (sizeMB > DOCUMENT_CONFIG.maxSizeMB) {
+        errors.push(`${file.name}: File size exceeds ${DOCUMENT_CONFIG.maxSizeMB}MB`);
+        return;
       }
+
       validFiles.push(file);
-      newPreviews.push(URL.createObjectURL(file));
+    });
+
+    if (errors.length > 0) {
+      alert('Some files were rejected:\n' + errors.join('\n'));
     }
 
-    setSelectedImages((prev) => [...prev, ...validFiles]);
-    setImagePreviews((prev) => [...prev, ...newPreviews]);
+    if (validFiles.length > 0) {
+      setSelectedDocuments(prev => [...prev, ...validFiles]);
+
+      // Create previews
+      validFiles.forEach(file => {
+        const preview = {
+          name: file.name,
+          type: file.type,
+          size: (file.size / 1024).toFixed(2) + ' KB',
+          icon: DOCUMENT_CONFIG.allowedTypes[file.type]?.icon || '📄'
+        };
+        setDocumentPreviews(prev => [...prev, preview]);
+      });
+    }
+
+    e.target.value = ''; // Reset input
+  };
+
+  // ⭐ NEW: Remove Document
+  const removeDocument = (index) => {
+    setSelectedDocuments(prev => prev.filter((_, i) => i !== index));
+    setDocumentPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // ⭐ NEW: Upload Documents to S3
+  const uploadDocumentsToS3 = async () => {
+    if (selectedDocuments.length === 0) return [];
+
+    setDocumentUploading(true);
+    setDocumentUploadProgress(0);
+
+    const uploadedUrls = [];
+    const totalDocs = selectedDocuments.length;
+
+    try {
+      for (let i = 0; i < selectedDocuments.length; i++) {
+        const file = selectedDocuments[i];
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch(`${BACKEND_BASE_URL}/api/properties/upload-document`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+
+        const data = await response.json();
+        if (data.success && data.url) {
+          uploadedUrls.push(data.url);
+        }
+
+        // Update progress
+        const progress = Math.round(((i + 1) / totalDocs) * 100);
+        setDocumentUploadProgress(progress);
+      }
+
+      return uploadedUrls;
+    } catch (err) {
+      console.error("Document upload error:", err);
+      throw new Error(`Document upload failed: ${err.message}`);
+    } finally {
+      setDocumentUploading(false);
+      setDocumentUploadProgress(0);
+    }
+  };
+
+  // Image handling (existing code)
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (selectedImages.length + files.length > 10) {
+      alert("Maximum 10 images allowed");
+      return;
+    }
+
+    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+    if (imageFiles.length !== files.length) {
+      alert("Only image files are allowed");
+      return;
+    }
+
+    setSelectedImages((prev) => [...prev, ...imageFiles]);
+
+    imageFiles.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreviews((prev) => [...prev, reader.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    e.target.value = "";
   };
 
   const removeImage = (index) => {
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
-    setImagePreviews((prev) => {
-      URL.revokeObjectURL(prev[index]);
-      return prev.filter((_, i) => i !== index);
-    });
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const setPrimaryImage = (index) => {
@@ -464,280 +598,221 @@ const handleAmenitiesPriceChange = (e) => {
     const newImages = [...selectedImages];
     const newPreviews = [...imagePreviews];
     [newImages[0], newImages[index]] = [newImages[index], newImages[0]];
-    [newPreviews[0], newPreviews[index]] = [newPreviews[index], newPreviews[0]];
+    [newPreviews[0], newPreviews[index]] = [
+      newPreviews[index],
+      newPreviews[0],
+    ];
     setSelectedImages(newImages);
     setImagePreviews(newPreviews);
   };
 
-  const handleAmenityChange = (amenity) => {
-    setFormData((prev) => {
-      const amenitiesArray = prev.amenities
-        ? prev.amenities
-            .split(",")
-            .map((a) => a.trim())
-            .filter((a) => a.length > 0)
-        : [];
-      const index = amenitiesArray.indexOf(amenity);
-      if (index > -1) {
-        amenitiesArray.splice(index, 1);
-      } else {
-        amenitiesArray.push(amenity);
-      }
-      return { ...prev, amenities: amenitiesArray.join(", ") };
-    });
-  };
+  const uploadImagesToS3 = async () => {
+    if (selectedImages.length === 0) return [];
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    const processedValue = type === "checkbox" ? checked : value;
+    setImageUploading(true);
+    setUploadProgress(0);
 
-    setFormData((prev) => {
-      let newState = { ...prev, [name]: processedValue };
-
-      if (name === "constructionStatus" && value !== "under_construction") {
-        newState.possessionYear = "";
-        newState.possessionMonth = "";
-      }
-
-      return newState;
-    });
-    setError(null);
-  };
-
-  const uploadImagesToS3 = async (propertyId) => {
     const uploadedUrls = [];
+    const totalImages = selectedImages.length;
 
-    for (let i = 0; i < selectedImages.length; i++) {
-      const file = selectedImages[i];
-      const formDataImage = new FormData();
-      formDataImage.append("file", file);
-      formDataImage.append("propertyId", propertyId);
+    try {
+      for (let i = 0; i < selectedImages.length; i++) {
+        const image = selectedImages[i];
+        const formData = new FormData();
+        formData.append("file", image);
 
-      setUploadProgress(Math.round(((i + 1) / selectedImages.length) * 100));
-
-      try {
         const response = await fetch(
-          `${BACKEND_BASE_URL}/api/upload/property-image`,
+          `${BACKEND_BASE_URL}/api/upload/image`,
           {
             method: "POST",
-            headers: { 'Authorization': `Bearer ${authToken}` },
-            body: formDataImage,
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: formData,
           }
         );
 
+        if (!response.ok) {
+          throw new Error(`Failed to upload image ${i + 1}`);
+        }
+
         const data = await response.json();
-
-        if (data.success && data.url) {
+      if (data.success && data.url) {
           uploadedUrls.push(data.url);
-        } else {
-          throw new Error(data.message || "Upload failed");
-        }
-      } catch (err) {
-        throw new Error(`Failed to upload image ${i + 1}: ${err.message}`);
       }
-    }
 
-    return uploadedUrls;
-  };
+        const progress = Math.round(((i + 1) / totalImages) * 100);
+        setUploadProgress(progress);
+      }
 
-  const saveImageUrlsToDatabase = async (propertyId, imageUrls) => {
-    const imageRequests = imageUrls.map((url, index) => ({
-      imageUrl: url,
-      isPrimary: index === 0,
-      displayOrder: index,
-    }));
-
-    try {
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(imageRequests),
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to save images to database");
-      return await response.json();
+      return uploadedUrls;
     } catch (err) {
-      throw err;
+      console.error("Image upload error:", err);
+      throw new Error(`Image upload failed: ${err.message}`);
+    } finally {
+      setImageUploading(false);
+      setUploadProgress(0);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!isAuthenticated) {
+      alert("Please log in to post a property");
+      return;
+    }
+
+    if (!formData.areaId) {
+      alert("Please select an area");
+      return;
+    }
+
+    if (isAgentOrAdmin && !selectedUserId) {
+      alert("Please select a user for this property");
+      return;
+    }
+
+    if (selectedImages.length === 0) {
+      alert("Please add at least one property image");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
-
     try {
-      if (!isAuthenticated || !user) {
-        setError("Please login to post.");
-        setLoading(false);
-        return;
+      // Upload images
+      console.log("📤 Starting image upload...");
+      const imageUrls = await uploadImagesToS3();
+      if (imageUrls.length === 0) {
+        throw new Error("No images were uploaded successfully");
       }
+      console.log("✅ Images uploaded:", imageUrls.length);
 
-      if (!authToken) {
-        setError("Authentication missing. Please login again.");
-        setLoading(false);
-        return;
-      }
+      // Upload documents
+      console.log("📤 Starting document upload...");
+      const documentUrls = await uploadDocumentsToS3();
+      console.log("✅ Documents uploaded:", documentUrls.length);
 
-      if (user?.role === "BROKER") {
-        const subscriptionCheckResponse = await fetch(
-          `${BACKEND_BASE_URL}/api/broker-subscription/can-post/${user.id}`,
-          {
-            headers: { Authorization: `Bearer ${authToken}` },
-          }
-        );
+      const actualUserId = isAgentOrAdmin ? selectedUserId : user.id;
 
-        let subscriptionCheck;
-        try {
-          subscriptionCheck = await subscriptionCheckResponse.clone().json();
-        } catch {
-          subscriptionCheck = null;
-        }
-
-        if (!subscriptionCheck?.success || !subscriptionCheck?.data?.canPost) {
-          setCurrentBrokerId(user.id);
-          setShowSubscriptionModal(true);
-          setLoading(false);
-          return;
-        }
-      }
-
-      if (!formData.title || !formData.price || !formData.areaId || !formData.description) {
-        setError("Please fill in Title, Price, Area, and Description");
-        setLoading(false);
-        return;
-      }
-
-      if (formData.constructionStatus === "under_construction" && (!formData.possessionYear || !formData.possessionMonth)) {
-         setError("Please specify the Possession Year and Month for 'Under Construction' properties.");
-         setLoading(false);
-         return;
-      }
-
-      if (selectedImages.length === 0) {
-        setError("Please upload at least one property image.");
-        setLoading(false);
-        return;
-      }
-
-      const propertyPayload = {
+      const propertyData = {
         ...formData,
-        imageUrl: null,
-        user: { id: (user?.role === "AGENT" || user?.role === "ADMIN") ? selectedUserId : user.id },
-        area: { id: formData.areaId },
-        price: Number(formData.price),
-        pricePerSqft: formData.pricePerSqft ? Number(formData.pricePerSqft) : null,
-        areaSqft: formData.areaSqft ? Number(formData.areaSqft) : null,
-         amenitiesPrice: formData.amenitiesPrice ? Number(formData.amenitiesPrice) : null, // ⭐ ADD THIS LINE
-        bedrooms: formData.bedrooms ? Number(formData.bedrooms) : null,
-        bathrooms: formData.bathrooms ? Number(formData.bathrooms) : null,
-        balconies: formData.balconies ? Number(formData.balconies) : null,
-        isReadyToMove: formData.constructionStatus === 'ready_to_move',
+        userId: actualUserId,
+        imageUrl: imageUrls[0],
+        imageUrls: imageUrls.join(","),
+        documentUrls: documentUrls.join(","),
+        bedrooms: formData.bedrooms || null,
+        bathrooms: formData.bathrooms || null,
+        balconies: formData.balconies || null,
+        areaSqft: formData.areaSqft || null,
+        amenitiesPrice: formData.amenitiesPrice || null,
+        pricePerSqft: formData.pricePerSqft || null,
       };
 
-      const createResponse = await fetch(`${BACKEND_BASE_URL}/api/properties`, {
+      console.log("📤 Posting property to backend...", propertyData);
+
+      const response = await fetch(`${BACKEND_BASE_URL}/api/properties`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify(propertyPayload),
+        body: JSON.stringify(propertyData),
       });
 
-      let createJson = null;
+      console.log("📡 Response status:", response.status, response.statusText);
 
-      try {
-        createJson = await createResponse.clone().json();
-      } catch {
-        createJson = null;
+      // Handle non-OK responses
+      if (!response.ok) {
+        let errorData;
+        const contentType = response.headers.get("content-type");
+
+        console.log("❌ Error response content-type:", contentType);
+
+        // Try to parse as JSON first
+        if (contentType && contentType.includes("application/json")) {
+          try {
+            errorData = await response.json();
+            console.log("📋 Parsed error data:", errorData);
+          } catch (parseError) {
+            console.error("Failed to parse error response as JSON:", parseError);
+            // If JSON parsing fails, try to get text
+            const errorText = await response.text();
+            console.error("Error as text:", errorText);
+            throw new Error(`Server error (${response.status}): ${errorText}`);
+          }
+        } else {
+          // If not JSON, get as text
+          const errorText = await response.text();
+          console.error("Non-JSON error response:", errorText);
+          throw new Error(`Server error (${response.status}): ${errorText}`);
+        }
+
+        // Check for specific error codes
+        if (errorData.error === 'BROKER_NO_ACTIVE_SUBSCRIPTION') {
+          console.log("❌ Broker needs subscription");
+          setCurrentBrokerId(user.id);
+          setShowSubscriptionModal(true);
+          setLoading(false);
+          return;
+        }
+
+        if (errorData.error === 'BROKER_PROPERTY_LIMIT_REACHED') {
+          throw new Error("You have reached your property posting limit. Please upgrade your subscription.");
+        }
+
+        throw new Error(errorData.message || "Failed to create property");
       }
 
-      if (
-        user?.role === "BROKER" &&
-        createResponse.status === 500 &&
-        ((createJson?.message &&
-          createJson.message.includes("Subscription required")) ||
-          true)
-      ) {
-        setCurrentBrokerId(user.id);
-        setShowSubscriptionModal(true);
-        setLoading(false);
-        return;
+      // Success - parse response
+      const result = await response.json();
+      console.log("✅ Property created successfully:", result);
+
+      // Track analytics
+      if (typeof trackPropertyPost === 'function') {
+        trackPropertyPost(result.data.id, {
+          type: formData.type,
+          listingType: formData.listingType,
+          price: formData.price,
+          city: formData.city,
+          userRole: user.role,
+          hasDocuments: documentUrls.length > 0,
+          documentCount: documentUrls.length
+        });
       }
 
-      if (createJson?.message?.includes("Subscription required")) {
-        setCurrentBrokerId(user.id);
-        setShowSubscriptionModal(true);
-        setLoading(false);
-        return;
-      }
-
-      if (!createResponse.ok) {
-        setError(createJson?.message || "Failed to create property");
-        setLoading(false);
-        return;
-      }
-
-      let propertyId = null;
-
-      if (createJson?.data?.id) {
-        propertyId = createJson.data.id;
-      } else if (createJson?.id) {
-        propertyId = createJson.id;
-      }
-
-      if (!propertyId) {
-        setError("Invalid response from server. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      setImageUploading(true);
-      const uploadedImageUrls = await uploadImagesToS3(propertyId);
-      setImageUploading(false);
-
-      if (uploadedImageUrls.length > 0) {
-        await saveImageUrlsToDatabase(propertyId, uploadedImageUrls);
-      }
-
-      alert("Property posted successfully!");
-      onPropertyPosted && onPropertyPosted();
-      onClose && onClose();
-        trackPropertyPost(
-          response.propertyId,
-          formData.propertyType,
-          formData.listingType
-        );
-
+      alert("✅ Property posted successfully!");
+      if (onPropertyPosted) onPropertyPosted(result.data);
+      onClose();
     } catch (err) {
-      console.error("Error posting property:", err);
-      setError(err?.message || "An error occurred. Please try again.");
+      console.error("❌ Error posting property:", err);
+      console.error("Error details:", {
+        message: err.message,
+        stack: err.stack
+      });
+
+      setError(err.message);
+      alert(`❌ Error: ${err.message}`);
     } finally {
       setLoading(false);
-      setImageUploading(false);
     }
   };
 
-  const handleBackdropClick = (e) => {
-    if (e.target.classList.contains("ppm-backdrop")) {
-      onClose && onClose();
-    }
-  };
-
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated) {
     return (
-      <div className="ppm-backdrop" onClick={handleBackdropClick}>
-        <div className="ppm-modal auth-required">
-          <button className="ppm-close" onClick={onClose}>
+      <div className="ppm-backdrop" onClick={onClose}>
+        <div
+          className="ppm-modal auth-required"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button onClick={onClose} className="ppm-close">
             ×
           </button>
-          <h2 className="ppm-auth-title">Please Login First</h2>
+          <h2 className="ppm-auth-title">⚠️ Authentication Required</h2>
           <p className="ppm-auth-text">
-            You need to be logged in to post a property.
+            Please log in to post a property listing.
           </p>
         </div>
       </div>
@@ -746,49 +821,37 @@ const handleAmenitiesPriceChange = (e) => {
 
   return (
     <>
-      <div
-        className="ppm-backdrop"
-        onClick={handleBackdropClick}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ppm-title"
-      >
+      <div className="ppm-backdrop" onClick={onClose}>
         <div className="ppm-modal" onClick={(e) => e.stopPropagation()}>
-          <button className="ppm-close" onClick={onClose} aria-label="Close">
+          <button onClick={onClose} className="ppm-close">
             ×
           </button>
-          <h2 id="ppm-title" className="ppm-title">
-            🏡 Post New Property
-          </h2>
+
+          <h2 className="ppm-title">📝 Post New Property</h2>
 
           {error && <div className="ppm-alert">{error}</div>}
 
           <form onSubmit={handleSubmit} className="ppm-form">
+            {/* User Selection Section (for Agents/Admins) */}
             {isAgentOrAdmin && (
               <div className="ppm-user-section">
                 <div className="ppm-user-header">
-                  <label className="ppm-label">
-                    Select Property Owner{" "}
-                    <span className="ppm-required-star">*</span>
-                  </label>
+                  <label className="ppm-label">👤 Select User</label>
                   <button
                     type="button"
                     onClick={() => setShowUserCreation(true)}
                     className="ppm-btn ppm-btn-small"
                   >
-                    + Create New User
+                    + Create User
                   </button>
                 </div>
                 <p className="ppm-info">
-                  As an {user?.role?.toLowerCase()}, you need to select which
-                  user this property belongs to.
+                  Select the property owner from existing users
                 </p>
                 <select
                   value={selectedUserId || ""}
                   onChange={(e) =>
-                    setSelectedUserId(
-                      e.target.value ? parseInt(e.target.value) : null
-                    )
+                    setSelectedUserId(Number(e.target.value) || null)
                   }
                   className="ppm-select"
                   required
@@ -796,60 +859,55 @@ const handleAmenitiesPriceChange = (e) => {
                   <option value="">-- Select User --</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.firstName} {u.lastName} ({u.email})
+                      {u.firstName} {u.lastName} ({u.email}) - {u.phone}
                     </option>
                   ))}
                 </select>
               </div>
             )}
 
-            {showSubscriptionModal && (
-              <BrokerSubscriptionModal
-                isOpen={showSubscriptionModal}
-                onClose={() => setShowSubscriptionModal(false)}
-                brokerId={currentBrokerId}
-                onSubscriptionSuccess={handleSubscriptionSuccess}
-              />
-            )}
-
+            {/* Basic Information */}
             <div className="ppm-field">
-              <label className="ppm-label required">Property Title</label>
+              <label className="ppm-label required">📋 Property Title</label>
               <input
                 type="text"
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
-                placeholder="e.g., Spacious 2BHK Apartment"
+                placeholder="e.g., 3BHK Luxury Apartment in Gachibowli"
                 className="ppm-input"
                 required
+                maxLength="200"
               />
             </div>
 
             <div className="ppm-row">
               <div className="ppm-field">
-                <label className="ppm-label required">Property Type</label>
-                {/* ✅ UPDATED DROPDOWN - Fetches from Database */}
-
-                {propertyTypesLoading ? (
-                  <div>Loading types...</div>
-                ) : (
-                  <select
-                    name="type"
-                    className="ppm-select"
-                    value={formData.type}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select Property Type</option>
-                    {propertyTypes.map((pt) => (
-                      <option key={pt.id ?? pt.name} value={pt.name}>
+                <label className="ppm-label required">🏘️ Property Type</label>
+                <select
+                  name="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                  className="ppm-select"
+                  required
+                  disabled={propertyTypesLoading}
+                >
+                  {propertyTypesLoading ? (
+                    <option value="">Loading types...</option>
+                  ) : propertyTypes.length > 0 ? (
+                    propertyTypes.map((pt) => (
+                      <option key={pt.id} value={pt.name}>
                         {getPropertyTypeIcon(pt.name)} {pt.name}
                       </option>
-                    ))}
-                  </select>
-                )}
+                    ))
+                  ) : (
+                    <option value="">No property types available</option>
+                  )}
+                </select>
               </div>
+
               <div className="ppm-field">
-                <label className="ppm-label required">Listing Type</label>
+                <label className="ppm-label required">🏷️ Listing Type</label>
                 <select
                   name="listingType"
                   value={formData.listingType}
@@ -857,47 +915,27 @@ const handleAmenitiesPriceChange = (e) => {
                   className="ppm-select"
                   required
                 >
-                  <option value="sale">🏘️ For Sale</option>
-                  <option value="rent">🔑 For Rent</option>
+                  <option value="sale">🏠 For Sale</option>
+                  <option value="rent">🏘️ For Rent</option>
                 </select>
               </div>
             </div>
 
-            <div className="ppm-field">
-              <label className="ppm-label required">👤 Posted By</label>
-              <select
-                name="ownerType"
-                value={formData.ownerType}
-                onChange={handleChange}
-                className="ppm-select"
-                required
-                disabled={isBroker}
-              >
-                {!isBroker && (
-                  <>
-                    <option value="owner">Owner</option>
-                    <option value="builder">Builder</option>
-                  </>
-                )}
-                {isBroker && <option value="broker">Broker</option>}
-              </select>
-            </div>
-
+            {/* Location Details */}
             <div className="ppm-row">
               <div className="ppm-field">
-                <label className="ppm-label">City</label>
+                <label className="ppm-label required">🌆 City</label>
                 <input
                   type="text"
                   name="city"
                   value={formData.city}
-                  readOnly
                   className="ppm-input readonly"
+                  readOnly
                 />
               </div>
+
               <div className="ppm-field">
-                <label className="ppm-label required">
-                  📍 Area ({areas.length} available)
-                </label>
+                <label className="ppm-label required">📍 Area</label>
                 <select
                   name="areaId"
                   value={formData.areaId}
@@ -906,10 +944,12 @@ const handleAmenitiesPriceChange = (e) => {
                   required
                   disabled={areasLoading}
                 >
-                  <option value="">-- Select Area --</option>
+                  <option value="">
+                    {areasLoading ? "Loading areas..." : "-- Select Area --"}
+                  </option>
                   {areas.map((area) => (
                     <option key={area.areaId} value={area.areaId}>
-                      {area.areaName} ({area.pincode})
+                      {area.areaName}
                     </option>
                   ))}
                 </select>
@@ -917,22 +957,39 @@ const handleAmenitiesPriceChange = (e) => {
             </div>
 
             <div className="ppm-field">
-              <label className="ppm-label">Complete Address (Optional)</label>
+              <label className="ppm-label required">📬 Full Address</label>
               <input
                 type="text"
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                placeholder="House/Plot number, Street name"
+                placeholder="Enter complete address"
                 className="ppm-input"
+                required
+                maxLength="500"
               />
             </div>
 
+            {/* Property Details */}
             <div className="ppm-row">
               <div className="ppm-field">
-                <label className="ppm-label required">
-                  Construction Status
-                </label>
+                <label className="ppm-label required">👨‍💼 Owner Type</label>
+                <select
+                  name="ownerType"
+                  value={formData.ownerType}
+                  onChange={handleChange}
+                  className="ppm-select"
+                  required
+                  disabled={isBroker}
+                >
+                  <option value="owner">🏠 Owner</option>
+                  <option value="broker">🤝 Broker</option>
+                  <option value="builder">🏗️ Builder</option>
+                </select>
+              </div>
+
+              <div className="ppm-field">
+                <label className="ppm-label required">🏗️ Construction Status</label>
                 <select
                   name="constructionStatus"
                   value={formData.constructionStatus}
@@ -941,53 +998,33 @@ const handleAmenitiesPriceChange = (e) => {
                   required
                 >
                   <option value="ready_to_move">✅ Ready to Move</option>
-                  <option value="under_construction">
-                    🚧 Under Construction
-                  </option>
+                  <option value="under_construction">🚧 Under Construction</option>
                 </select>
-              </div>
-
-              <div className="ppm-field">
-                <label className="ppm-label">
-                  RERA ID (Optional)
-                  {formData.reraId && (
-                    <span className="ppm-badge-success">✔</span>
-                  )}
-                </label>
-                <input
-                  type="text"
-                  name="reraId"
-                  value={formData.reraId}
-                  onChange={handleChange}
-                  placeholder="e.g., P01230004567"
-                  className="ppm-input"
-                />
-              </div>
-
-              <div className="ppm-field">
-                <label className="ppm-label">
-                  HMDA/DTCP ID (Optional)
-                  {formData.hmdaId && (
-                    <span className="ppm-badge-success">✔</span>
-                  )}
-                </label>
-                <input
-                  type="text"
-                  name="hmdaId"
-                  value={formData.hmdaId}
-                  onChange={handleChange}
-                  placeholder="e.g., 12/L.O./HMDA/2023"
-                  className="ppm-input"
-                />
               </div>
             </div>
 
             {formData.constructionStatus === "under_construction" && (
               <div className="ppm-row">
                 <div className="ppm-field">
-                  <label className="ppm-label required">
-                    Expected Possession Year
-                  </label>
+                  <label className="ppm-label required">📅 Possession Month</label>
+                  <select
+                    name="possessionMonth"
+                    value={formData.possessionMonth}
+                    onChange={handleChange}
+                    className="ppm-select"
+                    required
+                  >
+                    <option value="">-- Select Month --</option>
+                    {months.map((month, idx) => (
+                      <option key={idx} value={month}>
+                        {month}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="ppm-field">
+                  <label className="ppm-label required">📆 Possession Year</label>
                   <select
                     name="possessionYear"
                     value={formData.possessionYear}
@@ -1003,39 +1040,56 @@ const handleAmenitiesPriceChange = (e) => {
                     ))}
                   </select>
                 </div>
-                <div className="ppm-field">
-                  <label className="ppm-label required">
-                    Expected Possession Month
-                  </label>
-                  <select
-                    name="possessionMonth"
-                    value={formData.possessionMonth}
-                    onChange={handleChange}
-                    className="ppm-select"
-                    required
-                  >
-                    <option value="">-- Select Month --</option>
-                    {months.map((month) => (
-                      <option key={month} value={month}>
-                        {month}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="ppm-field"></div>
               </div>
             )}
 
-            <div className="ppm-images">
-              <label className="ppm-label required">
-                📷 Upload Property Images (Max 10)
-              </label>
+            {/* RERA/HMDA IDs */}
+            <div className="ppm-row">
+              <div className="ppm-field">
+                <label className="ppm-label">
+                  📄 RERA ID
+                  {formData.reraId && (
+                    <span className="ppm-badge-success">VERIFIED</span>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  name="reraId"
+                  value={formData.reraId}
+                  onChange={handleChange}
+                  placeholder="e.g., P02400004321"
+                  className="ppm-input"
+                  maxLength="50"
+                />
+              </div>
 
+              <div className="ppm-field">
+                <label className="ppm-label">
+                  📄 HMDA ID
+                  {formData.hmdaId && (
+                    <span className="ppm-badge-success">VERIFIED</span>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  name="hmdaId"
+                  value={formData.hmdaId}
+                  onChange={handleChange}
+                  placeholder="e.g., HMDA/LO/2024/12345"
+                  className="ppm-input"
+                  maxLength="50"
+                />
+              </div>
+            </div>
+
+            {/* Image Upload Section */}
+            <div className="ppm-images">
+              <label className="ppm-label required">📷 Property Images</label>
               <input
                 type="file"
-                accept="image/png, image/jpeg, image/jpg, image/gif, image/webp, image/heic, image/heif"
+                accept="image/*"
                 multiple
-                onChange={handleImageUpload}
+                onChange={handleImageChange}
                 className="ppm-file"
               />
 
@@ -1050,7 +1104,7 @@ const handleAmenitiesPriceChange = (e) => {
                       />
 
                       {index === 0 && (
-                        <div className="ppm-primary">Primary</div>
+                        <div className="ppm-primary">PRIMARY</div>
                       )}
 
                       <div className="ppm-controls">
@@ -1095,14 +1149,77 @@ const handleAmenitiesPriceChange = (e) => {
                     />
                   </div>
                   <p className="ppm-progress-text">
-                    Uploading... {uploadProgress}%
+                    Uploading images... {uploadProgress}%
                   </p>
                 </div>
               )}
             </div>
 
+            {/* ⭐ NEW: Document Upload Section */}
+            <div className="ppm-documents">
+              <label className="ppm-label">📁 Property Documents (Optional)</label>
+              <p className="ppm-info">
+                Upload brochures, floor plans, or other documents (Max {DOCUMENT_CONFIG.maxDocuments} files, {DOCUMENT_CONFIG.maxSizeMB}MB each)
+              </p>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+                multiple
+                onChange={handleDocumentChange}
+                className="ppm-file"
+                disabled={selectedDocuments.length >= DOCUMENT_CONFIG.maxDocuments}
+              />
+
+              {documentPreviews.length > 0 && (
+                <div className="ppm-document-list">
+                  {documentPreviews.map((doc, index) => (
+                    <div key={index} className="ppm-document-item">
+                      <div className="ppm-document-info">
+                        <span className="ppm-document-icon">{doc.icon}</span>
+                        <div className="ppm-document-details">
+                          <div className="ppm-document-name">{doc.name}</div>
+                          <div className="ppm-document-meta">
+                            {DOCUMENT_CONFIG.allowedTypes[doc.type]?.name} • {doc.size}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeDocument(index)}
+                        className="ppm-document-remove"
+                        title="Remove document"
+                      >
+                        ❌
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {selectedDocuments.length > 0 && (
+                <p className="ppm-img-count">
+                  {selectedDocuments.length} document(s) selected
+                </p>
+              )}
+
+              {documentUploading && (
+                <div className="ppm-progress">
+                  <div className="ppm-progress-bar">
+                    <div
+                      className="ppm-progress-fill"
+                      style={{ width: `${documentUploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="ppm-progress-text">
+                    Uploading documents... {documentUploadProgress}%
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Description */}
             <div className="ppm-field">
-              <label className="ppm-label required">Description</label>
+              <label className="ppm-label required">📝 Description</label>
               <textarea
                 name="description"
                 value={formData.description}
@@ -1113,6 +1230,7 @@ const handleAmenitiesPriceChange = (e) => {
               />
             </div>
 
+            {/* Bedrooms, Bathrooms, Balconies */}
             {!isPlotOrLandOrVilla && (
               <div className="ppm-row3">
                 <div className="ppm-field">
@@ -1162,6 +1280,7 @@ const handleAmenitiesPriceChange = (e) => {
               </div>
             )}
 
+            {/* Area and Pricing */}
             <div className="ppm-row">
               <div className="ppm-field">
                 <label className="ppm-label">📐 Area (sqft)</label>
@@ -1176,26 +1295,25 @@ const handleAmenitiesPriceChange = (e) => {
                   inputMode="numeric"
                 />
               </div>
-             {/* ⭐ NEW: FIXED Amenities Price Field (Only for Apartments) */}
-             {formData.type?.toLowerCase() === 'apartment' && (
-               <div className="ppm-field">
-                 <label className="ppm-label">💰 Amenities Price (₹)</label>
-                 <input
-                   type="number"
-                   name="amenitiesPrice"
-                   value={formData.amenitiesPrice}
-                   onChange={handleAmenitiesPriceChange}
-                   placeholder="e.g., 500000"
-                   className="ppm-input"
-                   max="10000000"
-                   inputMode="numeric"
-                 />
-                 <small style={{fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block'}}>
-                   Fixed price for amenities (balcony, club house, etc.)
-                 </small>
-               </div>
-             )}
-             {/* ⭐ END OF NEW BLOCK */}
+
+              {formData.type?.toLowerCase() === 'apartment' && (
+                <div className="ppm-field">
+                  <label className="ppm-label">💰 Amenities Price (₹)</label>
+                  <input
+                    type="number"
+                    name="amenitiesPrice"
+                    value={formData.amenitiesPrice}
+                    onChange={handleAmenitiesPriceChange}
+                    placeholder="e.g., 500000"
+                    className="ppm-input"
+                    max="10000000"
+                    inputMode="numeric"
+                  />
+                  <small style={{fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block'}}>
+                    Fixed price for amenities (balcony, club house, etc.)
+                  </small>
+                </div>
+              )}
 
               <div className="ppm-field">
                 <label className="ppm-label">💵 Price Per Sqft (₹)</label>
@@ -1230,6 +1348,7 @@ const handleAmenitiesPriceChange = (e) => {
               </div>
             </div>
 
+            {/* Amenities */}
             <div className="ppm-field">
               <label className="ppm-label">✨ Amenities</label>
               <div className="ppm-amenities">
@@ -1253,17 +1372,20 @@ const handleAmenitiesPriceChange = (e) => {
               </div>
             </div>
 
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={
-                loading || imageUploading || (isAgentOrAdmin && !selectedUserId)
+                loading || imageUploading || documentUploading || (isAgentOrAdmin && !selectedUserId)
               }
               className="ppm-submit"
             >
               {loading
                 ? "⏳ Posting..."
                 : imageUploading
-                ? "⏳ Uploading..."
+                ? "⏳ Uploading Images..."
+                : documentUploading
+                ? "⏳ Uploading Documents..."
                 : "📤 Post Property"}
             </button>
 

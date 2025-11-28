@@ -46,8 +46,9 @@ public class PropertyService {
     // ==================== PROPERTY CREATION ====================
 
     public Property postProperty(PropertyPostRequestDto dto) {
-        Long areaId = dto.getArea().getId();
-        Long userId = dto.getUser().getId();
+        // ✅ FIXED: Use simple ID fields instead of nested DTOs
+        Long areaId = dto.getAreaId();
+        Long userId = dto.getUserId();
 
         Area area = areaRepository.findById(areaId.intValue())
                 .orElseThrow(() -> new EntityNotFoundException("Area not found with ID: " + areaId));

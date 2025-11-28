@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
-import LoginModal from "../LoginModal.jsx";
+import LoginModal from "../LoginModal.jsx";  // ✅ FIXED - Same directory (components/)
 import { BACKEND_BASE_URL } from "../config/config";
 import "./PropertyDetails.css";
 
@@ -53,10 +53,14 @@ function PropertyDetails() {
       } else {
         setShowFeaturedSection(false);
       }
+    } else if (property && !user) {
+      // User not logged in, don't check for deals
+      setDealLoading(false);
+      setExistingDeal(null);
     }
   }, [property, user]);
 
-  // Track Property View AFTER User Logs In
+  // ✅ FIXED: Track Property View ONLY for buyers (not property owners) and only once
   useEffect(() => {
     if (user && property && !viewTracked && property.user?.id !== user.id) {
       trackPropertyView();
@@ -94,8 +98,6 @@ function PropertyDetails() {
       const response = await fetch(`${BACKEND_BASE_URL}/api/properties/${propertyId}`);
       if (!response.ok) throw new Error("Property not found");
       const data = await response.json();
-
-      // Fetch images
       const imageResponse = await fetch(`${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`);
       let images = [];
       if (imageResponse.ok) {
@@ -111,7 +113,7 @@ function PropertyDetails() {
     }
   };
 
-  // Track Property View with User Authentication
+  // ✅ FIXED: Better error handling for property tracking
   const trackPropertyView = async () => {
     if (!user) return;
 
@@ -119,6 +121,13 @@ function PropertyDetails() {
       console.log('📊 Tracking property view for user:', user.id);
 
       const token = localStorage.getItem("authToken");
+
+      // Don't track if no token
+      if (!token) {
+        console.log('⚠️ No auth token, skipping tracking');
+        return;
+      }
+
       const response = await fetch(
         `${BACKEND_BASE_URL}/api/property-tracking/view/${propertyId}`,
         {
@@ -141,10 +150,12 @@ function PropertyDetails() {
         console.log('✅ Property view tracked:', result);
         setViewTracked(true);
       } else {
-        console.warn('⚠️ Failed to track property view');
+        // Don't throw error, just log warning
+        console.warn('⚠️ Failed to track property view:', response.status);
       }
     } catch (error) {
-      console.error('❌ Error tracking property view:', error);
+      // Silently fail - tracking should not break the user experience
+      console.warn('⚠️ Error tracking property view:', error.message);
     }
   };
 
@@ -173,24 +184,65 @@ function PropertyDetails() {
     }
   };
 
+  // ✅ FIXED: Better deal detection with proper endpoint and error handling
   const checkExistingDeal = async () => {
     if (!user?.id) {
       setDealLoading(false);
+      setExistingDeal(null);
       return;
     }
+
     try {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/deals/property/${propertyId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
-      });
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setDealLoading(false);
+        setExistingDeal(null);
+        return;
+      }
+
+      console.log(`🔍 Checking for existing deal - Property: ${propertyId}, Buyer: ${user.id}`);
+
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/deals/buyer/${user.id}/property/${propertyId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+        }
+      );
+
+      console.log(`📡 Deal check response status: ${response.status}`);
+
       if (response.ok) {
-        const apiResponse = await response.json();
-        const deals = apiResponse.data || [];
-        const userDeal = deals.find(deal => deal.buyerId === user.id);
-        setExistingDeal(userDeal || null);
+        const data = await response.json();
+        console.log('📦 Deal check response data:', data);
+
+        // Handle different response structures
+        let deal = null;
+        if (data.success && data.data) {
+          deal = data.data;
+        } else if (data.dealId || data.id) {
+          deal = data;
+        }
+
+        if (deal) {
+          console.log('✅ Existing deal found:', deal);
+          setExistingDeal(deal);
+        } else {
+          console.log('ℹ️ No existing deal found');
+          setExistingDeal(null);
+        }
+      } else if (response.status === 404) {
+        // 404 means no deal exists - this is expected
+        console.log('ℹ️ No deal exists (404)');
+        setExistingDeal(null);
       } else {
+        console.warn(`⚠️ Unexpected response status: ${response.status}`);
         setExistingDeal(null);
       }
-    } catch {
+    } catch (error) {
+      console.error('❌ Error checking existing deal:', error);
       setExistingDeal(null);
     } finally {
       setDealLoading(false);
@@ -345,39 +397,60 @@ function PropertyDetails() {
     }
   };
 
+  // ✅ FIXED: Better deal creation with proper error handling
   const handleCreateDeal = async () => {
     if (!offerAmount || parseFloat(offerAmount) <= 0) {
       setDealError("Please enter a valid offer amount");
       return;
     }
+
+    setDealError("");
+
     try {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/deals`, {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setDealError("Please login to create a deal");
+        return;
+      }
+
+      console.log('📝 Creating deal:', {
+        propertyId: parseInt(propertyId),
+        buyerId: user.id,
+        sellerId: property.user?.id,
+        agreedPrice: parseFloat(offerAmount)
+      });
+
+      const response = await fetch(`${BACKEND_BASE_URL}/api/deals/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           propertyId: parseInt(propertyId),
           buyerId: user.id,
-          sellerId: property.user?.id,
-          offerAmount: parseFloat(offerAmount),
+          agreedPrice: parseFloat(offerAmount),
         }),
       });
-      if (response.ok) {
-        const newDeal = await response.json();
+
+      const data = await response.json();
+      console.log('📦 Create deal response:', data);
+
+      if (response.ok && (data.success || data.dealId || data.id)) {
+        const newDeal = data.data || data;
+        console.log('✅ Deal created successfully:', newDeal);
         setExistingDeal(newDeal);
         setOfferAmount("");
-        alert("Deal created successfully!");
+        alert("✅ Deal created successfully!");
         setDealError("");
       } else {
-        const errorData = await response.json();
-        const errorMessage = errorData?.message || errorData?.error || "Failed to create deal";
+        const errorMessage = data?.message || data?.error || "Failed to create deal";
+        console.error('❌ Failed to create deal:', errorMessage);
         setDealError(errorMessage);
       }
     } catch (err) {
-      console.error("Error creating deal:", err);
-      setDealError("Error creating deal. Please check your inputs and try again.");
+      console.error("❌ Error creating deal:", err);
+      setDealError("Error creating deal. Please try again.");
     }
   };
 
@@ -408,13 +481,11 @@ function PropertyDetails() {
     setModalImageIndex((prev) => prev === 0 ? imageUrls.length - 1 : prev - 1);
   };
 
-  // Handle contact click - require login
   const handleContactClick = (action) => {
     if (!user) {
       setShowLoginModal(true);
       return;
     }
-    // User is logged in, proceed with action
     if (action === 'whatsapp' && waHref) {
       window.open(waHref, "_blank");
     } else if (action === 'call' && telHref) {
@@ -479,7 +550,6 @@ function PropertyDetails() {
 
   return (
     <>
-      {/* Login Modal */}
       {showLoginModal && (
         <LoginModal onClose={() => setShowLoginModal(false)} />
       )}
@@ -583,11 +653,7 @@ function PropertyDetails() {
                   fontSize: '14px', color: '#4b5563', fontWeight: '600', padding: '8px 12px',
                   background: '#f3f4f6', borderRadius: '8px', marginBottom: '16px', width: 'fit-content'
                 }}>
-                  👤 Posted by: {
-                    property.ownerType === "broker" ? "Broker" :
-                    property.ownerType === "builder" ? "Builder" :
-                    property.ownerType === "agent" ? "Agent" : "Owner"
-                  }
+                  👤 Posted by: {property.ownerType === "broker" ? "Broker" : "Owner"}
                 </div>
               )}
 
@@ -652,7 +718,6 @@ function PropertyDetails() {
               <div className="card pd-contact">
                 <h3 className="pd-contact-title">{contactLabel}</h3>
 
-                {/* Show login prompt if not logged in */}
                 {!user ? (
                   <div style={{
                     textAlign: 'center',
@@ -790,24 +855,51 @@ function PropertyDetails() {
                   {dealLoading ? (
                     <div className="pd-deal-loading">
                       <div className="pd-spinner small" />
-                      <span>Checking...</span>
+                      <span>Checking for existing deals...</span>
                     </div>
                   ) : existingDeal ? (
                     <div className="pd-deal-exists">
-                      <div className="pd-deal-badge">Deal Active</div>
-                      <p className="pd-deal-info">Stage: <strong>{existingDeal.stage}</strong></p>
-                      <button onClick={() => navigate(`/deals/${existingDeal.dealId}`)} className="pd-btn pd-btn-view">
-                        View Deal
+                      <div className="pd-deal-badge">✅ Active Deal Found</div>
+                      <p className="pd-deal-info">
+                        Current Stage: <strong>{existingDeal.stage || existingDeal.currentStage || 'INQUIRY'}</strong>
+                      </p>
+                      {existingDeal.agreedPrice && (
+                        <p className="pd-deal-info">
+                          Agreed Price: <strong>₹{existingDeal.agreedPrice.toLocaleString()}</strong>
+                        </p>
+                      )}
+                      <button
+                        onClick={() => navigate(`/my-deals`)}
+                        className="pd-btn pd-btn-view"
+                      >
+                        View Deal Details
                       </button>
                     </div>
                   ) : (
                     <div className="pd-deal-none">
                       <div className="pd-deal-none-badge">No Active Deal</div>
+                      <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px' }}>
+                        Create a deal to start negotiating for this property
+                      </p>
                       <div className="pd-deal-create">
-                        <input type="number" className="pd-input" placeholder="Your offer amount (₹)"
-                               value={offerAmount} onChange={(e) => setOfferAmount(e.target.value)} />
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+                          Your Offer Amount
+                        </label>
+                        <input
+                          type="number"
+                          className="pd-input"
+                          placeholder="Enter your offer (₹)"
+                          value={offerAmount}
+                          onChange={(e) => setOfferAmount(e.target.value)}
+                        />
                         {dealError && <div className="pd-alert">{dealError}</div>}
-                        <button onClick={handleCreateDeal} className="pd-btn pd-btn-primary">Create Deal</button>
+                        <button
+                          onClick={handleCreateDeal}
+                          className="pd-btn pd-btn-primary"
+                          disabled={!offerAmount || parseFloat(offerAmount) <= 0}
+                        >
+                          Create Deal
+                        </button>
                       </div>
                     </div>
                   )}
@@ -852,7 +944,6 @@ function PropertyDetails() {
             </div>
           </div>
 
-          {/* Floating WhatsApp button */}
           <button
             className="pd-fab"
             onClick={() => user ? (validContactPhone && window.open(waHref, "_blank")) : setShowLoginModal(true)}

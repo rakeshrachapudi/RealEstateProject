@@ -134,6 +134,58 @@ const AdminDealPanel = () => {
             );
           }
         }
+
+    // Also fetch all deals to catch any that might not be assigned to agents
+    console.log("📊 Fetching all deals to catch unassigned deals...");
+    try {
+      const allDealsRes = await fetch(
+        `${BACKEND_BASE_URL}/api/deals`,
+        { headers }
+      );
+
+      if (allDealsRes.ok) {
+        const allDealsData = await allDealsRes.json();
+        console.log("✅ All deals response:", allDealsData);
+
+        let allDealsArray = [];
+        if (Array.isArray(allDealsData)) {
+          allDealsArray = allDealsData;
+        } else if (allDealsData.data && Array.isArray(allDealsData.data)) {
+          allDealsArray = allDealsData.data;
+        } else if (allDealsData.success && Array.isArray(allDealsData.data)) {
+          allDealsArray = allDealsData.data;
+        }
+
+        console.log(`📋 Total deals in system: ${allDealsArray.length}`);
+
+        // Find deals not yet in any agent's list
+        const assignedDealIds = new Set(allDealsFlat.map(d => d.dealId || d.id));
+        const unassignedDeals = allDealsArray.filter(d => !assignedDealIds.has(d.dealId || d.id));
+
+        if (unassignedDeals.length > 0) {
+          console.log(`🆕 Found ${unassignedDeals.length} unassigned deals`);
+
+          // Group unassigned deals
+          const unassignedKey = "unassigned-deals";
+          agentDealsMap[unassignedKey] = {
+            agentId: null,
+            agentName: "Unassigned / Pending Agent Assignment",
+            agentEmail: "N/A",
+            agentMobile: "N/A",
+            totalDeals: unassignedDeals.length,
+            completedDeals: unassignedDeals.filter(d => d.stage === "COMPLETED").length,
+            deals: unassignedDeals,
+          };
+
+          allDealsFlat.push(...unassignedDeals);
+          initialOpenAgents[unassignedKey] = true; // Auto-expand unassigned
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error fetching all deals:", error);
+    }
+
+
         setOpenAgents(initialOpenAgents);
       } else {
         console.error(
