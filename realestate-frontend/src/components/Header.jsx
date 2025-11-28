@@ -94,6 +94,8 @@ function Header({
     closeAllDropdowns();
   };
 
+  const capitalizeFirst = (s) => s[0].toUpperCase() + s.slice(1);
+
   const isAdmin = user?.role === "ADMIN";
   const isAgent = user?.role === "AGENT";
 
@@ -419,7 +421,9 @@ function Header({
                 <span className="user-avatar">
                   {user?.firstName?.[0]?.toUpperCase() || "U"}
                 </span>
-                <span className="user-name">{user?.firstName}</span>
+                <span className="user-name">
+                  {capitalizeFirst(user?.firstName)}
+                </span>
                 {activeDropdown === "profile" && (
                   <div
                     className="dropdown-menu-col user-dropdown"
@@ -453,10 +457,16 @@ function Header({
             </>
           ) : (
             <>
-              <button className="btn-text" onClick={onLoginClick}>
+              <button
+                className="nav-link ignore-btn-hover"
+                onClick={onLoginClick}
+              >
                 Login
               </button>
-              <button className="btn-primary" onClick={onSignupClick}>
+              <button
+                className="btn-primary ignore-btn-hover"
+                onClick={onSignupClick}
+              >
                 Sign Up
               </button>
             </>
@@ -485,7 +495,12 @@ function Header({
                 <img src={logo} alt="Logo" className="mobile-header-logo" />
                 <span className="mobile-header-title">Property Dealz</span>
               </div>
-              <button onClick={() => setIsMobileMenuOpen(false)}>✕</button>
+              <a
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="mobile-menu-close"
+              >
+                ✕
+              </a>
             </div>
 
             <div className="mobile-menu-content">
@@ -493,13 +508,14 @@ function Header({
                 <>
                   <div className="mobile-user-info">
                     <span className="mobile-avatar">
-                      {user?.firstName?.[0]?.toUpperCase() || "U"}
+                      {user?.lastName?.[0]?.toUpperCase() || "U"}
                     </span>
+
                     <div className="mobile-user-details">
                       <span className="mobile-user-name">
-                        {user?.firstName}
+                        &nbsp;{capitalizeFirst(user?.firstName)}
                       </span>
-                      <span className="mobile-user-email">{user?.email}</span>
+                      {/* <span className="mobile-user-email">{user?.email}</span> */}
                     </div>
                   </div>
                   <a
@@ -528,7 +544,7 @@ function Header({
                   </a>
                 </>
               ) : (
-                <>
+                <div className="login-signup">
                   <button
                     className="btn-primary full-width"
                     onClick={() => {
@@ -547,7 +563,7 @@ function Header({
                   >
                     Sign Up
                   </button>
-                </>
+                </div>
               )}
 
               <hr />
@@ -582,7 +598,7 @@ function Header({
               {isAdmin && (
                 <>
                   <hr />
-                  <div className="mobile-section-title">Admin</div>
+                  <h3 className="mobile-section-title">Admin</h3>
                   <a onClick={() => handleNavigation("/admin-deals")}>Deals</a>
                   <a onClick={() => handleNavigation("/admin/properties")}>
                     Properties

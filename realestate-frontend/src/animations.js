@@ -491,7 +491,7 @@ export const injectAnimations = () => {
         height: 300px;
       }
 
-      button:hover:not(.nav-link) {
+      button:hover:not(.nav-link):not(.ignore-btn-hover):not(.mobile-menu-btn) {
         transform: translateY(-2px);
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
       }
