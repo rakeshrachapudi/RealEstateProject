@@ -1,7 +1,9 @@
 package com.example.realestate.service;
 
+import com.example.realestate.repository.PropertyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -16,8 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * S3 helper service using AWS SDK v2.
@@ -36,6 +37,13 @@ public class S3Service {
     private final S3Client s3Client;
     private final String bucketName;
     private final Region awsRegion;
+    @Autowired
+    private PropertyDocumentService propertyDocumentService;
+    @Autowired
+    private PropertyImageService propertyImageService;
+
+
+
 
     public S3Service(@Value("${aws.accessKeyId}") String accessKey,
                      @Value("${aws.secretKey}") String secretKey,
@@ -161,41 +169,7 @@ public class S3Service {
         return uploadFile(key, filePath, contentType);
     }
 
-    /**
-     * Move (copy then delete) an object within the same bucket.
-     * Returns public URL of destination object.
-     */
-    public String moveFile(String sourceKey, String destinationKey) {
-        Objects.requireNonNull(sourceKey, "sourceKey is required");
-        Objects.requireNonNull(destinationKey, "destinationKey is required");
 
-        try {
-            // 1) Copy
-            CopyObjectRequest copyRequest = CopyObjectRequest.builder()
-                    .sourceBucket(bucketName)
-                    .sourceKey(sourceKey)
-                    .destinationBucket(bucketName)
-                    .destinationKey(destinationKey)
-                    .build();
-
-            s3Client.copyObject(copyRequest);
-
-            // 2) Delete source
-            DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
-                    .bucket(bucketName)
-                    .key(sourceKey)
-                    .build();
-
-            s3Client.deleteObject(deleteRequest);
-
-            String newUrl = getFileUrl(destinationKey);
-            logger.info("Moved S3 object from {} to {} (url={})", sourceKey, destinationKey, newUrl);
-            return newUrl;
-        } catch (Exception e) {
-            logger.error("Failed to move file in S3. src={}, dest={}, cause={}", sourceKey, destinationKey, e.getMessage(), e);
-            throw new RuntimeException("Failed to move file in S3: " + e.getMessage(), e);
-        }
-    }
 
     /**
      * Delete an object from S3.
@@ -332,4 +306,67 @@ public class S3Service {
         logger.debug("   Sanitized filename: {} -> {}", filename, sanitized);
         return sanitized;
     }
+    // Add this method to your S3Service.java class
+
+    // Add this method to your S3Service.java class
+
+    /**
+     * Move a file from one S3 key to another (copy + delete)
+     * @param sourceKey The current S3 key (e.g., "temp/images/file.jpg")
+     * @param destinationKey The new S3 key (e.g., "properties/123/images/file.jpg")
+     * @return true if successful, false otherwise
+     */
+    public boolean moveFile(String sourceKey, String destinationKey) {
+        try {
+            logger.info("📦 Moving S3 file: {} → {}", sourceKey, destinationKey);
+
+            // Step 1: Copy the object to the new location
+            CopyObjectRequest copyRequest = CopyObjectRequest.builder()
+                    .sourceBucket(bucketName)
+                    .sourceKey(sourceKey)
+                    .destinationBucket(bucketName)
+                    .destinationKey(destinationKey)
+                    .build();
+
+            s3Client.copyObject(copyRequest);
+            logger.info("✅ Copied S3 object to: {}", destinationKey);
+
+            // Step 2: Delete the original object
+            DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(sourceKey)
+                    .build();
+
+            s3Client.deleteObject(deleteRequest);
+            logger.info("🗑️ Deleted original S3 object: {}", sourceKey);
+
+            return true;
+
+        } catch (S3Exception e) {
+            logger.error("❌ S3 error moving file: {}", e.awsErrorDetails().errorMessage());
+            return false;
+        } catch (Exception e) {
+            logger.error("❌ Error moving S3 file: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Optional: Batch move multiple files (more efficient)
+     */
+    public Map<String, Boolean> moveFiles(Map<String, String> fileMappings) {
+        Map<String, Boolean> results = new HashMap<>();
+
+        for (Map.Entry<String, String> entry : fileMappings.entrySet()) {
+            String sourceKey = entry.getKey();
+            String destinationKey = entry.getValue();
+            boolean moved = moveFile(sourceKey, destinationKey);
+            results.put(sourceKey, moved);
+        }
+
+        return results;
+    }
+
+
+
 }

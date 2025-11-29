@@ -35,6 +35,15 @@ public class PropertyService {
     @Autowired
     private FeaturedPropertyRepository featuredPropertyRepository;
 
+    @Autowired
+    private PropertyImageService propertyImageService;
+
+    @Autowired
+    private PropertyDocumentService propertyDocumentService;
+
+    @Autowired
+    private S3Service s3Service;
+
     public PropertyService(PropertyRepository repo, UserRepository userRepository,
                            AreaRepository areaRepository, PropertyTypeRepository propertyTypeRepository) {
         this.repo = repo;
@@ -151,6 +160,280 @@ public class PropertyService {
         return savedProperty;
     }
 
+    /**
+     * Create property with Authentication support (for REST controller)
+     * This method wraps postProperty() and handles authentication context
+     */
+    public Property createProperty(PropertyPostRequestDto dto, org.springframework.security.core.Authentication authentication) {
+        // If userId is not provided in DTO but user is authenticated, get userId from authentication
+        if (dto.getUserId() == null && authentication != null && authentication.isAuthenticated()) {
+            String username = authentication.getName();
+            logger.info("Getting user from authentication: {}", username);
+
+            User user = userRepository.findByEmail(username)
+                    .orElseThrow(() -> new RuntimeException("Authenticated user not found: " + username));
+
+            dto.setUserId(user.getId());
+            logger.info("Set userId to {} from authenticated user", user.getId());
+        }
+
+        // Call existing postProperty method
+        Property savedProperty = postProperty(dto);
+
+        // ⭐ NEW: Save images to property_images table
+        if (dto.getImageUrl() != null && !dto.getImageUrl().trim().isEmpty()) {
+            saveImagesToDatabase(savedProperty.getId(), dto.getImageUrl());
+        }
+
+        // ⭐ NEW: Save documents to property_documents table
+        if (dto.getDocumentUrls() != null && !dto.getDocumentUrls().trim().isEmpty()) {
+            saveDocumentsToDatabase(savedProperty.getId(), dto.getDocumentUrls());
+        }
+
+        return savedProperty;
+    }
+
+    /**
+     * ⭐ NEW: Save images to property_images table AND reorganize S3 files
+     * Moves files from temp/images/ to properties/{propertyId}/images/
+     */
+    private void saveImagesToDatabase(Long propertyId, String imageUrls) {
+        try {
+            String[] urls = imageUrls.split(",");
+            List<PropertyImageService.PropertyImageRequest> imageRequests = new ArrayList<>();
+            List<String> reorganizedUrls = new ArrayList<>();
+
+            for (int i = 0; i < urls.length; i++) {
+                String tempUrl = urls[i].trim();
+                if (!tempUrl.isEmpty()) {
+                    // ⭐ Move file from temp to property folder
+                    String newUrl = moveFileToPropertyFolder(tempUrl, propertyId, "images");
+
+                    PropertyImageService.PropertyImageRequest request =
+                            new PropertyImageService.PropertyImageRequest();
+                    request.setImageUrl(newUrl != null ? newUrl : tempUrl); // Use new URL if move succeeded
+                    request.setIsPrimary(i == 0); // First image is primary
+                    request.setDisplayOrder(i);
+                    imageRequests.add(request);
+
+                    reorganizedUrls.add(newUrl != null ? newUrl : tempUrl);
+                }
+            }
+
+            if (!imageRequests.isEmpty()) {
+                propertyImageService.saveImages(propertyId, imageRequests);
+                logger.info("✅ Saved {} images to property_images table for property {}",
+                        imageRequests.size(), propertyId);
+
+                // Update property's imageUrl with reorganized URLs
+                String reorganizedUrlString = String.join(",", reorganizedUrls);
+                Property property = repo.findById(propertyId).orElse(null);
+                if (property != null) {
+                    property.setImageUrl(reorganizedUrlString);
+                    repo.save(property);
+                    logger.info("✅ Updated property imageUrl with reorganized S3 paths");
+                }
+            }
+        } catch (Exception e) {
+            logger.error("❌ Error saving images to database for property {}: {}",
+                    propertyId, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * ⭐ UPDATED: Save documents to property_documents table
+     * This version has better error handling and ALWAYS saves to database even if S3 move fails
+     */
+    private void saveDocumentsToDatabase(Long propertyId, String documentUrls) {
+        logger.info("💾 [saveDocumentsToDatabase] Starting for property {}", propertyId);
+        logger.info("   Document URLs received: {}", documentUrls);
+
+        try {
+            if (documentUrls == null || documentUrls.trim().isEmpty()) {
+                logger.warn("⚠️ No documentUrls provided for property {}", propertyId);
+                return;
+            }
+
+            String[] urls = documentUrls.split(",");
+            logger.info("   Split into {} URLs", urls.length);
+
+            List<PropertyDocumentService.PropertyDocumentRequest> documentRequests = new ArrayList<>();
+            List<String> reorganizedUrls = new ArrayList<>();
+
+            for (int i = 0; i < urls.length; i++) {
+                String tempUrl = urls[i].trim();
+                logger.info("   [{}] Processing URL: {}", i, tempUrl);
+
+                if (!tempUrl.isEmpty()) {
+                    // Try to move file from temp to property folder
+                    String finalUrl = tempUrl; // Default to original URL
+
+                    try {
+                        String newUrl = moveFileToPropertyFolder(tempUrl, propertyId, "documents");
+                        if (newUrl != null) {
+                            finalUrl = newUrl;
+                            logger.info("      ✅ File moved, using new URL: {}", newUrl);
+                        } else {
+                            logger.warn("      ⚠️ File move returned null, using original URL");
+                        }
+                    } catch (Exception moveEx) {
+                        // If move fails, that's okay - we'll use the original URL
+                        logger.warn("      ⚠️ Move failed (will use original URL): {}", moveEx.getMessage());
+                    }
+
+                    // Extract filename from URL
+                    String fileName = finalUrl.substring(finalUrl.lastIndexOf("/") + 1);
+                    logger.info("      Filename: {}", fileName);
+
+                    // Determine file type from extension
+                    String fileType = "application/pdf"; // Default
+                    String lowerFileName = fileName.toLowerCase();
+
+                    if (lowerFileName.endsWith(".pdf")) {
+                        fileType = "application/pdf";
+                    } else if (lowerFileName.endsWith(".doc")) {
+                        fileType = "application/msword";
+                    } else if (lowerFileName.endsWith(".docx")) {
+                        fileType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+                    } else if (lowerFileName.endsWith(".txt")) {
+                        fileType = "text/plain";
+                    } else if (lowerFileName.endsWith(".jpg") || lowerFileName.endsWith(".jpeg")) {
+                        fileType = "image/jpeg";
+                    } else if (lowerFileName.endsWith(".png")) {
+                        fileType = "image/png";
+                    }
+
+                    logger.info("      File type: {}", fileType);
+
+                    PropertyDocumentService.PropertyDocumentRequest request =
+                            new PropertyDocumentService.PropertyDocumentRequest();
+                    request.setDocumentUrl(finalUrl);
+                    request.setFileName(fileName);
+                    request.setFileType(fileType);
+                    request.setFileSize(0L);
+                    request.setDocumentType("brochure");
+                    documentRequests.add(request);
+                    reorganizedUrls.add(finalUrl);
+
+                    logger.info("      ✅ Added to save list");
+                }
+            }
+
+            if (!documentRequests.isEmpty()) {
+                logger.info("   💾 Calling propertyDocumentService.saveDocuments with {} documents",
+                        documentRequests.size());
+
+                try {
+                    propertyDocumentService.saveDocuments(propertyId, documentRequests);
+                    logger.info("   ✅ SUCCESSFULLY saved {} documents to database", documentRequests.size());
+                } catch (Exception saveEx) {
+                    logger.error("   ❌ FAILED to save documents to database: {}", saveEx.getMessage());
+                    logger.error("   Full error:", saveEx);
+                    throw saveEx; // Re-throw to see the error
+                }
+
+                // Update property's documentUrls with reorganized URLs
+                try {
+                    String reorganizedUrlString = String.join(",", reorganizedUrls);
+                    Property property = repo.findById(propertyId).orElse(null);
+                    if (property != null) {
+                        property.setDocumentUrls(reorganizedUrlString);
+                        repo.save(property);
+                        logger.info("   ✅ Updated property.documentUrls field");
+                    }
+                } catch (Exception updateEx) {
+                    logger.warn("   ⚠️ Failed to update property URLs: {}", updateEx.getMessage());
+                    // Don't fail the whole operation just because URL update failed
+                }
+            } else {
+                logger.warn("   ⚠️ No valid documents to save");
+            }
+
+        } catch (Exception e) {
+            logger.error("❌ [saveDocumentsToDatabase] EXCEPTION for property {}", propertyId);
+            logger.error("   Error message: {}", e.getMessage());
+            logger.error("   Full stack trace:", e);
+            // Don't re-throw - we don't want to fail property creation if documents fail
+        }
+
+        logger.info("💾 [saveDocumentsToDatabase] Completed for property {}", propertyId);
+    }
+
+    /**
+     * ⭐ NEW: Move file from temp folder to property folder in S3
+     * From: temp/images/file.jpg or temp/documents/file.pdf
+     * To: properties/{propertyId}/images/file.jpg or properties/{propertyId}/documents/file.pdf
+     */
+    private String moveFileToPropertyFolder(String tempUrl, Long propertyId, String folderType) {
+        try {
+            // Extract the S3 key from the URL
+            // URL format: https://bucket-name.s3.region.amazonaws.com/temp/images/file.jpg
+            String tempKey = extractS3KeyFromUrl(tempUrl);
+
+            if (tempKey == null || !tempKey.contains("temp/")) {
+                logger.warn("⚠️ URL doesn't contain temp path, skipping move: {}", tempUrl);
+                return null;
+            }
+
+            // Extract filename from temp key
+            String fileName = tempKey.substring(tempKey.lastIndexOf("/") + 1);
+
+            // Create new key: properties/{propertyId}/images/file.jpg
+            String newKey = String.format("properties/%d/%s/%s", propertyId, folderType, fileName);
+
+            // Move the file in S3 (copy then delete)
+            boolean moved = s3Service.moveFile(tempKey, newKey);
+
+            if (moved) {
+                // Generate new URL
+                String newUrl = tempUrl.replace(tempKey, newKey);
+                logger.info("✅ Moved S3 file: {} → {}", tempKey, newKey);
+                return newUrl;
+            } else {
+                logger.error("❌ Failed to move S3 file: {}", tempKey);
+                return null;
+            }
+
+        } catch (Exception e) {
+            logger.error("❌ Error moving file to property folder: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Extract S3 key from full S3 URL
+     * Example: https://bucket.s3.region.amazonaws.com/temp/images/file.jpg → temp/images/file.jpg
+     */
+    private String extractS3KeyFromUrl(String s3Url) {
+        try {
+            if (s3Url == null || s3Url.isEmpty()) {
+                return null;
+            }
+
+            // Remove the S3 base URL to get just the key
+            // Format: https://bucket-name.s3.region.amazonaws.com/KEY
+            int lastSlashBeforeKey = s3Url.indexOf(".com/");
+            if (lastSlashBeforeKey != -1) {
+                return s3Url.substring(lastSlashBeforeKey + 5); // +5 for ".com/"
+            }
+
+            // Alternative format: https://s3.region.amazonaws.com/bucket-name/KEY
+            int bucketIndex = s3Url.indexOf(".amazonaws.com/");
+            if (bucketIndex != -1) {
+                String afterDomain = s3Url.substring(bucketIndex + 15); // +15 for ".amazonaws.com/"
+                int firstSlash = afterDomain.indexOf("/");
+                if (firstSlash != -1) {
+                    return afterDomain.substring(firstSlash + 1); // Skip bucket name
+                }
+            }
+
+            return null;
+        } catch (Exception e) {
+            logger.error("Error extracting S3 key from URL: {}", e.getMessage());
+            return null;
+        }
+    }
+
     // ==================== SOFT DELETE USER PROPERTIES ====================
 
     /**
@@ -189,7 +472,7 @@ public class PropertyService {
 
     // ==================== Convert to DTO (with images) ====================
 
-    private PropertyDTO convertToDTO(Property property) {
+    public PropertyDTO convertToDTO(Property property) {
         PropertyDTO dto = new PropertyDTO();
 
         dto.setPropertyId(property.getId());

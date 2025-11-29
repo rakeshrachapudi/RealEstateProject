@@ -49,7 +49,6 @@ public class PropertyController {
         errorResponse.put("success", false);
         errorResponse.put("message", ex.getMessage());
 
-        // Check for specific error types
         if (ex.getMessage() != null) {
             if (ex.getMessage().contains("no active subscription") ||
                     ex.getMessage().contains("BROKER_NO_ACTIVE_SUBSCRIPTION")) {
@@ -65,9 +64,6 @@ public class PropertyController {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
     }
 
-    // -------------------------------------------------------------
-    // ⭐ GENERAL EXCEPTION HANDLER
-    // -------------------------------------------------------------
     @ExceptionHandler({Exception.class})
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ResponseEntity<Map<String, Object>> handleGeneralException(Exception ex) {
@@ -81,39 +77,7 @@ public class PropertyController {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 
-    // -------------------------------------------------------------
-    // ⭐ CREATE PROPERTY
-    // -------------------------------------------------------------
-    @PostMapping
-    public ResponseEntity<?> create(@RequestBody PropertyPostRequestDto dto) {
-        try {
-            logger.info("📝 Creating property: type={}, listingType={}, userId={}",
-                    dto.getType(), dto.getListingType(), dto.getUserId());
 
-            Property created = service.postProperty(dto);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Property created successfully");
-            response.put("data", created);
-
-            logger.info("✅ Property created successfully: id={}", created.getId());
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (EntityNotFoundException ex) {
-            logger.error("❌ Entity not found: {}", ex.getMessage());
-
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("message", ex.getMessage());
-            errorResponse.put("error", "ENTITY_NOT_FOUND");
-
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-        } catch (RuntimeException ex) {
-            // This will be caught by the @ExceptionHandler above
-            throw ex;
-        }
-    }
 
     // -------------------------------------------------------------
     // ⭐ PROPERTY TYPES
@@ -123,18 +87,12 @@ public class PropertyController {
         return ResponseEntity.ok(service.getPropertyTypes());
     }
 
-    // -------------------------------------------------------------
-    // ⭐ PROPERTIES BY TYPE (DTO)
-    // -------------------------------------------------------------
     @GetMapping("/byType")
     public ResponseEntity<List<PropertyDTO>> getByType(@RequestParam String type) {
         logger.info("Fetching properties of type {}", type);
         return ResponseEntity.ok(service.getPropertiesByTypeAsDTO(type));
     }
 
-    // -------------------------------------------------------------
-    // ⭐ USER PROPERTIES (DTO)
-    // -------------------------------------------------------------
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<PropertyDTO>> getByUser(@PathVariable Long userId) {
         logger.info("Fetching properties for user {}", userId);
@@ -142,17 +100,11 @@ public class PropertyController {
         return list.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(list);
     }
 
-    // -------------------------------------------------------------
-    // ⭐ GET ALL (ENTITY)
-    // -------------------------------------------------------------
     @GetMapping
     public List<Property> getAll() {
         return service.findAll();
     }
 
-    // -------------------------------------------------------------
-    // ⭐ GET BY ID (ENTITY)
-    // -------------------------------------------------------------
     @GetMapping("/{id}")
     public ResponseEntity<Property> getById(@PathVariable Long id) {
         return service.findById(id)
@@ -160,43 +112,28 @@ public class PropertyController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // -------------------------------------------------------------
-    // ⭐ ALL ACTIVE WITH CORRECT FEATURED STATUS (DTO)
-    // -------------------------------------------------------------
     @GetMapping("/all")
     public ResponseEntity<List<PropertyDTO>> getAllActive() {
         return ResponseEntity.ok(service.getAllActivePropertiesWithAccurateFeaturedStatus());
     }
 
-    // -------------------------------------------------------------
-    // ⭐ CHECK FEATURED STATUS
-    // -------------------------------------------------------------
     @GetMapping("/{id}/is-featured")
     public ResponseEntity<Map<String, Boolean>> checkFeatured(@PathVariable Long id) {
         boolean featured = service.isPropertyFeatured(id);
         return ResponseEntity.ok(Map.of("isFeatured", featured));
     }
 
-    // -------------------------------------------------------------
-    // ⭐ GET BY CITY (ENTITY)
-    // -------------------------------------------------------------
     @GetMapping("/byCity/{city}")
     public List<Property> getByCity(@PathVariable String city) {
         logger.info("Fetching by city {}", city);
         return service.findByCity(city);
     }
 
-    // -------------------------------------------------------------
-    // ⭐ GET BY AREA (DTO)
-    // -------------------------------------------------------------
     @GetMapping("/byArea/{areaName}")
     public ResponseEntity<List<PropertyDTO>> getByArea(@PathVariable String areaName) {
         return ResponseEntity.ok(service.findByAreaNameAsDTO(areaName));
     }
 
-    // -------------------------------------------------------------
-    // ⭐ UPDATE
-    // -------------------------------------------------------------
     @PutMapping("/{id}")
     public ResponseEntity<?> update(
             @PathVariable Long id,
@@ -210,9 +147,6 @@ public class PropertyController {
         }
     }
 
-    // -------------------------------------------------------------
-    // ⭐ DELETE
-    // -------------------------------------------------------------
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         try {
@@ -223,9 +157,6 @@ public class PropertyController {
         }
     }
 
-    // -------------------------------------------------------------
-    // ⭐ SMART QUICK SEARCH
-    // -------------------------------------------------------------
     @GetMapping("/search/quick")
     public ResponseEntity<?> smartQuickSearch(@RequestParam(required = false) String q,
                                               @RequestParam(required = false) Long propertyId,
@@ -244,48 +175,66 @@ public class PropertyController {
     }
 
     // -------------------------------------------------------------
-    // ⭐ UPLOAD PROPERTY DOCUMENT (FIXED)
+    // ⭐ CREATE NEW PROPERTY
     // -------------------------------------------------------------
-    /**
-     * Upload property document (brochures, PDFs, etc.) to S3
-     * Endpoint: POST /api/properties/upload-document
-     */
+    @PostMapping
+    public ResponseEntity<?> createProperty(
+            @RequestBody PropertyPostRequestDto propertyDto,
+            Authentication authentication) {
+
+        logger.info("📝 Creating new property - Type: {}, City: {}, User: {}",
+                propertyDto.getType(),
+                propertyDto.getCity(),
+                authentication != null ? authentication.getName() : "anonymous");
+
+        try {
+            // Create property using service
+            Property createdProperty = service.createProperty(propertyDto, authentication);
+
+            logger.info("✅ Property created successfully - ID: {}", createdProperty.getId());
+
+            // Return the created property with DTOs for consistency
+            PropertyDTO responseDto = service.convertToDTO(createdProperty);
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success(responseDto));
+
+        } catch (RuntimeException ex) {
+            // This will be caught by the @ExceptionHandler methods above
+            logger.error("❌ Error creating property: {}", ex.getMessage());
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("❌ Unexpected error creating property", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to create property: " + ex.getMessage()));
+        }
+    }
+
+    // -------------------------------------------------------------
+    // ⭐ UPLOAD DOCUMENT TO TEMP (will be moved after property creation)
+    // -------------------------------------------------------------
     @PostMapping("/upload-document")
     public ResponseEntity<?> uploadDocument(
             @RequestParam("file") MultipartFile file,
             Authentication authentication) {
 
-        logger.info("📄 Document upload request received - File: {}, Size: {} bytes",
+        logger.info("📄 Document upload request - File: {}, Size: {} bytes",
                 file.getOriginalFilename(), file.getSize());
 
         Path tempFile = null;
 
         try {
-            // Authentication check (uncomment if needed)
-            /*
-            if (authentication == null || !authentication.isAuthenticated()) {
-                logger.warn("❌ Unauthorized document upload attempt");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ApiResponse.error("Authentication required"));
-            }
-            */
-
-            // File validation
             if (file.isEmpty()) {
-                logger.warn("❌ Empty document file received");
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error("Document file is required"));
             }
 
-            // Validate file size (10MB max)
             long maxSize = 10 * 1024 * 1024; // 10MB
             if (file.getSize() > maxSize) {
-                logger.warn("❌ Document file too large: {} bytes", file.getSize());
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error("Document file size must not exceed 10MB"));
             }
 
-            // Validate file type
             String contentType = file.getContentType();
             List<String> allowedTypes = Arrays.asList(
                     "application/pdf",
@@ -299,54 +248,39 @@ public class PropertyController {
             );
 
             if (contentType == null || !allowedTypes.contains(contentType)) {
-                logger.warn("❌ Invalid document type: {}", contentType);
                 return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Invalid file type. Allowed: PDF, Word, Excel, Text, Images"));
+                        .body(ApiResponse.error("Invalid file type"));
             }
 
-            // Get file extension
             String originalFilename = file.getOriginalFilename();
             String fileExtension = "";
             if (originalFilename != null && originalFilename.contains(".")) {
                 fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
             }
 
-            // Generate unique filename with timestamp
             String timestamp = String.valueOf(System.currentTimeMillis());
-            String s3Key = "documents/" + timestamp + "_" +
-                    UUID.randomUUID().toString().substring(0, 8) + fileExtension;
+            String uniqueId = UUID.randomUUID().toString().substring(0, 8);
+            String s3Key = "temp/documents/" + timestamp + "_" + uniqueId + fileExtension;
 
-            logger.info("📤 Preparing to upload document to S3: {}", s3Key);
-
-            // Create temporary file from MultipartFile
             tempFile = Files.createTempFile("upload-", fileExtension);
             file.transferTo(tempFile.toFile());
 
-            logger.info("✅ Temporary file created: {}", tempFile);
-
-            // Upload to S3 using S3Service
             String documentUrl = s3Service.uploadFile(s3Key, tempFile, contentType);
 
-            logger.info("✅ Document uploaded successfully: {}", documentUrl);
+            logger.info("✅ Document uploaded to TEMP: {}", s3Key);
 
             return ResponseEntity.ok(ApiResponse.success(documentUrl));
 
-        } catch (IOException e) {
-            logger.error("❌ IO Error during document upload: ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to process document: " + e.getMessage()));
         } catch (Exception e) {
-            logger.error("❌ Error uploading document: ", e);
+            logger.error("❌ Error uploading document", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to upload document: " + e.getMessage()));
         } finally {
-            // Clean up temporary file
             if (tempFile != null) {
                 try {
                     Files.deleteIfExists(tempFile);
-                    logger.debug("🗑️ Temporary file deleted: {}", tempFile);
                 } catch (IOException e) {
-                    logger.warn("⚠️ Failed to delete temporary file: {}", tempFile, e);
+                    logger.warn("Failed to delete temp file", e);
                 }
             }
         }
