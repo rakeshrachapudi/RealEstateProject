@@ -5,6 +5,19 @@ import { useAuth } from "../AuthContext.jsx";
 import LoginModal from "../LoginModal.jsx";  // ✅ FIXED - Same directory (components/)
 import { BACKEND_BASE_URL } from "../config/config";
 import "./PropertyDetails.css";
+import {
+  trackFBPropertyView,
+  trackFBPropertyContact,
+  trackFBLead,
+  trackFBInitiateCheckout
+} from '../utils/fbPixelEvents';
+
+import {
+  trackPropertyView as trackGTMPropertyView,
+  trackContact as trackGTMContact,
+  trackLead as trackGTMLead,
+  trackBeginCheckout
+} from '../utils/gtmDataLayer';
 
 function PropertyDetails() {
   const { id: propertyId } = useParams();
@@ -60,12 +73,15 @@ function PropertyDetails() {
     }
   }, [property, user]);
 
-  // ✅ FIXED: Track Property View ONLY for buyers (not property owners) and only once
-  useEffect(() => {
-    if (user && property && !viewTracked && property.user?.id !== user.id) {
-      trackPropertyView();
-    }
-  }, [user, property, viewTracked]);
+useEffect(() => {
+  if (user && property && !viewTracked && property.user?.id !== user.id) {
+    trackPropertyView(); // Your existing backend tracking
+
+    // Add tracking
+    trackFBPropertyView(property);
+    trackGTMPropertyView(property);
+  }
+}, [user, property, viewTracked]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -436,13 +452,33 @@ function PropertyDetails() {
       const data = await response.json();
       console.log('📦 Create deal response:', data);
 
-      if (response.ok && (data.success || data.dealId || data.id)) {
-        const newDeal = data.data || data;
-        console.log('✅ Deal created successfully:', newDeal);
-        setExistingDeal(newDeal);
-        setOfferAmount("");
-        alert("✅ Deal created successfully!");
-        setDealError("");
+    if (response.ok && (data.success || data.dealId || data.id)) {
+      const newDeal = data.data || data;
+      console.log('✅ Deal created successfully:', newDeal);
+      setExistingDeal(newDeal);
+      setOfferAmount("");
+      alert("✅ Deal created successfully!");
+      setDealError("");
+
+      // Track deal creation
+      trackFBInitiateCheckout({
+        ...newDeal,
+        property: property,
+        propertyId: parseInt(propertyId),
+        offerAmount: parseFloat(offerAmount)
+      });
+
+      trackFBLead(property);
+
+      trackBeginCheckout(property);
+      trackGTMLead({
+        type: 'deal_creation',
+        propertyId: property.id,
+        propertyValue: parseFloat(offerAmount),
+        phone: user.mobileNumber,
+        name: `${user.firstName || ''} ${user.lastName || ''}`.trim()
+      });
+
       } else {
         const errorMessage = data?.message || data?.error || "Failed to create deal";
         console.error('❌ Failed to create deal:', errorMessage);
@@ -481,17 +517,22 @@ function PropertyDetails() {
     setModalImageIndex((prev) => prev === 0 ? imageUrls.length - 1 : prev - 1);
   };
 
-  const handleContactClick = (action) => {
-    if (!user) {
-      setShowLoginModal(true);
-      return;
-    }
-    if (action === 'whatsapp' && waHref) {
-      window.open(waHref, "_blank");
-    } else if (action === 'call' && telHref) {
-      window.location.href = telHref;
-    }
-  };
+const handleContactClick = (action) => {
+  if (!user) {
+    setShowLoginModal(true);
+    return;
+  }
+
+  // Track contact
+  trackFBPropertyContact(property);
+  trackGTMContact(property.id, action === 'whatsapp' ? 'whatsapp' : 'phone', property);
+
+  if (action === 'whatsapp' && waHref) {
+    window.open(waHref, "_blank");
+  } else if (action === 'call' && telHref) {
+    window.location.href = telHref;
+  }
+};
 
   if (loading) {
     return (
