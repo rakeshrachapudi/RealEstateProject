@@ -81,15 +81,6 @@ export const trackFBAddToWishlist = (property) => {
   }
 };
 
-export default {
-  trackFBPropertyView,
-  trackFBPropertySearch,
-  trackFBPropertyContact,
-  trackFBLead,
-  trackFBAddToWishlist
-};
-// Add to END of your existing fbPixelEvents.js:
-
 export const trackFBInitiateCheckout = (deal) => {
   if (window.fbq) {
     const pixelIds = ['25079012878428180', '868151089247460'];
@@ -135,14 +126,14 @@ export const trackFBCompleteRegistration = (userData = {}) => {
   }
 };
 
-// UPDATE default export to include new functions:
+// ✔ SINGLE valid default export
 export default {
   trackFBPropertyView,
   trackFBPropertySearch,
   trackFBPropertyContact,
   trackFBLead,
   trackFBAddToWishlist,
-  trackFBInitiateCheckout,       // ADD THIS
-  trackFBPurchase,                // ADD THIS
-  trackFBCompleteRegistration     // ADD THIS
+  trackFBInitiateCheckout,
+  trackFBPurchase,
+  trackFBCompleteRegistration
 };
