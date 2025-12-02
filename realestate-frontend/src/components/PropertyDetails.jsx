@@ -1,8 +1,8 @@
-// src/components/PropertyDetails.jsx
+// src/components/PropertyDetails.jsx - FIXED VERSION
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
-import LoginModal from "../LoginModal.jsx";  // ✅ FIXED - Same directory (components/)
+import LoginModal from "../LoginModal.jsx";
 import { BACKEND_BASE_URL } from "../config/config";
 import "./PropertyDetails.css";
 import {
@@ -52,6 +52,14 @@ function PropertyDetails() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [viewTracked, setViewTracked] = useState(false);
 
+  // ✅ FIXED: Agent Deal Creation States
+  const [showAgentDealCreation, setShowAgentDealCreation] = useState(false);
+  const [buyerSearchPhone, setBuyerSearchPhone] = useState('');
+  const [searchingBuyer, setSearchingBuyer] = useState(false);
+  const [foundBuyer, setFoundBuyer] = useState(null);
+  const [agentDealPrice, setAgentDealPrice] = useState('');
+  const [agentDealError, setAgentDealError] = useState('');
+
   useEffect(() => {
     fetchPropertyDetails();
   }, [propertyId]);
@@ -67,21 +75,18 @@ function PropertyDetails() {
         setShowFeaturedSection(false);
       }
     } else if (property && !user) {
-      // User not logged in, don't check for deals
       setDealLoading(false);
       setExistingDeal(null);
     }
   }, [property, user]);
 
-useEffect(() => {
-  if (user && property && !viewTracked && property.user?.id !== user.id) {
-    trackPropertyView(); // Your existing backend tracking
-
-    // Add tracking
-    trackFBPropertyView(property);
-    trackGTMPropertyView(property);
-  }
-}, [user, property, viewTracked]);
+  useEffect(() => {
+    if (user && property && !viewTracked && property.user?.id !== user.id) {
+      trackPropertyView();
+      trackFBPropertyView(property);
+      trackGTMPropertyView(property);
+    }
+  }, [user, property, viewTracked]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -129,7 +134,6 @@ useEffect(() => {
     }
   };
 
-  // ✅ FIXED: Better error handling for property tracking
   const trackPropertyView = async () => {
     if (!user) return;
 
@@ -138,7 +142,6 @@ useEffect(() => {
 
       const token = localStorage.getItem("authToken");
 
-      // Don't track if no token
       if (!token) {
         console.log('⚠️ No auth token, skipping tracking');
         return;
@@ -166,11 +169,9 @@ useEffect(() => {
         console.log('✅ Property view tracked:', result);
         setViewTracked(true);
       } else {
-        // Don't throw error, just log warning
         console.warn('⚠️ Failed to track property view:', response.status);
       }
     } catch (error) {
-      // Silently fail - tracking should not break the user experience
       console.warn('⚠️ Error tracking property view:', error.message);
     }
   };
@@ -200,7 +201,6 @@ useEffect(() => {
     }
   };
 
-  // ✅ FIXED: Better deal detection with proper endpoint and error handling
   const checkExistingDeal = async () => {
     if (!user?.id) {
       setDealLoading(false);
@@ -234,7 +234,6 @@ useEffect(() => {
         const data = await response.json();
         console.log('📦 Deal check response data:', data);
 
-        // Handle different response structures
         let deal = null;
         if (data.success && data.data) {
           deal = data.data;
@@ -250,7 +249,6 @@ useEffect(() => {
           setExistingDeal(null);
         }
       } else if (response.status === 404) {
-        // 404 means no deal exists - this is expected
         console.log('ℹ️ No deal exists (404)');
         setExistingDeal(null);
       } else {
@@ -274,6 +272,209 @@ useEffect(() => {
       }
     } catch (err) {
       console.error("Error checking featured status:", err);
+    }
+  };
+
+  // ✅ FIXED: Agent buyer search function
+  const handleBuyerSearch = async (phone) => {
+    if (!phone || phone.length !== 10) {
+      setFoundBuyer(null);
+      return;
+    }
+
+    setSearchingBuyer(true);
+    setAgentDealError('');
+
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/users/search?phone=${phone}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const buyer = data.success ? data.data : data;
+
+        if (buyer && buyer.id) {
+          setFoundBuyer(buyer);
+          setAgentDealError('');
+        } else {
+          setFoundBuyer(null);
+          setAgentDealError('❌ Buyer not found with this phone number');
+        }
+      } else {
+        setFoundBuyer(null);
+        setAgentDealError('❌ Error searching for buyer');
+      }
+    } catch (error) {
+      setFoundBuyer(null);
+      setAgentDealError('❌ Error: ' + error.message);
+    } finally {
+      setSearchingBuyer(false);
+    }
+  };
+
+  // ✅ FIXED: Agent deal creation with correct buyerId and agentId
+  const handleAgentCreateDeal = async () => {
+    if (!foundBuyer) {
+      setAgentDealError('❌ Please search and select a buyer first');
+      return;
+    }
+
+    if (!agentDealPrice || parseFloat(agentDealPrice) <= 0) {
+      setAgentDealError('❌ Please enter a valid deal price');
+      return;
+    }
+
+    setAgentDealError('');
+
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setAgentDealError('❌ Please login to create a deal');
+        return;
+      }
+
+      console.log('📝 Agent creating deal:', {
+        propertyId: parseInt(propertyId),
+        buyerId: foundBuyer.id,  // ✅ CORRECT: Buyer's ID from search
+        agentId: user.id,        // ✅ CORRECT: Agent's ID
+        agreedPrice: parseFloat(agentDealPrice)
+      });
+
+      const response = await fetch(`${BACKEND_BASE_URL}/api/deals/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          propertyId: parseInt(propertyId),
+          buyerId: foundBuyer.id,        // ✅ CORRECT
+          agentId: user.id,              // ✅ CORRECT
+          agreedPrice: parseFloat(agentDealPrice),
+        }),
+      });
+
+      const data = await response.json();
+      console.log('📦 Agent create deal response:', data);
+
+      if (response.ok && (data.success || data.dealId || data.id)) {
+        const newDeal = data.data || data;
+        console.log('✅ Agent deal created successfully:', newDeal);
+
+        // Track deal creation
+        trackFBInitiateCheckout({
+          ...newDeal,
+          property: property,
+          propertyId: parseInt(propertyId),
+          offerAmount: parseFloat(agentDealPrice)
+        });
+
+        trackFBLead(property);
+        trackBeginCheckout(property);
+        trackGTMLead({
+          type: 'deal_creation',
+          propertyId: property.id,
+          propertyValue: parseFloat(agentDealPrice),
+          phone: foundBuyer.mobileNumber,
+          name: `${foundBuyer.firstName || ''} ${foundBuyer.lastName || ''}`.trim()
+        });
+
+        alert(`✅ Deal created successfully!\n\nBuyer: ${foundBuyer.firstName} ${foundBuyer.lastName}\nPrice: ₹${parseFloat(agentDealPrice).toLocaleString('en-IN')}`);
+
+        // Reset form
+        setShowAgentDealCreation(false);
+        setBuyerSearchPhone('');
+        setFoundBuyer(null);
+        setAgentDealPrice('');
+        setAgentDealError('');
+
+        // Refresh page to show updated deal
+        window.location.reload();
+      } else {
+        const errorMessage = data?.message || data?.error || "Failed to create deal";
+        console.error('❌ Failed to create deal:', errorMessage);
+        setAgentDealError('❌ ' + errorMessage);
+      }
+    } catch (err) {
+      console.error("❌ Error creating deal:", err);
+      setAgentDealError('❌ Error creating deal. Please try again.');
+    }
+  };
+
+  // Original buyer deal creation (for USER role)
+  const handleCreateDeal = async () => {
+    if (!offerAmount || parseFloat(offerAmount) <= 0) {
+      setDealError("Please enter a valid offer amount");
+      return;
+    }
+
+    setDealError("");
+
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setDealError("Please login to create a deal");
+        return;
+      }
+
+      console.log('📝 Creating deal:', {
+        propertyId: parseInt(propertyId),
+        buyerId: user.id,
+        agreedPrice: parseFloat(offerAmount)
+      });
+
+      const response = await fetch(`${BACKEND_BASE_URL}/api/deals/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          propertyId: parseInt(propertyId),
+          buyerId: user.id,
+          agreedPrice: parseFloat(offerAmount),
+        }),
+      });
+
+      const data = await response.json();
+      console.log('📦 Create deal response:', data);
+
+      if (response.ok && (data.success || data.dealId || data.id)) {
+        const newDeal = data.data || data;
+        console.log('✅ Deal created successfully:', newDeal);
+        setExistingDeal(newDeal);
+        setOfferAmount("");
+        alert("✅ Deal created successfully!");
+        setDealError("");
+
+        trackFBInitiateCheckout({
+          ...newDeal,
+          property: property,
+          propertyId: parseInt(propertyId),
+          offerAmount: parseFloat(offerAmount)
+        });
+
+        trackFBLead(property);
+        trackBeginCheckout(property);
+        trackGTMLead({
+          type: 'deal_creation',
+          propertyId: property.id,
+          propertyValue: parseFloat(offerAmount),
+          phone: user.mobileNumber,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim()
+        });
+
+      } else {
+        const errorMessage = data?.message || data?.error || "Failed to create deal";
+        console.error('❌ Failed to create deal:', errorMessage);
+        setDealError(errorMessage);
+      }
+    } catch (err) {
+      console.error("❌ Error creating deal:", err);
+      setDealError("Error creating deal. Please try again.");
     }
   };
 
@@ -413,83 +614,6 @@ useEffect(() => {
     }
   };
 
-  // ✅ FIXED: Better deal creation with proper error handling
-  const handleCreateDeal = async () => {
-    if (!offerAmount || parseFloat(offerAmount) <= 0) {
-      setDealError("Please enter a valid offer amount");
-      return;
-    }
-
-    setDealError("");
-
-    try {
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        setDealError("Please login to create a deal");
-        return;
-      }
-
-      console.log('📝 Creating deal:', {
-        propertyId: parseInt(propertyId),
-        buyerId: user.id,
-        sellerId: property.user?.id,
-        agreedPrice: parseFloat(offerAmount)
-      });
-
-      const response = await fetch(`${BACKEND_BASE_URL}/api/deals/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          propertyId: parseInt(propertyId),
-          buyerId: user.id,
-          agreedPrice: parseFloat(offerAmount),
-        }),
-      });
-
-      const data = await response.json();
-      console.log('📦 Create deal response:', data);
-
-    if (response.ok && (data.success || data.dealId || data.id)) {
-      const newDeal = data.data || data;
-      console.log('✅ Deal created successfully:', newDeal);
-      setExistingDeal(newDeal);
-      setOfferAmount("");
-      alert("✅ Deal created successfully!");
-      setDealError("");
-
-      // Track deal creation
-      trackFBInitiateCheckout({
-        ...newDeal,
-        property: property,
-        propertyId: parseInt(propertyId),
-        offerAmount: parseFloat(offerAmount)
-      });
-
-      trackFBLead(property);
-
-      trackBeginCheckout(property);
-      trackGTMLead({
-        type: 'deal_creation',
-        propertyId: property.id,
-        propertyValue: parseFloat(offerAmount),
-        phone: user.mobileNumber,
-        name: `${user.firstName || ''} ${user.lastName || ''}`.trim()
-      });
-
-      } else {
-        const errorMessage = data?.message || data?.error || "Failed to create deal";
-        console.error('❌ Failed to create deal:', errorMessage);
-        setDealError(errorMessage);
-      }
-    } catch (err) {
-      console.error("❌ Error creating deal:", err);
-      setDealError("Error creating deal. Please try again.");
-    }
-  };
-
   const handleNext = () => {
     setCurrentImageIndex((prev) => prev === (property?.imageUrls?.length || 0) - 1 ? 0 : prev + 1);
   };
@@ -517,22 +641,21 @@ useEffect(() => {
     setModalImageIndex((prev) => prev === 0 ? imageUrls.length - 1 : prev - 1);
   };
 
-const handleContactClick = (action) => {
-  if (!user) {
-    setShowLoginModal(true);
-    return;
-  }
+  const handleContactClick = (action) => {
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
 
-  // Track contact
-  trackFBPropertyContact(property);
-  trackGTMContact(property.id, action === 'whatsapp' ? 'whatsapp' : 'phone', property);
+    trackFBPropertyContact(property);
+    trackGTMContact(property.id, action === 'whatsapp' ? 'whatsapp' : 'phone', property);
 
-  if (action === 'whatsapp' && waHref) {
-    window.open(waHref, "_blank");
-  } else if (action === 'call' && telHref) {
-    window.location.href = telHref;
-  }
-};
+    if (action === 'whatsapp' && waHref) {
+      window.open(waHref, "_blank");
+    } else if (action === 'call' && telHref) {
+      window.location.href = telHref;
+    }
+  };
 
   if (loading) {
     return (
@@ -588,6 +711,9 @@ const handleContactClick = (action) => {
   const images = property.imageUrls || [];
   const amenitiesList = Array.isArray(property?.amenities) ? property.amenities :
                        typeof property?.amenities === "string" ? property.amenities.split(",").map((a) => a.trim()) : [];
+
+  // ✅ Determine if user is an agent
+  const isAgent = user?.role === 'AGENT' || user?.role === 'ADMIN';
 
   return (
     <>
@@ -817,6 +943,171 @@ const handleContactClick = (action) => {
                 )}
               </div>
 
+              {/* ✅ FIXED: Agent Deal Creation Section */}
+              {isAgent && user && user.id !== property.user?.id && (
+                <div className="card pd-deal">
+                  <h3 className="pd-deal-title">🎯 Create Deal (Agent)</h3>
+
+                  {!showAgentDealCreation ? (
+                    <button
+                      onClick={() => setShowAgentDealCreation(true)}
+                      className="pd-btn pd-btn-primary"
+                      style={{ width: '100%' }}
+                    >
+                      ➕ Create New Deal
+                    </button>
+                  ) : (
+                    <div style={{ marginTop: '16px' }}>
+                      <div style={{
+                        background: '#fef3c7',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        border: '1px solid #fcd34d'
+                      }}>
+                        <strong>ℹ️ Agent Deal Creation</strong>
+                        <p style={{ fontSize: '12px', margin: '8px 0 0 0' }}>
+                          Search for buyer and enter deal price to create a new deal
+                        </p>
+                      </div>
+
+                      {agentDealError && (
+                        <div style={{
+                          background: '#fee2e2',
+                          color: '#dc2626',
+                          padding: '12px',
+                          borderRadius: '8px',
+                          marginBottom: '16px',
+                          fontSize: '13px',
+                          border: '1px solid #fecaca'
+                        }}>
+                          {agentDealError}
+                        </div>
+                      )}
+
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{
+                          display: 'block',
+                          marginBottom: '8px',
+                          fontWeight: '600',
+                          fontSize: '14px'
+                        }}>
+                          📱 Buyer Mobile Number
+                        </label>
+                        <input
+                          type="tel"
+                          className="pd-input"
+                          placeholder="Enter 10-digit mobile"
+                          value={buyerSearchPhone}
+                          onChange={(e) => {
+                            const phone = e.target.value.replace(/\D/g, '').slice(0, 10);
+                            setBuyerSearchPhone(phone);
+                            if (phone.length === 10) {
+                              handleBuyerSearch(phone);
+                            } else {
+                              setFoundBuyer(null);
+                            }
+                          }}
+                          maxLength="10"
+                          disabled={searchingBuyer}
+                        />
+                        <div style={{
+                          fontSize: '12px',
+                          marginTop: '6px',
+                          color: foundBuyer ? '#10b981' : '#64748b'
+                        }}>
+                          {searchingBuyer ? '🔍 Searching...' :
+                           foundBuyer ? `✅ Found: ${foundBuyer.firstName} ${foundBuyer.lastName}` :
+                           'Enter buyer\'s mobile number'}
+                        </div>
+                      </div>
+
+                      {foundBuyer && (
+                        <div style={{
+                          background: '#d1fae5',
+                          padding: '12px',
+                          borderRadius: '8px',
+                          marginBottom: '16px',
+                          border: '2px solid #10b981'
+                        }}>
+                          <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                            ✅ Buyer Found
+                          </div>
+                          <div style={{ fontSize: '13px' }}>
+                            {foundBuyer.firstName} {foundBuyer.lastName}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#047857' }}>
+                            📱 {foundBuyer.mobileNumber}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#047857' }}>
+                            📧 {foundBuyer.email || 'N/A'}
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{
+                          display: 'block',
+                          marginBottom: '8px',
+                          fontWeight: '600',
+                          fontSize: '14px'
+                        }}>
+                          💰 Deal Price (₹)
+                        </label>
+                        <input
+                          type="number"
+                          className="pd-input"
+                          placeholder="Enter deal price"
+                          value={agentDealPrice}
+                          onChange={(e) => {
+                            setAgentDealPrice(e.target.value.replace(/\D/g, ''));
+                            setAgentDealError('');
+                          }}
+                          disabled={!foundBuyer}
+                        />
+                        {agentDealPrice && (
+                          <div style={{
+                            fontSize: '12px',
+                            marginTop: '6px',
+                            color: '#10b981',
+                            fontWeight: '600'
+                          }}>
+                            ₹{parseFloat(agentDealPrice).toLocaleString('en-IN')}
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => {
+                            setShowAgentDealCreation(false);
+                            setBuyerSearchPhone('');
+                            setFoundBuyer(null);
+                            setAgentDealPrice('');
+                            setAgentDealError('');
+                          }}
+                          className="pd-btn pd-btn-secondary"
+                          style={{ flex: 1 }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleAgentCreateDeal}
+                          disabled={!foundBuyer || !agentDealPrice || parseFloat(agentDealPrice) <= 0}
+                          className="pd-btn pd-btn-primary"
+                          style={{
+                            flex: 1,
+                            opacity: (!foundBuyer || !agentDealPrice || parseFloat(agentDealPrice) <= 0) ? 0.6 : 1
+                          }}
+                        >
+                          ✅ Create Deal
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {showFeaturedSection && !featuredStatus?.featured && (
                 <div className="card pd-featured">
                   <h3 className="pd-featured-title">⭐ Make Your Property Featured</h3>
@@ -890,7 +1181,8 @@ const handleContactClick = (action) => {
                 </div>
               )}
 
-              {user && user.id !== property.user?.id && (
+              {/* Original Buyer Deal Creation (for USER role only) */}
+              {user && user.role === 'USER' && user.id !== property.user?.id && (
                 <div className="card pd-deal">
                   <h3 className="pd-deal-title">Make an Offer</h3>
                   {dealLoading ? (

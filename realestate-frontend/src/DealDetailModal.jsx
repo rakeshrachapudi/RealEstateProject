@@ -40,41 +40,13 @@ const DealDetailModal = ({
     : ["overview", "timeline"];
 
   useEffect(() => {
-    if (initialDeal && initialDeal.dealId) {
-      const fetchFullDeal = async () => {
-        try {
-          const response = await fetch(
-            `${BACKEND_BASE_URL}/api/deals/my-deals?userRole=${effectiveRole}&userId=${
-              initialDeal.agentId || initialDeal.buyerId || initialDeal.sellerId
-            }`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-              },
-            }
-          );
-          const data = await response.json();
-          if (response.ok && data?.data) {
-            const found = data.data.find(
-              (d) => d.dealId === initialDeal.dealId
-            );
-            setDeal(found || initialDeal || {});
-          } else {
-            setDeal(initialDeal || {});
-          }
-        } catch {
-          setDeal(initialDeal || {});
-        }
-      };
-      fetchFullDeal();
-    } else {
-      setDeal(initialDeal || {});
-    }
-
+    // ✅ FIXED: Just use initialDeal directly (already enriched by parent component)
+    // No need to fetch again - removes 403 error and improves performance
+    setDeal(initialDeal || {});
     setNewStage(initialDeal?.currentStage || initialDeal?.stage || "INQUIRY");
     setError(null);
     setNotes("");
-  }, [initialDeal, effectiveRole]);
+  }, [initialDeal]);
 
   useEffect(() => {
     if (activeTab === "timeline" && timelineEndRef.current) {
