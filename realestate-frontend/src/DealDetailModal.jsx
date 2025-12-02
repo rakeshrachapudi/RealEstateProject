@@ -1,5 +1,5 @@
 // realestate-frontend/src/DealDetailModal.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import DocumentUploadModal from "./DocumentUploadModal";
 import DealProgressBar from "./DealProgressBar";
@@ -123,7 +123,10 @@ const DealDetailModal = ({
     };
   };
 
-  const userDetails = extractUserDetails(deal, sellerInfo);
+  // Use useMemo to recalculate userDetails whenever deal or sellerInfo changes
+  const userDetails = useMemo(() => {
+    return extractUserDetails(deal, sellerInfo);
+  }, [deal, sellerInfo]);
 
   // Fetch seller info from property API
   useEffect(() => {
