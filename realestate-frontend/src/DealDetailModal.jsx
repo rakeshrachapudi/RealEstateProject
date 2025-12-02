@@ -24,6 +24,7 @@ const DealDetailModal = ({
   const [newStage, setNewStage] = useState(
     () => initialDeal?.currentStage || initialDeal?.stage || "INQUIRY"
   );
+  const [sellerInfo, setSellerInfo] = useState(null);
 
   const timelineEndRef = useRef(null);
   const navigate = useNavigate();
@@ -39,7 +40,159 @@ const DealDetailModal = ({
     ? ["overview", "timeline", "actions"]
     : ["overview", "timeline"];
 
+  // Enhanced helper function to extract user details
+  const extractUserDetails = (deal, fetchedSeller = null) => {
+    console.log("🔍 Extracting user details from deal:", deal);
+
+    // Buyer details with extensive fallbacks
+    const buyer = deal.buyer || {};
+    const buyerName =
+      deal.buyerName ||
+      `${buyer.firstName || ""} ${buyer.lastName || ""}`.trim() ||
+      buyer.name ||
+      `${buyer.first_name || ""} ${buyer.last_name || ""}`.trim() ||
+      "N/A";
+    const buyerEmail = deal.buyerEmail || buyer.email || "";
+    const buyerMobile =
+      deal.buyerMobile ||
+      buyer.mobile ||
+      buyer.phone ||
+      buyer.phoneNumber ||
+      "";
+
+    console.log("👤 Buyer extracted:", { buyerName, buyerEmail, buyerMobile });
+
+    // Seller details - use fetched seller info if available
+    const seller =
+      fetchedSeller ||
+      deal.seller ||
+      deal.property?.user ||
+      deal.property?.owner ||
+      {};
+    const sellerName =
+      deal.sellerName ||
+      `${seller.firstName || ""} ${seller.lastName || ""}`.trim() ||
+      seller.name ||
+      `${seller.first_name || ""} ${seller.last_name || ""}`.trim() ||
+      deal.property?.ownerName ||
+      "N/A";
+    const sellerEmail = deal.sellerEmail || seller.email || "";
+    const sellerMobile =
+      deal.sellerMobile ||
+      seller.mobile ||
+      seller.phone ||
+      seller.phoneNumber ||
+      "";
+
+    console.log("🏢 Seller extracted:", {
+      sellerName,
+      sellerEmail,
+      sellerMobile,
+    });
+    console.log("🏠 Property object:", deal.property);
+    console.log("📦 Fetched seller info:", fetchedSeller);
+
+    // Agent details with extensive fallbacks
+    const agent = deal.agent || {};
+    const agentName =
+      deal.agentName ||
+      `${agent.firstName || ""} ${agent.lastName || ""}`.trim() ||
+      agent.name ||
+      `${agent.first_name || ""} ${agent.last_name || ""}`.trim() ||
+      "Not Assigned";
+    const agentEmail = deal.agentEmail || agent.email || "";
+    const agentMobile =
+      deal.agentMobile ||
+      agent.mobile ||
+      agent.phone ||
+      agent.phoneNumber ||
+      "";
+
+    console.log("📊 Agent extracted:", { agentName, agentEmail, agentMobile });
+
+    return {
+      buyerName,
+      buyerEmail,
+      buyerMobile,
+      sellerName,
+      sellerEmail,
+      sellerMobile,
+      agentName,
+      agentEmail,
+      agentMobile,
+    };
+  };
+
+  const userDetails = extractUserDetails(deal, sellerInfo);
+
+  // Fetch seller info from property API
   useEffect(() => {
+    const fetchSellerInfo = async () => {
+      const propertyId =
+        deal.propertyId || deal.property?.propertyId || deal.property?.id;
+
+      if (!propertyId) {
+        console.log("⚠️ No propertyId found in deal");
+        return;
+      }
+
+      try {
+        console.log(
+          `🔍 Fetching property details for propertyId: ${propertyId}`
+        );
+
+        const response = await fetch(
+          `${BACKEND_BASE_URL}/api/properties/${propertyId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const propertyData = await response.json();
+          console.log("✅ Full property data fetched:", propertyData);
+
+          // Try multiple possible locations for seller/owner info
+          const seller =
+            propertyData.user ||
+            propertyData.owner ||
+            propertyData.data?.user ||
+            propertyData.data?.owner ||
+            propertyData.seller;
+
+          if (seller) {
+            console.log("✅ Seller info found in property:", seller);
+            setSellerInfo(seller);
+          } else {
+            console.log(
+              "⚠️ No seller/owner info in property response. Full response:",
+              propertyData
+            );
+          }
+        } else {
+          console.log(`❌ Failed to fetch property: ${response.status}`);
+        }
+      } catch (err) {
+        console.error("❌ Error fetching property details:", err);
+      }
+    };
+
+    if (deal && (deal.dealId || deal.id)) {
+      fetchSellerInfo();
+    }
+  }, [
+    deal.dealId,
+    deal.id,
+    deal.propertyId,
+    deal.property?.propertyId,
+    deal.property?.id,
+  ]);
+
+  useEffect(() => {
+    console.log("🎬 DealDetailModal mounted with initialDeal:", initialDeal);
+
     if (initialDeal && initialDeal.dealId) {
       const fetchFullDeal = async () => {
         try {
@@ -54,15 +207,19 @@ const DealDetailModal = ({
             }
           );
           const data = await response.json();
+          console.log("📥 Fetched full deal data:", data);
+
           if (response.ok && data?.data) {
             const found = data.data.find(
               (d) => d.dealId === initialDeal.dealId
             );
+            console.log("🔎 Found matching deal:", found);
             setDeal(found || initialDeal || {});
           } else {
             setDeal(initialDeal || {});
           }
-        } catch {
+        } catch (err) {
+          console.error("❌ Error fetching full deal:", err);
           setDeal(initialDeal || {});
         }
       };
@@ -480,20 +637,22 @@ const DealDetailModal = ({
                   <div className="ddm-info">
                     <div className="ddm-row">
                       <span className="ddm-label">Name</span>
-                      <span className="ddm-value">
-                        {deal.buyerName || "N/A"}
-                      </span>
+                      <span className="ddm-value">{userDetails.buyerName}</span>
                     </div>
-                    {deal.buyerEmail && (
+                    {userDetails.buyerEmail && (
                       <div className="ddm-row">
                         <span className="ddm-label">Email</span>
-                        <span className="ddm-value">{deal.buyerEmail}</span>
+                        <span className="ddm-value">
+                          {userDetails.buyerEmail}
+                        </span>
                       </div>
                     )}
-                    {deal.buyerMobile && isAgentOrAdmin && (
+                    {userDetails.buyerMobile && isAgentOrAdmin && (
                       <div className="ddm-row">
                         <span className="ddm-label">Phone</span>
-                        <span className="ddm-value">{deal.buyerMobile}</span>
+                        <span className="ddm-value">
+                          {userDetails.buyerMobile}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -505,19 +664,23 @@ const DealDetailModal = ({
                     <div className="ddm-row">
                       <span className="ddm-label">Name</span>
                       <span className="ddm-value">
-                        {deal.sellerName || "N/A"}
+                        {userDetails.sellerName}
                       </span>
                     </div>
-                    {deal.sellerEmail && (
+                    {userDetails.sellerEmail && (
                       <div className="ddm-row">
                         <span className="ddm-label">Email</span>
-                        <span className="ddm-value">{deal.sellerEmail}</span>
+                        <span className="ddm-value">
+                          {userDetails.sellerEmail}
+                        </span>
                       </div>
                     )}
-                    {deal.sellerMobile && isAgentOrAdmin && (
+                    {userDetails.sellerMobile && isAgentOrAdmin && (
                       <div className="ddm-row">
                         <span className="ddm-label">Phone</span>
-                        <span className="ddm-value">{deal.sellerMobile}</span>
+                        <span className="ddm-value">
+                          {userDetails.sellerMobile}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -528,20 +691,22 @@ const DealDetailModal = ({
                   <div className="ddm-info">
                     <div className="ddm-row">
                       <span className="ddm-label">Name</span>
-                      <span className="ddm-value">
-                        {deal.agentName || "Not Assigned"}
-                      </span>
+                      <span className="ddm-value">{userDetails.agentName}</span>
                     </div>
-                    {deal.agentEmail && (
+                    {userDetails.agentEmail && (
                       <div className="ddm-row">
                         <span className="ddm-label">Email</span>
-                        <span className="ddm-value">{deal.agentEmail}</span>
+                        <span className="ddm-value">
+                          {userDetails.agentEmail}
+                        </span>
                       </div>
                     )}
-                    {deal.agentMobile && isAgentOrAdmin && (
+                    {userDetails.agentMobile && isAgentOrAdmin && (
                       <div className="ddm-row">
                         <span className="ddm-label">Phone</span>
-                        <span className="ddm-value">{deal.agentMobile}</span>
+                        <span className="ddm-value">
+                          {userDetails.agentMobile}
+                        </span>
                       </div>
                     )}
                   </div>
