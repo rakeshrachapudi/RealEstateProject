@@ -1,4 +1,4 @@
-
+// new deal file
 // realestate-frontend/src/DealDetailModal.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
