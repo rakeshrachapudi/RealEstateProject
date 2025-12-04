@@ -154,7 +154,7 @@ function Footer() {
               <div className="footer-contact">
                 <p>📞 +91 63098 06984</p>
                 <p>📞 +91 77300 51329</p>
-                <p>✉️ info@propertydealz.com</p>
+                <p>✉️ info@propertydealz.in</p>
                 <p>📍 Kondapur, Hyderabad, 500084</p>
               </div>
 
