@@ -2,7 +2,10 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
-import LoginModal from "../LoginModal.jsx";  // ✅ FIXED - Same directory (components/)
+import LoginModal from "../LoginModal.jsx";
+import CreateDealModal from "./CreateDealModal.jsx";  // ✅ ADDED - For Agent/Admin deal creation
+import DealDetailModal from "../DealDetailModal.jsx";  // ✅ ADDED - For viewing existing deals
+import { canCreateDeal, isPropertyOwner, getRoleMessage } from "../config/rolePermissions";  // ✅ ADDED - Role permissions
 import { BACKEND_BASE_URL } from "../config/config";
 import "./PropertyDetails.css";
 import {
@@ -52,6 +55,11 @@ function PropertyDetails() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [viewTracked, setViewTracked] = useState(false);
 
+  // ✅ ADDED - Create Deal Modal State
+  const [showCreateDealModal, setShowCreateDealModal] = useState(false);
+  // ✅ ADDED - State for viewing existing deal
+  const [viewingDeal, setViewingDeal] = useState(null);
+
   useEffect(() => {
     fetchPropertyDetails();
   }, [propertyId]);
@@ -59,8 +67,23 @@ function PropertyDetails() {
   useEffect(() => {
     if (property && user) {
       fetchAgentForProperty();
-      checkExistingDeal();
       checkFeaturedStatus();
+
+      // ✅ UPDATED - Check for deals based on user role
+      if (user.role === "AGENT" || user.role === "ADMIN") {
+        // Agent/Admin: Check all deals on property
+        checkExistingDealForAgent();
+      } else if (user.role === "USER" || user.role === "BROKER") {
+        // USER: Check if they own the property (seller) or have a deal as buyer
+        const isPropertyOwner = property.user?.id === user.id || property.userId === user.id;
+        if (isPropertyOwner) {
+          // Property owner (seller): Check deals on their property
+          checkExistingDealForAgent();
+        } else {
+          // Not property owner: Check if they have a deal as buyer
+          checkExistingDeal();
+        }
+      }
       if (property.user?.id === user.id) {
         setShowFeaturedSection(true);
       } else {
@@ -129,7 +152,6 @@ useEffect(() => {
     }
   };
 
-  // ✅ FIXED: Better error handling for property tracking
   const trackPropertyView = async () => {
     if (!user) return;
 
@@ -138,7 +160,6 @@ useEffect(() => {
 
       const token = localStorage.getItem("authToken");
 
-      // Don't track if no token
       if (!token) {
         console.log('⚠️ No auth token, skipping tracking');
         return;
@@ -166,11 +187,9 @@ useEffect(() => {
         console.log('✅ Property view tracked:', result);
         setViewTracked(true);
       } else {
-        // Don't throw error, just log warning
         console.warn('⚠️ Failed to track property view:', response.status);
       }
     } catch (error) {
-      // Silently fail - tracking should not break the user experience
       console.warn('⚠️ Error tracking property view:', error.message);
     }
   };
@@ -200,7 +219,6 @@ useEffect(() => {
     }
   };
 
-  // ✅ FIXED: Better deal detection with proper endpoint and error handling
   const checkExistingDeal = async () => {
     if (!user?.id) {
       setDealLoading(false);
@@ -234,7 +252,6 @@ useEffect(() => {
         const data = await response.json();
         console.log('📦 Deal check response data:', data);
 
-        // Handle different response structures
         let deal = null;
         if (data.success && data.data) {
           deal = data.data;
@@ -250,7 +267,6 @@ useEffect(() => {
           setExistingDeal(null);
         }
       } else if (response.status === 404) {
-        // 404 means no deal exists - this is expected
         console.log('ℹ️ No deal exists (404)');
         setExistingDeal(null);
       } else {
@@ -259,6 +275,78 @@ useEffect(() => {
       }
     } catch (error) {
       console.error('❌ Error checking existing deal:', error);
+      setExistingDeal(null);
+    } finally {
+      setDealLoading(false);
+    }
+  };
+
+  // ✅ UPDATED - Check if agent/admin OR property owner (USER) has any deal on this property
+  const checkExistingDealForAgent = async () => {
+    // Allow AGENT, ADMIN, or USER who is property owner
+    if (!user?.id) {
+      setDealLoading(false);
+      return;
+    }
+
+    // Check if user is allowed to view property deals
+    const isAgentOrAdmin = user.role === "AGENT" || user.role === "ADMIN";
+    const isPropertyOwner = property && (property.user?.id === user.id || property.userId === user.id);
+
+    if (!isAgentOrAdmin && !isPropertyOwner) {
+      setDealLoading(false);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setDealLoading(false);
+        return;
+      }
+
+      console.log(`🔍 Agent checking for any deals on property: ${propertyId}`);
+
+      // Check all deals on this property
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/deals/property/${propertyId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📦 Property deals response:', data);
+
+        let deals = [];
+        if (data.success && Array.isArray(data.data)) {
+          deals = data.data;
+        } else if (Array.isArray(data)) {
+          deals = data;
+        }
+
+        // Find the most recent deal
+        if (deals.length > 0) {
+          const latestDeal = deals.sort((a, b) =>
+            new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+          )[0];
+
+          console.log('✅ Found existing deal on property:', latestDeal);
+          setExistingDeal(latestDeal);
+        } else {
+          console.log('ℹ️ No deals found on this property');
+          setExistingDeal(null);
+        }
+      } else {
+        console.log('ℹ️ No deals found or error');
+        setExistingDeal(null);
+      }
+    } catch (error) {
+      console.error('❌ Error checking property deals:', error);
       setExistingDeal(null);
     } finally {
       setDealLoading(false);
@@ -413,7 +501,6 @@ useEffect(() => {
     }
   };
 
-  // ✅ FIXED: Better deal creation with proper error handling
   const handleCreateDeal = async () => {
     if (!offerAmount || parseFloat(offerAmount) <= 0) {
       setDealError("Please enter a valid offer amount");
@@ -534,6 +621,24 @@ const handleContactClick = (action) => {
   }
 };
 
+  // ✅ ADDED - Handler for Create Deal Modal Success
+  const handleDealCreatedSuccess = () => {
+    setShowCreateDealModal(false);
+    if (user.role === "AGENT" || user.role === "ADMIN") {
+      checkExistingDealForAgent(); // Refresh for agent/admin
+    } else {
+      checkExistingDeal(); // Refresh for buyer
+    }
+    alert("✅ Deal created successfully!");
+  };
+
+  // ✅ ADDED - Handler to view existing deal
+  const handleViewDeal = () => {
+    if (existingDeal) {
+      setViewingDeal(existingDeal);
+    }
+  };
+
   if (loading) {
     return (
       <div className="pd-page">
@@ -589,15 +694,71 @@ const handleContactClick = (action) => {
   const amenitiesList = Array.isArray(property?.amenities) ? property.amenities :
                        typeof property?.amenities === "string" ? property.amenities.split(",").map((a) => a.trim()) : [];
 
+  // ✅ UPDATED - Role-based access control using permission functions
+  // Only ADMIN and AGENT can create deals (not BROKER, SELLER, or BUYER)
+  const isAgentOrAdmin = user ? canCreateDeal(user.role) : false;
+  const isNotPropertyOwner = user && property ? !isPropertyOwner(user, property) : false;
+  const roleMessage = user ? getRoleMessage(user.role) : '';
+
   return (
     <>
       {showLoginModal && (
         <LoginModal onClose={() => setShowLoginModal(false)} />
       )}
 
+      {/* ✅ ADDED - Create Deal Modal for ADMIN/AGENT */}
+      {showCreateDealModal && isAgentOrAdmin && (
+        <CreateDealModal
+          propertyId={propertyId}
+          propertyTitle={property.title}
+          onClose={() => setShowCreateDealModal(false)}
+          onSuccess={handleDealCreatedSuccess}
+        />
+      )}
+
+      {/* ✅ ADDED - Deal Detail Modal for viewing existing deals */}
+      {viewingDeal && (
+        <DealDetailModal
+          deal={viewingDeal}
+          onClose={() => setViewingDeal(null)}
+          onUpdate={(updatedDeal) => {
+            setViewingDeal(null);
+            if (user.role === "AGENT" || user.role === "ADMIN") {
+              checkExistingDealForAgent();
+            } else {
+              checkExistingDeal();
+            }
+          }}
+          userRole={user?.role}
+        />
+      )}
+
       <div className="pd-page">
         <div className="pd-container">
           <button onClick={() => navigate(-1)} className="pd-back">← Back</button>
+
+          {/* ✅ UPDATED - Show button for AGENT/ADMIN creating deals OR any user with existing deal */}
+          {((isAgentOrAdmin && isNotPropertyOwner) || existingDeal) && (
+            <button
+              onClick={() => existingDeal ? handleViewDeal() : setShowCreateDealModal(true)}
+              className="pd-btn pd-btn-primary"
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                zIndex: 10,
+                padding: '12px 24px',
+                fontSize: '16px',
+                fontWeight: '600',
+                backgroundColor: existingDeal ? '#3b82f6' : '#10b981',
+                boxShadow: existingDeal
+                  ? '0 4px 12px rgba(59, 130, 246, 0.3)'
+                  : '0 4px 12px rgba(16, 185, 129, 0.3)'
+              }}
+            >
+              {existingDeal ? '👁️ View & Manage Deal' : '➕ Create Deal'}
+            </button>
+          )}
 
           {images.length > 0 ? (
             <div className="pd-images">
@@ -817,6 +978,59 @@ const handleContactClick = (action) => {
                 )}
               </div>
 
+              {/* ✅ ADDED - Create Deal OR View Deal Card for ADMIN/AGENT (in sidebar) */}
+              {((isAgentOrAdmin && isNotPropertyOwner) || (existingDeal && user))&& (
+                <div className="card pd-deal">
+                  <h3 className="pd-deal-title">🎯 Agent Actions</h3>
+                  {existingDeal ? (
+                    <>
+                      <div style={{
+                        padding: '16px',
+                        backgroundColor: '#eff6ff',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        border: '1px solid #3b82f6'
+                      }}>
+                        <div style={{ fontSize: '14px', color: '#1e40af', marginBottom: '8px', fontWeight: '600' }}>
+                          ✅ Deal Exists on This Property
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>
+                          <strong>Deal #:</strong> {existingDeal.dealId || existingDeal.id}
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>
+                          <strong>Stage:</strong> {existingDeal.stage || existingDeal.currentStage || 'INQUIRY'}
+                        </div>
+                        {existingDeal.buyerName && (
+                          <div style={{ fontSize: '13px', color: '#64748b' }}>
+                            <strong>Buyer:</strong> {existingDeal.buyerName}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={handleViewDeal}
+                        className="pd-btn pd-btn-primary"
+                        style={{ width: '100%', backgroundColor: '#3b82f6' }}
+                      >
+                        👁️ View & Manage Deal
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px' }}>
+                        {roleMessage}
+                      </p>
+                      <button
+                        onClick={() => setShowCreateDealModal(true)}
+                        className="pd-btn pd-btn-primary"
+                        style={{ width: '100%' }}
+                      >
+                        ➕ Create New Deal
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
               {showFeaturedSection && !featuredStatus?.featured && (
                 <div className="card pd-featured">
                   <h3 className="pd-featured-title">⭐ Make Your Property Featured</h3>
@@ -890,62 +1104,8 @@ const handleContactClick = (action) => {
                 </div>
               )}
 
-              {user && user.id !== property.user?.id && (
-                <div className="card pd-deal">
-                  <h3 className="pd-deal-title">Make an Offer</h3>
-                  {dealLoading ? (
-                    <div className="pd-deal-loading">
-                      <div className="pd-spinner small" />
-                      <span>Checking for existing deals...</span>
-                    </div>
-                  ) : existingDeal ? (
-                    <div className="pd-deal-exists">
-                      <div className="pd-deal-badge">✅ Active Deal Found</div>
-                      <p className="pd-deal-info">
-                        Current Stage: <strong>{existingDeal.stage || existingDeal.currentStage || 'INQUIRY'}</strong>
-                      </p>
-                      {existingDeal.agreedPrice && (
-                        <p className="pd-deal-info">
-                          Agreed Price: <strong>₹{existingDeal.agreedPrice.toLocaleString()}</strong>
-                        </p>
-                      )}
-                      <button
-                        onClick={() => navigate(`/my-deals`)}
-                        className="pd-btn pd-btn-view"
-                      >
-                        View Deal Details
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="pd-deal-none">
-                      <div className="pd-deal-none-badge">No Active Deal</div>
-                      <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px' }}>
-                        Create a deal to start negotiating for this property
-                      </p>
-                      <div className="pd-deal-create">
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
-                          Your Offer Amount
-                        </label>
-                        <input
-                          type="number"
-                          className="pd-input"
-                          placeholder="Enter your offer (₹)"
-                          value={offerAmount}
-                          onChange={(e) => setOfferAmount(e.target.value)}
-                        />
-                        {dealError && <div className="pd-alert">{dealError}</div>}
-                        <button
-                          onClick={handleCreateDeal}
-                          className="pd-btn pd-btn-primary"
-                          disabled={!offerAmount || parseFloat(offerAmount) <= 0}
-                        >
-                          Create Deal
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+
+
 
               <div className="card pd-details">
                 <h3 className="pd-details-title">Property Details</h3>

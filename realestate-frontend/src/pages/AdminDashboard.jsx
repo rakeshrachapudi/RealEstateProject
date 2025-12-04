@@ -1,8 +1,9 @@
-// realestate-frontend/src/pages/AdminDashboard.jsx
+// realestate-frontend/src/pages/AdminDashboard.jsx - FIXED VERSION
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../AuthContext.jsx";
 import { BACKEND_BASE_URL } from "../config/config";
 import DealDetailModal from "../DealDetailModal.jsx";
+import { enrichDealsArray } from "../utils/dealDataEnricher.js"; // ✅ NEW IMPORT
 import "./AdminDashboard.css";
 
 export default function AdminDashboard() {
@@ -24,8 +25,8 @@ export default function AdminDashboard() {
   });
 
   // Agent leaderboard and recent deals
-  const [agents, setAgents] = useState([]); // [{ agentId, agentName, totalDeals, completedDeals, ... }]
-  const [recentDeals, setRecentDeals] = useState([]); // flat list across agents, sorted by createdAt desc
+  const [agents, setAgents] = useState([]);
+  const [recentDeals, setRecentDeals] = useState([]);
 
   // UI state
   const [stageFilter, setStageFilter] = useState("ALL");
@@ -99,36 +100,69 @@ export default function AdminDashboard() {
       }
       setAgents(perf);
 
-      // 3) Recent deals: pull last N per top agents (or all agents) and flatten
+      // 3) Recent deals: pull from all/top agents and flatten
+      console.log("📊 Fetching deals from top agents...");
       const topAgentIds = perf.slice(0, 6).map((a) => a.agentId);
+
       const dealLists = await Promise.allSettled(
         topAgentIds.map((id) =>
           fetch(`${BACKEND_BASE_URL}/api/deals/admin/agent/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
           })
-            .then((r) => (r.ok ? r.json() : []))
-            .then((d) => (Array.isArray(d) ? d : d?.data || []))
+            .then((r) => {
+              if (!r.ok) {
+                console.warn(`Failed to fetch deals for agent ${id}: ${r.status}`);
+                return [];
+              }
+              return r.json();
+            })
+            .then((d) => {
+              const dealsArray = Array.isArray(d) ? d : d?.data || [];
+              console.log(`Agent ${id} deals:`, dealsArray.length);
+              return dealsArray;
+            })
+            .catch(err => {
+              console.error(`Error fetching deals for agent ${id}:`, err);
+              return [];
+            })
         )
       );
+
       const flat = dealLists
         .filter((r) => r.status === "fulfilled")
         .flatMap((r) => r.value);
-      // dedupe by dealId/id and sort newest first
+
+      console.log(`📦 Total raw deals fetched: ${flat.length}`);
+
+      // ✅ CRITICAL FIX: Enrich all deal data to flatten nested objects
+      const enrichedDeals = enrichDealsArray(flat);
+      console.log(`✅ Enriched deals: ${enrichedDeals.length}`);
+
+      // Log first deal to verify enrichment
+      if (enrichedDeals.length > 0) {
+        console.log("Sample enriched deal:", enrichedDeals[0]);
+      }
+
+      // Dedupe by dealId/id and sort newest first
       const seen = new Set();
       const unique = [];
-      for (const d of flat) {
+      for (const d of enrichedDeals) {
         const id = d.dealId || d.id;
         if (id && !seen.has(id)) {
           seen.add(id);
           unique.push(d);
         }
       }
+
       unique.sort(
         (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
       );
+
+      console.log(`✅ Final unique deals: ${unique.length}`);
       setRecentDeals(unique.slice(0, 20));
+
     } catch (e) {
-      console.error(e);
+      console.error("❌ Error loading dashboard data:", e);
       setErr("Failed to load dashboard data.");
     } finally {
       setLoading(false);
@@ -152,26 +186,30 @@ export default function AdminDashboard() {
   const filteredRecent = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return recentDeals.filter((d) => {
+      // Stage filter
       if (
         stageFilter !== "ALL" &&
         (d.stage || d.currentStage) !== stageFilter
       ) {
         return false;
       }
+
+      // Search filter
       if (!needle) return true;
-      const txt = [
-        d.propertyTitle || d.property?.title || "",
-        d.buyerName || `${d.buyer?.firstName || ""} ${d.buyer?.lastName || ""}`,
-        d.sellerName ||
-          `${d.property?.user?.firstName || ""} ${
-            d.property?.user?.lastName || ""
-          }`,
-        d.agentName || `${d.agent?.firstName || ""} ${d.agent?.lastName || ""}`,
-        d.propertyCity || d.property?.city || "",
+
+      // ✅ FIXED: Use enriched flat fields for search
+      const searchText = [
+        d.propertyTitle || "",
+        d.buyerName || "", // Now properly enriched
+        d.sellerName || "", // Now properly enriched
+        d.agentName || "", // Now properly enriched
+        d.propertyCity || "",
+        d.propertyLocation || "",
       ]
         .join(" ")
         .toLowerCase();
-      return txt.includes(needle);
+
+      return searchText.includes(needle);
     });
   }, [recentDeals, stageFilter, search]);
 
@@ -320,29 +358,29 @@ export default function AdminDashboard() {
             </div>
 
             {filteredRecent.length === 0 ? (
-              <div className="adm-state">No deals match current filters.</div>
+              <div className="adm-state">
+                {recentDeals.length === 0
+                  ? "No deals found. Start by assigning agents to properties."
+                  : "No deals match current filters."}
+              </div>
             ) : (
               <div className="adm-recent-grid">
                 {filteredRecent.map((d) => {
                   const id = d.dealId || d.id;
                   const stage = d.stage || d.currentStage || "INQUIRY";
                   const price = d.agreedPrice || d.propertyPrice;
-                  const buyer =
-                    d.buyerName ||
-                    `${d.buyer?.firstName || ""} ${
-                      d.buyer?.lastName || ""
-                    }`.trim();
-                  const seller =
-                    d.sellerName ||
-                    `${d.property?.user?.firstName || ""} ${
-                      d.property?.user?.lastName || ""
-                    }`.trim();
+
+                  // ✅ FIXED: Now using enriched flat fields
+                  const buyer = d.buyerName || "Buyer N/A";
+                  const seller = d.sellerName || "Seller N/A";
+                  const agent = d.agentName || "Agent N/A";
 
                   return (
                     <div
                       key={id}
                       className="adm-deal-card"
                       onClick={() => setSelectedDeal(d)}
+                      style={{ cursor: 'pointer' }}
                     >
                       <div
                         className={`adm-stage-badge stage-${stage.toLowerCase()}`}
@@ -350,14 +388,15 @@ export default function AdminDashboard() {
                         {stage}
                       </div>
                       <div className="adm-deal-title">
-                        {d.propertyTitle || d.property?.title || "Property"}
+                        {d.propertyTitle || "Property"}
                       </div>
                       {price && (
                         <div className="adm-deal-price">₹{k(price)}</div>
                       )}
                       <div className="adm-deal-meta">
-                        <span>Buyer: {buyer || "N/A"}</span>
-                        <span>Seller: {seller || "N/A"}</span>
+                        <div><strong>👤 Buyer:</strong> {buyer}</div>
+                        <div><strong>🏢 Seller:</strong> {seller}</div>
+                        <div><strong>📊 Agent:</strong> {agent}</div>
                       </div>
                       <div className="adm-deal-date">
                         {new Date(

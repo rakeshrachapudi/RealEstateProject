@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import DealDetailsPopup from '../components/DealDetailsPopup';
 import { BACKEND_BASE_URL } from "../config/config";
+import '../DealStatusCard.css'; // ✅ Reuse Home/DealStatusCard styles
 
 const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
   const { user } = useAuth();
@@ -264,39 +265,70 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
                 <div style={styles.propertiesGrid}>
                   {properties.map(property => {
                     const propertyId = property.id || property.propertyId;
-                    const isSelected = selectedProperty?.id === propertyId || selectedProperty?.propertyId === propertyId;
+                    const isSelected =
+                      selectedProperty?.id === propertyId ||
+                      selectedProperty?.propertyId === propertyId;
                     const existingDeal = getPropertyDeal(propertyId);
-
                     return (
                       <div
                         key={propertyId}
+                        className="deal-status-card"
                         style={{
                           ...styles.propertyItem,
                           borderColor: isSelected ? '#3b82f6' : '#e2e8f0',
                           backgroundColor: isSelected ? '#eff6ff' : 'white',
-                          boxShadow: isSelected ? '0 4px 12px rgba(59, 130, 246, 0.2)' : '0 1px 3px rgba(0,0,0,0.1)',
+                          boxShadow: isSelected
+                            ? '0 4px 12px rgba(59, 130, 246, 0.2)'
+                            : '0 1px 3px rgba(0,0,0,0.1)',
                           opacity: existingDeal ? 0.7 : 1
                         }}
                         onClick={() => !existingDeal && setSelectedProperty(property)}
                       >
                         <img
-                          src={property.imageUrl || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop'}
+                          src={
+                            property.imageUrl ||
+                            'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop'
+                          }
                           alt={property.title}
                           style={styles.propertyImage}
                         />
                         <div style={styles.propertyDetails}>
-                          <h4 style={styles.propertyTitle}>{property.title}</h4>
-                          <p style={styles.propertyPrice}>💰 ₹{formatPrice(property.price)}</p>
-                          <p style={styles.propertySpecs}>
-                            🛏️ {property.bedrooms} | 🚿 {property.bathrooms} | 📐 {property.areaSqft || 'N/A'} sqft
+                          <h4
+                            className="property-title"
+                            style={styles.propertyTitle}
+                            title={property.title}
+                          >
+                            {property.title}
+                          </h4>
+                          <p
+                            className="detail-value"
+                            style={styles.propertyPrice}
+                            title={`₹${formatPrice(property.price)}`}
+                          >
+                            💰 ₹{formatPrice(property.price)}
                           </p>
-                          <p style={styles.propertyLocation}>📍 {property.areaName || property.city}</p>
+                          <p style={styles.propertySpecs}>
+                            🛏️ {property.bedrooms} | 🚿 {property.bathrooms} | 📐{' '}
+                            {property.areaSqft || 'N/A'} sqft
+                          </p>
+                          <p
+                            className="detail-value"
+                            style={styles.propertyLocation}
+                            title={property.areaName || property.city}
+                          >
+                            📍 {property.areaName || property.city}
+                          </p>
 
                           {/* REQUIREMENT: Show Seller Mobile */}
                           {property.user && (
                             <div style={styles.sellerInfo}>
-                              <p style={styles.sellerLabel}>🏠 Seller: {property.user.firstName} {property.user.lastName}</p>
-                              <p style={styles.sellerPhone}>📱 {property.user.mobileNumber || 'N/A'}</p>
+                              <p style={styles.sellerLabel}>
+                                🏠 Seller: {property.user.firstName}{' '}
+                                {property.user.lastName}
+                              </p>
+                              <p style={styles.sellerPhone}>
+                                📱 {property.user.mobileNumber || 'N/A'}
+                              </p>
                             </div>
                           )}
 
@@ -324,14 +356,26 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
                             <>
                               {/* REQUIREMENT: Deal Price Input */}
                               <div style={{ marginBottom: '12px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px', color: '#1e293b' }}>
+                                <label
+                                  style={{
+                                    display: 'block',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    marginBottom: '4px',
+                                    color: '#1e293b'
+                                  }}
+                                >
                                   💰 Deal Price (₹) *
                                 </label>
                                 <input
                                   type="number"
                                   placeholder="Enter agreed price"
                                   value={dealPrice}
-                                  onChange={(e) => setDealPrice(e.target.value.replace(/\D/g, ''))}
+                                  onChange={(e) =>
+                                    setDealPrice(
+                                      e.target.value.replace(/\D/g, '')
+                                    )
+                                  }
                                   style={{
                                     width: '100%',
                                     padding: '8px 12px',
@@ -342,20 +386,32 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
                                   }}
                                 />
                                 {dealPrice && (
-                                  <div style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>
+                                  <div
+                                    style={{
+                                      fontSize: '12px',
+                                      color: '#10b981',
+                                      marginTop: '4px'
+                                    }}
+                                  >
                                     ₹{formatPrice(dealPrice)}
                                   </div>
                                 )}
                               </div>
                               <button
+                                className="view-deal-btn"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleCreateDeal(propertyId);
                                 }}
                                 disabled={loading || !dealPrice}
-                                style={{ ...styles.selectBtn, opacity: (loading || !dealPrice) ? 0.6 : 1 }}
+                                style={{
+                                  opacity:
+                                    loading || !dealPrice ? 0.6 : 1
+                                }}
                               >
-                                {loading ? '⏳ Creating...' : '✅ Create Deal'}
+                                {loading
+                                  ? '⏳ Creating...'
+                                  : '✅ Create Deal'}
                               </button>
                             </>
                           ) : null}
@@ -377,7 +433,7 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
             <div style={styles.buttonGroup}>
               <button
                 onClick={onClose}
-                style={{...styles.secondaryButton, flex: '0 1 auto'}}
+                style={{ ...styles.secondaryButton, flex: '0 1 auto' }}
               >
                 Cancel
               </button>
@@ -389,10 +445,15 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
                     setError('Please enter a valid 10-digit phone number');
                   }
                 }}
-                disabled={loading || searching || buyerPhone.length !== 10}
+                disabled={
+                  loading || searching || buyerPhone.length !== 10
+                }
                 style={{
                   ...styles.primaryButton,
-                  opacity: (loading || searching || buyerPhone.length !== 10) ? 0.6 : 1,
+                  opacity:
+                    loading || searching || buyerPhone.length !== 10
+                      ? 0.6
+                      : 1
                 }}
               >
                 {searching ? '🔍 Searching...' : '🔍 Search Buyer'}
@@ -402,8 +463,14 @@ const BrowsePropertiesForDeal = ({ onDealCreated, onClose }) => {
 
           {/* Info Box */}
           <div style={styles.noteBox}>
-            <strong>ℹ️ REQUIREMENT:</strong> Only agents can create deals. This deal will show:
-            <ul style={{margin: '8px 0', paddingLeft: '20px'}}>
+            <strong>ℹ️ REQUIREMENT:</strong> Only agents can create deals.
+            This deal will show:
+            <ul
+              style={{
+                margin: '8px 0',
+                paddingLeft: '20px'
+              }}
+            >
               <li>✅ Agent ID: {user?.id}</li>
               <li>✅ Buyer Mobile: From Step 1</li>
               <li>✅ Seller Mobile: From property details</li>
@@ -653,88 +720,67 @@ const styles = {
     padding: '12px',
     backgroundColor: '#f0f9ff',
     borderRadius: '6px',
-    border: '1px solid #bae6fd',
-    marginBottom: '8px'
-  },
-  sellerLabel: {
-    margin: '0 0 4px 0',
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#0369a1'
-  },
-  sellerPhone: {
     margin: 0,
     fontSize: '12px',
     color: '#0369a1'
-  },
-  agentInfoSmall: {
-    padding: '8px 12px',
-    backgroundColor: '#fef3c7',
-    borderRadius: '6px',
-    border: '1px solid #fcd34d',
-    marginBottom: '12px'
-  },
-  agentLabel: {
-    margin: 0,
-    fontSize: '11px',
-    fontWeight: '600',
-    color: '#92400e'
-  },
-  dealExistsBadge: {
-    padding: '8px 12px',
-    backgroundColor: '#d1fae5',
-    color: '#065f46',
-    borderRadius: '6px',
-    fontSize: '12px',
-    fontWeight: '600',
-    marginBottom: '12px',
-    border: '1px solid #6ee7b7',
-    textAlign: 'center'
-  },
-  selectBtn: {
-    width: '100%',
-    padding: '10px',
-    backgroundColor: '#3b82f6',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontWeight: '600',
-    fontSize: '13px',
-    transition: 'background 0.2s'
-  },
-  viewDealBtn: {
-    width: '100%',
-    padding: '10px',
-    backgroundColor: '#10b981',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontWeight: '600',
-    fontSize: '13px',
-    transition: 'background 0.2s'
-  },
-  noProperties: {
-    gridColumn: '1 / -1',
-    textAlign: 'center',
-    padding: '40px',
-    color: '#64748b',
-    backgroundColor: '#f8fafc',
-    borderRadius: '8px',
-    border: '1px dashed #e2e8f0'
-  },
-  step1: { marginTop: '16px' },
-  step2: { marginTop: '16px' },
-  noteBox: {
-    backgroundColor: '#fef3c7',
-    border: '1px solid #fcd34d',
-    padding: '12px 16px',
-    borderRadius: '8px',
-    fontSize: '13px',
-    color: '#92400e',
-    marginTop: '20px'
-  }
-};
+      },
+      agentInfoSmall: {
+        padding: '8px 12px',
+        backgroundColor: '#fef3c7',
+        borderRadius: '6px',
+        border: '1px solid #fcd34d',
+        marginBottom: '12px'
+      },
+      agentLabel: {
+        margin: 0,
+        fontSize: '11px',
+        fontWeight: '600',
+        color: '#92400e'
+      },
+      dealExistsBadge: {
+        padding: '8px 12px',
+        backgroundColor: '#d1fae5',
+        color: '#065f46',
+        borderRadius: '6px',
+        fontSize: '12px',
+        fontWeight: '600',
+        marginBottom: '12px',
+        border: '1px solid #6ee7b7',
+        textAlign: 'center'
+      },
+      viewDealBtn: {
+        width: '100%',
+        padding: '10px',
+        backgroundColor: '#10b981',
+        color: 'white',
+        border: 'none',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        fontWeight: '600',
+        fontSize: '13px',
+        transition: 'background 0.2s'
+      },
+      noProperties: {
+        gridColumn: '1 / -1',
+        textAlign: 'center',
+        padding: '40px',
+        color: '#64748b',
+        backgroundColor: '#f8fafc',
+        borderRadius: '8px',
+        border: '1px dashed #e2e8f0'
+      },
+      step1: { marginTop: '16px' },
+      step2: { marginTop: '16px' },
+      noteBox: {
+        backgroundColor: '#fef3c7',
+        border: '1px solid #fcd34d',
+        padding: '12px 16px',
+        borderRadius: '8px',
+        fontSize: '13px',
+        color: '#92400e',
+        marginTop: '20px'
+      }
+    };
 
-export default BrowsePropertiesForDeal;
+    export default BrowsePropertiesForDeal;
+

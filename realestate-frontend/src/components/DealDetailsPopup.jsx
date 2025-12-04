@@ -26,11 +26,33 @@ const DealDetailsPopup = ({ deal, onClose }) => {
   if (!deal) return null;
 
   const currentStage = deal.stage || deal.currentStage || 'INQUIRY';
-  const buyerName = deal.buyer ? `${deal.buyer.firstName} ${deal.buyer.lastName}` : 'N/A';
-  const sellerName = deal.seller ? `${deal.seller.firstName} ${deal.seller.lastName}` : 'N/A';
-  const agentName = deal.agent ? `${deal.agent.firstName} ${deal.agent.lastName}` : 'Not Assigned';
-  const propertyTitle = deal.property?.title || 'Property';
-  const propertyPrice = deal.agreedPrice || deal.property?.price || 'TBD';
+
+  // ✅ FIXED: Support both flat fields and nested objects
+  const buyerName = deal.buyerName ||
+    (deal.buyer ? `${deal.buyer.firstName || ''} ${deal.buyer.lastName || ''}`.trim() : null) ||
+    'N/A';
+
+  const buyerEmail = deal.buyerEmail || deal.buyer?.email || null;
+  const buyerMobile = deal.buyerMobile || deal.buyer?.mobileNumber || null;
+
+  // ✅ FIXED: Seller with flat fields first, then nested
+  const sellerName = deal.sellerName ||
+    (deal.seller ? `${deal.seller.firstName || ''} ${deal.seller.lastName || ''}`.trim() : null) ||
+    'N/A';
+
+  const sellerEmail = deal.sellerEmail || deal.seller?.email || null;
+  const sellerMobile = deal.sellerMobile || deal.seller?.mobileNumber || null;
+
+  // ✅ FIXED: Agent with flat fields first, then nested
+  const agentName = deal.agentName ||
+    (deal.agent ? `${deal.agent.firstName || ''} ${deal.agent.lastName || ''}`.trim() : null) ||
+    'Not Assigned';
+
+  const agentEmail = deal.agentEmail || deal.agent?.email || null;
+  const agentMobile = deal.agentMobile || deal.agent?.mobileNumber || null;
+
+  const propertyTitle = deal.propertyTitle || deal.property?.title || 'Property';
+  const propertyPrice = deal.agreedPrice || deal.propertyPrice || deal.property?.price || 'TBD';
 
   return (
     <div style={styles.backdrop} onClick={onClose}>
@@ -64,8 +86,8 @@ const DealDetailsPopup = ({ deal, onClose }) => {
             <p style={{
               ...styles.stageBadge,
               backgroundColor: getStageColor(currentStage),
-              display: 'inline-block', // To fit content
-              fontSize: '16px' // Make it slightly larger
+              display: 'inline-block',
+              fontSize: '16px'
             }}>
               {currentStage}
             </p>
@@ -100,52 +122,58 @@ const DealDetailsPopup = ({ deal, onClose }) => {
             <div style={styles.infoBox}>
               <p style={styles.label}>Name</p>
               <p style={styles.value}>{buyerName}</p>
-              {deal.buyer?.email && (
+              {buyerEmail && (
                 <>
                   <p style={styles.label}>Email</p>
-                  <p style={styles.value}>{deal.buyer.email}</p>
+                  <p style={styles.value}>{buyerEmail}</p>
                 </>
               )}
-              {deal.buyer?.mobileNumber && (
+              {buyerMobile && (
                 <>
                   <p style={styles.label}>Phone</p>
-                  <p style={styles.value}>{deal.buyer.mobileNumber}</p>
+                  <p style={styles.value}>{buyerMobile}</p>
                 </>
               )}
             </div>
           </div>
 
-          {/* Seller Section */}
+          {/* Seller Section - ✅ FIXED */}
           <div style={styles.section}>
             <h3 style={styles.sectionTitle}>🏢 Seller</h3>
             <div style={styles.infoBox}>
               <p style={styles.label}>Name</p>
               <p style={styles.value}>{sellerName}</p>
-              {deal.seller?.email && (
+              {sellerEmail && (
                 <>
                   <p style={styles.label}>Email</p>
-                  <p style={styles.value}>{deal.seller.email}</p>
+                  <p style={styles.value}>{sellerEmail}</p>
                 </>
               )}
-              {deal.seller?.mobileNumber && (
+              {sellerMobile && (
                 <>
                   <p style={styles.label}>Phone</p>
-                  <p style={styles.value}>{deal.seller.mobileNumber}</p>
+                  <p style={styles.value}>{sellerMobile}</p>
                 </>
               )}
             </div>
           </div>
 
-          {/* Agent Section */}
+          {/* Agent Section - ✅ FIXED */}
           <div style={styles.section}>
             <h3 style={styles.sectionTitle}>📊 Agent</h3>
             <div style={styles.infoBox}>
               <p style={styles.label}>Agent Name</p>
               <p style={styles.value}>{agentName}</p>
-              {deal.agent?.email && (
+              {agentEmail && (
                 <>
                   <p style={styles.label}>Email</p>
-                  <p style={styles.value}>{deal.agent.email}</p>
+                  <p style={styles.value}>{agentEmail}</p>
+                </>
+              )}
+              {agentMobile && (
+                <>
+                  <p style={styles.label}>Phone</p>
+                  <p style={styles.value}>{agentMobile}</p>
                 </>
               )}
             </div>
