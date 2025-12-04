@@ -305,7 +305,9 @@ function HomePage() {
     try {
       const token = localStorage.getItem("authToken");
       if (!token) {
-        console.warn("Authentication token missing. Cannot fetch user properties.");
+        console.warn(
+          "Authentication token missing. Cannot fetch user properties."
+        );
         setLoadingMyProperties(false);
         return;
       }
@@ -328,7 +330,9 @@ function HomePage() {
       const normalized = propertiesArray.map((p) => normalizeProperty(p));
       const activeProperties = normalized.filter((p) => p.isActive !== false);
 
-      console.log(`📋 Loaded ${activeProperties.length} active properties for user ${user.id}`);
+      console.log(
+        `📋 Loaded ${activeProperties.length} active properties for user ${user.id}`
+      );
       setMyProperties(activeProperties);
     } catch (error) {
       console.error("Error fetching user properties:", error);
@@ -394,7 +398,11 @@ function HomePage() {
       propertiesArray = results.data;
     }
 
-    console.log("Processing", propertiesArray.length, "properties from advanced search");
+    console.log(
+      "Processing",
+      propertiesArray.length,
+      "properties from advanced search"
+    );
     const normalized = propertiesArray.map((p) => normalizeProperty(p));
     setSearchResults(normalized);
     setShowSearchResults(true);
@@ -473,7 +481,9 @@ function HomePage() {
 
     try {
       const response = await fetch(
-        `${BACKEND_BASE_URL}/api/properties/search/quick?q=${encodeURIComponent(query)}`,
+        `${BACKEND_BASE_URL}/api/properties/search/quick?q=${encodeURIComponent(
+          query
+        )}`,
         { signal: controller.signal }
       );
 
@@ -774,12 +784,16 @@ function HomePage() {
 
         {/* Popular Areas */}
         <section className="hp-popular-areas">
-          <h2 className="hp-section-title">
-            <span className="hp-section-ic">📍</span> Popular Areas in Hyderabad
-          </h2>
-          <p className="hp-section-subtitle">
-            Explore properties in the most sought-after locations
-          </p>
+          <div className="popul-brow-section">
+            <h2 className="hp-section-title">
+              <span className="hp-section-ic">📍</span> Popular Areas in
+              Hyderabad
+            </h2>
+            <p className="hp-section-subtitle">
+              Explore properties in the most sought-after locations
+            </p>
+          </div>
+
           <div className="hp-area-grid">
             {popularAreas.map((area) => (
               <button
@@ -798,16 +812,19 @@ function HomePage() {
 
         {/* Browse by Property Type */}
         <section className="hp-browse-types">
-          <h2 className="hp-section-title">
-            <span className="hp-section-ic">🏘️</span> Browse by Property Type
-          </h2>
-          <p className="hp-section-subtitle">
-            Find your perfect property from our diverse range of options
-          </p>
+          <div className="popul-brow-section">
+            <h2 className="hp-section-title">
+              <span className="hp-section-ic">🏘️</span> Browse by Property Type
+            </h2>
+            <p className="hp-section-subtitle">
+              Find your perfect property from our diverse range of options
+            </p>
+          </div>
 
           {loadingTypes ? (
             <div className="hp-types-loading">
-              <span className="hp-loading-spinner">⏳</span> Loading property types...
+              <span className="hp-loading-spinner">⏳</span> Loading property
+              types...
             </div>
           ) : propertyTypes.length === 0 ? (
             <div className="hp-types-empty">
@@ -827,7 +844,6 @@ function HomePage() {
                     {propertyTypeIcons[type] || "🏠"}
                   </div>
                   <div className="hp-type-name">{type}</div>
-                  <div className="hp-type-arrow">→</div>
                 </button>
               ))}
             </div>
