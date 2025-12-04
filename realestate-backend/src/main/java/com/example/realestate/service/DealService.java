@@ -244,32 +244,32 @@ public class DealService {
      * This is called from the frontend when users create deals with offer amounts
      */
     public DealStatus createDeal(Long propertyId, Long buyerId, Long agentId, Double agreedPrice) {
-        logger.info("📝 Creating deal with agreed price - Property: {}, Buyer: {}, Agent: {}, AgreedPrice: {}",
+        logger.info("Creating deal with agreed price - Property: {}, Buyer: {}, Agent: {}, AgreedPrice: {}",
                 propertyId, buyerId, agentId, agreedPrice);
 
         // Validate property exists
         Property property = propertyRepository.findById(propertyId)
                 .orElseThrow(() -> {
-                    logger.error("❌ Property not found with ID: {}", propertyId);
+                    logger.error("Property not found with ID: {}", propertyId);
                     return new RuntimeException("Property not found with ID: " + propertyId);
                 });
 
         // Validate buyer exists
         User buyer = userRepository.findById(buyerId)
                 .orElseThrow(() -> {
-                    logger.error("❌ Buyer user not found with ID: {}", buyerId);
+                    logger.error("Buyer user not found with ID: {}", buyerId);
                     return new RuntimeException("Buyer user not found with ID: " + buyerId);
                 });
 
         // Check for duplicate deal
         if (dealStatusRepository.existsByPropertyIdAndBuyerId(propertyId, buyerId)) {
-            logger.warn("⚠️ Deal already exists for property {} and buyer {}", propertyId, buyerId);
+            logger.warn("Deal already exists for property {} and buyer {}", propertyId, buyerId);
             throw new RuntimeException("Deal already exists for this property and buyer");
         }
 
         // Validate buyer is not the property owner
         if (property.getUser() != null && property.getUser().getId().equals(buyerId)) {
-            logger.warn("❌ Buyer {} cannot create deal on their own property {}", buyerId, propertyId);
+            logger.warn("Buyer cannot create deal on their own property: {}, {}", buyerId, propertyId);
             throw new RuntimeException("Cannot create deal on your own property");
         }
 
@@ -280,37 +280,39 @@ public class DealService {
                     .orElseThrow(() -> new RuntimeException("Agent user not found with ID: " + agentId));
 
             if (!agent.getRole().equals(User.UserRole.AGENT) && !agent.getRole().equals(User.UserRole.ADMIN)) {
-                logger.warn("❌ User {} is not an agent or admin", agentId);
+                logger.warn("User is not an agent or admin: {}", agentId);
                 throw new RuntimeException("Assigned user is not an agent or admin");
             }
         }
 
-        // Create the deal
+        // ✅ CREATE THE DEAL - FIXED TO START AT INQUIRY
         DealStatus deal = new DealStatus();
         deal.setProperty(property);
         deal.setBuyer(buyer);
         deal.setAgent(agent);
-        deal.setStage(DealStatus.DealStage.SHORTLIST);  // Start at SHORTLIST when buyer makes offer
+        deal.setStage(DealStatus.DealStage.INQUIRY); // ✅ FIXED - Start at INQUIRY
 
         // Set agreed price if provided
         if (agreedPrice != null && agreedPrice > 0) {
             deal.setAgreedPrice(BigDecimal.valueOf(agreedPrice));
-            deal.setNotes("Deal initiated by buyer with offer amount: ₹" + agreedPrice);
-            logger.info("💰 Agreed price set: ₹{}", agreedPrice);
+            deal.setNotes("Deal initiated with offer amount: " + agreedPrice);
+            logger.info("Agreed price set: {}", agreedPrice);
         } else {
             deal.setNotes("Deal initiated - Initial Inquiry");
         }
 
         deal.setLastUpdatedBy(buyer.getUsername());
         deal.setInquiryDate(LocalDateTime.now());
-        deal.setShortlistDate(LocalDateTime.now());
+        // ✅ REMOVED - Don't set shortlist date for INQUIRY stage
+        // deal.setShortlistDate(LocalDateTime.now());
 
         DealStatus savedDeal = dealStatusRepository.save(deal);
-        logger.info("✅ Deal created successfully - Deal ID: {}, Property: {}, Buyer: {}, AgreedPrice: {}",
+        logger.info("✅ Deal created successfully - Deal ID: {}, Property: {}, Buyer: {}, Stage: INQUIRY, AgreedPrice: {}",
                 savedDeal.getId(), propertyId, buyerId, savedDeal.getAgreedPrice());
 
         return savedDeal;
     }
+
 
     // ==================== ROLE-BASED DEAL FETCHING ====================
     public List<DealDetailDTO> getDealsByRole(Long userId, String userRole) {
