@@ -979,7 +979,7 @@ const handleContactClick = (action) => {
               </div>
 
               {/* ✅ ADDED - Create Deal OR View Deal Card for ADMIN/AGENT (in sidebar) */}
-              {isAgentOrAdmin && isNotPropertyOwner && (
+              {((isAgentOrAdmin && isNotPropertyOwner) || (existingDeal && user))&& (
                 <div className="card pd-deal">
                   <h3 className="pd-deal-title">🎯 Agent Actions</h3>
                   {existingDeal ? (
