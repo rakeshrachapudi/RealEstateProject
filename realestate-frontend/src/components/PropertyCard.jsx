@@ -1,11 +1,11 @@
-// src/components/PropertyCard.jsx - ENHANCED VERSION
+// src/components/PropertyCard.jsx - ALL INFO ORGANIZED VERSION
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import PropertyEditModal from "../PropertyEditModal";
 import { BACKEND_BASE_URL } from "../config/config";
 import "./PropertyCard.css";
-import LazyImage from './LazyImage';
+import LazyImage from "./LazyImage";
 
 const PropertyCard = ({
   property,
@@ -47,7 +47,11 @@ const PropertyCard = ({
 
   const getImageUrl = () => {
     if (imageError) return getDefaultImage();
-    if (property.imageUrl && property.imageUrl !== "null" && String(property.imageUrl).trim() !== "") {
+    if (
+      property.imageUrl &&
+      property.imageUrl !== "null" &&
+      String(property.imageUrl).trim() !== ""
+    ) {
       return property.imageUrl;
     }
     return getDefaultImage();
@@ -68,7 +72,10 @@ const PropertyCard = ({
 
     if (statusLower === "readytomove" || statusLower === "ready") {
       return "🏠 Ready to Move";
-    } else if (statusLower === "underconstruction" || statusLower === "construction") {
+    } else if (
+      statusLower === "underconstruction" ||
+      statusLower === "construction"
+    ) {
       const year = property.possessionYear;
       const month = property.possessionMonth;
 
@@ -80,21 +87,28 @@ const PropertyCard = ({
       return "🚧 Under Construction";
     }
 
-    // Fallback for any other status value
     return `📋 ${status}`;
   };
 
   const getStageColorClass = (stage) => {
     const key = (stage || "").toUpperCase();
     switch (key) {
-      case "INQUIRY": return "stage-inquiry";
-      case "SHORTLIST": return "stage-shortlist";
-      case "NEGOTIATION": return "stage-negotiation";
-      case "AGREEMENT": return "stage-agreement";
-      case "REGISTRATION": return "stage-registration";
-      case "PAYMENT": return "stage-payment";
-      case "COMPLETED": return "stage-completed";
-      default: return "stage-default";
+      case "INQUIRY":
+        return "stage-inquiry";
+      case "SHORTLIST":
+        return "stage-shortlist";
+      case "NEGOTIATION":
+        return "stage-negotiation";
+      case "AGREEMENT":
+        return "stage-agreement";
+      case "REGISTRATION":
+        return "stage-registration";
+      case "PAYMENT":
+        return "stage-payment";
+      case "COMPLETED":
+        return "stage-completed";
+      default:
+        return "stage-default";
     }
   };
 
@@ -113,17 +127,21 @@ const PropertyCard = ({
 
   const handleDelete = async (e) => {
     e.stopPropagation();
-    if (!window.confirm("⚠️ Are you sure you want to delete this property?")) return;
+    if (!window.confirm("⚠️ Are you sure you want to delete this property?"))
+      return;
 
     setIsDeleting(true);
     try {
       const propertyId = property.id || property.propertyId;
-      const response = await fetch(`${BACKEND_BASE_URL}/api/properties/${propertyId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/properties/${propertyId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to delete (Status: ${response.status})`);
@@ -173,72 +191,84 @@ const PropertyCard = ({
           )}
         </div>
 
-        {/* Image Section */}
-      <LazyImage
-        className="pc-image"
-        src={getImageUrl()}
-        alt={property.title || "Property"}
-        onError={handleImageError}
-      />
+        {/* Image Section - 40% */}
+        <div className="pc-image-wrap">
+          <LazyImage
+            className="pc-image"
+            src={getImageUrl()}
+            alt={property.title || "Property"}
+            onError={handleImageError}
+          />
           <div className="pc-image-overlay" />
 
           {/* Deal Stage Badge on Image */}
           {dealInfo && (
-            <span className={`pc-stage-badge ${getStageColorClass(dealInfo.stage || dealInfo.currentStage)}`}>
+            <span
+              className={`pc-stage-badge ${getStageColorClass(
+                dealInfo.stage || dealInfo.currentStage
+              )}`}
+            >
               Stage: {dealInfo.stage || dealInfo.currentStage || "INQUIRY"}
             </span>
           )}
+        </div>
 
-
-        {/* Content Section */}
+        {/* Content Section - 60% with ALL INFO */}
         <div className="pc-content">
           {/* Listing Type Tag */}
           <div className="pc-type-tag">
-            {property.listingType?.toLowerCase() === "sale" ? "FOR SALE" : "FOR RENT"}
+            {property.listingType?.toLowerCase() === "sale"
+              ? "FOR SALE"
+              : "FOR RENT"}
           </div>
 
-          {/* Title */}
-          <h3 className="pc-title">{property.title || "Property Title"}</h3>
-
-          {/* Location */}
-          <div className="pc-location">
-            📍 {property.areaName || property.city || "Location"}
-            {property.pincode ? ` - ${property.pincode}` : ""}
+          {/* Row 1: Title & Price */}
+          <div className="pc-title-row">
+            <h3 className="pc-title">{property.title || "Property Title"}</h3>
+            <div className="pc-price-container">
+              <div className="pc-price">{formatPrice(property.price)}</div>
+              {property.listingType?.toLowerCase() === "rent" && (
+                <span className="pc-per-month">/month</span>
+              )}
+            </div>
           </div>
 
-          {/* Price */}
-          <div className="pc-price">
-            {formatPrice(property.price)}
-            {property.listingType?.toLowerCase() === "rent" && (
-              <span className="pc-per-month">/month</span>
-            )}
+          {/* Row 2: Location & Property Type */}
+          <div className="pc-info-row">
+            <div className="pc-location">
+              📍 {property.areaName || property.city || "Location"}
+              {property.pincode ? ` - ${property.pincode}` : ""}
+            </div>
+            <div className="pc-type">
+              <strong>{getPropertyType()}</strong>
+            </div>
           </div>
 
-          {/* Price Per Sqft (if available) */}
-          {property.pricePerSqft && Number(property.pricePerSqft) > 0 && (
-            <div className="pc-price-per-sqft">
-              💵 ₹{Number(property.pricePerSqft).toLocaleString("en-IN")}/sqft
+          {/* Row 3: Price Per Sqft & Construction Status */}
+          {(property.pricePerSqft || getConstructionStatusDisplay()) && (
+            <div className="pc-status-row">
+              {property.pricePerSqft && Number(property.pricePerSqft) > 0 && (
+                <div className="pc-price-per-sqft">
+                  💵 ₹{Number(property.pricePerSqft).toLocaleString("en-IN")}
+                  /sqft
+                </div>
+              )}
+              {getConstructionStatusDisplay() && (
+                <div className="pc-construction-status">
+                  {getConstructionStatusDisplay()}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Property Type */}
-          <div className="pc-type">
-            <strong>{getPropertyType()}</strong>
-          </div>
-
-          {/* Construction Status */}
-          {getConstructionStatusDisplay() && (
-            <div className="pc-construction-status">
-              {getConstructionStatusDisplay()}
-            </div>
-          )}
-
-          {/* Property Details (Area, Beds, Baths, Balconies) */}
+          {/* Property Details Grid - Area, Beds, Baths, Balconies */}
           <div className="pc-details">
             {property.areaSqft && Number(property.areaSqft) > 0 && (
               <div className="pc-detail">
                 <span className="pc-detail-icon">📐</span>
-                <span>{Number(property.areaSqft).toLocaleString("en-IN")} sqft</span>
+                <span>
+                  {Number(property.areaSqft).toLocaleString("en-IN")} sqft
+                </span>
               </div>
             )}
             {property.bedrooms > 0 && (
@@ -269,45 +299,45 @@ const PropertyCard = ({
                 .split(",")
                 .map((a) => a.trim())
                 .filter((a) => a)
-                .slice(0, 3)
+                .slice(0, 4)
                 .join(", ")}
-              {property.amenities.split(",").length > 3 && "..."}
+              {property.amenities.split(",").length > 4 && "..."}
             </div>
           )}
 
-          {/* ⭐ POSTED BY ROLE FIX (Ensures capitalization for Agent/Broker/Owner) ⭐ */}
-          {(property.postedByRole || property.ownerType) && (
-            <div className="pc-owner-type">
-              👤 Posted by:{" "}
-              <strong>
-                {(property.postedByRole || property.ownerType)
-                  .replace(/^(owner|agent|broker|developer|builder)$/i, (match) =>
-                      match.charAt(0).toUpperCase() + match.slice(1)
+          {/* Row: Owner Type & Posted By */}
+          {(property.postedByRole || property.ownerType || property.user) && (
+            <div className="pc-owner-row">
+              {(property.postedByRole || property.ownerType) && (
+                <div className="pc-owner-type">
+                  👤{" "}
+                  {(property.postedByRole || property.ownerType).replace(
+                    /^(owner|agent|broker|developer|builder)$/i,
+                    (match) => match.charAt(0).toUpperCase() + match.slice(1)
                   ) || "N/A"}
-              </strong>
-            </div>
-          )}
-          {/* ⭐ END FIX ⭐ */}
-
-          {/* Posted By Information */}
-          {property.user && (
-            <div className="pc-posted-by">
-              📞 {property.user.firstName || ""} {property.user.lastName || ""}
-              {/* Note: property.user.mobile is the correct field from HomePage.jsx normalizeProperty */}
-              {property.user.mobile && ` • ${property.user.mobile}`}
+                  {"&nbsp:"}
+                </div>
+              )}
+              {property.user && (
+                <div className="pc-posted-by">
+                  📞 {property.user.firstName || ""}{" "}
+                  {property.user.lastName || ""}
+                  {property.user.mobile && ` • ${property.user.mobile}`}
+                </div>
+              )}
             </div>
           )}
 
           {/* IDs Section - RERA, HMDA, Property ID, Deal ID */}
           <div className="pc-ids">
-            {/* ⭐ RERA ID - Highlighted if present */}
+            {/* RERA ID - Highlighted */}
             {property.reraId && property.reraId.trim() && (
               <span className="pc-id-tag pc-statutory-tag pc-highlight">
                 ✅ RERA: {property.reraId.trim()}
               </span>
             )}
 
-            {/* ⭐ HMDA ID - Highlighted if present */}
+            {/* HMDA ID - Highlighted */}
             {property.hmdaId && property.hmdaId.trim() && (
               <span className="pc-id-tag pc-statutory-tag pc-highlight">
                 ✅ HMDA: {property.hmdaId.trim()}
@@ -321,7 +351,7 @@ const PropertyCard = ({
               </span>
             )}
 
-            {/* Deal ID (if applicable) */}
+            {/* Deal ID */}
             {dealInfo?.dealId && (
               <span className="pc-id-tag pc-deal-tag">
                 Deal ID: {dealInfo.dealId}
@@ -329,16 +359,19 @@ const PropertyCard = ({
             )}
           </div>
 
-          {/* Deal Actions (if deal exists) */}
+          {/* Deal Actions */}
           {dealInfo && (
             <div className="pc-deal-actions">
-              <button onClick={handleViewDealClick} className="pc-btn pc-btn-view">
+              <button
+                onClick={handleViewDealClick}
+                className="pc-btn pc-btn-view"
+              >
                 👁️ View Deal
               </button>
             </div>
           )}
 
-          {/* Owner Actions (Edit/Delete) */}
+          {/* Owner Actions */}
           {isOwner && (
             <div className="pc-actions">
               <button onClick={handleEdit} className="pc-btn pc-btn-edit">
