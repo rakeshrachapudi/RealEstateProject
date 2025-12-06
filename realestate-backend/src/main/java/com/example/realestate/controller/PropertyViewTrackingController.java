@@ -19,7 +19,8 @@ import java.util.Map;
 
 /**
  * Controller for tracking property views.
- * Saves view data to database for batch notification processing.
+ * ✅ ONLY tracks BUYER views (users with 0 properties)
+ * ❌ Ignores SELLER views (users with 1+ properties), ADMIN, AGENT, BROKER
  */
 @RestController
 @RequestMapping("/api/property-tracking")
@@ -40,8 +41,13 @@ public class PropertyViewTrackingController {
     private String frontendBaseUrl;
 
     /**
-     * Track property view - saves to database for batch processing.
+     * Track property view - ONLY saves BUYER views to database for batch processing.
      * POST /api/property-tracking/view/{propertyId}
+     *
+     * BUYER IDENTIFICATION LOGIC:
+     * - Role = "USER" AND propertyCount = 0 → BUYER (SAVE)
+     * - Role = "USER" AND propertyCount > 0 → SELLER (IGNORE)
+     * - Role = "ADMIN", "AGENT", "BROKER" → IGNORE
      */
     @PostMapping("/view/{propertyId}")
     public ResponseEntity<Map<String, Object>> trackPropertyView(
@@ -63,6 +69,7 @@ public class PropertyViewTrackingController {
             String userName = getStringFromMap(requestBody, "userName");
             String userMobile = getStringFromMap(requestBody, "userMobile");
             String userEmail = getStringFromMap(requestBody, "userEmail");
+            String userRole = getStringFromMap(requestBody, "userRole");
 
             if (userId == null) {
                 logger.warn("⚠️ Missing userId in request body");
@@ -71,8 +78,56 @@ public class PropertyViewTrackingController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            logger.info("📊 Tracking property view - Property ID: {}, User: {} ({})",
-                    propertyId, userName, userEmail);
+            if (userRole == null || userRole.isEmpty()) {
+                logger.warn("⚠️ Missing userRole in request body");
+                response.put("success", false);
+                response.put("message", "Missing userRole");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            logger.info("📊 Received property view - Property ID: {}, User: {} ({}), Role: {}",
+                    propertyId, userName, userEmail, userRole);
+
+            // === CRITICAL FILTERING LOGIC ===
+
+            // 1. Check if Admin, Agent, or Broker - IGNORE immediately
+            if ("ADMIN".equalsIgnoreCase(userRole) ||
+                    "AGENT".equalsIgnoreCase(userRole) ||
+                    "BROKER".equalsIgnoreCase(userRole)) {
+
+                logger.info("ℹ️ {} view detected - Ignoring (not saving)", userRole);
+                response.put("success", true);
+                response.put("message", "View ignored - only buyer views are tracked");
+                response.put("saved", false);
+                response.put("userRole", userRole);
+                response.put("reason", "Only BUYER views trigger notifications");
+                return ResponseEntity.ok(response);
+            }
+
+            // 2. If USER role - check property count to determine BUYER vs SELLER
+            if ("USER".equalsIgnoreCase(userRole)) {
+                // Check how many properties this user has posted
+                List<Property> userProperties = propertyRepository.findByUserId(userId);
+                int propertyCount = userProperties.size();
+
+                logger.info("🔍 USER role detected - Checking property count: {} properties", propertyCount);
+
+                // If user has ANY properties → SELLER (ignore)
+                if (propertyCount > 0) {
+                    logger.info("ℹ️ User is a SELLER (has {} propert{}) - Ignoring view",
+                            propertyCount, propertyCount == 1 ? "y" : "ies");
+                    response.put("success", true);
+                    response.put("message", "View ignored - user is a seller/broker");
+                    response.put("saved", false);
+                    response.put("userRole", "SELLER");
+                    response.put("propertyCount", propertyCount);
+                    response.put("reason", "Only BUYER views trigger notifications");
+                    return ResponseEntity.ok(response);
+                }
+
+                // If user has ZERO properties → BUYER (continue to save)
+                logger.info("✅ User is a BUYER (0 properties) - Will track view");
+            }
 
             // Fetch property details
             Property property = propertyRepository.findById(propertyId)
@@ -85,7 +140,7 @@ public class PropertyViewTrackingController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
             }
 
-            // Check if user is the property owner
+            // Check if user is the property owner (additional safety check)
             if (property.getUser() != null && property.getUser().getId().equals(userId)) {
                 logger.info("ℹ️ User is property owner - skipping tracking");
                 response.put("success", true);
@@ -93,14 +148,6 @@ public class PropertyViewTrackingController {
                 response.put("saved", false);
                 return ResponseEntity.ok(response);
             }
-
-            // Determine if user is buyer or seller
-            List<Property> userProperties = propertyRepository.findByUserId(userId);
-            int propertyCount = userProperties.size();
-            String userType = propertyCount == 0 ? "buyer" : "seller";
-
-            logger.info("📊 User {} has {} posted properties - Type: {}",
-                    userName, propertyCount, userType.toUpperCase());
 
             // Check for duplicate view (same buyer + property, not yet notified)
             boolean alreadyTracked = viewTrackingRepository
@@ -111,7 +158,7 @@ public class PropertyViewTrackingController {
                 response.put("success", true);
                 response.put("message", "View already tracked");
                 response.put("saved", false);
-                response.put("userType", userType);
+                response.put("userRole", "BUYER");
                 return ResponseEntity.ok(response);
             }
 
@@ -119,7 +166,7 @@ public class PropertyViewTrackingController {
             PropertyViewTracking tracking = PropertyViewTracking.builder()
                     .propertyId(propertyId)
                     .propertyTitle(property.getTitle())
-                    .propertyArea(getAreaName(property.getArea().getAreaName()))
+                    .propertyArea(getAreaName(property.getArea()))
                     .propertyCity(property.getCity())
                     .propertyPrice(formatPrice(property.getPrice()))
                     .propertyUrl(frontendBaseUrl + "/property/" + propertyId)
@@ -130,30 +177,24 @@ public class PropertyViewTrackingController {
                     .ownerName(getOwnerName(property))
                     .ownerPhone(getOwnerPhone(property))
                     .ownerEmail(getOwnerEmail(property))
-                    .userType(userType)
-                    .propertyCount(propertyCount)
+                    .userType("buyer") // Always "buyer" since we only save buyer views
+                    .propertyCount(0) // Buyer always has 0 properties
                     .viewedAt(LocalDateTime.now())
                     .notificationSent(false)
                     .build();
 
             // Save to database
             PropertyViewTracking saved = viewTrackingRepository.save(tracking);
-            logger.info("✅ Property view saved to database - ID: {}, Type: {}", saved.getId(), userType);
+            logger.info("✅ BUYER view saved to database - ID: {}", saved.getId());
 
             // Build response
             response.put("success", true);
-            response.put("message", "Property view tracked successfully");
+            response.put("message", "Buyer view tracked successfully");
             response.put("saved", true);
             response.put("trackingId", saved.getId());
-            response.put("userType", userType);
-            response.put("propertyCount", propertyCount);
+            response.put("userRole", "BUYER");
             response.put("viewedAt", saved.getViewedAt().toString());
-
-            if ("buyer".equals(userType)) {
-                response.put("note", "Buyer interest recorded - notification will be sent in next batch");
-            } else {
-                response.put("note", "Seller/broker view recorded - notification not required");
-            }
+            response.put("note", "Buyer interest recorded - notification will be sent in next batch");
 
             return ResponseEntity.ok(response);
 
@@ -178,9 +219,10 @@ public class PropertyViewTrackingController {
             Long totalCount = viewTrackingRepository.count();
 
             stats.put("pendingNotifications", pendingCount);
-            stats.put("totalViews", totalCount);
+            stats.put("totalBuyerViews", totalCount);
             stats.put("notifiedViews", totalCount - pendingCount);
             stats.put("trackingEnabled", trackingEnabled);
+            stats.put("filterLogic", "propertyCount == 0 → BUYER (save), propertyCount > 0 → SELLER (ignore)");
 
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
@@ -214,6 +256,7 @@ public class PropertyViewTrackingController {
         Map<String, Object> health = new HashMap<>();
         health.put("status", "UP");
         health.put("trackingEnabled", trackingEnabled);
+        health.put("filteringLogic", "BUYER (propertyCount=0) ONLY");
         health.put("timestamp", LocalDateTime.now().toString());
         return ResponseEntity.ok(health);
     }
@@ -222,7 +265,8 @@ public class PropertyViewTrackingController {
     private String getAreaName(Object areaObj) {
         if (areaObj == null) return "Unknown Area";
         try {
-            return areaObj.getClass().getMethod("getName").invoke(areaObj).toString();
+            // If Area object, try to get areaName property
+            return areaObj.getClass().getMethod("getAreaName").invoke(areaObj).toString();
         } catch (Exception e) {
             return areaObj.toString();
         }

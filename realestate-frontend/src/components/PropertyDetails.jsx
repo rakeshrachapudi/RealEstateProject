@@ -177,7 +177,8 @@ useEffect(() => {
             userId: user.id,
             userName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
             userMobile: user.mobileNumber || '',
-            userEmail: user.email || ''
+            userEmail: user.email || '',
+             userRole: user.role || 'USER'
           })
         }
       );
