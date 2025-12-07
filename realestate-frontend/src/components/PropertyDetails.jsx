@@ -84,11 +84,15 @@ function PropertyDetails() {
           checkExistingDeal();
         }
       }
-      if (property.user?.id === user.id) {
-        setShowFeaturedSection(true);
-      } else {
-        setShowFeaturedSection(false);
-      }
+     if (
+       user.role === "ADMIN" ||                  // ✅ Admin can feature ANY property
+       property.user?.id === user.id             // ✅ Owner can feature own property
+     ) {
+       setShowFeaturedSection(true);
+     } else {
+       setShowFeaturedSection(false);
+     }
+
     } else if (property && !user) {
       // User not logged in, don't check for deals
       setDealLoading(false);
@@ -1032,7 +1036,7 @@ const handleContactClick = (action) => {
                 </div>
               )}
 
-              {showFeaturedSection && !featuredStatus?.featured && (
+              {user?.role === "ADMIN" && showFeaturedSection && !featuredStatus?.featured && (
                 <div className="card pd-featured">
                   <h3 className="pd-featured-title">⭐ Make Your Property Featured</h3>
                   <p className="pd-featured-desc">Get more visibility! Featured properties appear at the top of search results.</p>
