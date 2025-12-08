@@ -42,9 +42,6 @@ public class S3Service {
     @Autowired
     private PropertyImageService propertyImageService;
 
-
-
-
     public S3Service(@Value("${aws.accessKeyId}") String accessKey,
                      @Value("${aws.secretKey}") String secretKey,
                      @Value("${aws.region}") String region,
@@ -152,7 +149,7 @@ public class S3Service {
      * Upload deal document to S3 (organized by deal ID and property ID)
      */
     public String uploadDealDocument(Long dealId, Long propertyId, Path filePath, String originalFilename, String contentType) throws IOException {
-        logger.info("🔐 UPLOADING DEAL DOCUMENT");
+        logger.info("📝 UPLOADING DEAL DOCUMENT");
         logger.info("   Deal ID: {}", dealId);
         logger.info("   Property ID: {}", propertyId);
 
@@ -168,8 +165,6 @@ public class S3Service {
 
         return uploadFile(key, filePath, contentType);
     }
-
-
 
     /**
      * Delete an object from S3.
@@ -306,12 +301,11 @@ public class S3Service {
         logger.debug("   Sanitized filename: {} -> {}", filename, sanitized);
         return sanitized;
     }
-    // Add this method to your S3Service.java class
-
-    // Add this method to your S3Service.java class
 
     /**
-     * Move a file from one S3 key to another (copy + delete)
+     * ⭐ FIXED: Move a file from one S3 key to another (copy + delete)
+     * NOW PROPERLY SETS ACL AND CONTENT-TYPE ON COPIED FILE
+     *
      * @param sourceKey The current S3 key (e.g., "temp/images/file.jpg")
      * @param destinationKey The new S3 key (e.g., "properties/123/images/file.jpg")
      * @return true if successful, false otherwise
@@ -320,18 +314,33 @@ public class S3Service {
         try {
             logger.info("📦 Moving S3 file: {} → {}", sourceKey, destinationKey);
 
-            // Step 1: Copy the object to the new location
+            // Step 1: Get metadata from source file to preserve content-type
+            HeadObjectRequest headRequest = HeadObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(sourceKey)
+                    .build();
+
+            HeadObjectResponse headResponse = s3Client.headObject(headRequest);
+            String contentType = headResponse.contentType();
+
+            logger.info("   Source file content-type: {}", contentType);
+
+            // Step 2: Copy the object to the new location WITH PUBLIC_READ ACL and content-type
             CopyObjectRequest copyRequest = CopyObjectRequest.builder()
                     .sourceBucket(bucketName)
                     .sourceKey(sourceKey)
                     .destinationBucket(bucketName)
                     .destinationKey(destinationKey)
+                    .acl(ObjectCannedACL.PUBLIC_READ)  // ⭐ CRITICAL: Set ACL to public-read
+                    .contentType(contentType)           // ⭐ CRITICAL: Preserve content-type
+                    .metadataDirective(MetadataDirective.REPLACE)  // Required when setting content-type
                     .build();
 
             s3Client.copyObject(copyRequest);
             logger.info("✅ Copied S3 object to: {}", destinationKey);
+            logger.info("   New file URL: {}", getFileUrl(destinationKey));
 
-            // Step 2: Delete the original object
+            // Step 3: Delete the original object
             DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
                     .bucket(bucketName)
                     .key(sourceKey)
@@ -344,6 +353,8 @@ public class S3Service {
 
         } catch (S3Exception e) {
             logger.error("❌ S3 error moving file: {}", e.awsErrorDetails().errorMessage());
+            logger.error("   Error code: {}", e.awsErrorDetails().errorCode());
+            logger.error("   Status code: {}", e.statusCode());
             return false;
         } catch (Exception e) {
             logger.error("❌ Error moving S3 file: {}", e.getMessage(), e);
@@ -366,7 +377,4 @@ public class S3Service {
 
         return results;
     }
-
-
-
 }

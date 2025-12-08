@@ -542,8 +542,10 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         }
 
         const data = await response.json();
-        if (data.success && data.url) {
-          uploadedUrls.push(data.url);
+        console.log("📄 Document upload response:", data);
+        if (data.success && data.data) {
+          uploadedUrls.push(data.data);
+          console.log("✅ Document URL received:", data.data);
         }
 
         // Update progress

@@ -1,0 +1,205 @@
+/* ============================================
+   PROPERTY DOCUMENTS SECTION STYLES
+   ============================================ */
+
+/* Documents Section Container */
+.pd-documents-section {
+  margin-top: 32px;
+  padding-top: 32px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.pd-documents-section .pd-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* Documents Grid Layout */
+.pd-documents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* Individual Document Card */
+.pd-document-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.pd-document-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+}
+
+.pd-document-card:active {
+  transform: translateY(0);
+}
+
+/* Document Icon */
+.pd-doc-icon {
+  font-size: 32px;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* Document Info */
+.pd-doc-info {
+  flex: 1;
+  min-width: 0; /* Allow text truncation */
+}
+
+.pd-doc-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1e293b;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pd-doc-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pd-doc-type {
+  font-size: 12px;
+  font-weight: 500;
+  color: #3b82f6;
+  background: #eff6ff;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: capitalize;
+}
+
+.pd-doc-size {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Download Icon */
+.pd-doc-download {
+  min-width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pd-doc-download-icon {
+  font-size: 20px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+.pd-document-card:hover .pd-doc-download-icon {
+  opacity: 1;
+  transform: translateY(2px);
+}
+
+/* No Documents State */
+.pd-no-documents {
+  text-align: center;
+  padding: 40px 20px;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  color: #64748b;
+}
+
+/* Loading Spinner for Documents */
+.pd-documents-section .pd-spinner {
+  border: 3px solid #e2e8f0;
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .pd-documents-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .pd-document-card {
+    padding: 12px;
+  }
+
+  .pd-doc-icon {
+    font-size: 28px;
+    min-width: 36px;
+  }
+
+  .pd-doc-name {
+    font-size: 13px;
+  }
+
+  .pd-doc-type,
+  .pd-doc-size {
+    font-size: 11px;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  .pd-documents-section {
+    margin-top: 24px;
+    padding-top: 24px;
+  }
+
+  .pd-doc-icon {
+    font-size: 24px;
+    min-width: 32px;
+  }
+
+  .pd-doc-name {
+    font-size: 12px;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .pd-documents-section {
+    page-break-inside: avoid;
+  }
+
+  .pd-document-card {
+    border: 1px solid #000;
+    box-shadow: none;
+  }
+
+  .pd-doc-download {
+    display: none;
+  }
+}

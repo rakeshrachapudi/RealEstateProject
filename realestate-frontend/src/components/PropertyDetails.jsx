@@ -3,11 +3,12 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
 import LoginModal from "../LoginModal.jsx";
-import CreateDealModal from "./CreateDealModal.jsx";  // ✅ ADDED - For Agent/Admin deal creation
-import DealDetailModal from "../DealDetailModal.jsx";  // ✅ ADDED - For viewing existing deals
-import { canCreateDeal, isPropertyOwner, getRoleMessage } from "../config/rolePermissions";  // ✅ ADDED - Role permissions
+import CreateDealModal from "./CreateDealModal.jsx";
+import DealDetailModal from "../DealDetailModal.jsx";
+import { canCreateDeal, isPropertyOwner, getRoleMessage } from "../config/rolePermissions";
 import { BACKEND_BASE_URL } from "../config/config";
 import "./PropertyDetails.css";
+import "./PropertyDetails_Documents.css"; // ⭐ NEW: Import document styles
 import {
   trackFBPropertyView,
   trackFBPropertyContact,
@@ -55,10 +56,14 @@ function PropertyDetails() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [viewTracked, setViewTracked] = useState(false);
 
-  // ✅ ADDED - Create Deal Modal State
+  // Create Deal Modal State
   const [showCreateDealModal, setShowCreateDealModal] = useState(false);
-  // ✅ ADDED - State for viewing existing deal
+  // State for viewing existing deal
   const [viewingDeal, setViewingDeal] = useState(null);
+
+  // ⭐ NEW: Documents state
+  const [documents, setDocuments] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(true);
 
   useEffect(() => {
     fetchPropertyDetails();
@@ -69,7 +74,7 @@ function PropertyDetails() {
       fetchAgentForProperty();
       checkFeaturedStatus();
 
-      // ✅ UPDATED - Check for deals based on user role
+      // Check for deals based on user role
       if (user.role === "AGENT" || user.role === "ADMIN") {
         // Agent/Admin: Check all deals on property
         checkExistingDealForAgent();
@@ -84,11 +89,15 @@ function PropertyDetails() {
           checkExistingDeal();
         }
       }
-      if (property.user?.id === user.id) {
-        setShowFeaturedSection(true);
-      } else {
-        setShowFeaturedSection(false);
-      }
+     if (
+       user.role === "ADMIN" ||                  // Admin can feature ANY property
+       property.user?.id === user.id             // Owner can feature own property
+     ) {
+       setShowFeaturedSection(true);
+     } else {
+       setShowFeaturedSection(false);
+     }
+
     } else if (property && !user) {
       // User not logged in, don't check for deals
       setDealLoading(false);
@@ -132,6 +141,37 @@ useEffect(() => {
     };
   }, [showImageModal]);
 
+  // ⭐ NEW: Fetch property documents
+ const fetchPropertyDocuments = async () => {
+   try {
+     setDocumentsLoading(true);
+     const response = await fetch(
+       `${BACKEND_BASE_URL}/api/property-documents/property/${propertyId}`
+     );
+
+     if (response.ok) {
+       const docsData = await response.json();
+       console.log("📄 Documents fetched:", docsData);
+
+       // ✅ FIXED: Access docsData.data
+       if (docsData.success && docsData.data) {
+         setDocuments(docsData.data);
+         console.log("✅ Documents set:", docsData.data.length);
+       } else {
+         setDocuments([]);
+       }
+     } else {
+       console.warn("⚠️ No documents found or error fetching documents");
+       setDocuments([]);
+     }
+   } catch (err) {
+     console.error("❌ Error fetching documents:", err);
+     setDocuments([]);
+   } finally {
+     setDocumentsLoading(false);
+   }
+ };
+
   const fetchPropertyDetails = async () => {
     try {
       const response = await fetch(`${BACKEND_BASE_URL}/api/properties/${propertyId}`);
@@ -145,11 +185,61 @@ useEffect(() => {
       }
       data.imageUrls = images;
       setProperty(data);
+
+      // ⭐ NEW: Fetch documents after property is loaded
+      await fetchPropertyDocuments();
+
     } catch (err) {
       setError(err.message || "Failed to load property");
     } finally {
       setLoading(false);
     }
+  };
+
+  // ⭐ NEW: Get icon for document type
+const getDocumentIcon = (fileType, fileName) => {
+  const type = fileType?.toLowerCase() || '';
+  const name = fileName?.toLowerCase() || '';
+
+  if (type.includes('pdf') || name.endsWith('.pdf')) return '📕';
+
+  // ✅ FIXED: Check for 'wordprocessingml' OR file extension
+  if (type.includes('word') ||
+      type.includes('wordprocessingml') ||  // ⭐ THIS IS THE KEY FIX
+      name.endsWith('.doc') ||
+      name.endsWith('.docx')) {
+    return '📘';
+  }
+
+  if (type.includes('image')) return '🖼️';
+  return '📄';
+};
+
+  // ⭐ NEW: Format file size
+  const formatFileSize = (bytes) => {
+    if (!bytes || bytes === 0) return "Unknown size";
+    const kb = bytes / 1024;
+    const mb = kb / 1024;
+    if (mb >= 1) return `${mb.toFixed(2)} MB`;
+    return `${kb.toFixed(2)} KB`;
+  };
+
+  // ⭐ NEW: Handle document download
+  const handleDocumentDownload = (documentUrl, fileName) => {
+    console.log("📥 Downloading document:", fileName);
+
+    // Track download event
+    if (user) {
+      trackGTMLead({
+        propertyId: property.id,
+        propertyName: property.title,
+        propertyPrice: property.price,
+        leadType: 'document_download'
+      });
+    }
+
+    // Open document in new tab
+    window.open(documentUrl, '_blank');
   };
 
   const trackPropertyView = async () => {
@@ -282,7 +372,6 @@ useEffect(() => {
     }
   };
 
-  // ✅ UPDATED - Check if agent/admin OR property owner (USER) has any deal on this property
   const checkExistingDealForAgent = async () => {
     // Allow AGENT, ADMIN, or USER who is property owner
     if (!user?.id) {
@@ -622,7 +711,7 @@ const handleContactClick = (action) => {
   }
 };
 
-  // ✅ ADDED - Handler for Create Deal Modal Success
+  // Handler for Create Deal Modal Success
   const handleDealCreatedSuccess = () => {
     setShowCreateDealModal(false);
     if (user.role === "AGENT" || user.role === "ADMIN") {
@@ -633,7 +722,7 @@ const handleContactClick = (action) => {
     alert("✅ Deal created successfully!");
   };
 
-  // ✅ ADDED - Handler to view existing deal
+  // Handler to view existing deal
   const handleViewDeal = () => {
     if (existingDeal) {
       setViewingDeal(existingDeal);
@@ -695,7 +784,7 @@ const handleContactClick = (action) => {
   const amenitiesList = Array.isArray(property?.amenities) ? property.amenities :
                        typeof property?.amenities === "string" ? property.amenities.split(",").map((a) => a.trim()) : [];
 
-  // ✅ UPDATED - Role-based access control using permission functions
+  // Role-based access control using permission functions
   // Only ADMIN and AGENT can create deals (not BROKER, SELLER, or BUYER)
   const isAgentOrAdmin = user ? canCreateDeal(user.role) : false;
   const isNotPropertyOwner = user && property ? !isPropertyOwner(user, property) : false;
@@ -707,7 +796,7 @@ const handleContactClick = (action) => {
         <LoginModal onClose={() => setShowLoginModal(false)} />
       )}
 
-      {/* ✅ ADDED - Create Deal Modal for ADMIN/AGENT */}
+      {/* Create Deal Modal for ADMIN/AGENT */}
       {showCreateDealModal && isAgentOrAdmin && (
         <CreateDealModal
           propertyId={propertyId}
@@ -717,7 +806,7 @@ const handleContactClick = (action) => {
         />
       )}
 
-      {/* ✅ ADDED - Deal Detail Modal for viewing existing deals */}
+      {/* Deal Detail Modal for viewing existing deals */}
       {viewingDeal && (
         <DealDetailModal
           deal={viewingDeal}
@@ -738,7 +827,7 @@ const handleContactClick = (action) => {
         <div className="pd-container">
           <button onClick={() => navigate(-1)} className="pd-back">← Back</button>
 
-          {/* ✅ UPDATED - Show button for AGENT/ADMIN creating deals OR any user with existing deal */}
+          {/* Show button for AGENT/ADMIN creating deals OR any user with existing deal */}
           {((isAgentOrAdmin && isNotPropertyOwner) || existingDeal) && (
             <button
               onClick={() => existingDeal ? handleViewDeal() : setShowCreateDealModal(true)}
@@ -915,6 +1004,62 @@ const handleContactClick = (action) => {
                   </div>
                 </div>
               )}
+
+              {/* ⭐ NEW: Property Documents Section */}
+              {(documents.length > 0 || documentsLoading) && (
+                <div className="pd-section pd-documents-section">
+                  <h2 className="pd-subtitle">📑 Property Documents</h2>
+                  {documentsLoading ? (
+                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                      <div className="pd-spinner" style={{ width: '30px', height: '30px', margin: '0 auto 10px' }}></div>
+                      <p>Loading documents...</p>
+                    </div>
+                  ) : documents.length > 0 ? (
+                    <>
+                      <div className="pd-documents-grid">
+                        {documents.map((doc, idx) => (
+                          <div
+                            key={idx}
+                            className="pd-document-card"
+                            onClick={() => handleDocumentDownload(doc.documentUrl, doc.fileName)}
+                            title={`Click to view ${doc.fileName}`}
+                          >
+                            <div className="pd-doc-icon">
+                              {getDocumentIcon(doc.fileType, doc.fileName)}  {/* ✅ Pass both */}
+                            </div>
+                            <div className="pd-doc-info">
+                              <div className="pd-doc-name" title={doc.fileName}>
+                                {doc.fileName || 'Document'}
+                              </div>
+                              <div className="pd-doc-meta">
+                                {doc.documentType && (
+                                  <span className="pd-doc-type">{doc.documentType}</span>
+                                )}
+                                {doc.fileSize > 0 && (
+                                  <span className="pd-doc-size">{formatFileSize(doc.fileSize)}</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="pd-doc-download">
+                              <span className="pd-doc-download-icon">⬇️</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{
+                        marginTop: '12px',
+                        padding: '12px',
+                        background: '#f0f9ff',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        color: '#0369a1'
+                      }}>
+                        💡 <strong>Tip:</strong> Click on any document to view or download it
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             <div className="pd-right">
@@ -979,7 +1124,7 @@ const handleContactClick = (action) => {
                 )}
               </div>
 
-              {/* ✅ ADDED - Create Deal OR View Deal Card for ADMIN/AGENT (in sidebar) */}
+              {/* Create Deal OR View Deal Card for ADMIN/AGENT (in sidebar) */}
               {((isAgentOrAdmin && isNotPropertyOwner) || (existingDeal && user))&& (
                 <div className="card pd-deal">
                   <h3 className="pd-deal-title">🎯 Agent Actions</h3>
@@ -1032,7 +1177,7 @@ const handleContactClick = (action) => {
                 </div>
               )}
 
-              {showFeaturedSection && !featuredStatus?.featured && (
+              {user?.role === "ADMIN" && showFeaturedSection && !featuredStatus?.featured && (
                 <div className="card pd-featured">
                   <h3 className="pd-featured-title">⭐ Make Your Property Featured</h3>
                   <p className="pd-featured-desc">Get more visibility! Featured properties appear at the top of search results.</p>
@@ -1104,9 +1249,6 @@ const handleContactClick = (action) => {
                   </div>
                 </div>
               )}
-
-
-
 
               <div className="card pd-details">
                 <h3 className="pd-details-title">Property Details</h3>
