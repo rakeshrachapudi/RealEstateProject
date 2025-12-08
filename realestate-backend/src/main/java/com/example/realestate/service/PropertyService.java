@@ -360,45 +360,66 @@ public class PropertyService {
     }
 
     /**
-     * ⭐ NEW: Move file from temp folder to property folder in S3
+     * ⭐ COMPLETE FIXED VERSION: PropertyService.java - moveFileToPropertyFolder method
+     * Replace lines 367-401 with this ENTIRE method
+     */
+
+    /**
+     * Move file from temp folder to property folder in S3
      * From: temp/images/file.jpg or temp/documents/file.pdf
      * To: properties/{propertyId}/images/file.jpg or properties/{propertyId}/documents/file.pdf
      */
+    // ═══════════════════════════════════════════════════════════════
+// SIMPLE FIX - Just replace this ONE method in PropertyService.java
+// Find: private String moveFileToPropertyFolder (around line 367)
+// Replace: The entire method with this code below
+// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// SIMPLE FIX - Just replace this ONE method in PropertyService.java
+// Find: private String moveFileToPropertyFolder (around line 367)
+// Replace: The entire method with this code below
+// ═══════════════════════════════════════════════════════════════
+
     private String moveFileToPropertyFolder(String tempUrl, Long propertyId, String folderType) {
+        logger.info("🔄 Moving file for property {}: {}", propertyId, tempUrl);
+
         try {
-            // Extract the S3 key from the URL
-            // URL format: https://bucket-name.s3.region.amazonaws.com/temp/images/file.jpg
+            // Extract S3 key from URL
             String tempKey = extractS3KeyFromUrl(tempUrl);
 
             if (tempKey == null || !tempKey.contains("temp/")) {
-                logger.warn("⚠️ URL doesn't contain temp path, skipping move: {}", tempUrl);
-                return null;
+                logger.warn("Invalid or non-temp URL: {}", tempUrl);
+                return tempUrl;
             }
 
-            // Extract filename from temp key
+            // Get filename
             String fileName = tempKey.substring(tempKey.lastIndexOf("/") + 1);
 
-            // Create new key: properties/{propertyId}/images/file.jpg
+            // Build new key: properties/{propertyId}/documents/filename
             String newKey = String.format("properties/%d/%s/%s", propertyId, folderType, fileName);
 
-            // Move the file in S3 (copy then delete)
+            logger.info("📦 Moving: {} → {}", tempKey, newKey);
+
+            // Move file in S3 (copy + delete)
             boolean moved = s3Service.moveFile(tempKey, newKey);
 
             if (moved) {
-                // Generate new URL
-                String newUrl = tempUrl.replace(tempKey, newKey);
-                logger.info("✅ Moved S3 file: {} → {}", tempKey, newKey);
+                // ⭐ CRITICAL FIX: Use S3Service to generate URL
+                String newUrl = s3Service.getFileUrl(newKey);
+                logger.info("✅ Moved successfully!");
+                logger.info("   ⭐ New URL: {}", newUrl);
                 return newUrl;
             } else {
-                logger.error("❌ Failed to move S3 file: {}", tempKey);
+                logger.error("❌ Failed to move file");
                 return null;
             }
 
         } catch (Exception e) {
-            logger.error("❌ Error moving file to property folder: {}", e.getMessage(), e);
+            logger.error("❌ Error moving file: {}", e.getMessage(), e);
             return null;
         }
     }
+
 
     /**
      * Extract S3 key from full S3 URL
