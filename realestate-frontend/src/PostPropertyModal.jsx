@@ -752,17 +752,30 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
           throw new Error(`Server error (${response.status}): ${errorText}`);
         }
 
-        // Check for specific error codes
-        if (errorData.error === 'BROKER_NO_ACTIVE_SUBSCRIPTION') {
-          console.log("❌ Broker needs subscription");
+        // ✅ FIXED: Check for specific error codes - more robust detection
+        // Check both 'error' field AND message content for subscription errors
+        if (errorData.error === 'BROKER_NO_ACTIVE_SUBSCRIPTION' ||
+            errorData.message?.toLowerCase().includes('subscription required') ||
+            errorData.message?.toLowerCase().includes('no active subscription') ||
+            errorData.message?.toLowerCase().includes('activate a subscription')) {
+          console.log("❌ Broker needs subscription - Opening subscription modal");
           setCurrentBrokerId(user.id);
           setShowSubscriptionModal(true);
           setLoading(false);
           return;
         }
 
-        if (errorData.error === 'BROKER_PROPERTY_LIMIT_REACHED') {
-          throw new Error("You have reached your property posting limit. Please upgrade your subscription.");
+        // ✅ FIXED: Check for property limit errors
+        if (errorData.error === 'BROKER_PROPERTY_LIMIT_REACHED' ||
+            errorData.message?.toLowerCase().includes('property limit') ||
+            errorData.message?.toLowerCase().includes('limit reached')) {
+          console.log("❌ Broker property limit reached");
+          setError("You have reached your property posting limit. Please upgrade your subscription.");
+          setLoading(false);
+          // Also show subscription modal so they can upgrade
+          setCurrentBrokerId(user.id);
+          setShowSubscriptionModal(true);
+          return;
         }
 
         throw new Error(errorData.message || "Failed to create property");

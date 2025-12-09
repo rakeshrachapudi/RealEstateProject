@@ -39,6 +39,7 @@ public class PropertyController {
 
     // -------------------------------------------------------------
     // ⭐ GLOBAL HANDLER FOR SUBSCRIPTION / BROKER LIMIT ERRORS
+    // ✅ FIXED: Added "Subscription required" and "Property limit reached" checks
     // -------------------------------------------------------------
     @ExceptionHandler({RuntimeException.class})
     @ResponseStatus(HttpStatus.FORBIDDEN)
@@ -50,13 +51,23 @@ public class PropertyController {
         errorResponse.put("message", ex.getMessage());
 
         if (ex.getMessage() != null) {
-            if (ex.getMessage().contains("no active subscription") ||
-                    ex.getMessage().contains("BROKER_NO_ACTIVE_SUBSCRIPTION")) {
+            String message = ex.getMessage().toLowerCase();
+
+            // ✅ FIXED: Check for subscription-related errors
+            if (message.contains("no active subscription") ||
+                    message.contains("subscription required") ||
+                    message.contains("broker_no_active_subscription")) {
                 errorResponse.put("error", "BROKER_NO_ACTIVE_SUBSCRIPTION");
-            } else if (ex.getMessage().contains("property limit reached") ||
-                    ex.getMessage().contains("BROKER_PROPERTY_LIMIT_REACHED")) {
+                logger.info("🔒 Broker subscription error detected - returning BROKER_NO_ACTIVE_SUBSCRIPTION");
+            }
+            // ✅ FIXED: Check for property limit errors
+            else if (message.contains("property limit reached") ||
+                    message.contains("property limit") ||
+                    message.contains("broker_property_limit_reached")) {
                 errorResponse.put("error", "BROKER_PROPERTY_LIMIT_REACHED");
-            } else {
+                logger.info("🔒 Broker limit error detected - returning BROKER_PROPERTY_LIMIT_REACHED");
+            }
+            else {
                 errorResponse.put("error", "BUSINESS_RULE_VIOLATION");
             }
         }
