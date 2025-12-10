@@ -1,71 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Google Tag Manager - PASTE YOUR GTM-XXXXXXX ID HERE -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-  })(window,document,'script','dataLayer','GTM-WDMS8V96');</script>
+    <script>
+      (function (w, d, s, l, i) {
+        w[l] = w[l] || [];
+        w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+        var f = d.getElementsByTagName(s)[0],
+          j = d.createElement(s),
+          dl = l != "dataLayer" ? "&l=" + l : "";
+        j.async = true;
+        j.src = "https://www.googletagmanager.com/gtm.js?id=" + i + dl;
+        f.parentNode.insertBefore(j, f);
+      })(window, document, "script", "dataLayer", "GTM-WDMS8V96");
+    </script>
     <!-- End Google Tag Manager -->
 
     <!-- Preconnect to external domains for performance -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://www.googletagmanager.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
 
     <!-- DNS prefetch for analytics -->
-    <link rel="dns-prefetch" href="//www.googletagmanager.com">
-    <link rel="dns-prefetch" href="//www.google-analytics.com">
-    <link rel="dns-prefetch" href="//connect.facebook.net">
+    <link rel="dns-prefetch" href="//www.googletagmanager.com" />
+    <link rel="dns-prefetch" href="//www.google-analytics.com" />
+    <link rel="dns-prefetch" href="//connect.facebook.net" />
+
+    <link
+      rel="icon"
+      href="/src/assets/logo-black.png"
+      media="(prefers-color-scheme: light)"
+    />
+
+    <!-- Dark Mode Favicon -->
+    <link
+      rel="icon"
+      href="/src/assets/logo-white.png"
+      media="(prefers-color-scheme: dark)"
+    />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <!-- <link rel="icon" type="image/x-icon" href="/src/assets/logo.png" /> -->
 
-    <title>PropertyDealz.in - Zero Brokerage Property Listings in Hyderabad</title>
+    <title>
+      PropertyDealz.in - Zero Brokerage Property Listings in Hyderabad
+    </title>
 
     <!-- Basic Meta Tags -->
-    <meta name="description" content="Find verified properties for sale and rent in Hyderabad. Direct owner contact, no brokerage. Flats, plots, villas in Gachibowli, Kondapur, Miyapur & more.">
-    <meta name="keywords" content="properties in hyderabad, zero brokerage, real estate hyderabad, flats for sale, property without broker">
-    <meta name="robots" content="index, follow">
-    <meta name="author" content="PropertyDealz.in">
+    <meta
+      name="description"
+      content="Find verified properties for sale and rent in Hyderabad. Direct owner contact, no brokerage. Flats, plots, villas in Gachibowli, Kondapur, Miyapur & more."
+    />
+    <meta
+      name="keywords"
+      content="properties in hyderabad, zero brokerage, real estate hyderabad, flats for sale, property without broker"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="PropertyDealz.in" />
 
     <!-- Open Graph Meta Tags -->
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="PropertyDealz.in - Zero Brokerage Properties in Hyderabad">
-    <meta property="og:description" content="Find verified properties for sale and rent in Hyderabad. Direct owner contact, no brokerage.">
-    <meta property="og:image" content="https://www.propertydealz.in/og-image.jpg">
-    <meta property="og:url" content="https://www.propertydealz.in">
-    <meta property="og:site_name" content="PropertyDealz.in">
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="PropertyDealz.in - Zero Brokerage Properties in Hyderabad"
+    />
+    <meta
+      property="og:description"
+      content="Find verified properties for sale and rent in Hyderabad. Direct owner contact, no brokerage."
+    />
+    <meta
+      property="og:image"
+      content="https://www.propertydealz.in/og-image.jpg"
+    />
+    <meta property="og:url" content="https://www.propertydealz.in" />
+    <meta property="og:site_name" content="PropertyDealz.in" />
 
     <!-- Twitter Card Meta Tags -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="PropertyDealz.in - Zero Brokerage Properties">
-    <meta name="twitter:description" content="Find verified properties in Hyderabad without brokerage.">
-    <meta name="twitter:image" content="https://www.propertydealz.in/og-image.jpg">
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="PropertyDealz.in - Zero Brokerage Properties"
+    />
+    <meta
+      name="twitter:description"
+      content="Find verified properties in Hyderabad without brokerage."
+    />
+    <meta
+      name="twitter:image"
+      content="https://www.propertydealz.in/og-image.jpg"
+    />
 
     <!-- Geo Meta Tags -->
-    <meta name="geo.region" content="IN-TG">
-    <meta name="geo.placename" content="Hyderabad">
-    <meta name="geo.position" content="17.3850;78.4867">
-    <meta name="ICBM" content="17.3850, 78.4867">
+    <meta name="geo.region" content="IN-TG" />
+    <meta name="geo.placename" content="Hyderabad" />
+    <meta name="geo.position" content="17.3850;78.4867" />
+    <meta name="ICBM" content="17.3850, 78.4867" />
 
     <!-- Theme Color for Mobile Browsers -->
-    <meta name="theme-color" content="#667eea">
+    <meta name="theme-color" content="#667eea" />
 
     <!-- Apple Touch Icon -->
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-</head>
-<body>
-<!-- Google Tag Manager (noscript) - PASTE YOUR GTM-XXXXXXX ID HERE -->
-<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WDMS8V96"
-                  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-<!-- End Google Tag Manager (noscript) -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  </head>
+  <body>
+    <!-- Google Tag Manager (noscript) - PASTE YOUR GTM-XXXXXXX ID HERE -->
+    <noscript
+      ><iframe
+        src="https://www.googletagmanager.com/ns.html?id=GTM-WDMS8V96"
+        height="0"
+        width="0"
+        style="display: none; visibility: hidden"
+      ></iframe
+    ></noscript>
+    <!-- End Google Tag Manager (noscript) -->
 
-<div id="root"></div>
-<script type="module" src="/src/main.jsx"></script>
-</body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
