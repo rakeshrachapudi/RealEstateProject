@@ -1177,7 +1177,7 @@ const handleContactClick = (action) => {
                 </div>
               )}
 
-              {user?.role === "ADMIN" && showFeaturedSection && !featuredStatus?.featured && (
+              {showFeaturedSection && !featuredStatus?.featured && (
                 <div className="card pd-featured">
                   <h3 className="pd-featured-title">⭐ Make Your Property Featured</h3>
                   <p className="pd-featured-desc">Get more visibility! Featured properties appear at the top of search results.</p>
