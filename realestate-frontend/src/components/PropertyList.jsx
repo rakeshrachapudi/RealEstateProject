@@ -4,11 +4,12 @@ import PropertyCard from "./PropertyCard";
 import "./PropertyList.css";
 
 const PropertyList = ({
-  properties, // Array of items: { ...propertyData, dealInfo? }
+  properties,
   loading,
+  loadingMore, // New prop for infinite scroll loading state
   onPropertyUpdated,
   onPropertyDeleted,
-  onViewDealDetails, // Handler bubbled up (e.g., from HomePage)
+  onViewDealDetails,
 }) => {
   if (loading) {
     return (
@@ -36,25 +37,46 @@ const PropertyList = ({
   }
 
   return (
-    <div className="pl-grid" role="list">
-      {properties.map((propertyItem, index) => {
-        const { dealInfo, ...propertyData } = propertyItem || {};
-        const propertyId =
-          propertyData?.id || propertyData?.propertyId || `prop-${index}`;
+    <>
+      <div className="pl-grid" role="list">
+        {properties.map((propertyItem, index) => {
+          const { dealInfo, ...propertyData } = propertyItem || {};
+          const propertyId =
+            propertyData?.id || propertyData?.propertyId || `prop-${index}`;
 
-        return (
-          <div className="pl-grid-item" role="listitem" key={propertyId}>
-            <PropertyCard
-              property={propertyData}
-              dealInfo={dealInfo}
-              onPropertyUpdated={onPropertyUpdated}
-              onPropertyDeleted={onPropertyDeleted}
-              onViewDealDetails={onViewDealDetails}
-            />
-          </div>
-        );
-      })}
-    </div>
+          return (
+            <div className="pl-grid-item" role="listitem" key={propertyId}>
+              <PropertyCard
+                property={propertyData}
+                dealInfo={dealInfo}
+                onPropertyUpdated={onPropertyUpdated}
+                onPropertyDeleted={onPropertyDeleted}
+                onViewDealDetails={onViewDealDetails}
+              />
+            </div>
+          );
+        })}
+
+        {/* Show skeleton loaders while loading more */}
+        {loadingMore && (
+          <>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div className="pl-grid-item" key={`skeleton-${i}`}>
+                <div className="pl-skeleton-card">
+                  <div className="pl-skeleton-image"></div>
+                  <div className="pl-skeleton-content">
+                    <div className="pl-skeleton-line xl"></div>
+                    <div className="pl-skeleton-line medium"></div>
+                    <div className="pl-skeleton-line long"></div>
+                    <div className="pl-skeleton-line short"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+    </>
   );
 };
 
