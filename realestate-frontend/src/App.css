@@ -12,6 +12,7 @@ html {
   line-height: 1.6;
   -webkit-text-size-adjust: 100%;
   -ms-text-size-adjust: 100%;
+  zoom: 0.8;
 }
 
 body {
