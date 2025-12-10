@@ -1,0 +1,2561 @@
+{
+	"info": {
+		"_postman_id": "propertydealz-api-v2",
+		"name": "PropertyDealz.in API v2",
+		"description": "Complete API collection for PropertyDealz.in - Zero Brokerage Real Estate Platform\n\n## Environments\n- **Production**: https://propertydealz.in\n- **Local**: http://localhost:8080\n\n## Authentication\nAll authenticated endpoints use Bearer Token (JWT)\n\n## User Roles\n- USER: Regular buyers/sellers\n- AGENT: Property agents  \n- BROKER: Property brokers with subscription\n- ADMIN: System administrators\n\n## Quick Start\n1. Run 'Login' request\n2. Token is auto-saved to {{token}} variable\n3. All other requests use the token automatically",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://propertydealz.in",
+			"type": "string",
+			"description": "Production: https://propertydealz.in | Local: http://localhost:8080"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "testUserId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "testPropertyId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "testDealId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "testAgentId",
+			"value": "2",
+			"type": "string"
+		},
+		{
+			"key": "testBrokerId",
+			"value": "5",
+			"type": "string"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global pre-request script",
+					"console.log('Request: ' + pm.info.requestName);"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test script",
+					"pm.test('Response time < 5s', function() {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});"
+				]
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "🔐 Auth",
+			"description": "Authentication endpoints - Login, Register, Token Verification",
+			"item": [
+				{
+					"name": "Login (Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has token', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('token');",
+									"    if(jsonData.token) {",
+									"        pm.collectionVariables.set('token', jsonData.token);",
+									"        console.log('✅ Token saved to collection variable');",
+									"    }",
+									"});",
+									"",
+									"pm.test('Response has user data', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('user');",
+									"    if(jsonData.user && jsonData.user.id) {",
+									"        pm.collectionVariables.set('testUserId', jsonData.user.id.toString());",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"admin1\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Login as Admin. Token is auto-saved.\n\n**Test Credentials:**\n- admin1 / password123\n- agent1 / password123\n- seller1 / password123\n- buyer1 / password123"
+					}
+				},
+				{
+					"name": "Login (Agent)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var jsonData = pm.response.json();",
+									"if(jsonData.token) {",
+									"    pm.collectionVariables.set('token', jsonData.token);",
+									"}",
+									"if(jsonData.user && jsonData.user.id) {",
+									"    pm.collectionVariables.set('testAgentId', jsonData.user.id.toString());",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"agent1\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Login (Seller)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var jsonData = pm.response.json();",
+									"if(jsonData.token) {",
+									"    pm.collectionVariables.set('token', jsonData.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"seller1\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Login (Buyer)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var jsonData = pm.response.json();",
+									"if(jsonData.token) {",
+									"    pm.collectionVariables.set('token', jsonData.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"buyer1\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Register New User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200 or 201', function() {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"testuser_{{$timestamp}}\",\n    \"password\": \"Test@123\",\n    \"email\": \"test_{{$timestamp}}@example.com\",\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\",\n    \"mobileNumber\": \"98765{{$randomInt}}\",\n    \"role\": \"USER\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "Register new user. Roles: USER, BROKER, AGENT (ADMIN cannot be self-registered)"
+					}
+				},
+				{
+					"name": "Verify Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Token is valid', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.valid || jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/verify",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "verify"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "👥 Users",
+			"description": "User management endpoints",
+			"item": [
+				{
+					"name": "Get All Users",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response is array', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users"]
+						}
+					}
+				},
+				{
+					"name": "Get User by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('User has required fields', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('username');",
+									"    pm.expect(jsonData).to.have.property('email');",
+									"    pm.expect(jsonData).to.have.property('role');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{testUserId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "{{testUserId}}"]
+						}
+					}
+				},
+				{
+					"name": "Search User by Email",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/users/search?email=admin1@realestate.com",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "search"],
+							"query": [
+								{
+									"key": "email",
+									"value": "admin1@realestate.com"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Search User by Phone",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/users/search?phone=1111111111",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "search"],
+							"query": [
+								{
+									"key": "phone",
+									"value": "1111111111"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get All Agents",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('All users are agents', function() {",
+									"    var jsonData = pm.response.json();",
+									"    if(Array.isArray(jsonData) && jsonData.length > 0) {",
+									"        jsonData.forEach(function(user) {",
+									"            pm.expect(user.role).to.equal('AGENT');",
+									"        });",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/users/agents",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "agents"]
+						}
+					}
+				},
+				{
+					"name": "Get Users by Role",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/users/role/:role",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "role", ":role"],
+							"variable": [
+								{
+									"key": "role",
+									"value": "BROKER",
+									"description": "USER, AGENT, BROKER, ADMIN"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create User (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"newagent_{{$timestamp}}\",\n    \"email\": \"newagent_{{$timestamp}}@example.com\",\n    \"firstName\": \"New\",\n    \"lastName\": \"Agent\",\n    \"mobileNumber\": \"87654{{$randomInt}}\",\n    \"address\": \"Hyderabad, Telangana\",\n    \"role\": \"AGENT\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/create",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "create"]
+						},
+						"description": "Creates user with default password: Welcome@123"
+					}
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstName\": \"Updated\",\n    \"lastName\": \"Name\",\n    \"address\": \"Updated Address, Hyderabad\",\n    \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{testUserId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "{{testUserId}}"]
+						}
+					}
+				},
+				{
+					"name": "Deactivate User",
+					"request": {
+						"method": "PUT",
+						"url": {
+							"raw": "{{baseUrl}}/api/users/:userId/deactivate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", ":userId", "deactivate"],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "{{testUserId}}"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Activate User",
+					"request": {
+						"method": "PUT",
+						"url": {
+							"raw": "{{baseUrl}}/api/users/:userId/activate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", ":userId", "activate"],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "{{testUserId}}"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete User (⚠️ Cascade)",
+					"request": {
+						"method": "DELETE",
+						"url": {
+							"raw": "{{baseUrl}}/api/users/:userId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", ":userId"],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "999"
+								}
+							]
+						},
+						"description": "⚠️ CAUTION: Deletes user and cascades to deals and properties"
+					}
+				},
+				{
+					"name": "Delete Agent (⚠️ Cascade)",
+					"request": {
+						"method": "DELETE",
+						"url": {
+							"raw": "{{baseUrl}}/api/users/agent/:agentId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "agent", ":agentId"],
+							"variable": [
+								{
+									"key": "agentId",
+									"value": "999"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🏠 Properties",
+			"description": "Property CRUD and search operations",
+			"item": [
+				{
+					"name": "Get All Properties",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response is array', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"    if(jsonData.length > 0) {",
+									"        pm.collectionVariables.set('testPropertyId', jsonData[0].id.toString());",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/properties",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties"]
+						}
+					}
+				},
+				{
+					"name": "Get All Active Properties",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/all",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "all"]
+						}
+					}
+				},
+				{
+					"name": "Get Property by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Property has required fields', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('title');",
+									"    pm.expect(jsonData).to.have.property('price');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/{{testPropertyId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "{{testPropertyId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Property Types",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Has property types', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.length).to.be.above(0);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/types",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "types"]
+						}
+					}
+				},
+				{
+					"name": "Get Properties by Type",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/byType?type=Apartment",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "byType"],
+							"query": [
+								{
+									"key": "type",
+									"value": "Apartment",
+									"description": "Apartment, Villa, House, Plot, Commercial, Penthouse, Studio, Duplex"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Properties by User",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/user/{{testUserId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "user", "{{testUserId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Properties by City",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/byCity/Hyderabad",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "byCity", "Hyderabad"]
+						}
+					}
+				},
+				{
+					"name": "Get Properties by Area",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/byArea/:areaName",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "byArea", ":areaName"],
+							"variable": [
+								{
+									"key": "areaName",
+									"value": "Gachibowli"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Check if Property is Featured",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/{{testPropertyId}}/is-featured",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "{{testPropertyId}}", "is-featured"]
+						}
+					}
+				},
+				{
+					"name": "Quick Search",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/search/quick?q=apartment gachibowli",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "search", "quick"],
+							"query": [
+								{
+									"key": "q",
+									"value": "apartment gachibowli"
+								}
+							]
+						},
+						"description": "Search by ID, title, description, address, or city"
+					}
+				},
+				{
+					"name": "Create Property",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200 or 201', function() {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});",
+									"",
+									"var jsonData = pm.response.json();",
+									"if(jsonData.id) {",
+									"    pm.collectionVariables.set('testPropertyId', jsonData.id.toString());",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"3BHK Luxury Apartment in Gachibowli\",\n    \"description\": \"Spacious 3BHK apartment with modern amenities, covered parking, and 24/7 security. East facing with excellent ventilation.\",\n    \"type\": \"Apartment\",\n    \"listingType\": \"sale\",\n    \"price\": 8500000,\n    \"priceDisplay\": \"85 Lakhs\",\n    \"pricePerSqft\": 6500,\n    \"areaSqft\": 1300,\n    \"bedrooms\": 3,\n    \"bathrooms\": 2,\n    \"balconies\": 2,\n    \"amenitiesPrice\": 500000,\n    \"address\": \"Near IT Park, Gachibowli\",\n    \"city\": \"Hyderabad\",\n    \"areaId\": 11,\n    \"userId\": 3,\n    \"amenities\": \"Parking,Gym,Swimming Pool,Club House,24x7 Security,Power Backup,Lift\",\n    \"status\": \"available\",\n    \"ownerType\": \"owner\",\n    \"isVerified\": false,\n    \"isReadyToMove\": true,\n    \"constructionStatus\": \"Ready to Move\",\n    \"possessionYear\": \"2024\",\n    \"possessionMonth\": \"January\",\n    \"reraId\": \"P02400005678\",\n    \"hmdaId\": \"HMDA/LP/2024/001234\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/properties",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties"]
+						}
+					}
+				},
+				{
+					"name": "Update Property",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Updated 3BHK Apartment - Price Reduced!\",\n    \"price\": 8000000,\n    \"priceDisplay\": \"80 Lakhs (Negotiable)\",\n    \"status\": \"available\",\n    \"isVerified\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/{{testPropertyId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "{{testPropertyId}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Property",
+					"request": {
+						"method": "DELETE",
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "999"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Upload Property Document (Temp)",
+					"request": {
+						"method": "POST",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": ""
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/upload-document",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "upload-document"]
+						},
+						"description": "Upload document to temp folder. Max 10MB. Allowed: PDF, DOC, DOCX, XLS, XLSX, TXT, JPG, PNG"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔍 Property Search",
+			"description": "Advanced property search with filters",
+			"item": [
+				{
+					"name": "Search Properties (All Filters)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has content array', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('content');",
+									"    pm.expect(jsonData.content).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"propertyType\": \"Apartment\",\n    \"minPrice\": 5000000,\n    \"maxPrice\": 20000000,\n    \"city\": \"Hyderabad\",\n    \"area\": \"\",\n    \"listingType\": \"sale\",\n    \"minBedrooms\": 2,\n    \"maxBedrooms\": 4,\n    \"isVerified\": null,\n    \"ownerType\": \"\",\n    \"isReadyToMove\": null,\n    \"sortBy\": \"createdAt\",\n    \"sortOrder\": \"DESC\",\n    \"page\": 0,\n    \"size\": 20\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "search"]
+						}
+					}
+				},
+				{
+					"name": "Search - Verified Only",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"isVerified\": true,\n    \"sortBy\": \"price\",\n    \"sortOrder\": \"ASC\",\n    \"page\": 0,\n    \"size\": 20\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "search"]
+						}
+					}
+				},
+				{
+					"name": "Search - Ready to Move",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"isReadyToMove\": true,\n    \"city\": \"Hyderabad\",\n    \"page\": 0,\n    \"size\": 20\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "search"]
+						}
+					}
+				},
+				{
+					"name": "Search - By Area (Gachibowli)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"area\": \"Gachibowli\",\n    \"sortBy\": \"price\",\n    \"sortOrder\": \"ASC\",\n    \"page\": 0,\n    \"size\": 20\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "search"]
+						}
+					}
+				},
+				{
+					"name": "Search - Rental Properties",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"listingType\": \"rent\",\n    \"city\": \"Hyderabad\",\n    \"page\": 0,\n    \"size\": 20\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "search"]
+						}
+					}
+				},
+				{
+					"name": "Get Featured Properties",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/properties/featured",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "properties", "featured"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🖼️ Property Images",
+			"description": "Property image management",
+			"item": [
+				{
+					"name": "Get Property Images",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/property-images/property/{{testPropertyId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "property-images", "property", "{{testPropertyId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Primary Image",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/property-images/property/{{testPropertyId}}/primary",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "property-images", "property", "{{testPropertyId}}", "primary"]
+						}
+					}
+				},
+				{
+					"name": "Add Images to Property",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    {\n        \"imageUrl\": \"https://propertydealz-bucket.s3.ap-south-1.amazonaws.com/properties/1/images/img1.jpg\",\n        \"isPrimary\": true,\n        \"displayOrder\": 0\n    },\n    {\n        \"imageUrl\": \"https://propertydealz-bucket.s3.ap-south-1.amazonaws.com/properties/1/images/img2.jpg\",\n        \"isPrimary\": false,\n        \"displayOrder\": 1\n    }\n]"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/property-images/property/{{testPropertyId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "property-images", "property", "{{testPropertyId}}"]
+						}
+					}
+				},
+				{
+					"name": "Set Primary Image",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"propertyId\": {{testPropertyId}}\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/property-images/:imageId/set-primary",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "property-images", ":imageId", "set-primary"],
+							"variable": [
+								{
+									"key": "imageId",
+									"value": "1"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Image Order",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"order\": 2\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/property-images/:imageId/order",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "property-images", ":imageId", "order"],
+							"variable": [
+								{
+									"key": "imageId",
+									"value": "1"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Image",
+					"request": {
+						"method": "DELETE",
+						"url": {
+							"raw": "{{baseUrl}}/api/property-images/:imageId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "property-images", ":imageId"],
+							"variable": [
+								{
+									"key": "imageId",
+									"value": "999"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📄 Property Documents",
+			"description": "Property document management",
+			"item": [
+				{
+					"name": "Get Documents by Property",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/property-documents/property/{{testPropertyId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "property-documents", "property", "{{testPropertyId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Documents by Type",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/property-documents/property/{{testPropertyId}}/type/:documentType",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "property-documents", "property", "{{testPropertyId}}", "type", ":documentType"],
+							"variable": [
+								{
+									"key": "documentType",
+									"value": "brochure",
+									"description": "brochure, floor_plan, other"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Document",
+					"request": {
+						"method": "DELETE",
+						"url": {
+							"raw": "{{baseUrl}}/api/property-documents/:documentId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "property-documents", ":documentId"],
+							"variable": [
+								{
+									"key": "documentId",
+									"value": "999"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete All Documents for Property",
+					"request": {
+						"method": "DELETE",
+						"url": {
+							"raw": "{{baseUrl}}/api/property-documents/property/:propertyId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "property-documents", "property", ":propertyId"],
+							"variable": [
+								{
+									"key": "propertyId",
+									"value": "999"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📍 Areas & Property Types",
+			"description": "Master data endpoints",
+			"item": [
+				{
+					"name": "Get All Property Types",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Has property types', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.length).to.be.above(0);",
+									"    console.log('Property Types: ' + jsonData.map(t => t.typeName).join(', '));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/property-types",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "property-types"]
+						}
+					}
+				},
+				{
+					"name": "Get Areas by City",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Has areas', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.length).to.be.above(0);",
+									"    console.log('Areas count: ' + jsonData.length);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/areas?city=Hyderabad",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "areas"],
+							"query": [
+								{
+									"key": "city",
+									"value": "Hyderabad"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🤝 Deals",
+			"description": "Deal management - Full deal lifecycle from inquiry to completion\n\n**Deal Stages (in order):**\n1. INQUIRY\n2. SHORTLIST\n3. NEGOTIATION\n4. AGREEMENT\n5. REGISTRATION\n6. PAYMENT\n7. COMPLETED",
+			"item": [
+				{
+					"name": "Check Existing Deal",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// 200 = deal exists, 404 = no deal (expected for new)",
+									"pm.test('Status is 200 or 404', function() {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});",
+									"",
+									"if(pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if(jsonData.id) {",
+									"        pm.collectionVariables.set('testDealId', jsonData.id.toString());",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/buyer/:buyerId/property/:propertyId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "buyer", ":buyerId", "property", ":propertyId"],
+							"variable": [
+								{
+									"key": "buyerId",
+									"value": "4"
+								},
+								{
+									"key": "propertyId",
+									"value": "{{testPropertyId}}"
+								}
+							]
+						},
+						"description": "Returns 200 with deal if exists, 404 if no deal (expected for new buyer-property pair)"
+					}
+				},
+				{
+					"name": "Get Deal by ID",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/{{testDealId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "{{testDealId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Deals by User (Auto Role)",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/user/{{testUserId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "user", "{{testUserId}}"]
+						},
+						"description": "Auto-detects user role and returns appropriate deals"
+					}
+				},
+				{
+					"name": "Get Deals by User and Role",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/user/:userId/role/:userRole",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "user", ":userId", "role", ":userRole"],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "{{testAgentId}}"
+								},
+								{
+									"key": "userRole",
+									"value": "AGENT"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Deals by Agent",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/agent/{{testAgentId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "agent", "{{testAgentId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Deals by Buyer",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/buyer/:buyerId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "buyer", ":buyerId"],
+							"variable": [
+								{
+									"key": "buyerId",
+									"value": "4"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Deals by Property",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/property/{{testPropertyId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "property", "{{testPropertyId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Deals by Stage",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/stage/:stage",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "stage", ":stage"],
+							"variable": [
+								{
+									"key": "stage",
+									"value": "INQUIRY",
+									"description": "INQUIRY, SHORTLIST, NEGOTIATION, AGREEMENT, REGISTRATION, PAYMENT, COMPLETED"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Deal Stats by Stage",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/stats/by-stage",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "stats", "by-stage"]
+						}
+					}
+				},
+				{
+					"name": "Create Deal (Basic)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200 or 201', function() {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});",
+									"",
+									"var jsonData = pm.response.json();",
+									"if(jsonData.id) {",
+									"    pm.collectionVariables.set('testDealId', jsonData.id.toString());",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"propertyId\": {{testPropertyId}},\n    \"buyerId\": 4,\n    \"agentId\": {{testAgentId}},\n    \"agreedPrice\": 8500000\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/create",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "create"]
+						},
+						"description": "Creates deal at INQUIRY stage. Returns existing deal if already exists."
+					}
+				},
+				{
+					"name": "Create Deal with Price (Agent)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"propertyId\": {{testPropertyId}},\n    \"buyerId\": 4,\n    \"agentId\": {{testAgentId}},\n    \"agreedPrice\": 8500000,\n    \"notes\": \"Initial negotiation completed. Buyer interested.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/create-with-price",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "create-with-price"]
+						},
+						"description": "Only AGENT or ADMIN can use this endpoint"
+					}
+				},
+				{
+					"name": "Update Deal Stage → SHORTLIST",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"stage\": \"SHORTLIST\",\n    \"notes\": \"Property shortlisted by buyer\",\n    \"username\": \"agent1\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/{{testDealId}}/stage",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "{{testDealId}}", "stage"]
+						}
+					}
+				},
+				{
+					"name": "Update Deal Stage → NEGOTIATION",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"stage\": \"NEGOTIATION\",\n    \"notes\": \"Price negotiation in progress\",\n    \"username\": \"agent1\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/{{testDealId}}/stage",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "{{testDealId}}", "stage"]
+						}
+					}
+				},
+				{
+					"name": "Update Deal Stage → AGREEMENT",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"stage\": \"AGREEMENT\",\n    \"notes\": \"Agreement signed. Awaiting registration.\",\n    \"username\": \"agent1\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/{{testDealId}}/stage",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "{{testDealId}}", "stage"]
+						},
+						"description": "⚠️ Requires agreementUploaded = true (upload deal document first)"
+					}
+				},
+				{
+					"name": "Update Deal Stage → REGISTRATION",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"stage\": \"REGISTRATION\",\n    \"notes\": \"Registration completed at SRO\",\n    \"username\": \"agent1\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/{{testDealId}}/stage",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "{{testDealId}}", "stage"]
+						},
+						"description": "⚠️ Requires registrationUploaded = true"
+					}
+				},
+				{
+					"name": "Delete Deal",
+					"request": {
+						"method": "DELETE",
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/:dealId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", ":dealId"],
+							"variable": [
+								{
+									"key": "dealId",
+									"value": "999"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Admin Dashboard",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/admin/dashboard",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "admin", "dashboard"]
+						}
+					}
+				},
+				{
+					"name": "Admin - Agent Performance",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/admin/agents-performance",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "admin", "agents-performance"]
+						}
+					}
+				},
+				{
+					"name": "Admin - Get Deals by Agent",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/deals/admin/agent/{{testAgentId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "deals", "admin", "agent", "{{testAgentId}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "👨‍💼 Agents",
+			"description": "Agent-specific endpoints",
+			"item": [
+				{
+					"name": "Get Agent for Property",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/agents/property/{{testPropertyId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "agents", "property", "{{testPropertyId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Agent Dashboard",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/agents/{{testAgentId}}/dashboard",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "agents", "{{testAgentId}}", "dashboard"]
+						}
+					}
+				},
+				{
+					"name": "Get All Properties for Agent",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/agents/{{testAgentId}}/all-properties?page=0&size=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "agents", "{{testAgentId}}", "all-properties"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Agent Stats",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/agents/{{testAgentId}}/stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "agents", "{{testAgentId}}", "stats"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "💳 Broker Subscription",
+			"description": "Broker subscription management with Razorpay integration",
+			"item": [
+				{
+					"name": "Get Subscription Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/broker-subscription/status/{{testBrokerId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "broker-subscription", "status", "{{testBrokerId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get All Subscription Plans",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/broker-subscription/plans",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "broker-subscription", "plans"]
+						}
+					}
+				},
+				{
+					"name": "Get Subscription Pricing",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/broker-subscription/pricing",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "broker-subscription", "pricing"]
+						}
+					}
+				},
+				{
+					"name": "Check Can Post Property",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/broker-subscription/can-post/{{testBrokerId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "broker-subscription", "can-post", "{{testBrokerId}}"]
+						}
+					}
+				},
+				{
+					"name": "Validate Coupon",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"brokerId\": {{testBrokerId}},\n    \"couponCode\": \"BROKER3FREE\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/broker-subscription/validate-coupon",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "broker-subscription", "validate-coupon"]
+						}
+					}
+				},
+				{
+					"name": "Apply Coupon (Free Trial)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"brokerId\": {{testBrokerId}},\n    \"couponCode\": \"BROKER3FREE\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/broker-subscription/apply-coupon",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "broker-subscription", "apply-coupon"]
+						}
+					}
+				},
+				{
+					"name": "Create Paid Subscription",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"brokerId\": {{testBrokerId}},\n    \"planType\": \"MONTHLY\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/broker-subscription/create-paid",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "broker-subscription", "create-paid"]
+						},
+						"description": "Plan types: FREE_TRIAL, MONTHLY, QUARTERLY, YEARLY"
+					}
+				},
+				{
+					"name": "Verify Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"razorpay_order_id\": \"order_xxxxx\",\n    \"razorpay_payment_id\": \"pay_xxxxx\",\n    \"razorpay_signature\": \"signature_xxxxx\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/broker-subscription/verify-payment",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "broker-subscription", "verify-payment"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🎟️ Coupons",
+			"description": "Coupon management for Featured Properties",
+			"item": [
+				{
+					"name": "Validate Coupon",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"couponCode\": \"FEATURED50\",\n    \"orderValue\": 499.00\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/coupons/validate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "coupons", "validate"]
+						}
+					}
+				},
+				{
+					"name": "Get Active Coupons",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/coupons/active",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "coupons", "active"]
+						}
+					}
+				},
+				{
+					"name": "Get Coupon by Code",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/coupons/:couponCode",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "coupons", ":couponCode"],
+							"variable": [
+								{
+									"key": "couponCode",
+									"value": "FEATURED50"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Admin - Create Coupon",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"couponCode\": \"NEWYEAR2025\",\n    \"description\": \"New Year 2025 - 25% Off on Featured Listing\",\n    \"discountType\": \"PERCENTAGE\",\n    \"discountValue\": 25,\n    \"maxDiscount\": 125,\n    \"minOrderValue\": 499,\n    \"isActive\": true,\n    \"usageLimit\": 100,\n    \"validFrom\": \"2025-01-01T00:00:00\",\n    \"validUntil\": \"2025-12-31T23:59:59\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/coupons/admin/create",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "coupons", "admin", "create"]
+						},
+						"description": "Discount types: PERCENTAGE, FLAT"
+					}
+				},
+				{
+					"name": "Admin - Update Coupon",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"Updated - 30% Off\",\n    \"discountValue\": 30,\n    \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/coupons/admin/:couponId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "coupons", "admin", ":couponId"],
+							"variable": [
+								{
+									"key": "couponId",
+									"value": "1"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Admin - Deactivate Coupon",
+					"request": {
+						"method": "PATCH",
+						"url": {
+							"raw": "{{baseUrl}}/api/coupons/admin/:couponId/deactivate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "coupons", "admin", ":couponId", "deactivate"],
+							"variable": [
+								{
+									"key": "couponId",
+									"value": "1"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Admin - Delete Coupon",
+					"request": {
+						"method": "DELETE",
+						"url": {
+							"raw": "{{baseUrl}}/api/coupons/admin/:couponId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "coupons", "admin", ":couponId"],
+							"variable": [
+								{
+									"key": "couponId",
+									"value": "999"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "⭐ Featured Properties",
+			"description": "Featured property listing with payment\n\n**Pricing:** ₹499/month\n\n**Flow:**\n1. Apply for featured (with/without coupon)\n2. Create Razorpay order\n3. Complete payment on frontend\n4. Verify payment",
+			"item": [
+				{
+					"name": "Get Active Featured Properties",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/featured-properties/active",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "featured-properties", "active"]
+						}
+					}
+				},
+				{
+					"name": "Check if Property is Featured",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/featured-properties/check/{{testPropertyId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "featured-properties", "check", "{{testPropertyId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get My Featured Properties",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/featured-properties/my-featured",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "featured-properties", "my-featured"]
+						}
+					}
+				},
+				{
+					"name": "Apply for Featured",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"propertyId\": {{testPropertyId}},\n    \"userId\": 3,\n    \"couponCode\": \"\",\n    \"durationMonths\": 3\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/featured-properties/apply",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "featured-properties", "apply"]
+						}
+					}
+				},
+				{
+					"name": "Create Featured Order (Razorpay)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"propertyId\": {{testPropertyId}},\n    \"userId\": 3,\n    \"couponCode\": \"\",\n    \"durationMonths\": 3\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/featured-properties/create-order",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "featured-properties", "create-order"]
+						},
+						"description": "Returns: razorpayOrderId, razorpayKeyId, finalAmount, free flag"
+					}
+				},
+				{
+					"name": "Complete Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"featuredId\": 1,\n    \"razorpayPaymentId\": \"pay_xxxxx\",\n    \"razorpayOrderId\": \"order_xxxxx\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/featured-properties/complete-payment",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "featured-properties", "complete-payment"]
+						}
+					}
+				},
+				{
+					"name": "Verify Featured Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"featuredId\": 1,\n    \"razorpayOrderId\": \"order_xxxxx\",\n    \"razorpayPaymentId\": \"pay_xxxxx\",\n    \"razorpaySignature\": \"signature_xxxxx\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/featured-properties/verify-payment",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "featured-properties", "verify-payment"]
+						}
+					}
+				},
+				{
+					"name": "Cancel Featured",
+					"request": {
+						"method": "DELETE",
+						"url": {
+							"raw": "{{baseUrl}}/api/featured-properties/:featuredId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "featured-properties", ":featuredId"],
+							"variable": [
+								{
+									"key": "featuredId",
+									"value": "999"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "👁️ Property View Tracking",
+			"description": "Track buyer property views for notifications\n\n**Business Logic:**\n- Only tracks BUYER views (USER with 0 properties)\n- Ignores SELLER, AGENT, BROKER, ADMIN views\n- Notifications sent in batches every 5 minutes",
+			"item": [
+				{
+					"name": "Track Property View",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": 4,\n    \"userName\": \"Test Buyer\",\n    \"userMobile\": \"9876543210\",\n    \"userEmail\": \"buyer@example.com\",\n    \"userRole\": \"USER\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/property-tracking/view/{{testPropertyId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "property-tracking", "view", "{{testPropertyId}}"]
+						},
+						"description": "Only tracks BUYER views. Ignored for: SELLER (has properties), AGENT, BROKER, ADMIN"
+					}
+				},
+				{
+					"name": "Get Tracking Stats",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/property-tracking/stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "property-tracking", "stats"]
+						}
+					}
+				},
+				{
+					"name": "Get Property Views",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/property-tracking/property/{{testPropertyId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "property-tracking", "property", "{{testPropertyId}}"]
+						}
+					}
+				},
+				{
+					"name": "Tracking Health Check",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/property-tracking/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "property-tracking", "health"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📤 File Upload",
+			"description": "File upload endpoints for images and documents\n\n**S3 Structure:**\n- /properties/{propertyId}/images/\n- /properties/{propertyId}/documents/\n- /properties/{propertyId}/deals/{dealId}/documents/\n- /temp/ (for new properties)\n\n**Limits:** Max 10MB",
+			"item": [
+				{
+					"name": "Upload Property Image",
+					"request": {
+						"method": "POST",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": ""
+								},
+								{
+									"key": "propertyId",
+									"value": "{{testPropertyId}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/upload/property-image",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "upload", "property-image"]
+						},
+						"description": "Upload to: properties/{propertyId}/images/"
+					}
+				},
+				{
+					"name": "Upload Image (Temp - New Property)",
+					"request": {
+						"method": "POST",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": ""
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/upload/image",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "upload", "image"]
+						},
+						"description": "Upload to temp/ folder. Use when propertyId doesn't exist yet."
+					}
+				},
+				{
+					"name": "Upload Property Document",
+					"request": {
+						"method": "POST",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": ""
+								},
+								{
+									"key": "propertyId",
+									"value": "{{testPropertyId}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/upload/document",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "upload", "document"]
+						},
+						"description": "Allowed: PDF, DOC, DOCX"
+					}
+				},
+				{
+					"name": "Upload Deal Document (Agreement)",
+					"request": {
+						"method": "POST",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": ""
+								},
+								{
+									"key": "dealId",
+									"value": "{{testDealId}}",
+									"type": "text"
+								},
+								{
+									"key": "propertyId",
+									"value": "{{testPropertyId}}",
+									"type": "text"
+								},
+								{
+									"key": "docType",
+									"value": "AGREEMENT",
+									"type": "text",
+									"description": "Sets agreementUploaded = true"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/upload/deal-document",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "upload", "deal-document"]
+						},
+						"description": "Upload agreement document. Sets agreementUploaded flag on deal."
+					}
+				},
+				{
+					"name": "Upload Deal Document (Registration)",
+					"request": {
+						"method": "POST",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": ""
+								},
+								{
+									"key": "dealId",
+									"value": "{{testDealId}}",
+									"type": "text"
+								},
+								{
+									"key": "propertyId",
+									"value": "{{testPropertyId}}",
+									"type": "text"
+								},
+								{
+									"key": "docType",
+									"value": "REGISTRATION",
+									"type": "text",
+									"description": "Sets registrationUploaded = true"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/upload/deal-document",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "upload", "deal-document"]
+						},
+						"description": "Upload registration document. Sets registrationUploaded flag on deal."
+					}
+				}
+			]
+		},
+		{
+			"name": "🔔 Notifications",
+			"description": "Notification service health and testing\n\n**Channels:**\n- Email (AWS SES)\n- WhatsApp (Meta Cloud API)\n\n**Recipients:**\n- Property owners\n- Agents\n- Admins",
+			"item": [
+				{
+					"name": "Check Notification Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "health"]
+						}
+					}
+				},
+				{
+					"name": "Send Test Notification",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/test?phone=917730051329&email=nsrinivas.0975@gmail.com",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "test"],
+							"query": [
+								{
+									"key": "phone",
+									"value": "917730051329",
+									"description": "Include country code"
+								},
+								{
+									"key": "email",
+									"value": "nsrinivas.0975@gmail.com"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🔗 Webhooks",
+			"description": "External service webhooks (Razorpay, WhatsApp)",
+			"item": [
+				{
+					"name": "Razorpay Webhook",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Razorpay-Signature",
+								"value": "webhook_signature"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"event\": \"payment.captured\",\n    \"payload\": {\n        \"payment\": {\n            \"entity\": {\n                \"id\": \"pay_xxxxx\",\n                \"order_id\": \"order_xxxxx\",\n                \"amount\": 49900,\n                \"status\": \"captured\"\n            }\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/webhook/razorpay",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "webhook", "razorpay"]
+						},
+						"description": "Events: payment.captured, payment.failed, order.paid"
+					}
+				},
+				{
+					"name": "WhatsApp Webhook Verify",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=PropertyDealz2025Webhook&hub.challenge=test_challenge",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "webhooks", "whatsapp"],
+							"query": [
+								{
+									"key": "hub.mode",
+									"value": "subscribe"
+								},
+								{
+									"key": "hub.verify_token",
+									"value": "PropertyDealz2025Webhook"
+								},
+								{
+									"key": "hub.challenge",
+									"value": "test_challenge"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "WhatsApp Webhook Event",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"entry\": [\n        {\n            \"changes\": [\n                {\n                    \"value\": {\n                        \"messages\": []\n                    }\n                }\n            ]\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/webhooks/whatsapp",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "webhooks", "whatsapp"]
+						}
+					}
+				}
+			]
+		}
+	]
+}
