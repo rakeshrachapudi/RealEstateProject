@@ -655,6 +655,46 @@
   }
 }
 
+/* ========== SKELETON LOADER PLACEHOLDER ========== */
+
+/* When card is skeleton (loading state) */
+.pc-card.pc-skeleton {
+  pointer-events: none;
+  background: #ffffff;
+}
+
+.pc-card.pc-skeleton .pc-image-wrap {
+  background: linear-gradient(90deg, #e5e7eb 0%, #f3f4f6 50%, #e5e7eb 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.pc-card.pc-skeleton .pc-content > * {
+  background: linear-gradient(90deg, #e5e7eb 0%, #f3f4f6 50%, #e5e7eb 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+  color: transparent;
+  border: none;
+  height: 12px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.pc-card.pc-skeleton .pc-badges,
+.pc-card.pc-skeleton .pc-image-overlay,
+.pc-card.pc-skeleton .pc-stage-badge {
+  display: none;
+}
+
 /* ========================================
    END - ALL INFO INCLUDED & ORGANIZED
    ======================================== */

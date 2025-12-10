@@ -1,5 +1,5 @@
-// src/components/PropertyTypePage.jsx
-import React, { useState, useEffect } from "react";
+// src/components/PropertyTypePage.jsx - OPTIMIZED WITH INFINITE SCROLL (8 per batch)
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import PropertyList from "./PropertyList";
 import { BACKEND_BASE_URL } from "../config/config";
@@ -9,19 +9,20 @@ const PropertyTypePage = () => {
   const { listingType, propertyType, areaName } = useParams();
   const navigate = useNavigate();
 
+  // Pagination states
   const [properties, setProperties] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchProperties();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listingType, propertyType, areaName]);
+  // Scroll detection
+  const observerTarget = useRef(null);
+  const allPropertiesCache = useRef([]);
 
-  const fetchProperties = async () => {
-    setLoading(true);
-    setError(null);
-
+  // Fetch ALL properties once and cache them
+  const fetchAllProperties = useCallback(async () => {
     try {
       const response = await fetch(`${BACKEND_BASE_URL}/api/properties`);
       if (!response.ok)
@@ -36,6 +37,7 @@ const PropertyTypePage = () => {
         allProperties = data.data;
       }
 
+      // Filter properties based on URL params
       const filteredProperties = allProperties.filter((property) => {
         let matches = true;
 
@@ -82,16 +84,89 @@ const PropertyTypePage = () => {
         return matches;
       });
 
-      setProperties(filteredProperties);
+      // Cache all filtered properties
+      allPropertiesCache.current = filteredProperties;
+      return filteredProperties;
     } catch (err) {
+      console.error("Error fetching properties:", err);
       setError(
         "Failed to load properties. Please check if the backend is running."
       );
-      setProperties([]);
-    } finally {
-      setLoading(false);
+      return [];
     }
-  };
+  }, [listingType, propertyType, areaName]);
+
+  // Load paginated results from cache
+  const loadPaginatedResults = useCallback((pageNum = 1, append = false) => {
+    const limit = 8; // Load 8 properties at a time
+    const startIndex = (pageNum - 1) * limit;
+    const endIndex = startIndex + limit;
+
+    const paginatedProperties = allPropertiesCache.current.slice(
+      startIndex,
+      endIndex
+    );
+
+    if (append) {
+      setProperties((prev) => [...prev, ...paginatedProperties]);
+    } else {
+      setProperties(paginatedProperties);
+    }
+
+    // Check if there are more properties
+    setHasMore(endIndex < allPropertiesCache.current.length);
+
+    if (pageNum === 1) {
+      setLoading(false);
+    } else {
+      setLoadingMore(false);
+    }
+  }, []);
+
+  // Initial load - fetch all properties then show first batch
+  useEffect(() => {
+    setLoading(true);
+    setPage(1);
+    setProperties([]);
+    setError(null);
+
+    const initialize = async () => {
+      const allProps = await fetchAllProperties();
+      if (allProps.length > 0) {
+        loadPaginatedResults(1, false);
+      } else {
+        setLoading(false);
+      }
+    };
+
+    initialize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listingType, propertyType, areaName]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          const nextPage = page + 1;
+          setPage(nextPage);
+          setLoadingMore(true);
+          loadPaginatedResults(nextPage, true); // Append mode
+        }
+      },
+      { threshold: 0.1, rootMargin: "100px" }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [page, hasMore, loading, loadingMore, loadPaginatedResults]);
 
   const checkPropertyTypeSynonyms = (propType, searchType) => {
     const synonyms = {
@@ -136,21 +211,23 @@ const PropertyTypePage = () => {
           <p className="ptp-subtitle" aria-live="polite" role="status">
             {loading
               ? "Searching..."
-              : `${properties.length} ${
-                  properties.length === 1 ? "property" : "properties"
-                } found`}
+              : `${properties.length} of ${allPropertiesCache.current.length} ${
+                  allPropertiesCache.current.length === 1
+                    ? "property"
+                    : "properties"
+                } loaded`}
           </p>
         </div>
       </div>
 
-      {error && (
+      {error && !loading && (
         <div className="ptp-error">
           <h2>Something went wrong</h2>
           <p>{error}</p>
           <div className="ptp-actions">
             <button
               className="ptp-btn ptp-btn-primary"
-              onClick={fetchProperties}
+              onClick={() => window.location.reload()}
             >
               Try Again
             </button>
@@ -163,7 +240,12 @@ const PropertyTypePage = () => {
 
       {!error && (
         <>
-          {!loading && properties.length === 0 ? (
+          {loading && properties.length === 0 ? (
+            <div className="ptp-loading">
+              <div className="ptp-spinner"></div>
+              <p>Loading properties...</p>
+            </div>
+          ) : properties.length === 0 ? (
             <div className="ptp-empty">
               <div className="ptp-empty-ic" aria-hidden="true">
                 🏠
@@ -181,13 +263,40 @@ const PropertyTypePage = () => {
                 >
                   Browse All Properties
                 </button>
-                <button className="ptp-btn" onClick={fetchProperties}>
+                <button
+                  className="ptp-btn"
+                  onClick={() => window.location.reload()}
+                >
                   Refresh Search
                 </button>
               </div>
             </div>
           ) : (
-            <PropertyList properties={properties} loading={loading} />
+            <>
+              <PropertyList
+                properties={properties}
+                loading={false}
+                loadingMore={loadingMore}
+                onPropertyUpdated={handlePropertyUpdated}
+                onPropertyDeleted={handlePropertyDeleted}
+                onViewDealDetails={handleViewDealDetails}
+              />
+
+              {/* Infinite scroll trigger element */}
+              <div ref={observerTarget} className="ptp-scroll-trigger">
+                {loadingMore && (
+                  <div className="ptp-loading-more">
+                    <div className="ptp-spinner-small"></div>
+                    <p>Loading more properties...</p>
+                  </div>
+                )}
+                {!hasMore && properties.length > 0 && (
+                  <div className="ptp-end-message">
+                    <p>✅ You've reached the end of results</p>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </>
       )}
