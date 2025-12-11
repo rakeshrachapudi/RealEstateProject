@@ -45,9 +45,9 @@ public class BrokerSubscriptionService {
 
     // Subscription pricing
     private static final Map<String, BigDecimal> SUBSCRIPTION_PRICES = new HashMap<>() {{
-        put("MONTHLY", new BigDecimal("499.00"));
-        put("QUARTERLY", new BigDecimal("1299.00"));
-        put("YEARLY", new BigDecimal("4999.00"));
+        put("MONTHLY", new BigDecimal("1999.00"));
+        put("QUARTERLY", new BigDecimal("4999.00"));
+        put("YEARLY", new BigDecimal("9999.00"));
     }};
 
     /**
@@ -335,13 +335,13 @@ public class BrokerSubscriptionService {
                 "price", SUBSCRIPTION_PRICES.get("QUARTERLY"),
                 "duration", "3 months",
                 "maxProperties", 50,
-                "savings", "13% OFF",
+                "savings", "17% OFF",
                 "features", List.of(
                         "Post up to 50 properties per month",
                         "Direct buyer contact",
                         "Priority support",
                         "Analytics dashboard",
-                        "Save ₹198"
+                        "Save ₹998"
                 )
         ));
 
@@ -350,13 +350,13 @@ public class BrokerSubscriptionService {
                 "price", SUBSCRIPTION_PRICES.get("YEARLY"),
                 "duration", "12 months",
                 "maxProperties", 50,
-                "savings", "17% OFF",
+                "savings", "58% OFF",
                 "features", List.of(
                         "Post up to 50 properties per month",
                         "Direct buyer contact",
                         "Priority support",
                         "Analytics dashboard",
-                        "Save ₹1,000"
+                        "Save ₹13,989"
                 )
         ));
 

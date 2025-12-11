@@ -16,11 +16,40 @@ const BrokerSubscriptionModal = ({
   const [error, setError] = useState("");
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
 
+  // Load Razorpay script helper
+  const loadRazorpayScript = () => {
+    return new Promise((resolve, reject) => {
+      if (window.Razorpay) {
+        console.log("✅ Razorpay already loaded");
+        resolve(true);
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      script.onload = () => {
+        console.log("✅ Razorpay script loaded successfully");
+        resolve(true);
+      };
+      script.onerror = () => {
+        console.error("❌ Failed to load Razorpay script");
+        reject(new Error("Failed to load Razorpay"));
+      };
+      document.body.appendChild(script);
+    });
+  };
+
+  // Load Razorpay script on mount
+  useEffect(() => {
+    loadRazorpayScript().catch(console.error);
+  }, []);
+
   // Subscription plans
   const plans = {
     MONTHLY: {
       name: "Monthly Plan",
-      price: 499,
+      price: 1999,
       duration: "1 month",
       features: [
         "Post up to 50 properties",
@@ -32,29 +61,29 @@ const BrokerSubscriptionModal = ({
     },
     QUARTERLY: {
       name: "Quarterly Plan",
-      price: 1299,
+      price: 4999,
       duration: "3 months",
       features: [
         "Post up to 50 properties per month",
         "Direct buyer contact",
         "Priority support",
         "Analytics dashboard",
-        "Save ₹198",
+        "Save ₹998",
       ],
-      savings: "13% OFF",
+      savings: "17% OFF",
     },
     YEARLY: {
       name: "Yearly Plan",
-      price: 4999,
+      price: 9999,
       duration: "12 months",
       features: [
         "Post up to 50 properties per month",
         "Direct buyer contact",
         "Priority support",
         "Analytics dashboard",
-        "Save ₹1,000",
+        "Save ₹13,989",
       ],
-      savings: "17% OFF",
+      savings: "58% OFF",
     },
   };
 
@@ -164,9 +193,13 @@ const BrokerSubscriptionModal = ({
     setError("");
 
     try {
+      // Step 0: Ensure Razorpay script is loaded
+      console.log("Step 0: Loading Razorpay script...");
+      await loadRazorpayScript();
+
       // Step 1: Create subscription order with Razorpay
-      // ✅ This is ONLY called for PAID plans (Monthly/Quarterly/Yearly)
-      // ❌ FREE trials with coupons skip this entirely
+      console.log("Step 1: Creating order for plan:", planType);
+
       const response = await axios.post(
         `${
           import.meta.env.VITE_BACKEND_BASE_URL
@@ -177,26 +210,77 @@ const BrokerSubscriptionModal = ({
         }
       );
 
+      console.log("Full API Response:", response.data);
+
       const orderData = response.data.data;
+      console.log("Order Data:", orderData);
+
+      // ✅ FIX: Handle both possible field names from backend
+      // Backend may return 'orderId' or 'razorpayOrderId'
+      const razorpayOrderId = orderData.razorpayOrderId || orderData.orderId;
+      const razorpayKeyId = orderData.razorpayKeyId || orderData.keyId;
+      // Backend returns amount in RUPEES (e.g., 499), Razorpay needs PAISE (e.g., 49900)
+      const amountInPaise = Math.round(Number(orderData.amount) * 100);
+      const currency = orderData.currency || "INR";
+
+      // ✅ Validate required fields before opening Razorpay
+      if (!razorpayOrderId) {
+        console.error("Missing Razorpay Order ID in response:", orderData);
+        setError("Payment order created but missing order ID. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      if (!razorpayKeyId) {
+        console.error("Missing Razorpay Key ID in response:", orderData);
+        setError("Payment configuration error. Please contact support.");
+        setLoading(false);
+        return;
+      }
+
+      if (!amountInPaise || amountInPaise <= 0) {
+        console.error("Invalid amount in response:", orderData);
+        setError("Invalid payment amount. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // Check if Razorpay script is loaded (should be loaded by now)
+      if (typeof window.Razorpay === "undefined") {
+        console.error("❌ Razorpay is still undefined after script load attempt");
+        setError("Payment gateway failed to load. Please refresh the page and try again.");
+        setLoading(false);
+        return;
+      }
+
+      console.log("Step 2: Razorpay is available, initializing payment...");
+
+      console.log("Initializing Razorpay with:", {
+        key: razorpayKeyId,
+        amount: amountInPaise,
+        order_id: razorpayOrderId,
+        currency: currency
+      });
 
       // Step 2: Initialize Razorpay
       const options = {
-        key: orderData.razorpayKeyId,
-        amount: orderData.amount * 100, // Amount in paise
-        currency: orderData.currency,
+        key: razorpayKeyId,
+        amount: amountInPaise, // Amount in paise (₹499 = 49900 paise)
+        currency: currency,
         name: "Property Dealz",
         description: `${plans[planType].name} Subscription`,
-        order_id: orderData.razorpayOrderId,
+        order_id: razorpayOrderId,
         prefill: {
-          name: orderData.brokerName,
-          email: orderData.brokerEmail,
-          contact: orderData.brokerPhone,
+          name: orderData.brokerName || "",
+          email: orderData.brokerEmail || "",
+          contact: orderData.brokerPhone || "",
         },
         theme: {
-          color: "#3399cc",
+          color: "#667eea",
         },
         handler: async function (response) {
           // Payment successful - verify on backend
+          console.log("Payment success response:", response);
           await verifyPayment(
             response.razorpay_order_id,
             response.razorpay_payment_id,
@@ -211,11 +295,32 @@ const BrokerSubscriptionModal = ({
         },
       };
 
-      const razorpay = new window.Razorpay(options);
+      console.log("Step 3: Creating Razorpay instance with options:", options);
+
+      let razorpay;
+      try {
+        razorpay = new window.Razorpay(options);
+      } catch (razorpayError) {
+        console.error("❌ Error creating Razorpay instance:", razorpayError);
+        setError("Failed to initialize payment gateway: " + razorpayError.message);
+        setLoading(false);
+        return;
+      }
+
+      razorpay.on("payment.failed", function (response) {
+        console.error("Payment failed:", response.error);
+        setError(response.error.description || "Payment failed. Please try again.");
+        setLoading(false);
+      });
+
+      console.log("Step 4: Opening Razorpay modal...");
       razorpay.open();
+      console.log("✅ Razorpay modal opened");
     } catch (error) {
+      console.error("Error in handlePurchase:", error);
+      console.error("Error response:", error.response?.data);
       setError(
-        error.response?.data?.message || "Failed to create payment order"
+        error.response?.data?.message || error.message || "Failed to create payment order. Please try again."
       );
       setLoading(false);
     }
@@ -223,6 +328,8 @@ const BrokerSubscriptionModal = ({
 
   const verifyPayment = async (orderId, paymentId, signature) => {
     try {
+      console.log("Verifying payment:", { orderId, paymentId, signature });
+
       const response = await axios.post(
         `${
           import.meta.env.VITE_BACKEND_BASE_URL
@@ -234,6 +341,8 @@ const BrokerSubscriptionModal = ({
         }
       );
 
+      console.log("Payment verification response:", response.data);
+
       alert("🎉 " + response.data.data.message);
 
       if (onSubscriptionSuccess) {
@@ -243,6 +352,7 @@ const BrokerSubscriptionModal = ({
       setLoading(false);
       onClose();
     } catch (error) {
+      console.error("Payment verification error:", error);
       setError(error.response?.data?.message || "Payment verification failed");
       setLoading(false);
     }
@@ -333,7 +443,7 @@ const BrokerSubscriptionModal = ({
                   <ul className="plan-features">
                     {plan.features.map((feature, index) => (
                       <li key={index}>
-                        <span className="check-icon">✓</span>
+                        <span className="check-icon">✔</span>
                         {feature}
                       </li>
                     ))}
@@ -384,7 +494,7 @@ const BrokerSubscriptionModal = ({
               {couponValidation?.valid && (
                 <div className="coupon-valid-box">
                   <div className="valid-header">
-                    <span className="success-icon">✓</span>
+                    <span className="success-icon">✔</span>
                     <span className="valid-text">Coupon Valid!</span>
                   </div>
 
