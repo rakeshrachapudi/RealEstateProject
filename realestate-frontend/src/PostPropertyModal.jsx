@@ -32,14 +32,88 @@ const DOCUMENT_CONFIG = {
   maxSizeMB: 10,
   allowedTypes: {
     'application/pdf': { ext: '.pdf', icon: '📄', name: 'PDF' },
+    'application/x-pdf': { ext: '.pdf', icon: '📄', name: 'PDF' },
+    'application/acrobat': { ext: '.pdf', icon: '📄', name: 'PDF' },
+    'application/vnd.pdf': { ext: '.pdf', icon: '📄', name: 'PDF' },
+
     'application/msword': { ext: '.doc', icon: '📝', name: 'Word Doc' },
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { ext: '.docx', icon: '📝', name: 'Word Doc' },
+
     'application/vnd.ms-excel': { ext: '.xls', icon: '📊', name: 'Excel' },
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { ext: '.xlsx', icon: '📊', name: 'Excel' },
+
     'text/plain': { ext: '.txt', icon: '📋', name: 'Text' },
+
     'image/jpeg': { ext: '.jpg', icon: '🖼️', name: 'Image' },
     'image/png': { ext: '.png', icon: '🖼️', name: 'Image' },
   }
+};
+
+// ⭐ Image Resize + Compression Helper
+// Uses Canvas API to resize and compress images in the browser (no external libs)
+const compressImage = (file, maxWidth = 1280, maxHeight = 1280, quality = 0.7) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      img.src = e.target.result;
+    };
+
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      // Maintain aspect ratio, resize if necessary
+      if (width > maxWidth) {
+        height = Math.round((maxWidth / width) * height);
+        width = maxWidth;
+      }
+      if (height > maxHeight) {
+        width = Math.round((maxHeight / height) * width);
+        height = maxHeight;
+      }
+
+      // Create canvas and draw compressed image
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Convert to compressed Blob
+      // Keep PNG as PNG (lossless) and compress JPEG
+      const outputType = file.type === "image/png" ? "image/png" : "image/jpeg";
+      const outputQuality = file.type === "image/png" ? 1.0 : quality;
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            // Convert Blob → File
+            const compressed = new File([blob], file.name, {
+              type: blob.type,
+              lastModified: Date.now(),
+            });
+            resolve(compressed);
+          } else {
+            reject(new Error("Compression failed"));
+          }
+        },
+        outputType,
+        outputQuality
+      );
+    };
+
+    img.onerror = (err) => {
+      reject(err || new Error("Image load error"));
+    };
+
+    reader.onerror = (err) => {
+      reject(err || new Error("File read error"));
+    };
+
+    reader.readAsDataURL(file);
+  });
 };
 
 function PostPropertyModal({ onClose, onPropertyPosted }) {
@@ -563,31 +637,60 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     }
   };
 
-  // Image handling (existing code)
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    if (selectedImages.length + files.length > 10) {
-      alert("Maximum 10 images allowed");
-      return;
+  // Image handling (updated: compression + resize)
+  const handleImageChange = async (e) => {
+    try {
+      const files = Array.from(e.target.files);
+
+      if (selectedImages.length + files.length > 10) {
+        alert("Maximum 10 images allowed");
+        e.target.value = "";
+        return;
+      }
+
+      const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
+      const validImages = [];
+      const errors = [];
+
+      // Process serially to manage memory - compress & resize each image
+      for (const file of files) {
+        if (!allowedTypes.includes(file.type)) {
+          errors.push(`${file.name} — Unsupported format (only JPG/PNG allowed)`);
+          continue;
+        }
+
+        // If file is already small (< 500KB) and dimensions unknown, we still compress to ensure consistent behavior
+        // If file is very large (> 5MB) we will compress it down
+        try {
+          const compressed = await compressImage(file, 1280, 1280, 0.7);
+          validImages.push(compressed);
+
+          // Create preview from compressed file
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setImagePreviews((prev) => [...prev, reader.result]);
+          };
+          reader.readAsDataURL(compressed);
+        } catch (imgErr) {
+          console.error("Compression error for", file.name, imgErr);
+          errors.push(`${file.name} — Failed to compress`);
+        }
+      }
+
+      if (errors.length > 0) {
+        alert(errors.join("\n"));
+      }
+
+      if (validImages.length > 0) {
+        setSelectedImages((prev) => [...prev, ...validImages]);
+      }
+
+      e.target.value = "";
+    } catch (err) {
+      console.error("handleImageChange error:", err);
+      e.target.value = "";
+      alert("Failed to process selected images");
     }
-
-    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
-    if (imageFiles.length !== files.length) {
-      alert("Only image files are allowed");
-      return;
-    }
-
-    setSelectedImages((prev) => [...prev, ...imageFiles]);
-
-    imageFiles.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreviews((prev) => [...prev, reader.result]);
-      };
-      reader.readAsDataURL(file);
-    });
-
-    e.target.value = "";
   };
 
   const removeImage = (index) => {
@@ -639,9 +742,9 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
         }
 
         const data = await response.json();
-      if (data.success && data.url) {
+        if (data.success && data.url) {
           uploadedUrls.push(data.url);
-      }
+        }
 
         const progress = Math.round(((i + 1) / totalImages) * 100);
         setUploadProgress(progress);
@@ -1102,7 +1205,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
               <label className="ppm-label required">📷 Property Images</label>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/jpg"
                 multiple
                 onChange={handleImageChange}
                 className="ppm-file"
