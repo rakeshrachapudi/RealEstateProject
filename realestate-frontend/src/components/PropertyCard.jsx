@@ -315,7 +315,7 @@ const PropertyCard = ({
                     /^(owner|agent|broker|developer|builder)$/i,
                     (match) => match.charAt(0).toUpperCase() + match.slice(1)
                   ) || "N/A"}
-                  {"&nbsp:"}
+                  {/* {"&nbsp:"} */}
                 </div>
               )}
               {property.user && (
