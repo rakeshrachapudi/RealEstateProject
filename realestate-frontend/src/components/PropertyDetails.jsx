@@ -8,7 +8,9 @@ import DealDetailModal from "../DealDetailModal.jsx";
 import { canCreateDeal, isPropertyOwner, getRoleMessage } from "../config/rolePermissions";
 import { BACKEND_BASE_URL } from "../config/config";
 import "./PropertyDetails.css";
-import "./PropertyDetails_Documents.css"; // ⭐ NEW: Import document styles
+import "./PropertyDetails_Documents.css";
+
+// ⭐ Facebook Pixel Events
 import {
   trackFBPropertyView,
   trackFBPropertyContact,
@@ -16,12 +18,21 @@ import {
   trackFBInitiateCheckout
 } from '../utils/fbPixelEvents';
 
+// ⭐ GTM/DataLayer Events
 import {
   trackPropertyView as trackGTMPropertyView,
   trackContact as trackGTMContact,
   trackLead as trackGTMLead,
   trackBeginCheckout
 } from '../utils/gtmDataLayer';
+
+// ⭐ GA4 + Google Ads Conversion Tracking (NEW - IMPORTANT!)
+import {
+  trackViewContact,
+  trackPhoneClick,
+  trackWhatsAppClick,
+  trackPropertyContact
+} from '../components/Analytics/GoogleAnalytics';
 
 function PropertyDetails() {
   const { id: propertyId } = useParams();
@@ -56,12 +67,15 @@ function PropertyDetails() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [viewTracked, setViewTracked] = useState(false);
 
+  // ⭐ NEW: Contact Reveal State - For Lead Tracking
+  const [contactRevealed, setContactRevealed] = useState(false);
+  const [contactLeadTracked, setContactLeadTracked] = useState(false);
+
   // Create Deal Modal State
   const [showCreateDealModal, setShowCreateDealModal] = useState(false);
-  // State for viewing existing deal
   const [viewingDeal, setViewingDeal] = useState(null);
 
-  // ⭐ NEW: Documents state
+  // Documents state
   const [documents, setDocuments] = useState([]);
   const [documentsLoading, setDocumentsLoading] = useState(true);
 
@@ -74,46 +88,38 @@ function PropertyDetails() {
       fetchAgentForProperty();
       checkFeaturedStatus();
 
-      // Check for deals based on user role
       if (user.role === "AGENT" || user.role === "ADMIN") {
-        // Agent/Admin: Check all deals on property
         checkExistingDealForAgent();
       } else if (user.role === "USER" || user.role === "BROKER") {
-        // USER: Check if they own the property (seller) or have a deal as buyer
         const isPropertyOwner = property.user?.id === user.id || property.userId === user.id;
         if (isPropertyOwner) {
-          // Property owner (seller): Check deals on their property
           checkExistingDealForAgent();
         } else {
-          // Not property owner: Check if they have a deal as buyer
           checkExistingDeal();
         }
       }
-     if (
-       user.role === "ADMIN" ||                  // Admin can feature ANY property
-       property.user?.id === user.id             // Owner can feature own property
-     ) {
-       setShowFeaturedSection(true);
-     } else {
-       setShowFeaturedSection(false);
-     }
+      if (
+        user.role === "ADMIN" ||
+        property.user?.id === user.id
+      ) {
+        setShowFeaturedSection(true);
+      } else {
+        setShowFeaturedSection(false);
+      }
 
     } else if (property && !user) {
-      // User not logged in, don't check for deals
       setDealLoading(false);
       setExistingDeal(null);
     }
   }, [property, user]);
 
-useEffect(() => {
-  if (user && property && !viewTracked && property.user?.id !== user.id) {
-    trackPropertyView(); // Your existing backend tracking
-
-    // Add tracking
-    trackFBPropertyView(property);
-    trackGTMPropertyView(property);
-  }
-}, [user, property, viewTracked]);
+  useEffect(() => {
+    if (user && property && !viewTracked && property.user?.id !== user.id) {
+      trackPropertyView();
+      trackFBPropertyView(property);
+      trackGTMPropertyView(property);
+    }
+  }, [user, property, viewTracked]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -141,36 +147,34 @@ useEffect(() => {
     };
   }, [showImageModal]);
 
-  // ⭐ NEW: Fetch property documents
- const fetchPropertyDocuments = async () => {
-   try {
-     setDocumentsLoading(true);
-     const response = await fetch(
-       `${BACKEND_BASE_URL}/api/property-documents/property/${propertyId}`
-     );
+  const fetchPropertyDocuments = async () => {
+    try {
+      setDocumentsLoading(true);
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/property-documents/property/${propertyId}`
+      );
 
-     if (response.ok) {
-       const docsData = await response.json();
-       console.log("📄 Documents fetched:", docsData);
+      if (response.ok) {
+        const docsData = await response.json();
+        console.log("📄 Documents fetched:", docsData);
 
-       // ✅ FIXED: Access docsData.data
-       if (docsData.success && docsData.data) {
-         setDocuments(docsData.data);
-         console.log("✅ Documents set:", docsData.data.length);
-       } else {
-         setDocuments([]);
-       }
-     } else {
-       console.warn("⚠️ No documents found or error fetching documents");
-       setDocuments([]);
-     }
-   } catch (err) {
-     console.error("❌ Error fetching documents:", err);
-     setDocuments([]);
-   } finally {
-     setDocumentsLoading(false);
-   }
- };
+        if (docsData.success && docsData.data) {
+          setDocuments(docsData.data);
+          console.log("✅ Documents set:", docsData.data.length);
+        } else {
+          setDocuments([]);
+        }
+      } else {
+        console.warn("⚠️ No documents found or error fetching documents");
+        setDocuments([]);
+      }
+    } catch (err) {
+      console.error("❌ Error fetching documents:", err);
+      setDocuments([]);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
 
   const fetchPropertyDetails = async () => {
     try {
@@ -186,7 +190,6 @@ useEffect(() => {
       data.imageUrls = images;
       setProperty(data);
 
-      // ⭐ NEW: Fetch documents after property is loaded
       await fetchPropertyDocuments();
 
     } catch (err) {
@@ -196,26 +199,23 @@ useEffect(() => {
     }
   };
 
-  // ⭐ NEW: Get icon for document type
-const getDocumentIcon = (fileType, fileName) => {
-  const type = fileType?.toLowerCase() || '';
-  const name = fileName?.toLowerCase() || '';
+  const getDocumentIcon = (fileType, fileName) => {
+    const type = fileType?.toLowerCase() || '';
+    const name = fileName?.toLowerCase() || '';
 
-  if (type.includes('pdf') || name.endsWith('.pdf')) return '📕';
+    if (type.includes('pdf') || name.endsWith('.pdf')) return '📕';
 
-  // ✅ FIXED: Check for 'wordprocessingml' OR file extension
-  if (type.includes('word') ||
-      type.includes('wordprocessingml') ||  // ⭐ THIS IS THE KEY FIX
-      name.endsWith('.doc') ||
-      name.endsWith('.docx')) {
-    return '📘';
-  }
+    if (type.includes('word') ||
+        type.includes('wordprocessingml') ||
+        name.endsWith('.doc') ||
+        name.endsWith('.docx')) {
+      return '📘';
+    }
 
-  if (type.includes('image')) return '🖼️';
-  return '📄';
-};
+    if (type.includes('image')) return '🖼️';
+    return '📄';
+  };
 
-  // ⭐ NEW: Format file size
   const formatFileSize = (bytes) => {
     if (!bytes || bytes === 0) return "Unknown size";
     const kb = bytes / 1024;
@@ -224,11 +224,9 @@ const getDocumentIcon = (fileType, fileName) => {
     return `${kb.toFixed(2)} KB`;
   };
 
-  // ⭐ NEW: Handle document download
   const handleDocumentDownload = (documentUrl, fileName) => {
     console.log("📥 Downloading document:", fileName);
 
-    // Track download event
     if (user) {
       trackGTMLead({
         propertyId: property.id,
@@ -238,7 +236,6 @@ const getDocumentIcon = (fileType, fileName) => {
       });
     }
 
-    // Open document in new tab
     window.open(documentUrl, '_blank');
   };
 
@@ -268,7 +265,7 @@ const getDocumentIcon = (fileType, fileName) => {
             userName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
             userMobile: user.mobileNumber || '',
             userEmail: user.email || '',
-             userRole: user.role || 'USER'
+            userRole: user.role || 'USER'
           })
         }
       );
@@ -373,13 +370,11 @@ const getDocumentIcon = (fileType, fileName) => {
   };
 
   const checkExistingDealForAgent = async () => {
-    // Allow AGENT, ADMIN, or USER who is property owner
     if (!user?.id) {
       setDealLoading(false);
       return;
     }
 
-    // Check if user is allowed to view property deals
     const isAgentOrAdmin = user.role === "AGENT" || user.role === "ADMIN";
     const isPropertyOwner = property && (property.user?.id === user.id || property.userId === user.id);
 
@@ -397,7 +392,6 @@ const getDocumentIcon = (fileType, fileName) => {
 
       console.log(`🔍 Agent checking for any deals on property: ${propertyId}`);
 
-      // Check all deals on this property
       const response = await fetch(
         `${BACKEND_BASE_URL}/api/deals/property/${propertyId}`,
         {
@@ -419,7 +413,6 @@ const getDocumentIcon = (fileType, fileName) => {
           deals = data;
         }
 
-        // Find the most recent deal
         if (deals.length > 0) {
           const latestDeal = deals.sort((a, b) =>
             new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
@@ -629,32 +622,31 @@ const getDocumentIcon = (fileType, fileName) => {
       const data = await response.json();
       console.log('📦 Create deal response:', data);
 
-    if (response.ok && (data.success || data.dealId || data.id)) {
-      const newDeal = data.data || data;
-      console.log('✅ Deal created successfully:', newDeal);
-      setExistingDeal(newDeal);
-      setOfferAmount("");
-      alert("✅ Deal created successfully!");
-      setDealError("");
+      if (response.ok && (data.success || data.dealId || data.id)) {
+        const newDeal = data.data || data;
+        console.log('✅ Deal created successfully:', newDeal);
+        setExistingDeal(newDeal);
+        setOfferAmount("");
+        alert("✅ Deal created successfully!");
+        setDealError("");
 
-      // Track deal creation
-      trackFBInitiateCheckout({
-        ...newDeal,
-        property: property,
-        propertyId: parseInt(propertyId),
-        offerAmount: parseFloat(offerAmount)
-      });
+        trackFBInitiateCheckout({
+          ...newDeal,
+          property: property,
+          propertyId: parseInt(propertyId),
+          offerAmount: parseFloat(offerAmount)
+        });
 
-      trackFBLead(property);
+        trackFBLead(property);
 
-      trackBeginCheckout(property);
-      trackGTMLead({
-        type: 'deal_creation',
-        propertyId: property.id,
-        propertyValue: parseFloat(offerAmount),
-        phone: user.mobileNumber,
-        name: `${user.firstName || ''} ${user.lastName || ''}`.trim()
-      });
+        trackBeginCheckout(property);
+        trackGTMLead({
+          type: 'deal_creation',
+          propertyId: property.id,
+          propertyValue: parseFloat(offerAmount),
+          phone: user.mobileNumber,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim()
+        });
 
       } else {
         const errorMessage = data?.message || data?.error || "Failed to create deal";
@@ -694,35 +686,109 @@ const getDocumentIcon = (fileType, fileName) => {
     setModalImageIndex((prev) => prev === 0 ? imageUrls.length - 1 : prev - 1);
   };
 
-const handleContactClick = (action) => {
-  if (!user) {
-    setShowLoginModal(true);
-    return;
-  }
+  // ⭐ NEW: Handle View Contact Button Click - PRIMARY LEAD EVENT
+  const handleViewContactClick = () => {
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
 
-  // Track contact
-  trackFBPropertyContact(property);
-  trackGTMContact(property.id, action === 'whatsapp' ? 'whatsapp' : 'phone', property);
+    // Only track once per session
+    if (!contactLeadTracked) {
+      console.log('🔥 VIEW CONTACT - Lead Event Fired!');
 
-  if (action === 'whatsapp' && waHref) {
-    window.open(waHref, "_blank");
-  } else if (action === 'call' && telHref) {
-    window.location.href = telHref;
-  }
-};
+      // GA4 + Google Ads Conversion
+      trackViewContact(property.id, property);
+      trackPropertyContact(property.id, 'view_contact', property);
 
-  // Handler for Create Deal Modal Success
+      // Facebook Pixel
+      trackFBPropertyContact(property);
+      trackFBLead(property);
+
+      // GTM DataLayer
+      trackGTMContact(property.id, 'view_contact', property);
+      trackGTMLead({
+        type: 'view_contact',
+        propertyId: property.id,
+        propertyTitle: property.title,
+        propertyPrice: property.price,
+        phone: user?.mobileNumber,
+        name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim()
+      });
+
+      setContactLeadTracked(true);
+    }
+
+    // Reveal contact info
+    setContactRevealed(true);
+  };
+
+  // ⭐ UPDATED: Handle WhatsApp/Call Click with proper tracking
+  const handleContactClick = (action) => {
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    console.log(`📞 Contact Click: ${action}`);
+
+    // ⭐ GA4 + Google Ads Conversion Events
+    if (action === "call") {
+      trackPhoneClick(property.id, property);
+      trackPropertyContact(property.id, "phone", property);
+    }
+
+    if (action === "whatsapp") {
+      trackWhatsAppClick(property.id, property);
+      trackPropertyContact(property.id, "whatsapp", property);
+    }
+
+    // Facebook Pixel + GTM (existing)
+    trackFBPropertyContact(property);
+    trackGTMContact(property.id, action === 'whatsapp' ? 'whatsapp' : 'phone', property);
+
+    // Execute the action with slight delay to ensure tracking fires
+    if (action === 'whatsapp' && waHref) {
+      setTimeout(() => {
+        window.open(waHref, "_blank");
+      }, 100);
+    } else if (action === 'call' && telHref) {
+      setTimeout(() => {
+        window.location.href = telHref;
+      }, 100);
+    }
+  };
+
+  // ⭐ NEW: Handle FAB Click with tracking
+  const handleFabClick = () => {
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (validContactPhone) {
+      // Track WhatsApp click from FAB
+      trackWhatsAppClick(property.id, property);
+      trackPropertyContact(property.id, "whatsapp", property);
+      trackFBPropertyContact(property);
+      trackGTMContact(property.id, 'whatsapp', property);
+
+      setTimeout(() => {
+        window.open(waHref, "_blank");
+      }, 100);
+    }
+  };
+
   const handleDealCreatedSuccess = () => {
     setShowCreateDealModal(false);
     if (user.role === "AGENT" || user.role === "ADMIN") {
-      checkExistingDealForAgent(); // Refresh for agent/admin
+      checkExistingDealForAgent();
     } else {
-      checkExistingDeal(); // Refresh for buyer
+      checkExistingDeal();
     }
     alert("✅ Deal created successfully!");
   };
 
-  // Handler to view existing deal
   const handleViewDeal = () => {
     if (existingDeal) {
       setViewingDeal(existingDeal);
@@ -784,8 +850,6 @@ const handleContactClick = (action) => {
   const amenitiesList = Array.isArray(property?.amenities) ? property.amenities :
                        typeof property?.amenities === "string" ? property.amenities.split(",").map((a) => a.trim()) : [];
 
-  // Role-based access control using permission functions
-  // Only ADMIN and AGENT can create deals (not BROKER, SELLER, or BUYER)
   const isAgentOrAdmin = user ? canCreateDeal(user.role) : false;
   const isNotPropertyOwner = user && property ? !isPropertyOwner(user, property) : false;
   const roleMessage = user ? getRoleMessage(user.role) : '';
@@ -796,7 +860,6 @@ const handleContactClick = (action) => {
         <LoginModal onClose={() => setShowLoginModal(false)} />
       )}
 
-      {/* Create Deal Modal for ADMIN/AGENT */}
       {showCreateDealModal && isAgentOrAdmin && (
         <CreateDealModal
           propertyId={propertyId}
@@ -806,7 +869,6 @@ const handleContactClick = (action) => {
         />
       )}
 
-      {/* Deal Detail Modal for viewing existing deals */}
       {viewingDeal && (
         <DealDetailModal
           deal={viewingDeal}
@@ -827,7 +889,6 @@ const handleContactClick = (action) => {
         <div className="pd-container">
           <button onClick={() => navigate(-1)} className="pd-back">← Back</button>
 
-          {/* Show button for AGENT/ADMIN creating deals OR any user with existing deal */}
           {((isAgentOrAdmin && isNotPropertyOwner) || existingDeal) && (
             <button
               onClick={() => existingDeal ? handleViewDeal() : setShowCreateDealModal(true)}
@@ -1005,7 +1066,6 @@ const handleContactClick = (action) => {
                 </div>
               )}
 
-              {/* ⭐ NEW: Property Documents Section */}
               {(documents.length > 0 || documentsLoading) && (
                 <div className="pd-section pd-documents-section">
                   <h2 className="pd-subtitle">📑 Property Documents</h2>
@@ -1025,7 +1085,7 @@ const handleContactClick = (action) => {
                             title={`Click to view ${doc.fileName}`}
                           >
                             <div className="pd-doc-icon">
-                              {getDocumentIcon(doc.fileType, doc.fileName)}  {/* ✅ Pass both */}
+                              {getDocumentIcon(doc.fileType, doc.fileName)}
                             </div>
                             <div className="pd-doc-info">
                               <div className="pd-doc-name" title={doc.fileName}>
@@ -1063,10 +1123,12 @@ const handleContactClick = (action) => {
             </div>
 
             <div className="pd-right">
+              {/* ⭐ UPDATED CONTACT SECTION WITH VIEW CONTACT BUTTON */}
               <div className="card pd-contact">
                 <h3 className="pd-contact-title">{contactLabel}</h3>
 
                 {!user ? (
+                  // User not logged in - Show login prompt
                   <div style={{
                     textAlign: 'center',
                     padding: '20px',
@@ -1086,7 +1148,63 @@ const handleContactClick = (action) => {
                       Login to Contact
                     </button>
                   </div>
+                ) : !contactRevealed ? (
+                  // ⭐ User logged in but contact NOT revealed - Show "View Contact" button
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '24px 20px',
+                    background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+                    borderRadius: '12px',
+                    marginBottom: '16px',
+                    border: '1px solid #10b981'
+                  }}>
+                    <div style={{ fontSize: '48px', marginBottom: '12px' }}>👤</div>
+                    <p style={{
+                      fontSize: '14px',
+                      color: '#065f46',
+                      fontWeight: '600',
+                      marginBottom: '8px'
+                    }}>
+                      {contactRoleLabel}
+                    </p>
+                    <p style={{
+                      fontSize: '18px',
+                      color: '#047857',
+                      fontWeight: '700',
+                      marginBottom: '16px'
+                    }}>
+                      {ownerDisplayName}
+                    </p>
+                    <button
+                      onClick={handleViewContactClick}
+                      className="pd-btn pd-btn-primary"
+                      style={{
+                        width: '100%',
+                        padding: '14px 24px',
+                        fontSize: '16px',
+                        fontWeight: '700',
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        border: 'none',
+                        borderRadius: '10px',
+                        color: 'white',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      👁️ View Contact Number
+                    </button>
+                    <p style={{
+                      fontSize: '12px',
+                      color: '#6b7280',
+                      marginTop: '12px',
+                      fontStyle: 'italic'
+                    }}>
+                      Click to reveal phone number
+                    </p>
+                  </div>
                 ) : (
+                  // ⭐ Contact REVEALED - Show full contact info and action buttons
                   <>
                     <div className="pd-owner">
                       <div className="pd-avatar">{ownerInitial}</div>
@@ -1096,7 +1214,17 @@ const handleContactClick = (action) => {
                         {agentLoading ? (
                           <div className="pd-owner-phone">Assigning agent…</div>
                         ) : validContactPhone ? (
-                          <div className="pd-owner-phone">{contactPhone}</div>
+                          <div className="pd-owner-phone" style={{
+                            fontSize: '18px',
+                            fontWeight: '700',
+                            color: '#059669',
+                            background: '#ecfdf5',
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            marginTop: '8px'
+                          }}>
+                            📞 {contactPhone}
+                          </div>
                         ) : (
                           <div className="pd-owner-phone pd-muted">Agent contact will be assigned shortly.</div>
                         )}
@@ -1124,8 +1252,7 @@ const handleContactClick = (action) => {
                 )}
               </div>
 
-              {/* Create Deal OR View Deal Card for ADMIN/AGENT (in sidebar) */}
-              {((isAgentOrAdmin && isNotPropertyOwner) || (existingDeal && user))&& (
+              {((isAgentOrAdmin && isNotPropertyOwner) || (existingDeal && user)) && (
                 <div className="card pd-deal">
                   <h3 className="pd-deal-title">🎯 Agent Actions</h3>
                   {existingDeal ? (
@@ -1288,9 +1415,10 @@ const handleContactClick = (action) => {
             </div>
           </div>
 
+          {/* ⭐ UPDATED FAB with tracking */}
           <button
             className="pd-fab"
-            onClick={() => user ? (validContactPhone && window.open(waHref, "_blank")) : setShowLoginModal(true)}
+            onClick={handleFabClick}
             disabled={user && !validContactPhone}
             title={!user ? "Login to contact" : (validContactPhone ? "Chat on WhatsApp" : "Agent not assigned yet")}
           >
