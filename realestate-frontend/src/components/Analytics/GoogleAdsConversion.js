@@ -8,16 +8,33 @@
  * This fires when a user takes a lead action (view contact, call, whatsapp)
  */
 export const triggerGoogleAdsConversion = () => {
-  if (typeof window.gtag !== "function") {
-    console.warn("⚠️ gtag not loaded - Google Ads conversion not fired");
+  console.log("🔥 triggerGoogleAdsConversion called");
+
+  if (typeof window === 'undefined') {
+    console.warn("⚠️ Window not available (SSR)");
     return;
   }
 
-  window.gtag("event", "conversion", {
-    send_to: "AW-17763220413/krxACISP38cbEL33lJZC"
-  });
-  
-  console.log("✅ Google Ads conversion fired successfully");
+  if (typeof window.gtag !== "function") {
+    console.warn("⚠️ gtag not loaded - trying via dataLayer");
+
+    // Fallback: Push to dataLayer directly
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      'event': 'conversion',
+      'send_to': 'AW-17763220413/krxACISP38cbEL33lJZC'
+    });
+    return;
+  }
+
+  try {
+    window.gtag("event", "conversion", {
+      send_to: "AW-17763220413/krxACISP38cbEL33lJZC"
+    });
+    console.log("✅ Google Ads conversion fired successfully!");
+  } catch (error) {
+    console.error("❌ Error firing Google Ads conversion:", error);
+  }
 };
 
 export default triggerGoogleAdsConversion;
