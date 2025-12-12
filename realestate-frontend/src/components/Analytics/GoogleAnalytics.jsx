@@ -2,12 +2,12 @@
 import React, { useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
+import { triggerGoogleAdsConversion } from "./GoogleAdsConversion"; // ⭐ IMPORTANT
 
 const GoogleAnalytics = ({ measurementId = 'G-5X8D8087C4' }) => {
   const location = useLocation();
 
   useEffect(() => {
-    // Track page views on route change
     if (window.gtag) {
       window.gtag('config', measurementId, {
         page_path: location.pathname + location.search,
@@ -29,40 +29,67 @@ const GoogleAnalytics = ({ measurementId = 'G-5X8D8087C4' }) => {
       </script>
 
       {/* Google Analytics 4 */}
-      <script
-        async
-        src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}
-      />
+      <script async src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`} />
       <script>
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', '${measurementId}', {
-            send_page_view: false
-          });
+          gtag('config', '${measurementId}', { send_page_view: false });
         `}
       </script>
     </Helmet>
   );
 };
 
-// Event tracking utilities
+// 🔵 Generic GA4 Event
 export const trackEvent = (eventName, eventParams = {}) => {
   if (window.gtag) {
     window.gtag('event', eventName, eventParams);
   }
 };
 
+// ======================================================
+// ⭐ ONLY REAL LEAD EVENTS WILL FIRE GOOGLE ADS CONVERSION
+// ======================================================
+
+// 1️⃣ PHONE CLICK → conversion
 export const trackPhoneClick = (propertyId) => {
   trackEvent('phone_click', {
     property_id: propertyId,
     event_label: 'Phone Number Clicked'
   });
+
+  // Google Ads Conversion
+  triggerGoogleAdsConversion();
 };
 
+// 2️⃣ WHATSAPP → conversion
+export const trackWhatsAppClick = (propertyId) => {
+  trackEvent('whatsapp_click', {
+    property_id: propertyId,
+    event_label: 'WhatsApp Clicked'
+  });
 
-// Specific event trackers for PropertyDealz
+  // Google Ads Conversion
+  triggerGoogleAdsConversion();
+};
+
+// 3️⃣ CONTACT BUTTON (email/contact agent) → conversion
+export const trackPropertyContact = (propertyId, contactMethod) => {
+  trackEvent('contact_property', {
+    property_id: propertyId,
+    contact_method: contactMethod,
+  });
+
+  // Google Ads Conversion
+  triggerGoogleAdsConversion();
+};
+
+// ======================================================
+// ❌ These DO NOT fire Google Ads conversions
+// ======================================================
+
 export const trackPropertyView = (propertyId, propertyDetails) => {
   trackEvent('view_item', {
     items: [{
@@ -86,18 +113,11 @@ export const trackPropertySearch = (searchParams) => {
   });
 };
 
-export const trackPropertyContact = (propertyId, contactMethod) => {
-  trackEvent('contact_property', {
-    property_id: propertyId,
-    contact_method: contactMethod, // 'phone', 'whatsapp', 'email'
-  });
-};
-
 export const trackPropertyShare = (propertyId, shareMethod) => {
   trackEvent('share', {
     content_type: 'property',
     item_id: propertyId,
-    method: shareMethod // 'facebook', 'twitter', 'whatsapp', 'copy_link'
+    method: shareMethod
   });
 };
 
@@ -110,15 +130,11 @@ export const trackPropertyPost = (propertyId, propertyType, listingType) => {
 };
 
 export const trackUserSignup = (method) => {
-  trackEvent('sign_up', {
-    method: method // 'email', 'otp', 'social'
-  });
+  trackEvent('sign_up', { method });
 };
 
 export const trackUserLogin = (method) => {
-  trackEvent('login', {
-    method: method
-  });
+  trackEvent('login', { method });
 };
 
 export default GoogleAnalytics;
