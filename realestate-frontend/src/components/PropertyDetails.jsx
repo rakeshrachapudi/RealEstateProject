@@ -32,7 +32,7 @@ import {
   trackPhoneClick,
   trackWhatsAppClick,
   trackPropertyContact
-} from '../components/Analytics/GoogleAnalytics';
+} from './Analytics/GoogleAnalytics';
 
 function PropertyDetails() {
   const { id: propertyId } = useParams();

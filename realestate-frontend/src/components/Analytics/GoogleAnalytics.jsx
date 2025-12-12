@@ -47,30 +47,45 @@ const GoogleAnalytics = ({ measurementId = 'G-5X8D8087C4' }) => {
 // 🔵 Generic GA4 Event Tracker
 // ============================================
 export const trackEvent = (eventName, eventParams = {}) => {
+  console.log(`📊 trackEvent called: ${eventName}`, eventParams);
+
+  if (typeof window === 'undefined') {
+    console.warn("⚠️ Window not available");
+    return;
+  }
+
   if (window.gtag) {
     window.gtag('event', eventName, eventParams);
-    console.log(`📊 GA4 Event: ${eventName}`, eventParams);
+    console.log(`✅ GA4 Event sent: ${eventName}`);
+  } else {
+    console.warn(`⚠️ gtag not available for event: ${eventName}`);
+    // Fallback to dataLayer
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      'event': eventName,
+      ...eventParams
+    });
+    console.log(`📤 Pushed to dataLayer: ${eventName}`);
   }
 };
 
 // ============================================
 // ⭐ LEAD EVENTS - Fire Google Ads Conversion
-// These are the REAL lead actions for PropertyDealz
 // ============================================
 
 /**
  * 🔥 VIEW CONTACT → Primary Lead Event
- * Fires when user clicks "View Contact" button to reveal contact info
- * This is the STRONGEST lead signal for real estate
  */
 export const trackViewContact = (propertyId, propertyDetails = {}) => {
+  console.log("🔥 trackViewContact called", { propertyId, propertyDetails });
+
   trackEvent('view_contact', {
     property_id: propertyId,
-    property_title: propertyDetails.title || '',
-    property_price: propertyDetails.price || 0,
-    property_type: propertyDetails.type || propertyDetails.propertyType || '',
-    listing_type: propertyDetails.listingType || '',
-    area: propertyDetails.areaName || propertyDetails.address || '',
+    property_title: propertyDetails?.title || '',
+    property_price: propertyDetails?.price || 0,
+    property_type: propertyDetails?.type || propertyDetails?.propertyType || '',
+    listing_type: propertyDetails?.listingType || '',
+    area: propertyDetails?.areaName || propertyDetails?.address || '',
     event_label: 'Contact Info Viewed',
     event_category: 'lead'
   });
@@ -83,9 +98,11 @@ export const trackViewContact = (propertyId, propertyDetails = {}) => {
  * 📞 PHONE CLICK → Strong Lead Signal
  */
 export const trackPhoneClick = (propertyId, propertyDetails = {}) => {
+  console.log("📞 trackPhoneClick called", { propertyId });
+
   trackEvent('phone_click', {
     property_id: propertyId,
-    property_title: propertyDetails.title || '',
+    property_title: propertyDetails?.title || '',
     event_label: 'Phone Number Clicked',
     event_category: 'lead'
   });
@@ -98,9 +115,11 @@ export const trackPhoneClick = (propertyId, propertyDetails = {}) => {
  * 💬 WHATSAPP CLICK → Strong Lead Signal
  */
 export const trackWhatsAppClick = (propertyId, propertyDetails = {}) => {
+  console.log("💬 trackWhatsAppClick called", { propertyId });
+
   trackEvent('whatsapp_click', {
     property_id: propertyId,
-    property_title: propertyDetails.title || '',
+    property_title: propertyDetails?.title || '',
     event_label: 'WhatsApp Clicked',
     event_category: 'lead'
   });
@@ -113,10 +132,12 @@ export const trackWhatsAppClick = (propertyId, propertyDetails = {}) => {
  * 📧 CONTACT PROPERTY → Generic Contact Action
  */
 export const trackPropertyContact = (propertyId, contactMethod, propertyDetails = {}) => {
+  console.log("📧 trackPropertyContact called", { propertyId, contactMethod });
+
   trackEvent('contact_property', {
     property_id: propertyId,
-    contact_method: contactMethod, // 'phone', 'whatsapp', 'view_contact'
-    property_title: propertyDetails.title || '',
+    contact_method: contactMethod,
+    property_title: propertyDetails?.title || '',
     event_category: 'lead'
   });
 
@@ -125,42 +146,32 @@ export const trackPropertyContact = (propertyId, contactMethod, propertyDetails 
 };
 
 // ============================================
-// ❌ NON-LEAD EVENTS - GA4 Only (No Ads Conversion)
+// ❌ NON-LEAD EVENTS - GA4 Only
 // ============================================
 
-/**
- * Property View - Analytics only (NOT a lead)
- */
 export const trackPropertyView = (propertyId, propertyDetails = {}) => {
   trackEvent('view_item', {
     items: [{
       item_id: propertyId,
-      item_name: propertyDetails.title || 'Property',
-      item_category: propertyDetails.propertyType || propertyDetails.type || 'property',
-      item_category2: propertyDetails.listingType || 'unknown',
-      price: propertyDetails.price || 0,
-      location: propertyDetails.areaName || propertyDetails.address || ''
+      item_name: propertyDetails?.title || 'Property',
+      item_category: propertyDetails?.propertyType || propertyDetails?.type || 'property',
+      item_category2: propertyDetails?.listingType || 'unknown',
+      price: propertyDetails?.price || 0,
+      location: propertyDetails?.areaName || propertyDetails?.address || ''
     }]
   });
-  // ❌ No Google Ads conversion - viewing is NOT a lead
 };
 
-/**
- * Property Search - Analytics only
- */
 export const trackPropertySearch = (searchParams = {}) => {
   trackEvent('search', {
-    search_term: searchParams.area || searchParams.city || 'unknown',
-    property_type: searchParams.propertyType || 'any',
-    price_range: searchParams.minPrice && searchParams.maxPrice
+    search_term: searchParams?.area || searchParams?.city || 'unknown',
+    property_type: searchParams?.propertyType || 'any',
+    price_range: searchParams?.minPrice && searchParams?.maxPrice
       ? `${searchParams.minPrice}-${searchParams.maxPrice}`
       : 'any'
   });
 };
 
-/**
- * Property Share - Analytics only
- */
 export const trackPropertyShare = (propertyId, shareMethod) => {
   trackEvent('share', {
     content_type: 'property',
@@ -169,9 +180,6 @@ export const trackPropertyShare = (propertyId, shareMethod) => {
   });
 };
 
-/**
- * Property Post - Analytics only
- */
 export const trackPropertyPost = (propertyId, propertyType, listingType) => {
   trackEvent('post_property', {
     property_id: propertyId,
@@ -180,16 +188,10 @@ export const trackPropertyPost = (propertyId, propertyType, listingType) => {
   });
 };
 
-/**
- * User Signup - Analytics only
- */
 export const trackUserSignup = (method) => {
   trackEvent('sign_up', { method });
 };
 
-/**
- * User Login - Analytics only
- */
 export const trackUserLogin = (method) => {
   trackEvent('login', { method });
 };
