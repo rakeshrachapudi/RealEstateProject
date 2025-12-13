@@ -5,6 +5,7 @@ import {
   Routes,
   Route,
   useNavigate,
+  useLocation,
 } from "react-router-dom";
 
 import { HelmetProvider } from "react-helmet-async";
@@ -32,19 +33,27 @@ import Footer from "./components/Footer.jsx";
 const HomePage = lazy(() => import("./pages/HomePage.jsx"));
 const SearchResultsPage = lazy(() => import("./pages/SearchResultsPage.jsx"));
 const PropertyDetails = lazy(() => import("./components/PropertyDetails.jsx"));
-const PropertyTypePage = lazy(() => import("./components/PropertyTypePage.jsx"));
+const PropertyTypePage = lazy(() =>
+  import("./components/PropertyTypePage.jsx")
+);
 const MyPropertiesPage = lazy(() => import("./pages/MyPropertiesPage.jsx"));
 const MyDealsPage = lazy(() => import("./pages/MyDealsPage.jsx"));
 const SellerDealsPage = lazy(() => import("./pages/SellerDealsPage.jsx"));
 const BuyerDeals = lazy(() => import("./BuyerDeals.jsx"));
 const MyAgreementsPage = lazy(() => import("./pages/MyAgreementsPage.jsx"));
-const RentalAgreementPage = lazy(() => import("./pages/RentalAgreementPage.jsx"));
-const CreateSaleAgreementPage = lazy(() => import("./pages/CreateSaleAgreementPage.jsx"));
+const RentalAgreementPage = lazy(() =>
+  import("./pages/RentalAgreementPage.jsx")
+);
+const CreateSaleAgreementPage = lazy(() =>
+  import("./pages/CreateSaleAgreementPage.jsx")
+);
 const AgentDashboard = lazy(() => import("./pages/AgentDashboard.jsx"));
 const AdminDealPanel = lazy(() => import("./AdminDealPanel.jsx"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard.jsx"));
 const AdminUsersPage = lazy(() => import("./pages/AdminUsersPage.jsx"));
-const AdminPropertiesPage = lazy(() => import("./pages/AdminPropertiesPage.jsx"));
+const AdminPropertiesPage = lazy(() =>
+  import("./pages/AdminPropertiesPage.jsx")
+);
 const AdminAgentsPage = lazy(() => import("./pages/AdminAgentsPage.jsx"));
 const EmiCalculatorPage = lazy(() => import("./pages/EmiCalculatorPage.jsx"));
 const LegalPage = lazy(() => import("./pages/LegalPage.jsx"));
@@ -58,24 +67,28 @@ const TERMS_AND_CONDITIONS_CONTENT = [];
 
 // Loading Fallback Component
 const PageLoader = () => (
-  <div style={{
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: '60vh',
-    fontSize: '1.2rem',
-    color: '#666'
-  }}>
-    <div style={{ textAlign: 'center' }}>
-      <div style={{
-        width: '50px',
-        height: '50px',
-        border: '4px solid #f3f3f3',
-        borderTop: '4px solid #3498db',
-        borderRadius: '50%',
-        animation: 'spin 1s linear infinite',
-        margin: '0 auto 20px'
-      }}></div>
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      minHeight: "60vh",
+      fontSize: "1.2rem",
+      color: "#666",
+    }}
+  >
+    <div style={{ textAlign: "center" }}>
+      <div
+        style={{
+          width: "50px",
+          height: "50px",
+          border: "4px solid #f3f3f3",
+          borderTop: "4px solid #3498db",
+          borderRadius: "50%",
+          animation: "spin 1s linear infinite",
+          margin: "0 auto 20px",
+        }}
+      ></div>
       Loading...
     </div>
   </div>
@@ -87,6 +100,12 @@ const PageLoader = () => (
 function AppContent() {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
+
+  const location = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [location.pathname]);
 
   // Modal states - centralized in App
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -184,7 +203,9 @@ function AppContent() {
             <Route
               path="/my-properties"
               element={
-                <MyPropertiesPage onPostPropertyClick={handlePostPropertyClick} />
+                <MyPropertiesPage
+                  onPostPropertyClick={handlePostPropertyClick}
+                />
               }
             />
 
@@ -192,7 +213,9 @@ function AppContent() {
             <Route
               path="/dashboard"
               element={
-                <MyPropertiesPage onPostPropertyClick={handlePostPropertyClick} />
+                <MyPropertiesPage
+                  onPostPropertyClick={handlePostPropertyClick}
+                />
               }
             />
 
@@ -214,7 +237,10 @@ function AppContent() {
             {/* Agreements */}
             <Route path="/my-agreements" element={<MyAgreementsPage />} />
             <Route path="/rental-agreement" element={<RentalAgreementPage />} />
-            <Route path="/sale-agreement" element={<CreateSaleAgreementPage />} />
+            <Route
+              path="/sale-agreement"
+              element={<CreateSaleAgreementPage />}
+            />
 
             {/* Legal Pages */}
             <Route
@@ -249,7 +275,10 @@ function AppContent() {
               path="/contact"
               element={<PlaceholderPage title="Contact Us" />}
             />
-            <Route path="/about" element={<PlaceholderPage title="About Us" />} />
+            <Route
+              path="/about"
+              element={<PlaceholderPage title="About Us" />}
+            />
             <Route
               path="/faq"
               element={<PlaceholderPage title="Frequently Asked Questions" />}
@@ -260,7 +289,9 @@ function AppContent() {
             />
             <Route
               path="/partner/electrical"
-              element={<PlaceholderPage title="Trusted Electrical Contractor" />}
+              element={
+                <PlaceholderPage title="Trusted Electrical Contractor" />
+              }
             />
             <Route
               path="/loan"

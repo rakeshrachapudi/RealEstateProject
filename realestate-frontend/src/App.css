@@ -476,7 +476,7 @@ a:hover {
 /* Desktop */
 @media (max-width: 1199px) and (min-width: 992px) {
   .main-content {
-    max-width: 1200px;
+    /* max-width: 1800px; */
     padding: 0 32px;
   }
 
