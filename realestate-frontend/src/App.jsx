@@ -312,7 +312,7 @@ function AppContent() {
 
       {/* 🚀 WhatsApp Floating Widget */}
       <WhatsAppWidget
-        phoneNumber="919989269875"
+        phoneNumber="917730051329"
         message="Hi! I'm interested in properties on PropertyDealz.in"
       />
 
