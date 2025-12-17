@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
 import { triggerGoogleAdsConversion } from "./GoogleAdsConversion";
+import { trackMetaLead } from "./MetaEvents"; //
 
 const GoogleAnalytics = ({ measurementId = 'G-5X8D8087C4' }) => {
   const location = useLocation();
@@ -20,16 +21,24 @@ const GoogleAnalytics = ({ measurementId = 'G-5X8D8087C4' }) => {
       {/* Google Tag Manager */}
       <script>
         {`
-          (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-          new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-          j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-          'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+          (function(w,d,s,l,i){
+            w[l]=w[l]||[];
+            w[l].push({'gtm.start': new Date().getTime(),event:'gtm.js'});
+            var f=d.getElementsByTagName(s)[0],
+                j=d.createElement(s),
+                dl=l!='dataLayer'?'&l='+l:'';
+            j.async=true;
+            j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
+            f.parentNode.insertBefore(j,f);
           })(window,document,'script','dataLayer','GTM-WDMS8V96');
         `}
       </script>
 
       {/* Google Analytics 4 + Google Ads */}
-      <script async src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`} />
+      <script
+        async
+        src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}
+      />
       <script>
         {`
           window.dataLayer = window.dataLayer || [];
@@ -59,10 +68,9 @@ export const trackEvent = (eventName, eventParams = {}) => {
     console.log(`✅ GA4 Event sent: ${eventName}`);
   } else {
     console.warn(`⚠️ gtag not available for event: ${eventName}`);
-    // Fallback to dataLayer
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
-      'event': eventName,
+      event: eventName,
       ...eventParams
     });
     console.log(`📤 Pushed to dataLayer: ${eventName}`);
@@ -90,8 +98,15 @@ export const trackViewContact = (propertyId, propertyDetails = {}) => {
     event_category: 'lead'
   });
 
-  // 🔥 Fire Google Ads Conversion
+  // 🔥 Google Ads Conversion
   triggerGoogleAdsConversion();
+
+  // 🔵 Meta Lead
+  trackMetaLead("Lead", {
+    content_name: propertyDetails?.title,
+    content_category: "property",
+    property_id: propertyId
+  });
 };
 
 /**
@@ -107,7 +122,6 @@ export const trackPhoneClick = (propertyId, propertyDetails = {}) => {
     event_category: 'lead'
   });
 
-  // 🔥 Fire Google Ads Conversion
   triggerGoogleAdsConversion();
 };
 
@@ -124,7 +138,6 @@ export const trackWhatsAppClick = (propertyId, propertyDetails = {}) => {
     event_category: 'lead'
   });
 
-  // 🔥 Fire Google Ads Conversion
   triggerGoogleAdsConversion();
 };
 
@@ -141,7 +154,6 @@ export const trackPropertyContact = (propertyId, contactMethod, propertyDetails 
     event_category: 'lead'
   });
 
-  // 🔥 Fire Google Ads Conversion
   triggerGoogleAdsConversion();
 };
 
@@ -166,9 +178,10 @@ export const trackPropertySearch = (searchParams = {}) => {
   trackEvent('search', {
     search_term: searchParams?.area || searchParams?.city || 'unknown',
     property_type: searchParams?.propertyType || 'any',
-    price_range: searchParams?.minPrice && searchParams?.maxPrice
-      ? `${searchParams.minPrice}-${searchParams.maxPrice}`
-      : 'any'
+    price_range:
+      searchParams?.minPrice && searchParams?.maxPrice
+        ? `${searchParams.minPrice}-${searchParams.maxPrice}`
+        : 'any'
   });
 };
 
