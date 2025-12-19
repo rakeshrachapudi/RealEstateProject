@@ -45,7 +45,7 @@ public class BrokerSubscriptionService {
 
     // Subscription pricing
     private static final Map<String, BigDecimal> SUBSCRIPTION_PRICES = new HashMap<>() {{
-        put("MONTHLY", new BigDecimal("1999.00"));
+        put("MONTHLY", new BigDecimal("19.00"));
         put("QUARTERLY", new BigDecimal("4999.00"));
         put("YEARLY", new BigDecimal("9999.00"));
     }};
