@@ -673,9 +673,7 @@ function CreateSaleAgreementPage() {
       </style>
 
       <h1 className="no-print csap-page-title">Online Sale Agreement</h1>
-      <p className="no-print csap-page-subtitle">
-        through <strong>Zero Brokerage Platform</strong>
-      </p>
+
 
       {/* Step 1: Introduction */}
       {step === 1 && (
