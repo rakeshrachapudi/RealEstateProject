@@ -25,13 +25,26 @@ const HyderabadPage = () => {
   const [featuredProperties, setFeaturedProperties] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // ✅ REQUIRED normalizer (PropertyList depends on id)
+  const normalizeProperty = (p) => ({
+    ...p,
+    id: p.propertyId ?? p.id,
+    isActive: true
+  });
+
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const response = await propertyService.getAll({ city: 'Hyderabad', limit: 6 });
-        setFeaturedProperties(response.data?.content || response.data || []);
+        const response = await propertyService.getAll({
+          city: 'Hyderabad'
+          // ❌ limit removed intentionally
+        });
+
+        const list = Array.isArray(response) ? response : [];
+        setFeaturedProperties(list.map(normalizeProperty));
       } catch (error) {
         console.error('Error fetching properties:', error);
+        setFeaturedProperties([]);
       } finally {
         setLoading(false);
       }
@@ -95,19 +108,19 @@ const HyderabadPage = () => {
     },
     {
       question: "Which areas are best for buying property in Hyderabad?",
-      answer: "For IT professionals: Gachibowli, HITEC City, Kondapur, Madhapur. For families: Kukatpally, Miyapur, Manikonda. For investment: Kokapet, Tellapur, Shadnagar, Shamshabad (near airport). For luxury: Jubilee Hills, Banjara Hills, Film Nagar."
+      answer: "For IT professionals: Gachibowli, HITEC City, Kondapur, Madhapur. For families: Kukatpally, Miyapur, Manikonda. For investment: Kokapet, Tellapur. For luxury: Jubilee Hills, Banjara Hills."
     },
     {
       question: "How does PropertyDealz help in buying property?",
-      answer: "PropertyDealz offers zero brokerage property listings with verified ownership. You get direct contact with property owners, transparent pricing, legal verification support, and end-to-end deal assistance from search to registration."
+      answer: "PropertyDealz offers zero brokerage property listings with verified ownership, direct owner contact, transparent pricing, and legal verification support."
     },
     {
       question: "Is it a good time to buy property in Hyderabad?",
-      answer: "Hyderabad's real estate market remains strong due to IT sector growth, infrastructure development (Metro, ORR, Regional Ring Road), and steady appreciation. Areas near upcoming developments like Pharma City and IT corridors show good potential."
+      answer: "Hyderabad’s IT growth, infrastructure projects, and steady appreciation make it one of the best cities for property investment."
     },
     {
-      question: "What documents should I verify before buying property in Hyderabad?",
-      answer: "Essential documents: Sale deed, Encumbrance Certificate (EC), HMDA/DTCP approval, Building permission, Occupancy Certificate, Title deed chain, Property tax receipts, and NOCs from relevant authorities. PropertyDealz helps verify all these documents."
+      question: "What documents should I verify?",
+      answer: "Sale deed, EC, approvals, OC, tax receipts, and title chain. PropertyDealz assists in verification."
     }
   ];
 
@@ -119,7 +132,7 @@ const HyderabadPage = () => {
     generateSearchActionSchema()
   ];
 
-  // Internal links for cross-linking
+  // Internal links
   const internalLinks = [
     { text: 'Buy Flat in Hyderabad', url: '/buy-flat-in-hyderabad/' },
     { text: 'Flats for Sale Hyderabad', url: '/flats-for-sale-in-hyderabad/' },
@@ -153,21 +166,6 @@ const HyderabadPage = () => {
             Gachibowli, HITEC City, Kondapur, and 50+ prime locations.
           </p>
 
-          <div className="seo-hero-stats">
-            <div className="seo-hero-stat">
-              <span className="seo-hero-stat-value">500+</span>
-              <span className="seo-hero-stat-label">Verified Properties</span>
-            </div>
-            <div className="seo-hero-stat">
-              <span className="seo-hero-stat-value">₹0</span>
-              <span className="seo-hero-stat-label">Brokerage</span>
-            </div>
-            <div className="seo-hero-stat">
-              <span className="seo-hero-stat-value">50+</span>
-              <span className="seo-hero-stat-label">Localities</span>
-            </div>
-          </div>
-
           <SEOCtaGroup
             primaryText="View All Properties"
             primaryLink="/search?city=Hyderabad"
@@ -176,16 +174,11 @@ const HyderabadPage = () => {
         </div>
       </section>
 
-      {/* Main Content */}
       <div className="seo-content">
 
         {/* Browse by Property Type */}
         <section className="seo-section">
           <h2>Browse Properties by Type</h2>
-          <p>
-            Whether you're looking for a cozy apartment, a spacious independent house,
-            or a plot to build your dream home, PropertyDealz has verified options across Hyderabad.
-          </p>
 
           <div className="seo-links-grid">
             {childPages.map((page, index) => (
@@ -201,37 +194,9 @@ const HyderabadPage = () => {
           </div>
         </section>
 
-        {/* About Hyderabad Real Estate */}
-        <section className="seo-section">
-          <h2>Hyderabad Real Estate Overview</h2>
-          <p>
-            Hyderabad has emerged as one of India's most sought-after real estate destinations,
-            driven by a thriving IT industry, excellent infrastructure, and relatively affordable
-            property prices compared to other metro cities. The city offers a perfect blend of
-            modern amenities and cultural heritage.
-          </p>
-          <p>
-            The western corridor comprising Gachibowli, HITEC City, Madhapur, and Kondapur
-            continues to be the most preferred choice for IT professionals and investors.
-            Meanwhile, areas like Tellapur, Kokapet, and Narsingi are emerging as new growth
-            centers with excellent connectivity and upcoming infrastructure projects.
-          </p>
-          <p>
-            With the Outer Ring Road (ORR), upcoming Regional Ring Road (RRR), and expanding
-            Metro network, Hyderabad's real estate market offers strong appreciation potential.
-            PropertyDealz brings you verified properties across all these prime locations with
-            zero brokerage.
-          </p>
-        </section>
-
         {/* Popular Localities */}
         <section className="seo-section">
           <h2>Popular Localities in Hyderabad</h2>
-          <p>
-            Explore properties in Hyderabad's most sought-after neighborhoods.
-            Each locality offers unique advantages – from IT hub proximity to
-            excellent schools and healthcare facilities.
-          </p>
           <SEOLocalityGrid localities={popularLocalities} />
         </section>
 
@@ -243,29 +208,23 @@ const HyderabadPage = () => {
               View All Properties →
             </Link>
           </div>
+
           <PropertyList
             properties={featuredProperties.slice(0, 6)}
             loading={loading}
           />
         </section>
 
-        {/* Why PropertyDealz */}
         <SEOBenefits />
 
-        {/* Internal Links for SEO */}
         <SEOInternalLinks
           links={internalLinks}
           title="Explore More Property Options"
         />
 
-        {/* FAQs */}
-        <section className="seo-section">
-          <SEOFaqSection faqs={faqs} />
-        </section>
-
+        <SEOFaqSection faqs={faqs} />
       </div>
 
-      {/* Sticky Mobile CTA */}
       <SEOStickyCta />
     </div>
   );

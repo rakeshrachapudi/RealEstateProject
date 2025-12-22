@@ -22,19 +22,20 @@ const PropertyList = ({
     );
   }
 
-  if (!properties || properties.length === 0) {
-    return (
-      <div className="pl-state pl-empty" role="status" aria-live="polite">
-        <span className="pl-empty-icon" aria-hidden="true">
-          🏘️
-        </span>
-        <div className="pl-empty-title">No properties found</div>
-        <div className="pl-empty-subtitle">
-          Try adjusting filters like budget, property type, or area.
-        </div>
+if (!properties || properties.length === 0) {
+  return (
+    <div className="pl-state pl-empty">
+      <span className="pl-empty-icon">🏘️</span>
+      <div className="pl-empty-title">
+        Properties coming soon
       </div>
-    );
-  }
+      <div className="pl-empty-subtitle">
+        We’re adding verified listings for this section.
+      </div>
+    </div>
+  );
+}
+
 
   return (
     <>
