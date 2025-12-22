@@ -1,5 +1,6 @@
 // src/components/Footer.jsx
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom"; // ✅ ADD THIS IMPORT
 import "./Footer.css";
 
 // Format current time/date/day in IST
@@ -44,103 +45,103 @@ function Footer() {
             <h4 className="footer-col-title">Support</h4>
             <ul className="footer-links">
               <li>
-                <a href="/contact" className="footer-link">
+                <Link to="/contact" className="footer-link">
                   Contact Us
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/faq" className="footer-link">
+                <Link to="/faq" className="footer-link">
                   FAQ
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/privacy" className="footer-link">
+                <Link to="/privacy" className="footer-link">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/terms" className="footer-link">
+                <Link to="/terms" className="footer-link">
                   Terms of Service
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
         </div>
 
-        {/* Column 2: Properties in Hyderabad */}
+        {/* Column 2: Properties in Hyderabad - ✅ UPDATED WITH Link */}
         <div className="footer-col">
           <h4 className="footer-col-title">Properties in Hyderabad</h4>
           <ul className="footer-links">
             <li>
-              <a href="/area/Kondapur" className="footer-link">
+              <Link to="/area/Kondapur" className="footer-link">
                 Property in Kondapur
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/area/Gachibowli" className="footer-link">
+              <Link to="/area/Gachibowli" className="footer-link">
                 Property in Gachibowli
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/area/Madhapur" className="footer-link">
+              <Link to="/area/Madhapur" className="footer-link">
                 Property in Madhapur
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/area/Jubilee_Hills" className="footer-link">
+              <Link to="/area/Jubilee_Hills" className="footer-link">
                 Property in Jubilee Hills
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/area/Banjara_Hills" className="footer-link">
+              <Link to="/area/Banjara_Hills" className="footer-link">
                 Property in Banjara Hills
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/search?city=Hyderabad" className="footer-link">
+              <Link to="/search?city=Hyderabad" className="footer-link">
                 View All Locations
-              </a>
+              </Link>
             </li>
           </ul>
         </div>
 
-        {/* Column 3: Property Services & Trusted Partners */}
+        {/* Column 3: Property Services & Trusted Partners - ✅ UPDATED WITH Link */}
         <div className="footer-col">
           <h4 className="footer-col-title">Property Services</h4>
           <ul className="footer-links">
             <li>
-              <a href="/loan" className="footer-link">
+              <Link to="/loan" className="footer-link">
                 Home Loan Assistance
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/rental-agreement" className="footer-link">
+              <Link to="/rental-agreement" className="footer-link">
                 Rental Agreement
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/owner-plans" className="footer-link">
+              <Link to="/owner-plans" className="footer-link">
                 Seller Plans
-              </a>
+              </Link>
             </li>
           </ul>
 
           <h4 className="footer-col-title mt-3">Trusted Partners</h4>
           <ul className="footer-links">
             <li>
-              <a href="/partner/furniture" className="footer-link">
+              <Link to="/partner/furniture" className="footer-link">
                 Trusted Furniture Partner
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/partner/electrical" className="footer-link">
+              <Link to="/partner/electrical" className="footer-link">
                 Trusted Electrical Contractor
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/home-renovation" className="footer-link">
+              <Link to="/home-renovation" className="footer-link">
                 Home Interior Experts
-              </a>
+              </Link>
             </li>
           </ul>
         </div>
@@ -161,7 +162,7 @@ function Footer() {
               {/* Social Icons */}
               <div className="footer-social-icons">
                 <a
-                  href="https://www.facebook.com/Property Dealz"
+                  href="https://www.facebook.com/PropertyDealz"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="footer-social-link"
@@ -178,7 +179,7 @@ function Footer() {
                   </svg>
                 </a>
                 <a
-                  href="https://twitter.com/Property Dealz"
+                  href="https://twitter.com/PropertyDealz"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="footer-social-link"
@@ -195,7 +196,7 @@ function Footer() {
                   </svg>
                 </a>
                 <a
-                  href="https://www.linkedin.com/company/Property Dealz"
+                  href="https://www.linkedin.com/company/PropertyDealz"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="footer-social-link"
@@ -271,7 +272,6 @@ function Footer() {
       <div className="footer-copy">
         &copy; {new Date().getFullYear()} Property Dealz. All rights reserved. |
         Serving Hyderabad.
-        {/* <div className="footer-time">Current Time: {currentDateTime} IST</div> */}
       </div>
     </footer>
   );

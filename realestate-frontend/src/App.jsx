@@ -36,6 +36,7 @@ const PropertyDetails = lazy(() => import("./components/PropertyDetails.jsx"));
 const PropertyTypePage = lazy(() =>
   import("./components/PropertyTypePage.jsx")
 );
+const AreaPage = lazy(() => import("./pages/AreaPage.jsx")); // ✅ FIXED
 const MyPropertiesPage = lazy(() => import("./pages/MyPropertiesPage.jsx"));
 const MyDealsPage = lazy(() => import("./pages/MyDealsPage.jsx"));
 const SellerDealsPage = lazy(() => import("./pages/SellerDealsPage.jsx"));
@@ -60,16 +61,26 @@ const LegalPage = lazy(() => import("./pages/LegalPage.jsx"));
 const PlaceholderPage = lazy(() => import("./pages/PlaceholderPage.jsx"));
 
 // 🔥 SEO PAGES - Lazy loaded for performance
-const HyderabadPage = lazy(() => import("./pages/seo/HyderabadPage.jsx"));
-const BuyFlatHyderabadPage = lazy(() => import("./pages/seo/BuyFlatHyderabadPage.jsx"));
-const FlatsForSaleHyderabadPage = lazy(() => import("./pages/seo/FlatsForSaleHyderabadPage.jsx"));
-const PlotsForSaleHyderabadPage = lazy(() => import("./pages/seo/PlotsForSaleHyderabadPage.jsx"));
-const IndependentHousesHyderabadPage = lazy(() => import("./pages/seo/IndependentHousesHyderabadPage.jsx"));
+const HyderabadPage = lazy(() =>
+  import("./pages/seo/HyderabadPage.jsx")
+);
+const BuyFlatHyderabadPage = lazy(() =>
+  import("./pages/seo/BuyFlatHyderabadPage.jsx")
+);
+const FlatsForSaleHyderabadPage = lazy(() =>
+  import("./pages/seo/FlatsForSaleHyderabadPage.jsx")
+);
+const PlotsForSaleHyderabadPage = lazy(() =>
+  import("./pages/seo/PlotsForSaleHyderabadPage.jsx")
+);
+const IndependentHousesHyderabadPage = lazy(() =>
+  import("./pages/seo/IndependentHousesHyderabadPage.jsx")
+);
 
 import "./App.css";
 import "./SEOPages.css"; // SEO Pages Styling
 
-// Legal content (you can move these to separate files if needed)
+// Legal content
 const PRIVACY_POLICY_CONTENT = [];
 const TERMS_AND_CONDITIONS_CONTENT = [];
 
@@ -107,58 +118,41 @@ const PageLoader = () => (
 // -------------------------------------
 function AppContent() {
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout } = useAuth();
-
   const location = useLocation();
+  const { isAuthenticated, user, logout } = useAuth();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [location.pathname]);
 
-  // Modal states - centralized in App
+  useEffect(() => {
+    injectAnimations();
+  }, []);
+
+  // Modal states
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isPostPropertyModalOpen, setIsPostPropertyModalOpen] = useState(false);
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
 
-  useEffect(() => {
-    injectAnimations();
-  }, []);
-
-  // Modal handlers
+  // Handlers
   const handlePropertyPosted = () => {
     setIsPostPropertyModalOpen(false);
     navigate("/my-properties");
   };
 
   const handlePostPropertyClick = () => {
-    if (isAuthenticated) {
-      setIsPostPropertyModalOpen(true);
-    } else {
-      setIsLoginModalOpen(true);
-    }
+    isAuthenticated
+      ? setIsPostPropertyModalOpen(true)
+      : setIsLoginModalOpen(true);
   };
 
   const handleLoginClick = () => setIsLoginModalOpen(true);
   const handleSignupClick = () => setIsSignupModalOpen(true);
   const handleProfileClick = () => setIsUserProfileModalOpen(true);
 
-  const closeLoginModal = () => setIsLoginModalOpen(false);
-  const closeSignupModal = () => setIsSignupModalOpen(false);
-
-  const handleSwitchToSignup = () => {
-    setIsLoginModalOpen(false);
-    setIsSignupModalOpen(true);
-  };
-
-  const handleSwitchToLogin = () => {
-    setIsSignupModalOpen(false);
-    setIsLoginModalOpen(true);
-  };
-
   return (
     <div className="app-content">
-      {/* Global Header - shown on all pages */}
       <Header
         onLoginClick={handleLoginClick}
         onSignupClick={handleSignupClick}
@@ -166,11 +160,10 @@ function AppContent() {
         onProfileClick={handleProfileClick}
       />
 
-      {/* Main Content with Suspense for Code Splitting */}
       <main className="main-content">
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            {/* Home - pass modal handlers to avoid duplication */}
+            {/* Home */}
             <Route
               path="/"
               element={
@@ -181,42 +174,20 @@ function AppContent() {
               }
             />
 
-            {/* =============================================
-                🔥 SEO PAGES - MONEY PAGES FOR ORGANIC TRAFFIC
-                ============================================= */}
-
-            {/* City Hub Page - Pillar Content */}
+            {/* SEO Pages */}
             <Route path="/hyderabad" element={<HyderabadPage />} />
-            <Route path="/hyderabad/" element={<HyderabadPage />} />
-
-            {/* Money Page #1 - Buy Flat in Hyderabad */}
             <Route path="/buy-flat-in-hyderabad" element={<BuyFlatHyderabadPage />} />
-            <Route path="/buy-flat-in-hyderabad/" element={<BuyFlatHyderabadPage />} />
-
-            {/* Money Page #2 - Flats for Sale in Hyderabad */}
             <Route path="/flats-for-sale-in-hyderabad" element={<FlatsForSaleHyderabadPage />} />
-            <Route path="/flats-for-sale-in-hyderabad/" element={<FlatsForSaleHyderabadPage />} />
-
-            {/* Money Page #3 - Plots for Sale in Hyderabad */}
             <Route path="/plots-for-sale-in-hyderabad" element={<PlotsForSaleHyderabadPage />} />
-            <Route path="/plots-for-sale-in-hyderabad/" element={<PlotsForSaleHyderabadPage />} />
-
-            {/* Money Page #4 - Independent Houses */}
-            <Route path="/independent-houses-for-sale-hyderabad" element={<IndependentHousesHyderabadPage />} />
-            <Route path="/independent-houses-for-sale-hyderabad/" element={<IndependentHousesHyderabadPage />} />
-
-            {/* Future City Pages - Placeholder structure
-            <Route path="/bangalore" element={<BangalorePage />} />
-            <Route path="/chennai" element={<ChennaiPage />} />
-            <Route path="/pune" element={<PunePage />} />
-            */}
-
-            {/* ============================================= */}
+            <Route
+              path="/independent-houses-for-sale-hyderabad"
+              element={<IndependentHousesHyderabadPage />}
+            />
 
             {/* Search */}
             <Route path="/search" element={<SearchResultsPage />} />
 
-            {/* Property Details */}
+            {/* Property */}
             <Route
               path="/property/:id"
               element={
@@ -227,19 +198,18 @@ function AppContent() {
               }
             />
 
-            {/* Browse by type (rent/sale + type) */}
             <Route
               path="/property-type/:listingType/:propertyType"
               element={<PropertyTypePage />}
             />
 
-            {/* Area-based listing */}
-            <Route path="/area/:areaName" element={<PropertyTypePage />} />
+            {/* ✅ AREA PAGE FIX */}
+            <Route path="/area/:areaName" element={<AreaPage />} />
 
-            {/* EMI Calculator */}
+            {/* Tools */}
             <Route path="/emi-calculator" element={<EmiCalculatorPage />} />
 
-            {/* My Properties */}
+            {/* User */}
             <Route
               path="/my-properties"
               element={
@@ -249,7 +219,6 @@ function AppContent() {
               }
             />
 
-            {/* Dashboard → redirects to My Properties */}
             <Route
               path="/dashboard"
               element={
@@ -259,15 +228,12 @@ function AppContent() {
               }
             />
 
-            {/* Deals */}
             <Route path="/my-deals" element={<MyDealsPage />} />
             <Route path="/seller-deals" element={<SellerDealsPage />} />
             <Route path="/buyer-deals" element={<BuyerDeals />} />
 
-            {/* Agent */}
+            {/* Agent / Admin */}
             <Route path="/agent-dashboard" element={<AgentDashboard />} />
-
-            {/* Admin */}
             <Route path="/admin-deals" element={<AdminDealPanel />} />
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/admin-agents" element={<AdminAgentsPage />} />
@@ -277,19 +243,13 @@ function AppContent() {
             {/* Agreements */}
             <Route path="/my-agreements" element={<MyAgreementsPage />} />
             <Route path="/rental-agreement" element={<RentalAgreementPage />} />
-            <Route
-              path="/sale-agreement"
-              element={<CreateSaleAgreementPage />}
-            />
+            <Route path="/sale-agreement" element={<CreateSaleAgreementPage />} />
 
-            {/* Legal Pages */}
+            {/* Legal */}
             <Route
               path="/privacy"
               element={
-                <LegalPage
-                  title="Privacy Policy"
-                  content={PRIVACY_POLICY_CONTENT}
-                />
+                <LegalPage title="Privacy Policy" content={PRIVACY_POLICY_CONTENT} />
               }
             />
             <Route
@@ -302,65 +262,43 @@ function AppContent() {
               }
             />
 
-            {/* Services / Static Pages */}
-            <Route
-              path="/owner-plans"
-              element={<PlaceholderPage title="Owner Plans" />}
-            />
-            <Route
-              path="/home-renovation"
-              element={<PlaceholderPage title="Home Interior/Renovation" />}
-            />
-            <Route
-              path="/contact"
-              element={<PlaceholderPage title="Contact Us" />}
-            />
-            <Route
-              path="/about"
-              element={<PlaceholderPage title="About Us" />}
-            />
-            <Route
-              path="/faq"
-              element={<PlaceholderPage title="Frequently Asked Questions" />}
-            />
-            <Route
-              path="/partner/furniture"
-              element={<PlaceholderPage title="Trusted Furniture Partner" />}
-            />
-            <Route
-              path="/partner/electrical"
-              element={
-                <PlaceholderPage title="Trusted Electrical Contractor" />
-              }
-            />
-            <Route
-              path="/loan"
-              element={<PlaceholderPage title="Home Loan Assistance" />}
-            />
+            {/* Static */}
+            <Route path="/contact" element={<PlaceholderPage title="Contact Us" />} />
+            <Route path="/about" element={<PlaceholderPage title="About Us" />} />
+            <Route path="/faq" element={<PlaceholderPage title="FAQ" />} />
+            <Route path="/loan" element={<PlaceholderPage title="Home Loan Assistance" />} />
 
-            {/* 404 - Optional */}
-            <Route
-              path="*"
-              element={<PlaceholderPage title="Page Not Found" />}
-            />
+            {/* 404 */}
+            <Route path="*" element={<PlaceholderPage title="Page Not Found" />} />
           </Routes>
         </Suspense>
       </main>
 
-      {/* Global Footer - shown on all pages */}
       <Footer />
 
-      {/* 🚀 WhatsApp Floating Widget */}
       <WhatsAppWidget
         phoneNumber="917730051329"
         message="Hi! I'm interested in properties on PropertyDealz.in"
       />
 
-      {/* Global Modals */}
+      {/* Modals */}
       {isLoginModalOpen && (
         <LoginModal
-          onClose={closeLoginModal}
-          onSwitchToSignup={handleSwitchToSignup}
+          onClose={() => setIsLoginModalOpen(false)}
+          onSwitchToSignup={() => {
+            setIsLoginModalOpen(false);
+            setIsSignupModalOpen(true);
+          }}
+        />
+      )}
+
+      {isSignupModalOpen && (
+        <SignupModal
+          onClose={() => setIsSignupModalOpen(false)}
+          onSwitchToLogin={() => {
+            setIsSignupModalOpen(false);
+            setIsLoginModalOpen(true);
+          }}
         />
       )}
 
@@ -371,18 +309,11 @@ function AppContent() {
         />
       )}
 
-      {isSignupModalOpen && (
-        <SignupModal
-          onClose={closeSignupModal}
-          onSwitchToLogin={handleSwitchToLogin}
-        />
-      )}
-
       {isUserProfileModalOpen && (
         <UserProfileModal
           user={user}
-          onClose={() => setIsUserProfileModalOpen(false)}
           logout={logout}
+          onClose={() => setIsUserProfileModalOpen(false)}
         />
       )}
     </div>
@@ -400,10 +331,8 @@ function App() {
     <Router>
       <HelmetProvider>
         <AuthProvider>
-          {/* Global Analytics */}
           <GoogleAnalytics measurementId={GA_MEASUREMENT_ID} />
           <MetaPixel pixelId={META_PIXEL_IDS} />
-
           <div className="app-wrapper">
             <AppContent />
           </div>
