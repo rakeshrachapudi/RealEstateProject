@@ -1,18 +1,22 @@
 User-agent: *
 Allow: /
+
+# Block private / non-SEO areas
 Disallow: /admin
-Disallow: /api/
 Disallow: /dashboard
 Disallow: /my-properties
 Disallow: /login
 
-# Crawl-delay for politeness
+# IMPORTANT: Allow APIs for proper page rendering
+Allow: /api/
+
+# Crawl delay (safe)
 Crawl-delay: 1
 
-# Sitemaps
+# Sitemap location
 Sitemap: https://www.propertydealz.in/sitemap.xml
 
-# Block AI crawlers if desired (optional)
+# Optional: Block AI crawlers
 User-agent: GPTBot
 Disallow: /
 

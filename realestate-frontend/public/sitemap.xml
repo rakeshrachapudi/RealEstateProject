@@ -1,68 +1,120 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://www.propertydealz.in</loc>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://www.propertydealz.in/login</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://www.propertydealz.in/my-properties</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://www.propertydealz.in/properties/gachibowli</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.propertydealz.in/properties/kondapur</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.propertydealz.in/properties/miyapur</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.propertydealz.in/properties/manikonda</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.propertydealz.in/properties/hitec-city</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.propertydealz.in/properties/madhapur</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.propertydealz.in/properties/kukatpally</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.propertydealz.in/properties/ameerpet</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.propertydealz.in/properties/begumpet</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.propertydealz.in/properties/secunderabad</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
+
+    <!-- Home -->
+    <url>
+        <loc>https://www.propertydealz.in/</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+
+    <!-- City Hub -->
+    <url>
+        <loc>https://www.propertydealz.in/hyderabad</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.9</priority>
+    </url>
+
+    <!-- SEO MONEY PAGES -->
+    <url>
+        <loc>https://www.propertydealz.in/buy-flat-in-hyderabad</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.9</priority>
+    </url>
+
+    <url>
+        <loc>https://www.propertydealz.in/flats-for-sale-in-hyderabad</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.9</priority>
+    </url>
+
+    <url>
+        <loc>https://www.propertydealz.in/plots-for-sale-in-hyderabad</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.9</priority>
+    </url>
+
+    <url>
+        <loc>https://www.propertydealz.in/independent-houses-for-sale-hyderabad</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.9</priority>
+    </url>
+
+    <!-- LOCALITY PAGES (SUPPORTING) -->
+    <url>
+        <loc>https://www.propertydealz.in/properties/gachibowli</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <url>
+        <loc>https://www.propertydealz.in/properties/kondapur</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <url>
+        <loc>https://www.propertydealz.in/properties/miyapur</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <url>
+        <loc>https://www.propertydealz.in/properties/manikonda</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <url>
+        <loc>https://www.propertydealz.in/properties/hitec-city</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <url>
+        <loc>https://www.propertydealz.in/properties/madhapur</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <url>
+        <loc>https://www.propertydealz.in/properties/kukatpally</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <url>
+        <loc>https://www.propertydealz.in/properties/ameerpet</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <url>
+        <loc>https://www.propertydealz.in/properties/begumpet</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <url>
+        <loc>https://www.propertydealz.in/properties/secunderabad</loc>
+        <lastmod>2025-12-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
 </urlset>
