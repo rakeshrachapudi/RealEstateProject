@@ -1,0 +1,708 @@
+/* ========================================
+   SEOComponents.css - Shared Styles for SEO Pages
+   PropertyDealz.in
+======================================== */
+
+/* ========== BASE STYLES ========== */
+.seo-page {
+  font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #1a1a1a;
+  background: #ffffff;
+  min-height: 100vh;
+}
+
+/* ========== HERO SECTION ========== */
+.seo-hero {
+  background: linear-gradient(135deg, #1a5f7a 0%, #0d3b4c 50%, #134e5e 100%);
+  padding: clamp(48px, 8vw, 80px) clamp(16px, 4vw, 40px);
+  position: relative;
+  overflow: hidden;
+}
+
+.seo-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 80% 30%, rgba(255, 107, 53, 0.1) 0%, transparent 50%);
+}
+
+.seo-hero-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+
+.seo-hero h1 {
+  font-size: clamp(26px, 5vw, 42px);
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 16px 0;
+  line-height: 1.2;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+}
+
+.seo-hero-subtitle {
+  font-size: clamp(14px, 2vw, 18px);
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 28px 0;
+  line-height: 1.6;
+  max-width: 800px;
+}
+
+/* Hero Stats */
+.seo-hero-stats {
+  display: flex;
+  gap: clamp(20px, 4vw, 40px);
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.seo-hero-stat {
+  text-align: center;
+}
+
+.seo-hero-stat-value {
+  display: block;
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 800;
+  color: #ff6b35;
+  line-height: 1.2;
+}
+
+.seo-hero-stat-label {
+  display: block;
+  font-size: clamp(11px, 1.4vw, 13px);
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+/* ========== BREADCRUMB ========== */
+.seo-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.seo-breadcrumb a {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.seo-breadcrumb a:hover {
+  color: #ffffff;
+}
+
+.seo-breadcrumb-sep {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+}
+
+.seo-breadcrumb-current {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ========== CTA GROUP ========== */
+.seo-cta-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.seo-cta-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #ff6b35 0%, #f7502b 100%);
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.seo-cta-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 107, 53, 0.35);
+  text-decoration: none;
+  color: #ffffff;
+}
+
+.seo-cta-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  background: #25d366;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.seo-cta-whatsapp:hover {
+  background: #1fb855;
+  transform: translateY(-2px);
+  text-decoration: none;
+  color: #ffffff;
+}
+
+/* ========== CONTENT SECTIONS ========== */
+.seo-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(32px, 5vw, 60px) clamp(16px, 4vw, 40px);
+}
+
+.seo-content-narrow {
+  max-width: 900px;
+}
+
+.seo-section {
+  margin-bottom: clamp(32px, 5vw, 48px);
+}
+
+.seo-section h2 {
+  font-size: clamp(20px, 3.5vw, 28px);
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 20px 0;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.seo-section p {
+  font-size: clamp(14px, 1.8vw, 16px);
+  color: #4b5563;
+  line-height: 1.7;
+  margin-bottom: 16px;
+}
+
+/* ========== LISTINGS PREVIEW ========== */
+.seo-listings-preview {
+  margin-bottom: clamp(32px, 5vw, 48px);
+}
+
+.seo-listings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.seo-listings-header h2 {
+  font-size: clamp(20px, 3.5vw, 28px);
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.seo-view-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #1a5f7a;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.seo-view-all:hover {
+  color: #0d3b4c;
+  text-decoration: none;
+}
+
+/* ========== LOCALITY GRID ========== */
+.seo-locality-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.seo-locality-btn {
+  display: inline-block;
+  padding: 10px 18px;
+  background: #f0f9ff;
+  color: #1a5f7a;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.seo-locality-btn:hover {
+  background: #1a5f7a;
+  color: #ffffff;
+  border-color: #1a5f7a;
+  text-decoration: none;
+}
+
+/* ========== PRICE RANGE CARDS ========== */
+.seo-price-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.seo-price-card {
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.seo-price-card:hover {
+  border-color: #1a5f7a;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(26, 95, 122, 0.12);
+  text-decoration: none;
+}
+
+.seo-price-card-icon {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+.seo-price-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.seo-price-card-desc {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ========== LINK CARDS ========== */
+.seo-links-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.seo-link-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.seo-link-card:hover {
+  border-color: #1a5f7a;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(26, 95, 122, 0.12);
+  text-decoration: none;
+}
+
+.seo-link-card-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.seo-link-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.seo-link-card-content h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 4px 0;
+}
+
+.seo-link-card-content p {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.seo-link-card-arrow {
+  font-size: 18px;
+  color: #1a5f7a;
+  flex-shrink: 0;
+}
+
+/* ========== BENEFITS ========== */
+.seo-benefits {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 16px;
+  padding: clamp(24px, 4vw, 40px);
+  margin-bottom: clamp(32px, 5vw, 48px);
+}
+
+.seo-benefits h3 {
+  font-size: clamp(18px, 3vw, 24px);
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 20px 0;
+  text-align: center;
+}
+
+.seo-benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.seo-benefit-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  padding: 16px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.seo-benefit-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.seo-benefit-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.seo-benefit-text strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.seo-benefit-text span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ========== FAQ SECTION ========== */
+.seo-faq {
+  margin-bottom: clamp(32px, 5vw, 48px);
+}
+
+.seo-faq h2 {
+  font-size: clamp(20px, 3.5vw, 28px);
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 24px 0;
+  text-align: center;
+}
+
+.seo-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.seo-faq-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.seo-faq-question {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 20px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  transition: background 0.2s;
+}
+
+.seo-faq-question:hover {
+  background: #f8fafc;
+}
+
+.seo-faq-icon {
+  font-size: 14px;
+  color: #1a5f7a;
+  transition: transform 0.2s;
+}
+
+.seo-faq-item.open .seo-faq-icon {
+  transform: rotate(180deg);
+}
+
+.seo-faq-answer {
+  padding: 0 20px 18px;
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.6;
+  display: none;
+}
+
+.seo-faq-item.open .seo-faq-answer {
+  display: block;
+}
+
+/* ========== INTERNAL LINKS ========== */
+.seo-internal-links {
+  margin-bottom: clamp(32px, 5vw, 48px);
+}
+
+.seo-internal-links h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 16px 0;
+}
+
+.seo-internal-links-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.seo-internal-link {
+  display: inline-block;
+  padding: 8px 16px;
+  background: #f8fafc;
+  color: #1a5f7a;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.seo-internal-link:hover {
+  background: #1a5f7a;
+  color: #ffffff;
+  border-color: #1a5f7a;
+  text-decoration: none;
+}
+
+/* ========== COMPARISON TABLE ========== */
+.seo-comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+.seo-comparison-table th,
+.seo-comparison-table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.seo-comparison-table th {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.seo-comparison-table td {
+  color: #4b5563;
+}
+
+.seo-comparison-table tr:hover td {
+  background: #f8fafc;
+}
+
+/* ========== LEGAL CHECKLIST ========== */
+.seo-checklist {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.seo-checklist h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 16px 0;
+}
+
+.seo-checklist-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.seo-checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.seo-checklist-icon {
+  color: #10b981;
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ========== STICKY CTA ========== */
+.seo-sticky-cta {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  padding: 12px 16px;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  gap: 10px;
+}
+
+.seo-sticky-btn {
+  flex: 1;
+  padding: 14px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.seo-sticky-whatsapp {
+  background: #25d366;
+  color: #ffffff;
+}
+
+.seo-sticky-call {
+  background: #1a5f7a;
+  color: #ffffff;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .seo-hero {
+    padding: 40px 16px;
+  }
+
+  .seo-hero-stats {
+    gap: 16px;
+  }
+
+  .seo-cta-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .seo-cta-primary,
+  .seo-cta-whatsapp {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .seo-listings-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .seo-comparison-table {
+    font-size: 12px;
+  }
+
+  .seo-comparison-table th,
+  .seo-comparison-table td {
+    padding: 10px 12px;
+  }
+
+  .seo-sticky-cta {
+    display: flex;
+  }
+
+  .seo-page {
+    padding-bottom: 72px;
+  }
+}
+
+@media (max-width: 480px) {
+  .seo-hero h1 {
+    font-size: 24px;
+  }
+
+  .seo-links-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .seo-link-card {
+    padding: 16px;
+  }
+
+  .seo-benefits-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .seo-faq-question {
+    font-size: 14px;
+    padding: 14px 16px;
+  }
+}
+
+/* Focus States */
+.seo-cta-primary:focus,
+.seo-cta-whatsapp:focus,
+.seo-locality-btn:focus,
+.seo-link-card:focus,
+.seo-faq-question:focus {
+  outline: 2px solid #1a5f7a;
+  outline-offset: 2px;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

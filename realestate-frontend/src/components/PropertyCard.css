@@ -1,38 +1,35 @@
 /* ========================================
-   PropertyCard.css - ALL INFO ORGANIZED
-   40% Image | 60% Content | Everything Included
-   ======================================== */
+   PropertyCard.css - Clean Professional Design
+   Matches SEO Pages Style
+======================================== */
 
 /* ========== CARD STRUCTURE ========== */
-
 .pc-card {
   background: #ffffff;
-  background-color: #ffffff;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: all 0.2s ease;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-height: 450px;
-  border: 1px solid #e5e7eb;
+  max-height: 440px;
+  border: 1px solid #e2e8f0;
   position: relative;
   min-width: 0;
 }
 
 .pc-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
 }
 
-/* ========== TOP RIGHT BADGES ========== */
-
+/* ========== BADGES ========== */
 .pc-badges {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 8px;
+  right: 8px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -40,38 +37,35 @@
 }
 
 .pc-badge {
-  padding: 3px 8px;
-  border-radius: 10px;
-  font-size: 8px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 9px;
   font-weight: 700;
   backdrop-filter: blur(6px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   text-transform: uppercase;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.3px;
   color: white;
 }
 
 .pc-badge.featured {
   background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-  color: #000;
+  color: #78350f;
 }
 
 .pc-badge.verified {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
 }
 
 .pc-badge.ready {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
 }
 
-/* ========== IMAGE SECTION - 40% HEIGHT ========== */
-
+/* ========== IMAGE SECTION ========== */
 .pc-image-wrap {
   position: relative;
   width: 100%;
-  height: 40%;
+  height: 42%;
   min-height: 150px;
   max-height: 180px;
   overflow: hidden;
@@ -84,12 +78,12 @@
   height: 100%;
   object-fit: cover;
   object-position: center;
-  transition: transform 0.2s ease;
+  transition: transform 0.3s ease;
   display: block;
 }
 
 .pc-card:hover .pc-image {
-  transform: scale(1.04);
+  transform: scale(1.05);
 }
 
 .pc-image-overlay {
@@ -97,70 +91,45 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 35%;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.35), transparent);
+  height: 40%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.4), transparent);
   pointer-events: none;
 }
 
-/* Deal Stage Badge (on image) */
+/* Stage Badge */
 .pc-stage-badge {
   position: absolute;
-  bottom: 4px;
-  left: 4px;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 8px;
+  bottom: 8px;
+  left: 8px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 9px;
   font-weight: 700;
   color: white;
   backdrop-filter: blur(6px);
   z-index: 2;
   text-transform: uppercase;
-  letter-spacing: 0.2px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.stage-inquiry {
-  background: rgba(59, 130, 246, 0.9);
-}
+.stage-inquiry { background: rgba(59, 130, 246, 0.9); }
+.stage-shortlist { background: rgba(139, 92, 246, 0.9); }
+.stage-negotiation { background: rgba(245, 158, 11, 0.9); }
+.stage-agreement { background: rgba(16, 185, 129, 0.9); }
+.stage-registration { background: rgba(6, 182, 212, 0.9); }
+.stage-payment { background: rgba(236, 72, 153, 0.9); }
+.stage-completed { background: rgba(34, 197, 94, 0.9); }
+.stage-default { background: rgba(107, 114, 128, 0.9); }
 
-.stage-shortlist {
-  background: rgba(139, 92, 246, 0.9);
-}
-
-.stage-negotiation {
-  background: rgba(245, 158, 11, 0.9);
-}
-
-.stage-agreement {
-  background: rgba(16, 185, 129, 0.9);
-}
-
-.stage-registration {
-  background: rgba(6, 182, 212, 0.9);
-}
-
-.stage-payment {
-  background: rgba(236, 72, 153, 0.9);
-}
-
-.stage-completed {
-  background: rgba(34, 197, 94, 0.9);
-}
-
-.stage-default {
-  background: rgba(107, 114, 128, 0.9);
-}
-
-/* ========== CONTENT SECTION - 60% HEIGHT ========== */
-
+/* ========== CONTENT SECTION ========== */
 .pc-content {
-  padding: 8px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 6px;
   flex: 1;
   background: #ffffff;
-  background-color: #ffffff;
   overflow: hidden;
   min-height: 0;
 }
@@ -168,35 +137,31 @@
 /* Listing Type Tag */
 .pc-type-tag {
   display: inline-block;
-  padding: 3px 8px;
-  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #1a5f7a 0%, #0d3b4c 100%);
   color: white;
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.3px;
   width: fit-content;
   text-transform: uppercase;
-  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.25);
-  margin-bottom: 0;
 }
 
-/* ========== TITLE & PRICE ROW ========== */
-
+/* Title & Price Row */
 .pc-title-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 6px;
-  margin-bottom: 2px;
+  gap: 8px;
 }
 
 .pc-title {
-  font-size: 13px;
-  font-weight: 800;
-  color: #1f2937;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.25;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -213,8 +178,8 @@
 }
 
 .pc-price {
-  font-size: 15px;
-  font-weight: 900;
+  font-size: 16px;
+  font-weight: 800;
   color: #059669;
   white-space: nowrap;
   margin: 0;
@@ -222,28 +187,26 @@
 }
 
 .pc-per-month {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 600;
-  color: #6b7280;
-  margin-top: 1px;
+  color: #64748b;
+  margin-top: 2px;
 }
 
-/* ========== LOCATION & PROPERTY TYPE ROW ========== */
-
+/* Info Row */
 .pc-info-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 2px;
+  gap: 8px;
 }
 
 .pc-location {
-  font-size: 10px;
-  color: #6b7280;
+  font-size: 11px;
+  color: #64748b;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   font-weight: 500;
   flex: 1;
   min-width: 0;
@@ -253,42 +216,40 @@
 }
 
 .pc-type {
-  font-size: 9px;
+  font-size: 10px;
   color: #374151;
   font-weight: 700;
-  background: #f9fafb;
-  padding: 2px 6px;
-  border-radius: 3px;
+  background: #f3f4f6;
+  padding: 3px 8px;
+  border-radius: 4px;
   border: 1px solid #e5e7eb;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-/* ========== PRICE PER SQFT & CONSTRUCTION STATUS ROW ========== */
-
+/* Status Row */
 .pc-status-row {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   align-items: center;
-  margin-bottom: 3px;
 }
 
 .pc-price-per-sqft {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 600;
-  color: #7c3aed;
-  background: #f3e8ff;
-  padding: 2px 6px;
-  border-radius: 3px;
-  border: 1px solid #e9d5ff;
+  color: #1a5f7a;
+  background: #f0f9ff;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid #bae6fd;
   white-space: nowrap;
 }
 
 .pc-construction-status {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 3px;
+  padding: 3px 8px;
+  border-radius: 4px;
   background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
   color: #92400e;
   border: 1px solid #fbbf24;
@@ -299,42 +260,37 @@
   white-space: nowrap;
 }
 
-/* ========== PROPERTY DETAILS GRID ========== */
-
+/* Details Grid */
 .pc-details {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 3px;
-  padding: 4px 0;
+  gap: 4px;
+  padding: 8px 0;
   border-top: 1px solid #f3f4f6;
   border-bottom: 1px solid #f3f4f6;
-  margin: 2px 0;
 }
 
 .pc-detail {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
-  font-size: 9px;
+  gap: 2px;
+  font-size: 10px;
   color: #374151;
   font-weight: 600;
   text-align: center;
 }
 
 .pc-detail-icon {
-  font-size: 11px;
-  color: #6b7280;
+  font-size: 12px;
+  color: #64748b;
 }
 
-/* ========== AMENITIES ========== */
-
+/* Amenities */
 .pc-amenities {
-  font-size: 9px;
-  color: #6b7280;
-  line-height: 1.2;
-  padding: 0;
-  margin: 2px 0;
+  font-size: 10px;
+  color: #64748b;
+  line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -346,33 +302,31 @@
   font-weight: 700;
 }
 
-/* ========== OWNER TYPE & POSTED BY ROW ========== */
-
+/* Owner Row */
 .pc-owner-row {
   display: flex;
-  gap: 4px;
-  margin: 2px 0;
+  gap: 6px;
 }
 
 .pc-owner-type {
-  font-size: 9px;
-  color: #1f2937;
+  font-size: 10px;
+  color: #166534;
   font-weight: 600;
-  padding: 2px 6px;
+  padding: 3px 8px;
   background: #f0fdf4;
-  border-radius: 3px;
+  border-radius: 4px;
   border: 1px solid #bbf7d0;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .pc-posted-by {
-  font-size: 9px;
+  font-size: 10px;
   color: #374151;
-  font-weight: 600;
-  padding: 2px 6px;
+  font-weight: 500;
+  padding: 3px 8px;
   background: #f9fafb;
-  border-radius: 3px;
+  border-radius: 4px;
   border: 1px solid #e5e7eb;
   flex: 1;
   overflow: hidden;
@@ -380,26 +334,23 @@
   white-space: nowrap;
 }
 
-/* ========== IDS SECTION ========== */
-
+/* IDs Section */
 .pc-ids {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px;
-  margin: 3px 0;
-  padding: 3px 0;
+  gap: 4px;
+  padding-top: 6px;
   border-top: 1px solid #f3f4f6;
 }
 
 .pc-id-tag {
-  padding: 2px 5px;
+  padding: 3px 6px;
   background: #eff6ff;
-  border-radius: 3px;
-  font-size: 8px;
+  border-radius: 4px;
+  font-size: 9px;
   color: #2563eb;
   font-weight: 600;
   border: 1px solid #bfdbfe;
-  display: inline-block;
 }
 
 .pc-deal-tag {
@@ -407,80 +358,51 @@
   color: #166534;
   border: 1px solid #86efac;
   font-weight: 700;
-  padding: 2px 5px;
-  border-radius: 3px;
-  font-size: 8px;
-  display: inline-block;
 }
 
 .pc-statutory-tag {
   background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
   color: #166534;
-  font-weight: 800;
+  font-weight: 700;
   border: 1px solid #22c55e;
-  padding: 2px 6px;
-  font-size: 8px;
-  box-shadow: 0 1px 3px rgba(34, 197, 94, 0.3);
-  border-radius: 3px;
-  display: inline-block;
 }
 
 .pc-statutory-tag.pc-highlight {
-  animation: pulse-glow 2s ease-in-out infinite;
   background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
   color: white;
   border-color: #059669;
 }
 
-.pc-statutory-tag.pc-highlight:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 5px rgba(16, 185, 129, 0.4);
-  transition: all 0.2s ease;
-}
-
-@keyframes pulse-glow {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4),
-      0 1px 3px rgba(34, 197, 94, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0),
-      0 2px 5px rgba(34, 197, 94, 0.4);
-  }
-}
-
-/* ========== ACTION BUTTONS ========== */
-
+/* Action Buttons */
 .pc-deal-actions,
 .pc-actions {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   margin-top: auto;
-  padding-top: 4px;
+  padding-top: 8px;
   border-top: 1px solid #f3f4f6;
 }
 
 .pc-btn {
   flex: 1;
-  padding: 5px 8px;
+  padding: 8px 10px;
   border: none;
-  border-radius: 5px;
-  font-size: 10px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
   color: white;
-  min-height: 28px;
+  min-height: 32px;
 }
 
 .pc-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .pc-btn:disabled {
@@ -489,34 +411,30 @@
 }
 
 .pc-btn-view {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  box-shadow: 0 2px 5px rgba(59, 130, 246, 0.25);
+  background: linear-gradient(135deg, #1a5f7a 0%, #0d3b4c 100%);
 }
 
 .pc-btn-edit {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  box-shadow: 0 2px 5px rgba(16, 185, 129, 0.25);
 }
 
 .pc-btn-delete {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  box-shadow: 0 2px 5px rgba(239, 68, 68, 0.25);
 }
 
 /* ========== RESPONSIVE ========== */
-
 @media (min-width: 1400px) {
   .pc-card {
-    max-height: 480px;
+    max-height: 470px;
   }
 
   .pc-image-wrap {
     min-height: 170px;
-    max-height: 192px;
+    max-height: 190px;
   }
 
   .pc-title {
-    font-size: 14px;
+    font-size: 15px;
   }
 
   .pc-price {
@@ -541,7 +459,7 @@
   }
 
   .pc-title {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .pc-price {
@@ -549,42 +467,20 @@
   }
 }
 
-@media print {
-  .pc-card {
-    break-inside: avoid;
-    box-shadow: none;
-    border: 1px solid #ddd;
-    background: #ffffff !important;
-  }
-
-  .pc-content {
-    background: #ffffff !important;
-  }
-
-  .pc-btn {
-    display: none;
-  }
-
-  .pc-badges {
-    position: static;
-    display: inline-flex;
-    flex-direction: row;
-    margin-bottom: 5px;
-  }
-}
-
+/* Focus States */
 .pc-card:focus,
 .pc-card:focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #1a5f7a;
   outline-offset: 2px;
 }
 
 .pc-btn:focus,
 .pc-btn:focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #1a5f7a;
   outline-offset: 2px;
 }
 
+/* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   .pc-card,
   .pc-image,
@@ -592,75 +488,14 @@
     transition: none;
   }
 
-  .pc-statutory-tag.pc-highlight {
-    animation: none;
-  }
-
   .pc-card:hover .pc-image {
     transform: none;
   }
 }
 
-@media (prefers-contrast: high) {
-  .pc-card {
-    border: 2px solid currentColor;
-    background: #ffffff !important;
-  }
-
-  .pc-content {
-    background: #ffffff !important;
-  }
-
-  .pc-btn {
-    border: 2px solid currentColor;
-  }
-
-  .pc-statutory-tag {
-    border: 2px solid currentColor;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .pc-card {
-    background: #1f2937;
-    border-color: #374151;
-  }
-
-  .pc-content {
-    background: #1f2937;
-  }
-
-  .pc-title {
-    color: #f3f4f6;
-  }
-
-  .pc-location {
-    color: #9ca3af;
-  }
-
-  .pc-type {
-    background: #374151;
-    border-color: #4b5563;
-    color: #e5e7eb;
-  }
-
-  .pc-posted-by {
-    background: #374151;
-    border-color: #4b5563;
-    color: #e5e7eb;
-  }
-
-  .pc-detail {
-    color: #d1d5db;
-  }
-}
-
-/* ========== SKELETON LOADER PLACEHOLDER ========== */
-
-/* When card is skeleton (loading state) */
+/* Skeleton Loader */
 .pc-card.pc-skeleton {
   pointer-events: none;
-  background: #ffffff;
 }
 
 .pc-card.pc-skeleton .pc-image-wrap {
@@ -670,31 +505,6 @@
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
-
-.pc-card.pc-skeleton .pc-content > * {
-  background: linear-gradient(90deg, #e5e7eb 0%, #f3f4f6 50%, #e5e7eb 100%);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
-  color: transparent;
-  border: none;
-  height: 12px;
-  border-radius: 4px;
-  margin-bottom: 8px;
-}
-
-.pc-card.pc-skeleton .pc-badges,
-.pc-card.pc-skeleton .pc-image-overlay,
-.pc-card.pc-skeleton .pc-stage-badge {
-  display: none;
-}
-
-/* ========================================
-   END - ALL INFO INCLUDED & ORGANIZED
-   ======================================== */
