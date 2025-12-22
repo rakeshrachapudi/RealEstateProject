@@ -130,3 +130,24 @@ export const getAreas = async (city = "Hyderabad") => {
   );
   return handleResponse(response);
 };
+// -------------------------
+// Property Service (USED BY SEO PAGES)
+// -------------------------
+export const propertyService = {
+  getAll: async (params = {}) => {
+    // SEO pages expect filtered listing support
+    const response = await fetch(`${API_BASE_URL}/properties/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        city: params.city,
+        propertyType: params.propertyType,
+        listingType: params.listingType,
+        limit: params.limit || 10
+      })
+    });
+
+    return handleResponse(response);
+  }
+};
+

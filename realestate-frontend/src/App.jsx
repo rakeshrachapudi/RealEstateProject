@@ -1,4 +1,4 @@
-// src/App.jsx - OPTIMIZED VERSION WITH CODE SPLITTING
+// src/App.jsx - UPDATED WITH SEO PAGES
 import React, { useEffect, useState, Suspense, lazy } from "react";
 import {
   BrowserRouter as Router,
@@ -59,7 +59,15 @@ const EmiCalculatorPage = lazy(() => import("./pages/EmiCalculatorPage.jsx"));
 const LegalPage = lazy(() => import("./pages/LegalPage.jsx"));
 const PlaceholderPage = lazy(() => import("./pages/PlaceholderPage.jsx"));
 
+// 🔥 SEO PAGES - Lazy loaded for performance
+const HyderabadPage = lazy(() => import("./pages/seo/HyderabadPage.jsx"));
+const BuyFlatHyderabadPage = lazy(() => import("./pages/seo/BuyFlatHyderabadPage.jsx"));
+const FlatsForSaleHyderabadPage = lazy(() => import("./pages/seo/FlatsForSaleHyderabadPage.jsx"));
+const PlotsForSaleHyderabadPage = lazy(() => import("./pages/seo/PlotsForSaleHyderabadPage.jsx"));
+const IndependentHousesHyderabadPage = lazy(() => import("./pages/seo/IndependentHousesHyderabadPage.jsx"));
+
 import "./App.css";
+import "./SEOPages.css"; // SEO Pages Styling
 
 // Legal content (you can move these to separate files if needed)
 const PRIVACY_POLICY_CONTENT = [];
@@ -172,6 +180,38 @@ function AppContent() {
                 />
               }
             />
+
+            {/* =============================================
+                🔥 SEO PAGES - MONEY PAGES FOR ORGANIC TRAFFIC
+                ============================================= */}
+
+            {/* City Hub Page - Pillar Content */}
+            <Route path="/hyderabad" element={<HyderabadPage />} />
+            <Route path="/hyderabad/" element={<HyderabadPage />} />
+
+            {/* Money Page #1 - Buy Flat in Hyderabad */}
+            <Route path="/buy-flat-in-hyderabad" element={<BuyFlatHyderabadPage />} />
+            <Route path="/buy-flat-in-hyderabad/" element={<BuyFlatHyderabadPage />} />
+
+            {/* Money Page #2 - Flats for Sale in Hyderabad */}
+            <Route path="/flats-for-sale-in-hyderabad" element={<FlatsForSaleHyderabadPage />} />
+            <Route path="/flats-for-sale-in-hyderabad/" element={<FlatsForSaleHyderabadPage />} />
+
+            {/* Money Page #3 - Plots for Sale in Hyderabad */}
+            <Route path="/plots-for-sale-in-hyderabad" element={<PlotsForSaleHyderabadPage />} />
+            <Route path="/plots-for-sale-in-hyderabad/" element={<PlotsForSaleHyderabadPage />} />
+
+            {/* Money Page #4 - Independent Houses */}
+            <Route path="/independent-houses-for-sale-hyderabad" element={<IndependentHousesHyderabadPage />} />
+            <Route path="/independent-houses-for-sale-hyderabad/" element={<IndependentHousesHyderabadPage />} />
+
+            {/* Future City Pages - Placeholder structure
+            <Route path="/bangalore" element={<BangalorePage />} />
+            <Route path="/chennai" element={<ChennaiPage />} />
+            <Route path="/pune" element={<PunePage />} />
+            */}
+
+            {/* ============================================= */}
 
             {/* Search */}
             <Route path="/search" element={<SearchResultsPage />} />

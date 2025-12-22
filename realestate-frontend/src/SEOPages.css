@@ -1,0 +1,662 @@
+/* ============================================
+   PropertyDealz SEO Pages - Conversion Focused
+   ============================================ */
+
+/* ---------- CSS Variables ---------- */
+:root {
+  --seo-primary: #1a5f7a;
+  --seo-primary-dark: #134b61;
+  --seo-accent: #ff6b35;
+  --seo-accent-hover: #e55a2b;
+  --seo-success: #28a745;
+  --seo-bg-light: #f8fafc;
+  --seo-bg-cream: #fefcf3;
+  --seo-text-dark: #1e293b;
+  --seo-text-muted: #64748b;
+  --seo-border: #e2e8f0;
+  --seo-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --seo-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --seo-radius: 12px;
+  --seo-radius-lg: 20px;
+  --seo-font-display: 'Poppins', sans-serif;
+  --seo-font-body: 'Open Sans', sans-serif;
+}
+
+/* ---------- Page Container ---------- */
+.seo-page {
+  font-family: var(--seo-font-body);
+  color: var(--seo-text-dark);
+  line-height: 1.7;
+}
+
+/* ---------- Hero Section ---------- */
+.seo-hero {
+  background: linear-gradient(135deg, var(--seo-primary) 0%, var(--seo-primary-dark) 100%);
+  color: white;
+  padding: 60px 20px 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+.seo-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.5;
+}
+
+.seo-hero-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.seo-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 24px;
+  opacity: 0.9;
+}
+
+.seo-breadcrumb a {
+  color: white;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.seo-breadcrumb a:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.seo-breadcrumb-separator {
+  opacity: 0.6;
+}
+
+.seo-hero h1 {
+  font-family: var(--seo-font-display);
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  font-weight: 700;
+  margin: 0 0 16px;
+  line-height: 1.2;
+}
+
+.seo-hero-subtitle {
+  font-size: 1.15rem;
+  opacity: 0.95;
+  max-width: 700px;
+  margin-bottom: 32px;
+}
+
+.seo-hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  margin-top: 32px;
+}
+
+.seo-hero-stat {
+  text-align: center;
+}
+
+.seo-hero-stat-value {
+  font-family: var(--seo-font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  display: block;
+}
+
+.seo-hero-stat-label {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+/* ---------- CTA Buttons ---------- */
+.seo-cta-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.seo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.seo-btn-primary {
+  background: var(--seo-accent);
+  color: white;
+  box-shadow: 0 4px 14px rgba(255, 107, 53, 0.4);
+}
+
+.seo-btn-primary:hover {
+  background: var(--seo-accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.5);
+}
+
+.seo-btn-secondary {
+  background: white;
+  color: var(--seo-primary);
+  box-shadow: var(--seo-shadow);
+}
+
+.seo-btn-secondary:hover {
+  background: var(--seo-bg-light);
+  transform: translateY(-2px);
+}
+
+.seo-btn-whatsapp {
+  background: #25d366;
+  color: white;
+}
+
+.seo-btn-whatsapp:hover {
+  background: #20bd5a;
+}
+
+/* ---------- Content Container ---------- */
+.seo-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 20px;
+}
+
+.seo-content-narrow {
+  max-width: 900px;
+}
+
+/* ---------- Section Styling ---------- */
+.seo-section {
+  margin-bottom: 60px;
+}
+
+.seo-section h2 {
+  font-family: var(--seo-font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--seo-primary);
+  margin: 0 0 20px;
+  position: relative;
+  padding-bottom: 12px;
+}
+
+.seo-section h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 4px;
+  background: var(--seo-accent);
+  border-radius: 2px;
+}
+
+.seo-section p {
+  color: var(--seo-text-dark);
+  margin-bottom: 16px;
+}
+
+/* ---------- Links Grid (Child Pages) ---------- */
+.seo-links-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.seo-link-card {
+  background: white;
+  border: 2px solid var(--seo-border);
+  border-radius: var(--seo-radius);
+  padding: 24px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.seo-link-card:hover {
+  border-color: var(--seo-primary);
+  box-shadow: var(--seo-shadow-lg);
+  transform: translateY(-4px);
+}
+
+.seo-link-card-icon {
+  width: 56px;
+  height: 56px;
+  background: var(--seo-bg-light);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.seo-link-card-content h3 {
+  font-family: var(--seo-font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--seo-primary);
+  margin: 0 0 4px;
+}
+
+.seo-link-card-content p {
+  font-size: 0.9rem;
+  color: var(--seo-text-muted);
+  margin: 0;
+}
+
+.seo-link-card-arrow {
+  margin-left: auto;
+  font-size: 1.5rem;
+  color: var(--seo-accent);
+  transition: transform 0.3s;
+}
+
+.seo-link-card:hover .seo-link-card-arrow {
+  transform: translateX(4px);
+}
+
+/* ---------- Locality Grid ---------- */
+.seo-locality-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.seo-locality-tag {
+  background: var(--seo-bg-light);
+  border: 1px solid var(--seo-border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  text-decoration: none;
+  color: var(--seo-text-dark);
+  font-weight: 500;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.seo-locality-tag:hover {
+  background: var(--seo-primary);
+  color: white;
+  border-color: var(--seo-primary);
+}
+
+/* ---------- Why PropertyDealz Section ---------- */
+.seo-benefits {
+  background: var(--seo-bg-cream);
+  border-radius: var(--seo-radius-lg);
+  padding: 40px;
+  margin: 40px 0;
+}
+
+.seo-benefits h2::after {
+  display: none;
+}
+
+.seo-benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 32px;
+  margin-top: 32px;
+}
+
+.seo-benefit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.seo-benefit-icon {
+  width: 48px;
+  height: 48px;
+  background: white;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: var(--seo-shadow);
+  flex-shrink: 0;
+}
+
+.seo-benefit-content h4 {
+  font-family: var(--seo-font-display);
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--seo-text-dark);
+}
+
+.seo-benefit-content p {
+  font-size: 0.9rem;
+  color: var(--seo-text-muted);
+  margin: 0;
+}
+
+/* ---------- FAQ Section ---------- */
+.seo-faq {
+  background: white;
+  border-radius: var(--seo-radius-lg);
+  padding: 40px;
+  box-shadow: var(--seo-shadow);
+}
+
+.seo-faq-item {
+  border-bottom: 1px solid var(--seo-border);
+  padding: 20px 0;
+}
+
+.seo-faq-item:last-child {
+  border-bottom: none;
+}
+
+.seo-faq-question {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  font-family: var(--seo-font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--seo-text-dark);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0;
+}
+
+.seo-faq-question:hover {
+  color: var(--seo-primary);
+}
+
+.seo-faq-icon {
+  font-size: 1.5rem;
+  color: var(--seo-accent);
+  transition: transform 0.3s;
+}
+
+.seo-faq-item.open .seo-faq-icon {
+  transform: rotate(45deg);
+}
+
+.seo-faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.seo-faq-item.open .seo-faq-answer {
+  max-height: 500px;
+  padding-top: 16px;
+}
+
+.seo-faq-answer p {
+  margin: 0;
+  color: var(--seo-text-muted);
+  line-height: 1.8;
+}
+
+/* ---------- Sticky CTA ---------- */
+.seo-sticky-cta {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  padding: 16px 20px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+
+.seo-sticky-cta.visible {
+  transform: translateY(0);
+}
+
+@media (min-width: 768px) {
+  .seo-sticky-cta {
+    display: none;
+  }
+}
+
+/* ---------- Property Listings Preview ---------- */
+.seo-listings-preview {
+  background: var(--seo-bg-light);
+  border-radius: var(--seo-radius-lg);
+  padding: 40px;
+  margin: 40px 0;
+}
+
+.seo-listings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.seo-listings-header h2 {
+  margin: 0;
+  padding: 0;
+}
+
+.seo-listings-header h2::after {
+  display: none;
+}
+
+.seo-view-all {
+  color: var(--seo-primary);
+  font-weight: 600;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.seo-view-all:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Price Range Cards ---------- */
+.seo-price-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.seo-price-card {
+  background: white;
+  border: 2px solid var(--seo-border);
+  border-radius: var(--seo-radius);
+  padding: 20px;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s;
+}
+
+.seo-price-card:hover {
+  border-color: var(--seo-accent);
+  box-shadow: var(--seo-shadow);
+}
+
+.seo-price-card-label {
+  font-size: 0.85rem;
+  color: var(--seo-text-muted);
+  margin-bottom: 4px;
+}
+
+.seo-price-card-value {
+  font-family: var(--seo-font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--seo-primary);
+}
+
+/* ---------- Internal Links Section ---------- */
+.seo-internal-links {
+  background: var(--seo-primary);
+  color: white;
+  padding: 40px;
+  border-radius: var(--seo-radius-lg);
+  margin: 40px 0;
+}
+
+.seo-internal-links h3 {
+  font-family: var(--seo-font-display);
+  font-size: 1.25rem;
+  margin: 0 0 20px;
+}
+
+.seo-internal-links-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.seo-internal-link {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.seo-internal-link:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ---------- Legal Checklist ---------- */
+.seo-checklist {
+  background: #f0fdf4;
+  border: 2px solid #86efac;
+  border-radius: var(--seo-radius);
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.seo-checklist h3 {
+  font-family: var(--seo-font-display);
+  color: #166534;
+  margin: 0 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.seo-checklist ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.seo-checklist li {
+  padding: 8px 0;
+  padding-left: 28px;
+  position: relative;
+  color: #15803d;
+}
+
+.seo-checklist li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #22c55e;
+  font-weight: bold;
+}
+
+/* ---------- Comparison Table ---------- */
+.seo-comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 24px 0;
+  background: white;
+  border-radius: var(--seo-radius);
+  overflow: hidden;
+  box-shadow: var(--seo-shadow);
+}
+
+.seo-comparison-table th,
+.seo-comparison-table td {
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 1px solid var(--seo-border);
+}
+
+.seo-comparison-table th {
+  background: var(--seo-primary);
+  color: white;
+  font-family: var(--seo-font-display);
+  font-weight: 600;
+}
+
+.seo-comparison-table tr:last-child td {
+  border-bottom: none;
+}
+
+.seo-comparison-table tr:hover td {
+  background: var(--seo-bg-light);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .seo-hero {
+    padding: 40px 16px 60px;
+  }
+
+  .seo-hero-stats {
+    gap: 24px;
+  }
+
+  .seo-content {
+    padding: 40px 16px;
+  }
+
+  .seo-benefits,
+  .seo-faq,
+  .seo-listings-preview {
+    padding: 24px;
+    border-radius: var(--seo-radius);
+  }
+
+  .seo-cta-group {
+    flex-direction: column;
+  }
+
+  .seo-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
