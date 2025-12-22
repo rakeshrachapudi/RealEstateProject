@@ -1,13 +1,15 @@
-/* src/DealStatusCard.css - ENHANCED VERSION */
+/* ========================================
+   DealStatusCard.css - Clean Professional Design
+   Matches SEO Pages Style
+======================================== */
+
 .deal-status-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border: 1px solid #e2e8f0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  margin-bottom: 20px;
+  transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
 }
@@ -19,52 +21,53 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+  background: linear-gradient(90deg, #1a5f7a, #ff6b35, #10b981);
 }
 
 .deal-status-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
 }
 
+/* Header */
 .deal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .deal-stage-badge {
   color: white;
-  padding: 8px 16px;
-  border-radius: 24px;
+  padding: 6px 14px;
+  border-radius: 20px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .deal-id {
-  font-size: 12px;
+  font-size: 11px;
   color: #64748b;
   font-weight: 600;
   background: #f1f5f9;
-  padding: 4px 8px;
+  padding: 4px 10px;
   border-radius: 6px;
 }
 
+/* Property Info */
 .deal-property {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .property-title {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 12px;
-  line-height: 1.4;
+  color: #1a1a1a;
+  margin: 0 0 12px 0;
+  line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -81,7 +84,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 14px;
+  font-size: 13px;
   padding: 8px 0;
   border-bottom: 1px solid #f1f5f9;
 }
@@ -92,41 +95,42 @@
 
 .detail-label {
   color: #64748b;
-  font-weight: 600;
+  font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .detail-value {
-  color: #1e293b;
+  color: #1a1a1a;
   font-weight: 700;
   text-align: right;
-  max-width: 200px;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* Parties Section */
 .deal-parties {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 24px;
-  padding: 20px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  border-radius: 12px;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px;
+  background: #f8fafc;
+  border-radius: 10px;
   border: 1px solid #e2e8f0;
 }
 
 .party-item {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
 }
 
 .party-icon {
-  font-size: 18px;
+  font-size: 16px;
   margin-top: 2px;
 }
 
@@ -138,36 +142,36 @@
 }
 
 .party-label {
-  font-size: 10px;
+  font-size: 9px;
   color: #64748b;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.5px;
   margin-bottom: 2px;
 }
 
 .party-name {
-  font-size: 14px;
-  color: #1e293b;
+  font-size: 13px;
+  color: #1a1a1a;
   font-weight: 600;
-  margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* View Deal Button */
 .view-deal-btn {
   width: 100%;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #1a5f7a 0%, #0d3b4c 100%);
   color: white;
   border: none;
-  padding: 16px 24px;
-  border-radius: 12px;
+  padding: 14px 20px;
+  border-radius: 10px;
   font-weight: 700;
-  font-size: 15px;
+  font-size: 14px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 8px rgba(26, 95, 122, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -175,79 +179,68 @@
 }
 
 .view-deal-btn:hover {
-  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
   transform: translateY(-2px);
-  box-shadow: 0 8px 12px -2px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 6px 14px rgba(26, 95, 122, 0.35);
 }
 
 .view-deal-btn:active {
   transform: translateY(0);
 }
 
-/* Enhanced tooltip styles */
-.detail-value,
-.party-name,
-.property-title {
-  position: relative;
+/* Stage Colors */
+.deal-stage-badge[style*="background-color: rgb(59, 130, 246)"],
+.deal-stage-badge[style*="#3b82f6"] {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
 }
 
-.detail-value[title]:hover::after,
-.party-name[title]:hover::after,
-.property-title[title]:hover::after {
-  content: attr(title);
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.9);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 1000;
-  pointer-events: none;
+.deal-stage-badge[style*="background-color: rgb(139, 92, 246)"],
+.deal-stage-badge[style*="#8b5cf6"] {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
 }
 
-/* Agent status indicators */
-.party-icon {
-  transition: all 0.3s ease;
+.deal-stage-badge[style*="background-color: rgb(245, 158, 11)"],
+.deal-stage-badge[style*="#f59e0b"] {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
 }
 
-.party-item:has(.party-label:contains("AGENT PENDING")) .party-icon {
-  opacity: 0.6;
-  animation: pulse 2s infinite;
+.deal-stage-badge[style*="background-color: rgb(16, 185, 129)"],
+.deal-stage-badge[style*="#10b981"] {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
+.deal-stage-badge[style*="background-color: rgb(6, 182, 212)"],
+.deal-stage-badge[style*="#06b6d4"] {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
 }
 
-/* Mobile Responsive - Enhanced */
+.deal-stage-badge[style*="background-color: rgb(236, 72, 153)"],
+.deal-stage-badge[style*="#ec4899"] {
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%) !important;
+}
+
+.deal-stage-badge[style*="background-color: rgb(34, 197, 94)"],
+.deal-stage-badge[style*="#22c55e"] {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+}
+
+/* Responsive */
 @media (max-width: 768px) {
   .deal-status-card {
-    padding: 20px;
-    margin-bottom: 16px;
+    padding: 16px;
   }
 
   .deal-parties {
     grid-template-columns: 1fr;
-    gap: 16px;
-    padding: 16px;
+    gap: 10px;
+    padding: 12px;
   }
 
   .property-title {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .detail-item {
-    font-size: 13px;
+    font-size: 12px;
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
@@ -259,15 +252,15 @@
   }
 
   .view-deal-btn {
-    padding: 14px 20px;
-    font-size: 14px;
+    padding: 12px 16px;
+    font-size: 13px;
   }
 }
 
 @media (max-width: 480px) {
   .deal-header {
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     align-items: stretch;
   }
 
@@ -275,49 +268,44 @@
     text-align: center;
   }
 
-  .party-item {
-    gap: 8px;
-  }
-
   .party-name {
-    font-size: 13px;
-  }
-  .property-title {
-    font-size: 16px;
-    line-height: 1.3;
-    -webkit-line-clamp: 3; /* Allow more lines on mobile */
-  }
-
-  .detail-value {
     font-size: 12px;
   }
 
-  .party-name {
-    font-size: 11px;
+  .property-title {
+    font-size: 15px;
+    -webkit-line-clamp: 3;
   }
 }
 
-/* Loading animation for when data is being updated */
+/* Loading Animation */
 .detail-value.loading {
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
   background-size: 200% 100%;
-  animation: loading 1.5s infinite;
+  animation: shimmer 1.5s infinite;
   border-radius: 4px;
   color: transparent;
 }
 
-/* Loading state for data that's being updated */
-.party-name:empty::after {
-  content: "Loading...";
-  color: #6b7280;
-  font-style: italic;
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
-@keyframes loading {
-  0% {
-    background-position: 200% 0;
+/* Focus States */
+.view-deal-btn:focus {
+  outline: 2px solid #1a5f7a;
+  outline-offset: 2px;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .deal-status-card,
+  .view-deal-btn {
+    transition: none;
   }
-  100% {
-    background-position: -200% 0;
+
+  .detail-value.loading {
+    animation: none;
   }
 }
