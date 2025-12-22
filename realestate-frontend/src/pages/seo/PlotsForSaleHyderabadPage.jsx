@@ -26,18 +26,28 @@ const PlotsForSaleHyderabadPage = () => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // ✅ Normalizer (required by PropertyList)
+  const normalizeProperty = (p) => ({
+    ...p,
+    id: p.propertyId ?? p.id,
+    isActive: true
+  });
+
   useEffect(() => {
     const fetchProperties = async () => {
       try {
         const response = await propertyService.getAll({
           city: 'Hyderabad',
           propertyType: 'Plot',
-          listingType: 'Sale',
-          limit: 8
+          listingType: 'Sale'
+          // ❌ limit removed intentionally
         });
-        setProperties(response.data?.content || response.data || []);
+
+        const list = Array.isArray(response) ? response : [];
+        setProperties(list.map(normalizeProperty));
       } catch (error) {
         console.error('Error fetching properties:', error);
+        setProperties([]);
       } finally {
         setLoading(false);
       }
@@ -93,23 +103,23 @@ const PlotsForSaleHyderabadPage = () => {
   const faqs = [
     {
       question: "What is the difference between HMDA and DTCP approved plots?",
-      answer: "HMDA (Hyderabad Metropolitan Development Authority) approval covers areas within Greater Hyderabad. DTCP (Directorate of Town & Country Planning) covers areas outside HMDA jurisdiction. Both ensure legal layouts with proper roads, drainage, and building permissions. Always verify approval before purchase."
+      answer: "HMDA approval applies within Greater Hyderabad, DTCP outside. Both ensure legal layouts."
     },
     {
       question: "What is the price range for plots in Hyderabad?",
-      answer: "Plot prices vary significantly: Peripheral areas (₹15,000-30,000/sq.yard), Semi-urban areas (₹30,000-60,000/sq.yard), IT corridor adjacent (₹50,000-1,00,000/sq.yard), Premium locations (₹1-2 lakhs/sq.yard). Prices depend on location, approval status, and infrastructure."
+      answer: "Peripheral areas ₹15,000-30,000/sq.yard, IT corridor adjacent ₹50,000-1,00,000/sq.yard."
     },
     {
-      question: "Which areas are best for buying plots in Hyderabad for investment?",
-      answer: "High-potential investment areas: Near upcoming Pharma City (Mucherla, Kadthal), ORR-adjacent areas (Tellapur, Kollur, Mokila), Airport zone (Shamshabad, Adibatla), Regional Ring Road (RRR) corridor, and Srisailam Highway stretch."
+      question: "Which areas are best for plot investment?",
+      answer: "Pharma City corridor, ORR-adjacent areas, Airport belt, and RRR corridor."
     },
     {
-      question: "What documents should I check before buying a plot in Hyderabad?",
-      answer: "Essential documents: Layout approval (HMDA/DTCP), Sale deed with complete chain, EC for 30 years, Pattadar passbook, Mutation documents, Tax paid receipts, NOCs from relevant authorities, and Physical verification with survey stones."
+      question: "What documents should I check?",
+      answer: "Layout approval, sale deed chain, EC, tax receipts, and survey verification."
     },
     {
-      question: "Can I get a home loan for buying a plot?",
-      answer: "Yes, most banks offer plot loans up to 70-80% of plot value. However, the plot must have HMDA/DTCP approval, clear title, and be within municipal limits. Interest rates are slightly higher than home loans. Construction must typically begin within 2-3 years."
+      question: "Can I get a loan for plots?",
+      answer: "Yes, banks finance HMDA/DTCP approved plots up to 70-80% of value."
     }
   ];
 
@@ -149,25 +159,8 @@ const PlotsForSaleHyderabadPage = () => {
           <h1>Plots for Sale in Hyderabad – HMDA & DTCP Approved Layouts</h1>
 
           <p className="seo-hero-subtitle">
-            Find verified HMDA & DTCP approved plots in Hyderabad. Residential plots,
-            gated community layouts, and investment lands near ORR, airport, and IT corridor.
-            Clear titles, legal verification, zero brokerage.
+            Find verified HMDA & DTCP approved plots in Hyderabad with zero brokerage.
           </p>
-
-          <div className="seo-hero-stats">
-            <div className="seo-hero-stat">
-              <span className="seo-hero-stat-value">200+</span>
-              <span className="seo-hero-stat-label">Verified Plots</span>
-            </div>
-            <div className="seo-hero-stat">
-              <span className="seo-hero-stat-value">100%</span>
-              <span className="seo-hero-stat-label">Legal Verification</span>
-            </div>
-            <div className="seo-hero-stat">
-              <span className="seo-hero-stat-value">30+</span>
-              <span className="seo-hero-stat-label">Prime Locations</span>
-            </div>
-          </div>
 
           <SEOCtaGroup
             primaryText="Browse All Plots"
@@ -177,50 +170,8 @@ const PlotsForSaleHyderabadPage = () => {
         </div>
       </section>
 
-      {/* Main Content */}
       <div className="seo-content seo-content-narrow">
 
-        {/* Introduction */}
-        <section className="seo-section">
-          <h2>Buy Approved Plots in Hyderabad</h2>
-          <p>
-            Owning a plot in Hyderabad offers the freedom to build your dream home
-            exactly the way you want. With the city expanding rapidly along the Outer
-            Ring Road (ORR) and upcoming Regional Ring Road (RRR), plot investments
-            have shown strong appreciation over the years.
-          </p>
-          <p>
-            PropertyDealz brings you only verified plots with complete legal documentation.
-            Every listing includes approval status, title verification, and direct owner
-            contact – ensuring you make a safe investment with zero brokerage.
-          </p>
-        </section>
-
-        {/* Legal Checklist - BIG SEO BOOST */}
-        <section className="seo-section">
-          <h2>Plot Buying Legal Checklist</h2>
-          <p>
-            Before purchasing any plot in Hyderabad, ensure these documents are verified.
-            This checklist helps protect your investment from legal disputes.
-          </p>
-          <SEOLegalChecklist
-            items={legalChecklist}
-            title="Essential Documents to Verify"
-          />
-        </section>
-
-        {/* Residential Plots */}
-        <section className="seo-section">
-          <h2>Residential Plots in Hyderabad</h2>
-          <p>
-            Residential plots are ideal for those who want to build a customized home.
-            These plots come with HMDA/DTCP approval, ensuring you can obtain building
-            permissions without hassles. Popular sizes range from 150-500 sq.yards.
-          </p>
-          <SEOLocalityGrid localities={plotLocalities.residential} />
-        </section>
-
-        {/* Featured Listings */}
         <section className="seo-listings-preview">
           <div className="seo-listings-header">
             <h2>Featured Plots for Sale</h2>
@@ -228,63 +179,24 @@ const PlotsForSaleHyderabadPage = () => {
               View All Plots →
             </Link>
           </div>
+
           <PropertyList
             properties={properties.slice(0, 6)}
             loading={loading}
           />
         </section>
 
-        {/* Gated Community Plots */}
-        <section className="seo-section">
-          <h2>Gated Community Plots</h2>
-          <p>
-            Gated community plots offer the best of both worlds – the freedom of
-            independent construction within a secure, planned layout. These come
-            with developed roads, drainage, electricity connections, and common
-            amenities like parks and clubhouses.
-          </p>
-          <SEOLocalityGrid localities={plotLocalities.gatedCommunity} />
-        </section>
-
-        {/* Investment Plots */}
-        <section className="seo-section">
-          <h2>Investment Plots Near Growth Corridors</h2>
-          <p>
-            For long-term investors, plots near upcoming infrastructure projects
-            offer excellent appreciation potential. The Pharma City corridor,
-            Regional Ring Road zones, and airport belt are emerging as high-growth
-            investment destinations.
-          </p>
-          <SEOLocalityGrid localities={plotLocalities.investment} />
-        </section>
-
-        {/* Plot Type Comparison */}
-        <section className="seo-section">
-          <h2>Choosing the Right Plot Type</h2>
-          <p>
-            Different plot types serve different purposes. Here's a comparison to
-            help you decide based on your goals:
-          </p>
-          <SEOComparisonTable headers={comparisonHeaders} rows={comparisonRows} />
-        </section>
-
-        {/* Why PropertyDealz */}
         <SEOBenefits />
 
-        {/* Internal Links */}
         <SEOInternalLinks
           links={internalLinks}
           title="Explore More Properties"
         />
 
-        {/* FAQs */}
-        <section className="seo-section">
-          <SEOFaqSection faqs={faqs} />
-        </section>
+        <SEOFaqSection faqs={faqs} />
 
       </div>
 
-      {/* Sticky Mobile CTA */}
       <SEOStickyCta />
     </div>
   );

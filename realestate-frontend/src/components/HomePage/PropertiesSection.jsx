@@ -137,13 +137,20 @@ function PropertiesSection({
           </div>
         )
       ) : (
-        <PropertyList
-          properties={propertiesWithDeals}
-          loading={isLoading}
-          onPropertyUpdated={onPropertyUpdated}
-          onPropertyDeleted={onPropertyDeleted}
-          onViewDealDetails={onViewDealDetails}
-        />
+       <PropertyList
+         properties={
+           activeTab === "featured"
+             ? featuredPropsList
+             : activeTab === "my-properties"
+             ? myProperties
+             : propertiesWithDeals
+         }
+         loading={isLoading}
+         onPropertyUpdated={onPropertyUpdated}
+         onPropertyDeleted={onPropertyDeleted}
+         onViewDealDetails={onViewDealDetails}
+       />
+
       )}
     </section>
   );

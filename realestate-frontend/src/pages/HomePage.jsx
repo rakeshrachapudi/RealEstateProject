@@ -218,8 +218,10 @@ function HomePage() {
         .filter((p) => p.isActive !== false);
 
       // Show featured first, then regular
-      const featured = normalized.filter(p => p.isFeatured === true);
-      const regular = normalized.filter(p => p.isFeatured !== true);
+     const featured = normalized.filter(
+       p => p.isFeatured === true || p.featured === true
+     );
+const regular = normalized.filter(p => p.isFeatured !== true);
 
       setFeaturedPropsList([...featured, ...regular].slice(0, 12));
       setShowSearchResults(false);
@@ -807,23 +809,25 @@ function HomePage() {
               </div>
             )
           ) : (
-            <PropertyList
-              properties={displayProperties}
-              loading={isLoading}
-              onPropertyUpdated={handlePropertyUpdated}
-              onPropertyDeleted={handlePropertyDeleted}
-              onViewDealDetails={handleViewDealDetails}
-            />
+           <PropertyList
+             properties={displayProperties}
+             loading={isLoading}
+             isHomePage={true}   // ✅ ADD THIS
+             onPropertyUpdated={handlePropertyUpdated}
+             onPropertyDeleted={handlePropertyDeleted}
+             onViewDealDetails={handleViewDealDetails}
+           />
+
           )}
 
           {/* View All Link */}
-          {!showSearchResults && !selectedArea && displayProperties.length >= 12 && (
-            <div className="hp-view-all">
-              <Link to="/search?city=Hyderabad" className="hp-view-all-btn">
-                View All Properties →
-              </Link>
-            </div>
-          )}
+      {activeTab === "featured" && !showSearchResults && !selectedArea && (
+        <div className="hp-view-all">
+          <Link to="/search?city=Hyderabad" className="hp-view-all-btn">
+            View All Properties →
+          </Link>
+        </div>
+      )}
         </section>
 
         {/* ========== HOW IT WORKS ========== */}
