@@ -159,6 +159,15 @@ const PlaceholderPage = () => {
         <div className="pp-floating-shape pp-shape-3"></div>
         <div className="pp-floating-shape pp-shape-4"></div>
       </div>
+      <Helmet>
+        <title>
+          Flats for Sale in {getPageTitle()} | Zero Brokerage | PropertyDealz
+        </title>
+        <meta
+          name="description"
+          content={`Buy flats, houses and plots in ${getPageTitle()}, Hyderabad with zero brokerage. Verified listings and dedicated agent support.`}
+        />
+      </Helmet>
 
       {/* Header */}
       <header className="pp-header">
@@ -175,11 +184,12 @@ const PlaceholderPage = () => {
       <main className="pp-main">
         <div className="pp-hero">
           <div className="pp-hero-icon">🚀</div>
-          <h1 className="pp-hero-title">{getPageTitle()} Coming Soon!</h1>
-          <p className="pp-hero-subtitle">
-            We're working hard to bring you an amazing new experience. Get ready
-            for something extraordinary!
-          </p>
+         <h1 className="pp-hero-title">
+           Properties in {getPageTitle()}, Hyderabad
+         </h1>
+        <p className="pp-hero-subtitle">
+          Verified properties and dedicated agent support available in {getPageTitle()}.
+        </p>
 
           {/* Countdown Timer */}
           <div className="pp-countdown">
