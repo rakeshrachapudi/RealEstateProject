@@ -254,7 +254,7 @@ function HomePage() {
     }
   }, [isAuthenticated, user?.id]);
 
-  // Smart Search Handler
+  // Smart Search Handler (FIXED – client side)
   const performSearch = async (query) => {
     if (!query.trim()) {
       setSearchResults([]);
@@ -262,43 +262,25 @@ function HomePage() {
       return;
     }
 
-    if (searchAbortRef.current) {
-      searchAbortRef.current.abort();
-    }
-    searchAbortRef.current = new AbortController();
-
     setSearchLoading(true);
-    try {
-      const token = localStorage.getItem("authToken");
-      const headers = { "Content-Type": "application/json" };
-      if (token) headers.Authorization = `Bearer ${token}`;
 
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/properties/search/smart?query=${encodeURIComponent(query)}`,
-        {
-          headers,
-          signal: searchAbortRef.current.signal,
-        }
+    const q = query.toLowerCase();
+
+    const results = allProperties.filter((p) => {
+      return (
+        p.areaName?.toLowerCase().includes(q) ||
+        p.type?.toLowerCase().includes(q) ||
+        String(p.bedrooms || "").includes(q) ||
+        String(p.priceDisplay || "").includes(q)
       );
+    });
 
-      if (!response.ok) throw new Error("Search failed");
-      const data = await response.json();
-      const results = (Array.isArray(data) ? data : data?.data || [])
-        .map(normalizeProperty)
-        .filter(Boolean);
-
-      setSearchResults(results);
-      setShowSearchResults(true);
-      setSelectedArea(null);
-    } catch (error) {
-      if (error.name !== "AbortError") {
-        console.error("Search error:", error);
-        setSearchResults([]);
-      }
-    } finally {
-      setSearchLoading(false);
-    }
+    setSearchResults(results);
+    setShowSearchResults(true);
+    setSelectedArea(null);
+    setSearchLoading(false);
   };
+
 
   // Debounced search
   useEffect(() => {
@@ -329,43 +311,29 @@ function HomePage() {
     }
   };
 
-  const handleAreaClick = async (areaName) => {
-    if (selectedArea === areaName) {
-      setSelectedArea(null);
-      setSearchResults([]);
-      setShowSearchResults(false);
-      return;
-    }
 
-    setSelectedArea(areaName);
-    setSearchLoading(true);
 
-    try {
-      const token = localStorage.getItem("authToken");
-      const headers = { "Content-Type": "application/json" };
-      if (token) headers.Authorization = `Bearer ${token}`;
+   const handleAreaClick = async (areaName) => {
+     if (selectedArea === areaName) {
+       setSelectedArea(null);
+       setSearchResults([]);
+       setShowSearchResults(false);
+       return;
+     }
 
-      const response = await fetch(
-        `${BACKEND_BASE_URL}/api/properties/search/smart?query=${encodeURIComponent(areaName)}`,
-        { headers }
-      );
+     setSelectedArea(areaName);
+     setSearchLoading(true);
 
-      if (!response.ok) throw new Error("Search failed");
-      const data = await response.json();
-      const results = (Array.isArray(data) ? data : data?.data || [])
-        .map(normalizeProperty)
-        .filter(Boolean);
+     const results = allProperties.filter(
+       (p) => p.areaName?.toLowerCase() === areaName.toLowerCase()
+     );
 
-      setSearchResults(results);
-      setShowSearchResults(true);
-      setSearchQuery("");
-    } catch (error) {
-      console.error("Area search error:", error);
-      setSearchResults([]);
-    } finally {
-      setSearchLoading(false);
-    }
-  };
+     setSearchResults(results);
+     setShowSearchResults(true);
+     setSearchQuery("");
+     setSearchLoading(false);
+   };
+
 
   const handleTypeClick = (type) => {
     setActiveTab("all");
