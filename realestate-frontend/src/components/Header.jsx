@@ -110,10 +110,12 @@ function Header({
     closeAllDropdowns();
   };
 
-  const handleLogout = () => {
-    logout();
-    closeAllDropdowns();
-  };
+ const handleLogout = () => {
+   logout();
+   closeAllDropdowns();
+   navigate("/"); // or "/login"
+ };
+
 
   const capitalizeFirst = (s) => (s ? s[0].toUpperCase() + s.slice(1) : "");
 
