@@ -128,7 +128,7 @@ export default defineConfig({
   // Development server
   server: {
     port: 5173,
-    strictPort: false,
+    strictPort: true,
     host: true, // Listen on all addresses
     open: true, // Auto-open browser
     cors: true,
