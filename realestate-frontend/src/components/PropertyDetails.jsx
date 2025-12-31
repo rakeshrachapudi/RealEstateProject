@@ -71,6 +71,9 @@ function PropertyDetails() {
   const [contactRevealed, setContactRevealed] = useState(false);
   const [contactLeadTracked, setContactLeadTracked] = useState(false);
 
+  // ⭐ NEW: Prevent duplicate backend notifications per session
+  const [notificationSentThisSession, setNotificationSentThisSession] = useState(false);
+
   // Create Deal Modal State
   const [showCreateDealModal, setShowCreateDealModal] = useState(false);
   const [viewingDeal, setViewingDeal] = useState(null);
@@ -686,8 +689,48 @@ function PropertyDetails() {
     setModalImageIndex((prev) => prev === 0 ? imageUrls.length - 1 : prev - 1);
   };
 
-  // ⭐ NEW: Handle View Contact Button Click - PRIMARY LEAD EVENT
-  const handleViewContactClick = () => {
+  // ⭐ Helper: Send backend notification (only once per session)
+  const sendBackendNotification = async (contactMethod) => {
+    if (notificationSentThisSession) {
+      console.log('ℹ️ Notification already sent this session, skipping...');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) return;
+
+      console.log(`📤 Sending ${contactMethod} notification to backend...`);
+
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/api/notifications/whatsapp/contact`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            propertyId: parseInt(propertyId),
+            contactMethod: contactMethod,
+            message: `Interested in ${property.title}`
+          })
+        }
+      );
+
+      if (response.ok) {
+        console.log('✅ Backend notification sent successfully');
+        setNotificationSentThisSession(true);
+      } else {
+        console.warn('⚠️ Failed to send backend notification');
+      }
+    } catch (error) {
+      console.error('❌ Error sending backend notification:', error);
+    }
+  };
+
+  // ⭐ Handle View Contact Button Click - PRIMARY LEAD EVENT
+  const handleViewContactClick = async () => {
     if (!user) {
       setShowLoginModal(true);
       return;
@@ -717,13 +760,16 @@ function PropertyDetails() {
       });
 
       setContactLeadTracked(true);
+
+      // ⭐ Send backend notification (only on first view_contact)
+      await sendBackendNotification('view_contact');
     }
 
     // Reveal contact info
     setContactRevealed(true);
   };
 
-  // ⭐ UPDATED: Handle WhatsApp/Call Click with proper tracking
+  // ⭐ Handle WhatsApp/Call Click with proper tracking
   const handleContactClick = (action) => {
     if (!user) {
       setShowLoginModal(true);
@@ -759,7 +805,7 @@ function PropertyDetails() {
     }
   };
 
-  // ⭐ NEW: Handle FAB Click with tracking
+  // ⭐ Handle FAB Click with tracking
   const handleFabClick = () => {
     if (!user) {
       setShowLoginModal(true);
@@ -1415,7 +1461,7 @@ function PropertyDetails() {
             </div>
           </div>
 
-          {/* ⭐ UPDATED FAB with tracking */}
+          {/* ⭐ FAB WhatsApp Button */}
           <button
             className="pd-fab"
             onClick={handleFabClick}
