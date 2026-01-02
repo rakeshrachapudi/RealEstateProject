@@ -39,7 +39,8 @@ function PropertyEditModal({ property, onClose, onPropertyUpdated }) {
   // ✅ NEW: Property Types State
   const [propertyTypes, setPropertyTypes] = useState([]);
   const [propertyTypesLoading, setPropertyTypesLoading] = useState(true);
-const [formData, setFormData] = useState({
+
+  const [formData, setFormData] = useState({
     title: property?.title || "",
     type: property?.type || property?.propertyType || "Apartment",
     listingType: property?.listingType || "sale",
@@ -111,12 +112,19 @@ const [formData, setFormData] = useState({
   // ---------- Effects ----------
   useEffect(() => {
     loadAreas();
+    loadPropertyTypes();
   }, []);
 
   useEffect(() => {
-    if (propertyId) {
-      fetchExistingImages(propertyId);
-    }
+    if (!propertyId) return;
+
+    // 🔥 CRITICAL RESET (prevents duplication)
+    setExistingImages([]);
+    setNewFiles([]);
+    setNewPreviews([]);
+    setRemovedExistingIds([]);
+
+    fetchExistingImages(propertyId);
   }, [propertyId]);
 
   useEffect(() => {
@@ -250,6 +258,62 @@ const [formData, setFormData] = useState({
       setAreas([]);
     } finally {
       setAreasLoading(false);
+    }
+  }
+
+  async function loadPropertyTypes() {
+    setPropertyTypesLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_BASE_URL}/api/property-types`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+
+      let typesRaw = [];
+      if (data?.success && Array.isArray(data.data)) {
+        typesRaw = data.data;
+      } else if (Array.isArray(data)) {
+        typesRaw = data;
+      }
+
+      const normalized = (typesRaw || [])
+        .filter(Boolean)
+        .map((t) => {
+          const id =
+            t.propertyTypeId ??
+            t.property_type_id ??
+            t.id ??
+            null;
+
+          const name =
+            t.typeName ??
+            t.type_name ??
+            t.name ??
+            t.type ??
+            (typeof t === "string" ? t : "");
+
+          return { id, name };
+        })
+        .filter((t) => t.name && t.name.length > 0);
+
+      setPropertyTypes(normalized);
+
+      // ✅ Ensure selected value exists
+      if (
+        normalized.length > 0 &&
+        !normalized.some((t) => t.name === formData.type)
+      ) {
+        setFormData((prev) => ({
+          ...prev,
+          type: normalized[0].name,
+        }));
+      }
+
+    } catch (err) {
+      console.error("Failed to load property types", err);
+      setPropertyTypes([]);
+    } finally {
+      setPropertyTypesLoading(false);
     }
   }
 
@@ -435,76 +499,102 @@ const [formData, setFormData] = useState({
     setError(null);
 
     try {
-      // 1) Upload new images
-     // ✅ FIXED: Upload new images in PropertyEditModal
-     // This should replace the upload section in handleSubmit function (around line 518-550)
+      console.log("🔄 Starting property update process...");
 
-     // Inside handleSubmit function of PropertyEditModal.jsx:
+      // ========================================
+      // STEP 1: DELETE REMOVED EXISTING IMAGES
+      // ========================================
+      if (removedExistingIds.length > 0) {
+        console.log(`🗑️ Deleting ${removedExistingIds.length} removed images...`);
 
-     // 1) Upload new images
-     const uploadedNewUrls = [];
-     if (newFiles.length > 0) {
-       setImageUploading(true);
-       console.log(`📤 Uploading ${newFiles.length} new images for property ${propertyId}...`);
+        for (const imageId of removedExistingIds) {
+          try {
+            const delRes = await fetch(
+              `${BACKEND_BASE_URL}/api/property-images/${imageId}`,
+              {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${authToken}` },
+              }
+            );
 
-       for (let i = 0; i < newFiles.length; i++) {
-         const file = newFiles[i];
-         const fd = new FormData();
-         fd.append("file", file);
-         fd.append("propertyId", String(propertyId));
+            if (!delRes.ok) {
+              console.warn(`⚠️ Failed to delete image ${imageId}: HTTP ${delRes.status}`);
+            } else {
+              console.log(`✅ Deleted image ${imageId}`);
+            }
+          } catch (err) {
+            console.error(`❌ Error deleting image ${imageId}:`, err);
+          }
+        }
+      }
 
-         console.log(`   Uploading image ${i + 1}/${newFiles.length}...`);
+      // ========================================
+      // STEP 2: UPLOAD NEW IMAGES
+      // ========================================
+      const uploadedNewUrls = [];
+      if (newFiles.length > 0) {
+        setImageUploading(true);
+        console.log(`📤 Uploading ${newFiles.length} new images for property ${propertyId}...`);
 
-         // ✅ CRITICAL FIX: Use property-specific upload endpoint
-         const res = await fetch(`${BACKEND_BASE_URL}/api/upload/property-image`, {
-           method: "POST",
-           headers: { Authorization: `Bearer ${authToken}` },
-           body: fd,
-         });
+        for (let i = 0; i < newFiles.length; i++) {
+          const file = newFiles[i];
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("propertyId", String(propertyId));
 
-         if (!res.ok) {
-           const errorText = await res.text();
-           console.error(`❌ Image ${i + 1} upload failed:`, errorText);
-           throw new Error(`Image upload failed: HTTP ${res.status}`);
-         }
+          console.log(`   Uploading image ${i + 1}/${newFiles.length}...`);
 
-         const data = await res.json();
-         console.log(`✅ Image ${i + 1} uploaded:`, data);
+          const res = await fetch(`${BACKEND_BASE_URL}/api/upload/property-image`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${authToken}` },
+            body: fd,
+          });
 
-         // ✅ Extract URL from response (handle different response formats)
-         const url = data.data?.imageUrl || data.imageUrl || data.url;
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error(`❌ Image ${i + 1} upload failed:`, errorText);
+            throw new Error(`Image upload failed: HTTP ${res.status}`);
+          }
 
-         if (!url) {
-           console.error("❌ No imageUrl in response:", data);
-           throw new Error("Upload returned no imageUrl");
-         }
+          const data = await res.json();
+          console.log(`✅ Image ${i + 1} uploaded:`, data);
 
-         uploadedNewUrls.push(url);
-         console.log(`✅ Image ${i + 1} URL:`, url);
+          const url = data.data?.imageUrl || data.imageUrl || data.url;
 
-         setUploadProgress(Math.round(((i + 1) / newFiles.length) * 100));
-       }
+          if (!url) {
+            console.error("❌ No imageUrl in response:", data);
+            throw new Error("Upload returned no imageUrl");
+          }
 
-       setImageUploading(false);
-       console.log(`✅ All ${uploadedNewUrls.length} new images uploaded successfully`);
-     }
+          uploadedNewUrls.push(url);
+          setUploadProgress(Math.round(((i + 1) / newFiles.length) * 100));
+        }
 
-     // Continue with the rest of the handleSubmit logic...
-     // (building finalImages, deleting old images, saving new images, updating property)
+        setImageUploading(false);
+        console.log(`✅ All ${uploadedNewUrls.length} new images uploaded successfully`);
+      }
 
-      // 2) Build final images list
+      // ========================================
+      // STEP 3: BUILD FINAL IMAGES LIST
+      // ========================================
+      let hasPrimary = orderedExisting.some(i => i.isPrimary);
+
       const finalImages = [
         ...orderedExisting.map((img, idx) => ({
+          imageId: img.imageId, // Keep existing imageId for updates
           imageUrl: img.imageUrl,
           isPrimary: img.isPrimary,
           displayOrder: idx,
         })),
-        ...uploadedNewUrls.map((url, idx) => ({
-          imageUrl: url,
-          isPrimary:
-            orderedExisting.every((i) => !i.isPrimary) && idx === 0,
-          displayOrder: orderedExisting.length + idx,
-        })),
+        ...uploadedNewUrls.map((url, idx) => {
+          const isPrimary = !hasPrimary && idx === 0;
+          if (isPrimary) hasPrimary = true;
+          return {
+            imageUrl: url,
+            isPrimary,
+            displayOrder: orderedExisting.length + idx,
+          };
+        }),
       ];
 
       // Ensure exactly one primary
@@ -514,55 +604,104 @@ const [formData, setFormData] = useState({
 
       const primaryUrl = finalImages.find((i) => i.isPrimary)?.imageUrl || "";
 
-      // 3) Delete old images ONLY if something changed
-      if (removedExistingIds.length > 0 || uploadedNewUrls.length > 0) {
-        await fetch(
-          `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
-          {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${authToken}` },
-          }
-        );
+      console.log(`📋 Final images list (${finalImages.length} total):`, finalImages);
 
-        if (finalImages.length > 0) {
-          const saveRes = await fetch(
-            `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${authToken}`,
-              },
-              body: JSON.stringify(finalImages),
+      // ========================================
+      // STEP 4: UPDATE EXISTING IMAGES (order/primary)
+      // ========================================
+      const existingToUpdate = finalImages.filter(img => img.imageId);
+
+      if (existingToUpdate.length > 0) {
+        console.log(`🔄 Updating ${existingToUpdate.length} existing images...`);
+
+        for (const img of existingToUpdate) {
+          try {
+            // 1️⃣ set primary (only once)
+            if (img.isPrimary) {
+              const primaryRes = await fetch(
+                `${BACKEND_BASE_URL}/api/property-images/${img.imageId}/set-primary`,
+                {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${authToken}`,
+                  },
+                  body: JSON.stringify({ propertyId }),
+                }
+              );
+
+              if (!primaryRes.ok) {
+                console.warn(`⚠️ Failed to set primary for image ${img.imageId}`);
+              }
             }
-          );
 
-          if (!saveRes.ok) {
-            throw new Error(`Failed to save images`);
+            // 2️⃣ update order (always)
+            const orderRes = await fetch(
+              `${BACKEND_BASE_URL}/api/property-images/${img.imageId}/order`,
+              {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${authToken}`,
+                },
+                body: JSON.stringify({ order: img.displayOrder }),
+              }
+            );
+
+            if (!orderRes.ok) {
+              console.warn(`⚠️ Failed to update order for image ${img.imageId}`);
+            }
+
+          } catch (err) {
+            console.error(`❌ Error updating image ${img.imageId}:`, err);
           }
         }
-      }
+    }
 
 
-      // 4) Save new images list
-      if (finalImages.length > 0) {
-        const saveRes = await fetch(
-          `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${authToken}`,
-            },
-            body: JSON.stringify(finalImages),
-          }
-        );
-        if (!saveRes.ok) {
-          throw new Error(`Failed to save images: HTTP ${saveRes.status}`);
+      // ========================================
+      // STEP 5: SAVE NEW IMAGES TO DATABASE
+      // ========================================
+    // ========================================
+    // STEP 5: SAVE NEW IMAGES TO DATABASE (ONCE)
+    // ========================================
+    const newImagesToSave = finalImages.filter(img => !img.imageId);
+
+    if (newImagesToSave.length > 0) {
+      console.log(`💾 Saving ${newImagesToSave.length} new images to database...`);
+
+      const saveRes = await fetch(
+        `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify(
+            newImagesToSave.map(img => ({
+              imageUrl: img.imageUrl,
+              isPrimary: img.isPrimary,
+              displayOrder: img.displayOrder,
+            }))
+          ),
         }
+      );
+
+      if (!saveRes.ok) {
+        const errorText = await saveRes.text();
+        throw new Error(`Failed to save images: ${errorText}`);
       }
 
-      // 5) Update property
+      console.log("✅ New images saved successfully");
+    }
+
+
+      // ========================================
+      // STEP 6: UPDATE PROPERTY
+      // ========================================
+      console.log("🏠 Updating property details...");
+
       const payload = {
         title: formData.title.trim(),
         type: formData.type,
@@ -607,16 +746,31 @@ const [formData, setFormData] = useState({
       }
 
       const updated = await propRes.json();
+      console.log("✅ Property updated successfully!");
+
+      // ========================================
+      // STEP 7: SUCCESS - CLEAR STATE & CLOSE
+      // ========================================
       alert("✅ Property updated successfully!");
+
       if (onPropertyUpdated) onPropertyUpdated(updated);
+
+      // Clear image state
+      setExistingImages([]);
+      setNewFiles([]);
+      setNewPreviews([]);
+      setRemovedExistingIds([]);
+
       onClose();
+
     } catch (err) {
-      console.error("Update error:", err);
+      console.error("❌ Update error:", err);
       setError(err.message || "Failed to update property");
-      alert(`❌ ${err.message}`);
+      alert(`❌ Error: ${err.message}`);
     } finally {
       setLoading(false);
       setImageUploading(false);
+      setUploadProgress(0);
     }
   }
 
@@ -663,25 +817,23 @@ const [formData, setFormData] = useState({
           <div className="pem-row">
             <div className="pem-field">
               <label className="pem-label">Property Type *</label>
-
-{propertyTypesLoading ? (
-  <div>Loading types...</div>
-) : (
-  <select
-    name="type"
-    className="pem-select"
-    value={formData.type}
-    onChange={handleChange}
-  >
-    <option value="">Select Property Type</option>
-    {propertyTypes.map((pt) => (
-      <option key={pt.id ?? pt.name} value={pt.name}>
-        {pt.name}
-      </option>
-    ))}
-  </select>
-)}
-
+              {propertyTypesLoading ? (
+                <div>Loading types...</div>
+              ) : (
+                <select
+                  name="type"
+                  className="pem-select"
+                  value={formData.type}
+                  onChange={handleChange}
+                >
+                  <option value="">Select Property Type</option>
+                  {propertyTypes.map((pt) => (
+                    <option key={pt.id ?? pt.name} value={pt.name}>
+                      {pt.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="pem-field">
