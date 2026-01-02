@@ -26,7 +26,8 @@ public class PropertyService {
     private final UserRepository userRepository;
     private final AreaRepository areaRepository;
     private final PropertyTypeRepository propertyTypeRepository;
-
+    @Autowired
+    private  PropertyRepository propertyRep;
     @Autowired
     private BrokerSubscriptionService brokerSubscriptionService;
     @Autowired
@@ -181,9 +182,11 @@ public class PropertyService {
         Property savedProperty = postProperty(dto);
 
         // ⭐ NEW: Save images to property_images table
-        if (dto.getImageUrl() != null && !dto.getImageUrl().trim().isEmpty()) {
-            saveImagesToDatabase(savedProperty.getId(), dto.getImageUrl());
+        // ⭐ FIX: Save ALL images (not just primary)
+        if (dto.getImageUrls() != null && !dto.getImageUrls().trim().isEmpty()) {
+            saveImagesToDatabase(savedProperty.getId(), dto.getImageUrls());
         }
+
 
         // ⭐ NEW: Save documents to property_documents table
         if (dto.getDocumentUrls() != null && !dto.getDocumentUrls().trim().isEmpty()) {
@@ -194,51 +197,85 @@ public class PropertyService {
     }
 
     /**
-     * ⭐ NEW: Save images to property_images table AND reorganize S3 files
-     * Moves files from temp/images/ to properties/{propertyId}/images/
+     * ⭐ FIXED: Save images to property_images table AND reorganize S3 files
+     * NOW HANDLES MULTIPLE IMAGES CORRECTLY WITH BETTER ERROR HANDLING
+     */
+    // ✅ This is the CORRECT logic from PropertyService.java
+// Just verifying it's handling multiple images properly
+
+    // ==================== IMAGE HANDLING ====================
+
+    /**
+     * ✅ Save images to property_images table
+     * ✅ Move images from temp → property folder
+     * ✅ Store ONLY PRIMARY image in property.imageUrl
      */
     private void saveImagesToDatabase(Long propertyId, String imageUrls) {
+        logger.info("📸 [saveImagesToDatabase] Starting for property {}", propertyId);
+        logger.info("   Image URLs received: {}", imageUrls);
+
         try {
+            if (imageUrls == null || imageUrls.trim().isEmpty()) {
+                logger.warn("⚠️ No imageUrls provided for property {}", propertyId);
+                return;
+            }
+
             String[] urls = imageUrls.split(",");
+            logger.info("   Split into {} image URLs", urls.length);
+
             List<PropertyImageService.PropertyImageRequest> imageRequests = new ArrayList<>();
-            List<String> reorganizedUrls = new ArrayList<>();
+            String primaryImageUrl = null;
 
             for (int i = 0; i < urls.length; i++) {
                 String tempUrl = urls[i].trim();
-                if (!tempUrl.isEmpty()) {
-                    // ⭐ Move file from temp to property folder
-                    String newUrl = moveFileToPropertyFolder(tempUrl, propertyId, "images");
+                if (tempUrl.isEmpty()) continue;
 
-                    PropertyImageService.PropertyImageRequest request =
-                            new PropertyImageService.PropertyImageRequest();
-                    request.setImageUrl(newUrl != null ? newUrl : tempUrl); // Use new URL if move succeeded
-                    request.setIsPrimary(i == 0); // First image is primary
-                    request.setDisplayOrder(i);
-                    imageRequests.add(request);
+                String finalUrl = tempUrl;
 
-                    reorganizedUrls.add(newUrl != null ? newUrl : tempUrl);
+                try {
+                    logger.info("   [{}] Moving image to property folder", i);
+                    String movedUrl = moveFileToPropertyFolder(tempUrl, propertyId, "images");
+                    if (movedUrl != null && !movedUrl.isEmpty()) {
+                        finalUrl = movedUrl;
+                    }
+                } catch (Exception ex) {
+                    logger.error("❌ Failed to move image, using original URL: {}", tempUrl);
+                }
+
+                PropertyImageService.PropertyImageRequest req =
+                        new PropertyImageService.PropertyImageRequest();
+                req.setImageUrl(finalUrl);
+                req.setIsPrimary(i == 0);
+                req.setDisplayOrder(i);
+
+                imageRequests.add(req);
+
+                if (i == 0) {
+                    primaryImageUrl = finalUrl;
                 }
             }
 
             if (!imageRequests.isEmpty()) {
                 propertyImageService.saveImages(propertyId, imageRequests);
-                logger.info("✅ Saved {} images to property_images table for property {}",
-                        imageRequests.size(), propertyId);
+                logger.info("✅ Saved {} images to property_images", imageRequests.size());
+            }
 
-                // Update property's imageUrl with reorganized URLs
-                String reorganizedUrlString = String.join(",", reorganizedUrls);
+            // 🔥 CRITICAL FIX: store ONLY PRIMARY image
+            if (primaryImageUrl != null) {
                 Property property = repo.findById(propertyId).orElse(null);
                 if (property != null) {
-                    property.setImageUrl(reorganizedUrlString);
+                    property.setImageUrl(primaryImageUrl);
                     repo.save(property);
-                    logger.info("✅ Updated property imageUrl with reorganized S3 paths");
+                    logger.info("✅ property.imageUrl updated with PRIMARY image only");
                 }
             }
+
         } catch (Exception e) {
-            logger.error("❌ Error saving images to database for property {}: {}",
-                    propertyId, e.getMessage(), e);
+            logger.error("❌ [saveImagesToDatabase] Failed", e);
         }
     }
+
+
 
     /**
      * ⭐ UPDATED: Save documents to property_documents table
@@ -360,101 +397,107 @@ public class PropertyService {
     }
 
     /**
-     * ⭐ COMPLETE FIXED VERSION: PropertyService.java - moveFileToPropertyFolder method
-     * Replace lines 367-401 with this ENTIRE method
+     * ⭐ IMPROVED: Move file from temp folder to property folder in S3
+     * NOW WITH BETTER LOGGING AND ERROR HANDLING
      */
-
-    /**
-     * Move file from temp folder to property folder in S3
-     * From: temp/images/file.jpg or temp/documents/file.pdf
-     * To: properties/{propertyId}/images/file.jpg or properties/{propertyId}/documents/file.pdf
-     */
-    // ═══════════════════════════════════════════════════════════════
-// SIMPLE FIX - Just replace this ONE method in PropertyService.java
-// Find: private String moveFileToPropertyFolder (around line 367)
-// Replace: The entire method with this code below
-// ═══════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════
-// SIMPLE FIX - Just replace this ONE method in PropertyService.java
-// Find: private String moveFileToPropertyFolder (around line 367)
-// Replace: The entire method with this code below
-// ═══════════════════════════════════════════════════════════════
-
     private String moveFileToPropertyFolder(String tempUrl, Long propertyId, String folderType) {
-        logger.info("🔄 Moving file for property {}: {}", propertyId, tempUrl);
+        logger.info("   📦 [moveFileToPropertyFolder] Starting...");
+        logger.info("      tempUrl: {}", tempUrl);
+        logger.info("      propertyId: {}", propertyId);
+        logger.info("      folderType: {}", folderType);
 
         try {
             // Extract S3 key from URL
             String tempKey = extractS3KeyFromUrl(tempUrl);
+            logger.info("      Extracted tempKey: {}", tempKey);
 
-            if (tempKey == null || !tempKey.contains("temp/")) {
-                logger.warn("Invalid or non-temp URL: {}", tempUrl);
-                return tempUrl;
+            if (tempKey == null) {
+                logger.error("      ❌ Failed to extract S3 key from URL");
+                return null;
             }
 
-            // Get filename
+            if (!tempKey.contains("temp/")) {
+                logger.warn("      ⚠️ URL does not contain 'temp/' - might already be in final location");
+                logger.warn("      Key: {}", tempKey);
+                return tempUrl; // Return original URL if not in temp
+            }
+
+            // Extract filename from the temp key
             String fileName = tempKey.substring(tempKey.lastIndexOf("/") + 1);
+            logger.info("      Extracted fileName: {}", fileName);
 
-            // Build new key: properties/{propertyId}/documents/filename
+            // Build new key: properties/{propertyId}/images/filename
             String newKey = String.format("properties/%d/%s/%s", propertyId, folderType, fileName);
-
-            logger.info("📦 Moving: {} → {}", tempKey, newKey);
+            logger.info("      New S3 key: {}", newKey);
 
             // Move file in S3 (copy + delete)
+            logger.info("      Calling s3Service.moveFile...");
             boolean moved = s3Service.moveFile(tempKey, newKey);
 
             if (moved) {
-                // ⭐ CRITICAL FIX: Use S3Service to generate URL
+                // Generate new URL from the new key
                 String newUrl = s3Service.getFileUrl(newKey);
-                logger.info("✅ Moved successfully!");
-                logger.info("   ⭐ New URL: {}", newUrl);
+                logger.info("      ✅ File moved successfully!");
+                logger.info("         New URL: {}", newUrl);
                 return newUrl;
             } else {
-                logger.error("❌ Failed to move file");
+                logger.error("      ❌ s3Service.moveFile returned false");
                 return null;
             }
 
         } catch (Exception e) {
-            logger.error("❌ Error moving file: {}", e.getMessage(), e);
+            logger.error("      ❌ Exception in moveFileToPropertyFolder: {}", e.getMessage(), e);
             return null;
         }
     }
+
+
+
 
 
     /**
-     * Extract S3 key from full S3 URL
-     * Example: https://bucket.s3.region.amazonaws.com/temp/images/file.jpg → temp/images/file.jpg
+     * ⭐ IMPROVED: Extract S3 key from full S3 URL
+     * NOW HANDLES MORE URL FORMATS
      */
     private String extractS3KeyFromUrl(String s3Url) {
+        logger.info("         [extractS3KeyFromUrl] Input: {}", s3Url);
+
         try {
             if (s3Url == null || s3Url.isEmpty()) {
+                logger.warn("         ⚠️ URL is null or empty");
                 return null;
             }
 
-            // Remove the S3 base URL to get just the key
-            // Format: https://bucket-name.s3.region.amazonaws.com/KEY
-            int lastSlashBeforeKey = s3Url.indexOf(".com/");
-            if (lastSlashBeforeKey != -1) {
-                return s3Url.substring(lastSlashBeforeKey + 5); // +5 for ".com/"
+            // Format 1: https://bucket-name.s3.region.amazonaws.com/key/path
+            // Find ".com/" and everything after it is the key
+            int comIndex = s3Url.indexOf(".com/");
+            if (comIndex != -1) {
+                String key = s3Url.substring(comIndex + 5); // +5 for ".com/"
+                logger.info("         ✅ Extracted key (format 1): {}", key);
+                return key;
             }
 
-            // Alternative format: https://s3.region.amazonaws.com/bucket-name/KEY
-            int bucketIndex = s3Url.indexOf(".amazonaws.com/");
-            if (bucketIndex != -1) {
-                String afterDomain = s3Url.substring(bucketIndex + 15); // +15 for ".amazonaws.com/"
+            // Format 2: https://s3.region.amazonaws.com/bucket-name/key/path
+            // Find ".amazonaws.com/" then skip bucket name
+            int awsIndex = s3Url.indexOf(".amazonaws.com/");
+            if (awsIndex != -1) {
+                String afterDomain = s3Url.substring(awsIndex + 15); // +15 for ".amazonaws.com/"
                 int firstSlash = afterDomain.indexOf("/");
                 if (firstSlash != -1) {
-                    return afterDomain.substring(firstSlash + 1); // Skip bucket name
+                    String key = afterDomain.substring(firstSlash + 1); // Skip bucket name
+                    logger.info("         ✅ Extracted key (format 2): {}", key);
+                    return key;
                 }
             }
 
+            logger.error("         ❌ Could not extract key from URL");
             return null;
+
         } catch (Exception e) {
-            logger.error("Error extracting S3 key from URL: {}", e.getMessage());
+            logger.error("         ❌ Error extracting S3 key: {}", e.getMessage(), e);
             return null;
         }
     }
-
     // ==================== SOFT DELETE USER PROPERTIES ====================
 
     /**
@@ -801,4 +844,32 @@ public class PropertyService {
         List<Property> properties = repo.findByAreaNameAndIsActiveTrue(areaName);
         return properties.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
+    /**
+     * ✅ Get property by ID - Used by notification system
+     */
+    public Property getById(Long propertyId) {
+        if (propertyId == null) {
+            logger.warn("⚠️ Attempted to fetch property with null ID");
+            return null;
+        }
+
+        Optional<Property> property = propertyRep.findById(propertyId);
+
+        if (property.isEmpty()) {
+            logger.warn("⚠️ Property not found: {}", propertyId);
+            return null;
+        }
+
+        logger.debug("✅ Property fetched: {} - {}", propertyId, property.get().getTitle());
+        return property.get();
+    }
+
+
+
+
+
+
+
+
+
 }
