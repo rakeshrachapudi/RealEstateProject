@@ -1,43 +1,59 @@
 // AdminPropertyEditModal.jsx
-// Enhanced modal for admin to edit properties with full image management
-// Styled to match PropertyEditModal
+// FULLY FIXED - Aligned 1:1 with PropertyEditModal image logic
 
 import React, { useState, useEffect, useMemo } from "react";
 import { BACKEND_BASE_URL } from "../config/config";
 import "./AdminPropertyEditModal.css";
 
 function AdminPropertyEditModal({ property, onClose, onPropertyUpdated }) {
+
+  // ===============================
+  // BASIC STATE
+  // ===============================
   const [areas, setAreas] = useState([]);
+  const [areasLoading, setAreasLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [areasLoading, setAreasLoading] = useState(true);
-  const [imageUploading, setImageUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [priceInWords, setPriceInWords] = useState("");
 
-  // Image management state
+  // ===============================
+  // IMAGE STATE
+  // ===============================
   const [existingImages, setExistingImages] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
   const [newPreviews, setNewPreviews] = useState([]);
   const [removedExistingIds, setRemovedExistingIds] = useState([]);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-
-  // ✅ NEW: Property Types State
+  // ===============================
+  // PROPERTY TYPES
+  // ===============================
   const [propertyTypes, setPropertyTypes] = useState([]);
   const [propertyTypesLoading, setPropertyTypesLoading] = useState(true);
-const [formData, setFormData] = useState({
+
+  // ===============================
+  // PRICE WORDS
+  // ===============================
+  const [priceInWords, setPriceInWords] = useState("");
+
+  const propertyId = property?.id || property?.propertyId;
+
+  // ===============================
+  // FORM DATA
+  // ===============================
+  const [formData, setFormData] = useState({
     title: property?.title || "",
     type: property?.propertyType || property?.type || "Apartment",
     listingType: property?.listingType || "sale",
     city: property?.cityName || property?.city || "Hyderabad",
     areaId: property?.area?.areaId || "",
     address: property?.address || "",
-    bedrooms: property?.bedrooms || "",
-    bathrooms: property?.bathrooms || "",
-    balconies: property?.balconies || "",
-    areaSqft: property?.areaSqft || "",
-    price: property?.price || "",
-    pricePerSqft: property?.pricePerSqft || "",
+    bedrooms: property?.bedrooms ?? "",
+    bathrooms: property?.bathrooms ?? "",
+    balconies: property?.balconies ?? "",
+    areaSqft: property?.areaSqft ?? "",
+    price: property?.price ?? "",
+    pricePerSqft: property?.pricePerSqft ?? "",
     amenities: property?.amenities || "",
     description: property?.description || "",
     ownerType: property?.ownerType || "owner",
@@ -46,12 +62,13 @@ const [formData, setFormData] = useState({
     possessionMonth: property?.possessionMonth || "",
     reraId: property?.reraId || "",
     hmdaId: property?.hmdaId || "",
-    isReadyToMove: property?.isReadyToMove || false,
-    isVerified: property?.isVerified || false,
-    isFeatured: property?.isFeatured || false,
+    isReadyToMove: !!property?.isReadyToMove,
+    isVerified: !!property?.isVerified,
+    isFeatured: !!property?.isFeatured,
     status: property?.status || "available",
   });
 
+  // Common amenities list
   const commonAmenities = [
     "Parking",
     "Gym",
@@ -68,6 +85,7 @@ const [formData, setFormData] = useState({
     "Community Hall",
   ];
 
+  // Possession months and years
   const months = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
@@ -75,27 +93,45 @@ const [formData, setFormData] = useState({
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 10 }, (_, i) => currentYear + i);
 
-  // Check if property type is plot, land, or villa
+  // ===============================
+  // DERIVED FLAGS
+  // ===============================
   const isPlotOrLandOrVilla =
     formData.type?.toLowerCase() === "plot" ||
     formData.type?.toLowerCase() === "land" ||
     formData.type?.toLowerCase() === "villa";
 
-  const propertyId = property.id || property.propertyId;
-
-  // Ordered existing images
+  // ===============================
+  // ORDERED EXISTING IMAGES
+  // ===============================
   const orderedExisting = useMemo(() => {
     const arr = Array.isArray(existingImages) ? [...existingImages] : [];
     arr.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
     return arr;
   }, [existingImages]);
 
-  const totalImagesCount = (orderedExisting?.length || 0) + (newPreviews?.length || 0);
+  const totalImagesCount =
+    (orderedExisting?.length || 0) + (newPreviews?.length || 0);
 
+  // ===============================
+  // EFFECTS
+  // ===============================
   useEffect(() => {
     loadAreas();
-    loadExistingImages();
+    loadPropertyTypes();
   }, []);
+
+  useEffect(() => {
+    if (!propertyId) return;
+
+    // 🔥 CRITICAL RESET (prevents duplication)
+    setExistingImages([]);
+    setNewFiles([]);
+    setNewPreviews([]);
+    setRemovedExistingIds([]);
+
+    loadExistingImages();
+  }, [propertyId]);
 
   useEffect(() => {
     if (formData.price) {
@@ -105,27 +141,57 @@ const [formData, setFormData] = useState({
     }
   }, [formData.price]);
 
+  // ===============================
+  // LOADERS
+  // ===============================
   const loadAreas = async () => {
     setAreasLoading(true);
     try {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/areas?city=Hyderabad`);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      if (data.success && Array.isArray(data.data)) {
+      const res = await fetch(`${BACKEND_BASE_URL}/api/areas?city=Hyderabad`);
+      const data = await res.json();
+      if (data?.success && Array.isArray(data.data)) {
         setAreas(data.data);
-        setError(null);
       }
-    } catch (err) {
-      setError(`Failed to load areas: ${err.message}`);
+    } catch (e) {
       setAreas([]);
     } finally {
       setAreasLoading(false);
     }
   };
 
+  const loadPropertyTypes = async () => {
+    setPropertyTypesLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_BASE_URL}/api/property-types`);
+      const data = await res.json();
+      const list = data?.data || data || [];
+
+      const normalized = list
+        .filter(Boolean)
+        .map(t => ({
+          id: t.id ?? t.propertyTypeId ?? null,
+          name: t.name ?? t.typeName ?? t.type ?? ""
+        }))
+        .filter(t => t.name);
+
+      setPropertyTypes(normalized);
+
+      if (
+        normalized.length &&
+        !normalized.some(t => t.name === formData.type)
+      ) {
+        setFormData(prev => ({ ...prev, type: normalized[0].name }));
+      }
+    } catch {
+      setPropertyTypes([]);
+    } finally {
+      setPropertyTypesLoading(false);
+    }
+  };
+
   const loadExistingImages = async () => {
     try {
-      const response = await fetch(
+      const res = await fetch(
         `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
         {
           headers: {
@@ -133,72 +199,53 @@ const [formData, setFormData] = useState({
           },
         }
       );
-      if (response.ok) {
-        const data = await response.json();
-        const list = Array.isArray(data) ? data : data?.data || [];
-        const normalized = list
-          .filter(Boolean)
-          .map((img, idx) => ({
-            imageId: img.imageId ?? img.id ?? null,
-            imageUrl: img.imageUrl,
-            isPrimary: !!img.isPrimary,
-            displayOrder: Number.isFinite(img.displayOrder) ? img.displayOrder : idx,
-            createdAt: img.createdAt || null,
-          }));
-        if (!normalized.some((i) => i.isPrimary) && normalized.length > 0) {
-          normalized[0].isPrimary = true;
-        }
-        setExistingImages(normalized);
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : data?.data || [];
+
+      const normalized = list.map((img, idx) => ({
+        imageId: img.imageId ?? img.id,
+        imageUrl: img.imageUrl,
+        isPrimary: !!img.isPrimary,
+        displayOrder: Number.isFinite(img.displayOrder) ? img.displayOrder : idx,
+      }));
+
+      if (!normalized.some(i => i.isPrimary) && normalized.length) {
+        normalized[0].isPrimary = true;
       }
-    } catch (err) {
-      console.error("Error loading existing images:", err);
+
+      setExistingImages(normalized);
+    } catch {
       setExistingImages([]);
     }
   };
 
+  // ===============================
+  // PRICE HELPERS
+  // ===============================
   const convertToIndianWords = (numStr) => {
     const num = Number(numStr);
-    if (!numStr || isNaN(num) || num <= 0) return "";
-
-    const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
-    const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
-
+    if (!num || isNaN(num)) return "";
+    const ones = ["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten",
+      "Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
+    const tens = ["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
     const numToWords = (n) => {
-      let str = "";
-      if (n > 99) {
-        str += ones[Math.floor(n / 100)] + " Hundred ";
-        n %= 100;
-      }
-      if (n > 19) {
-        str += tens[Math.floor(n / 10)] + " ";
-        n %= 10;
-      }
-      if (n > 0) {
-        str += ones[n] + " ";
-      }
-      return str;
+      let s = "";
+      if (n > 99) { s += ones[Math.floor(n/100)]+" Hundred "; n%=100; }
+      if (n > 19) { s += tens[Math.floor(n/10)]+" "; n%=10; }
+      if (n > 0) s += ones[n]+" ";
+      return s;
     };
-
-    let words = "";
-    let tempNum = num;
-    if (tempNum >= 10000000) {
-      words += numToWords(Math.floor(tempNum / 10000000)) + "Crore ";
-      tempNum %= 10000000;
-    }
-    if (tempNum >= 100000) {
-      words += numToWords(Math.floor(tempNum / 100000)) + "Lakh ";
-      tempNum %= 100000;
-    }
-    if (tempNum >= 1000) {
-      words += numToWords(Math.floor(tempNum / 1000)) + "Thousand ";
-      tempNum %= 1000;
-    }
-    if (tempNum > 0) {
-      words += numToWords(tempNum);
-    }
-    return words.trim() + " Rupees Only";
+    let w = "", t = num;
+    if (t >= 10000000) { w += numToWords(Math.floor(t/10000000))+"Crore "; t%=10000000; }
+    if (t >= 100000) { w += numToWords(Math.floor(t/100000))+"Lakh "; t%=100000; }
+    if (t >= 1000) { w += numToWords(Math.floor(t/1000))+"Thousand "; t%=1000; }
+    if (t > 0) w += numToWords(t);
+    return w.trim()+" Rupees Only";
   };
 
+  // ===============================
+  // PRICE/AREA CALCULATIONS
+  // ===============================
   const calculatePricePerSqft = (price, areaSqft) => {
     const p = Number(price);
     const a = Number(areaSqft);
@@ -252,6 +299,9 @@ const [formData, setFormData] = useState({
     });
   };
 
+  // ===============================
+  // INPUT HANDLERS
+  // ===============================
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -269,55 +319,62 @@ const [formData, setFormData] = useState({
     }
   };
 
+  // ===============================
+  // AMENITIES
+  // ===============================
   const handleAmenityChange = (amenity) => {
-    const currentAmenities = formData.amenities
+    const selected = formData.amenities
       ? formData.amenities.split(",").map((a) => a.trim())
       : [];
-    let updatedAmenities;
-    if (currentAmenities.includes(amenity)) {
-      updatedAmenities = currentAmenities.filter((a) => a !== amenity);
-    } else {
-      updatedAmenities = [...currentAmenities, amenity];
-    }
+
+    const updated = selected.includes(amenity)
+      ? selected.filter((a) => a !== amenity)
+      : [...selected, amenity];
+
     setFormData((prev) => ({
       ...prev,
-      amenities: updatedAmenities.join(", "),
+      amenities: updated.join(", "),
     }));
   };
 
+  // ===============================
+  // NEW FILE SELECTION
+  // ===============================
   const handleNewFilesSelected = (e) => {
     const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+    if (!files.length) return;
 
-    const currentTotal = totalImagesCount;
-    if (currentTotal + files.length > 10) {
-      alert("Maximum 10 images allowed per property");
+    if (totalImagesCount + files.length > 10) {
+      alert("You can upload a maximum of 10 images.");
       return;
     }
 
-    const validFiles = [];
-    const newPreviews = [];
+    const valid = [];
+    const previews = [];
 
     for (const file of files) {
       if (!file.type.startsWith("image/")) {
-        alert(`"${file.name}" is not an image file`);
+        alert(`"${file.name}" is not an image`);
         continue;
       }
       if (file.size > 10 * 1024 * 1024) {
-        alert(`"${file.name}" is too large (max 10MB)`);
+        alert(`"${file.name}" exceeds 10MB`);
         continue;
       }
-      validFiles.push(file);
-      newPreviews.push(URL.createObjectURL(file));
+      valid.push(file);
+      previews.push(URL.createObjectURL(file));
     }
 
-    setNewFiles(prev => [...prev, ...validFiles]);
-    setNewPreviews(prev => [...prev, ...newPreviews]);
+    setNewFiles((prev) => [...prev, ...valid]);
+    setNewPreviews((prev) => [...prev, ...previews]);
   };
 
+  // ===============================
+  // REMOVE NEW IMAGE
+  // ===============================
   const removeNewImage = (index) => {
-    setNewFiles(prev => prev.filter((_, i) => i !== index));
-    setNewPreviews(prev => {
+    setNewFiles((prev) => prev.filter((_, i) => i !== index));
+    setNewPreviews((prev) => {
       try {
         URL.revokeObjectURL(prev[index]);
       } catch {}
@@ -325,6 +382,9 @@ const [formData, setFormData] = useState({
     });
   };
 
+  // ===============================
+  // REMOVE EXISTING IMAGE (MARK ONLY)
+  // ===============================
   const removeExistingImage = (imageId) => {
     setExistingImages((prev) =>
       prev.filter((img) => img.imageId !== imageId)
@@ -332,6 +392,9 @@ const [formData, setFormData] = useState({
     setRemovedExistingIds((prev) => [...prev, imageId]);
   };
 
+  // ===============================
+  // SET PRIMARY EXISTING IMAGE
+  // ===============================
   const setPrimaryExisting = (imageId) => {
     setExistingImages((prev) =>
       prev.map((img) => ({
@@ -341,14 +404,21 @@ const [formData, setFormData] = useState({
     );
   };
 
+  // ===============================
+  // SET PRIMARY NEW IMAGE
+  // ===============================
   const setPrimaryNew = (index) => {
-    setExistingImages((prev) => prev.map((i) => ({ ...i, isPrimary: false })));
+    setExistingImages((prev) =>
+      prev.map((img) => ({ ...img, isPrimary: false }))
+    );
+
     if (index > 0) {
       setNewFiles((prev) => {
         const arr = [...prev];
         [arr[0], arr[index]] = [arr[index], arr[0]];
         return arr;
       });
+
       setNewPreviews((prev) => {
         const arr = [...prev];
         [arr[0], arr[index]] = [arr[index], arr[0]];
@@ -357,26 +427,36 @@ const [formData, setFormData] = useState({
     }
   };
 
+  // ===============================
+  // MOVE EXISTING IMAGE
+  // ===============================
   const moveExisting = (imageId, direction) => {
     setExistingImages((prev) => {
       const arr = [...prev];
       const idx = arr.findIndex((i) => i.imageId === imageId);
       if (idx < 0) return arr;
+
       const target = direction === "left" ? idx - 1 : idx + 1;
       if (target < 0 || target >= arr.length) return arr;
+
       [arr[idx], arr[target]] = [arr[target], arr[idx]];
       return arr.map((img, i) => ({ ...img, displayOrder: i }));
     });
   };
 
+  // ===============================
+  // MOVE NEW IMAGE
+  // ===============================
   const moveNew = (index, direction) => {
     const target = direction === "left" ? index - 1 : index + 1;
     if (target < 0 || target >= newFiles.length) return;
+
     setNewFiles((prev) => {
       const arr = [...prev];
       [arr[index], arr[target]] = [arr[target], arr[index]];
       return arr;
     });
+
     setNewPreviews((prev) => {
       const arr = [...prev];
       [arr[index], arr[target]] = [arr[target], arr[index]];
@@ -384,94 +464,127 @@ const [formData, setFormData] = useState({
     });
   };
 
+  // ===============================
+  // BACKDROP CLICK
+  // ===============================
   const handleBackdropClick = (e) => {
     if (e.target.classList.contains("pem-backdrop")) {
       onClose && onClose();
     }
   };
 
-  const handleSubmit = async (e) => {
+  // ===============================
+  // SUBMIT - FIXED LOGIC FROM PropertyEditModal
+  // ===============================
+  async function handleSubmit(e) {
     e.preventDefault();
+
+    const authToken = localStorage.getItem("authToken");
+    if (!authToken) {
+      alert("Please log in to update this property.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
-    // Validation
-    if (!formData.title || !formData.areaId || !formData.price || !formData.description) {
-      setError("Please fill all required fields marked with *");
-      setLoading(false);
-      return;
-    }
-
-    if (!isPlotOrLandOrVilla) {
-      if (!formData.bedrooms || !formData.bathrooms) {
-        setError("Bedrooms and bathrooms are required for this property type");
-        setLoading(false);
-        return;
-      }
-    }
-
-    const numericPrice = parseFloat(formData.price);
-    if (isNaN(numericPrice) || numericPrice <= 0) {
-      setError("Please enter a valid price");
-      setLoading(false);
-      return;
-    }
-
-    const selectedAreaObject = areas.find(
-      (area) => area.areaId.toString() === formData.areaId.toString()
-    );
-
-    if (!selectedAreaObject) {
-      setError("Invalid area selected. Please try again.");
-      setLoading(false);
-      return;
-    }
-
     try {
-      // 1) Upload new images
+      console.log("📝 Starting property update process...");
+
+      // ========================================
+      // STEP 1: DELETE REMOVED EXISTING IMAGES
+      // ========================================
+      if (removedExistingIds.length > 0) {
+        console.log(`🗑️ Deleting ${removedExistingIds.length} removed images...`);
+
+        for (const imageId of removedExistingIds) {
+          try {
+            const delRes = await fetch(
+              `${BACKEND_BASE_URL}/api/property-images/${imageId}`,
+              {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${authToken}` },
+              }
+            );
+
+            if (!delRes.ok) {
+              console.warn(`⚠️ Failed to delete image ${imageId}: HTTP ${delRes.status}`);
+            } else {
+              console.log(`✅ Deleted image ${imageId}`);
+            }
+          } catch (err) {
+            console.error(`❌ Error deleting image ${imageId}:`, err);
+          }
+        }
+      }
+
+      // ========================================
+      // STEP 2: UPLOAD NEW IMAGES
+      // ========================================
       const uploadedNewUrls = [];
       if (newFiles.length > 0) {
         setImageUploading(true);
+        console.log(`📤 Uploading ${newFiles.length} new images for property ${propertyId}...`);
+
         for (let i = 0; i < newFiles.length; i++) {
           const file = newFiles[i];
           const fd = new FormData();
           fd.append("file", file);
           fd.append("propertyId", String(propertyId));
 
+          console.log(`   Uploading image ${i + 1}/${newFiles.length}...`);
+
           const res = await fetch(`${BACKEND_BASE_URL}/api/upload/property-image`, {
             method: "POST",
-            headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
+            headers: { Authorization: `Bearer ${authToken}` },
             body: fd,
           });
 
           if (!res.ok) {
+            const errorText = await res.text();
+            console.error(`❌ Image ${i + 1} upload failed:`, errorText);
             throw new Error(`Image upload failed: HTTP ${res.status}`);
           }
 
           const data = await res.json();
-          const url = data.data?.imageUrl || data.imageUrl;
+          console.log(`✅ Image ${i + 1} uploaded:`, data);
+
+          const url = data.data?.imageUrl || data.imageUrl || data.url;
+
           if (!url) {
+            console.error("❌ No imageUrl in response:", data);
             throw new Error("Upload returned no imageUrl");
           }
-          uploadedNewUrls.push(url);
 
+          uploadedNewUrls.push(url);
           setUploadProgress(Math.round(((i + 1) / newFiles.length) * 100));
         }
+
         setImageUploading(false);
+        console.log(`✅ All ${uploadedNewUrls.length} new images uploaded successfully`);
       }
 
-      // 2) Build final images list
+      // ========================================
+      // STEP 3: BUILD FINAL IMAGES LIST
+      // ========================================
+      let hasPrimary = orderedExisting.some(i => i.isPrimary);
+
       const finalImages = [
         ...orderedExisting.map((img, idx) => ({
+          imageId: img.imageId,
           imageUrl: img.imageUrl,
           isPrimary: img.isPrimary,
           displayOrder: idx,
         })),
-        ...uploadedNewUrls.map((url, idx) => ({
-          imageUrl: url,
-          isPrimary: orderedExisting.every((i) => !i.isPrimary) && idx === 0,
-          displayOrder: orderedExisting.length + idx,
-        })),
+        ...uploadedNewUrls.map((url, idx) => {
+          const isPrimary = !hasPrimary && idx === 0;
+          if (isPrimary) hasPrimary = true;
+          return {
+            imageUrl: url,
+            isPrimary,
+            displayOrder: orderedExisting.length + idx,
+          };
+        }),
       ];
 
       // Ensure exactly one primary
@@ -481,49 +594,115 @@ const [formData, setFormData] = useState({
 
       const primaryUrl = finalImages.find((i) => i.isPrimary)?.imageUrl || "";
 
-      // 3) Delete old property images
-      await fetch(
-        `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
-        }
-      );
+      console.log(`📋 Final images list (${finalImages.length} total):`, finalImages);
 
-      // 4) Save new images list
-      if (finalImages.length > 0) {
+      // ========================================
+      // STEP 4: UPDATE EXISTING IMAGES (order/primary)
+      // ========================================
+      const existingToUpdate = finalImages.filter(img => img.imageId);
+
+      if (existingToUpdate.length > 0) {
+        console.log(`🔄 Updating ${existingToUpdate.length} existing images...`);
+
+        for (const img of existingToUpdate) {
+          try {
+            // 1️⃣ set primary (only once)
+            if (img.isPrimary) {
+              const primaryRes = await fetch(
+                `${BACKEND_BASE_URL}/api/property-images/${img.imageId}/set-primary`,
+                {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${authToken}`,
+                  },
+                  body: JSON.stringify({ propertyId }),
+                }
+              );
+
+              if (!primaryRes.ok) {
+                console.warn(`⚠️ Failed to set primary for image ${img.imageId}`);
+              }
+            }
+
+            // 2️⃣ update order (always)
+            const orderRes = await fetch(
+              `${BACKEND_BASE_URL}/api/property-images/${img.imageId}/order`,
+              {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${authToken}`,
+                },
+                body: JSON.stringify({ order: img.displayOrder }),
+              }
+            );
+
+            if (!orderRes.ok) {
+              console.warn(`⚠️ Failed to update order for image ${img.imageId}`);
+            }
+
+          } catch (err) {
+            console.error(`❌ Error updating image ${img.imageId}:`, err);
+          }
+        }
+      }
+
+      // ========================================
+      // STEP 5: SAVE NEW IMAGES TO DATABASE (ONCE)
+      // ========================================
+      const newImagesToSave = finalImages.filter(img => !img.imageId);
+
+      if (newImagesToSave.length > 0) {
+        console.log(`💾 Saving ${newImagesToSave.length} new images to database...`);
+
         const saveRes = await fetch(
           `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
           {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+              Authorization: `Bearer ${authToken}`,
             },
-            body: JSON.stringify(finalImages),
+            body: JSON.stringify(
+              newImagesToSave.map(img => ({
+                imageUrl: img.imageUrl,
+                isPrimary: img.isPrimary,
+                displayOrder: img.displayOrder,
+              }))
+            ),
           }
         );
+
         if (!saveRes.ok) {
-          throw new Error(`Failed to save images: HTTP ${saveRes.status}`);
+          const errorText = await saveRes.text();
+          throw new Error(`Failed to save images: ${errorText}`);
         }
+
+        console.log("✅ New images saved successfully");
       }
 
-      // 5) Update property details
-      const propertyData = {
-        title: formData.title,
+      // ========================================
+      // STEP 6: UPDATE PROPERTY
+      // ========================================
+      console.log("🏠 Updating property details...");
+
+      const payload = {
+        title: formData.title.trim(),
         type: formData.type,
-        city: formData.city,
-        address: formData.address || `${selectedAreaObject.areaName}, ${formData.city}`,
-        imageUrl: primaryUrl,
-        description: formData.description,
-        price: numericPrice,
-        areaSqft: formData.areaSqft ? parseFloat(formData.areaSqft) : null,
-        pricePerSqft: formData.pricePerSqft ? Number(formData.pricePerSqft) : null,
-        amenities: formData.amenities || null,
         listingType: formData.listingType,
-        status: formData.status,
-        isFeatured: formData.isFeatured,
-        isActive: true,
+        city: formData.city,
+        areaId: Number(formData.areaId),
+        address: formData.address.trim(),
+        imageUrl: primaryUrl,
+        bedrooms: formData.bedrooms ? Number(formData.bedrooms) : null,
+        bathrooms: formData.bathrooms ? Number(formData.bathrooms) : null,
+        balconies: formData.balconies ? Number(formData.balconies) : null,
+        areaSqft: formData.areaSqft ? Number(formData.areaSqft) : null,
+        price: formData.price ? Number(formData.price) : 0,
+        pricePerSqft: formData.pricePerSqft ? Number(formData.pricePerSqft) : null,
+        amenities: formData.amenities.trim(),
+        description: formData.description.trim(),
         ownerType: formData.ownerType,
         constructionStatus: formData.constructionStatus,
         possessionYear: formData.possessionYear ? Number(formData.possessionYear) : null,
@@ -532,80 +711,76 @@ const [formData, setFormData] = useState({
         hmdaId: formData.hmdaId.trim() || null,
         isReadyToMove: formData.isReadyToMove,
         isVerified: formData.isVerified,
-        area: selectedAreaObject,
-        user: property.user,
+        isFeatured: formData.isFeatured,
+        status: formData.status,
       };
 
-      // Only include bedroom/bathroom/balconies if not plot/land/villa
-      if (!isPlotOrLandOrVilla) {
-        propertyData.bedrooms = parseInt(formData.bedrooms);
-        propertyData.bathrooms = parseInt(formData.bathrooms);
-        propertyData.balconies = parseInt(formData.balconies || "0");
-      } else {
-        propertyData.bedrooms = 0;
-        propertyData.bathrooms = 0;
-        propertyData.balconies = 0;
-      }
-
-      const response = await fetch(
+      const propRes = await fetch(
         `${BACKEND_BASE_URL}/api/properties/${propertyId}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            Authorization: `Bearer ${authToken}`,
           },
-          body: JSON.stringify(propertyData),
+          body: JSON.stringify(payload),
         }
       );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error("Failed to update property: " + errorText);
+      if (!propRes.ok) {
+        const errText = await propRes.text();
+        throw new Error(`Failed to update property: ${errText}`);
       }
 
-      console.log("✅ Property updated successfully");
+      const updated = await propRes.json();
+      console.log("✅ Property updated successfully!");
+
+      // ========================================
+      // STEP 7: SUCCESS - CLEAR STATE & CLOSE
+      // ========================================
       alert("✅ Property updated successfully!");
-      if (onPropertyUpdated) onPropertyUpdated();
+
+      if (onPropertyUpdated) onPropertyUpdated(updated);
+
+      // Clear image state
+      setExistingImages([]);
+      setNewFiles([]);
+      setNewPreviews([]);
+      setRemovedExistingIds([]);
+
       onClose();
+
     } catch (err) {
-      console.error("❌ Error updating property:", err);
-      setError(err.message || "Failed to update property. Please try again.");
-      alert(`❌ ${err.message}`);
+      console.error("❌ Update error:", err);
+      setError(err.message || "Failed to update property");
+      alert(`❌ Error: ${err.message}`);
     } finally {
       setLoading(false);
       setImageUploading(false);
+      setUploadProgress(0);
     }
-  };
+  }
 
+  // ===============================
+  // RENDER
+  // ===============================
   return (
     <div className="pem-backdrop" onClick={handleBackdropClick}>
       <div className="pem-modal">
         <button className="pem-close" onClick={onClose}>
           ×
         </button>
-        <h2 className="pem-title">✏️ Edit Property (Admin)</h2>
+        <h2 className="pem-title">Admin: Edit Property</h2>
 
         {error && <div className="pem-alert">{error}</div>}
 
         <form className="pem-form" onSubmit={handleSubmit}>
-          {/* Property ID (Read-only) */}
-          <div className="pem-field">
-            <label className="pem-label">Property ID</label>
-            <input
-              type="text"
-              className="pem-input readonly"
-              value={propertyId}
-              disabled
-            />
-          </div>
-
           {/* Title */}
           <div className="pem-field">
-            <label className="pem-label required">Title</label>
+            <label className="pem-label">Title *</label>
             <input
-              type="text"
               className="pem-input"
+              type="text"
               name="title"
               value={formData.title}
               onChange={handleChange}
@@ -617,30 +792,28 @@ const [formData, setFormData] = useState({
           {/* Type & Listing Type */}
           <div className="pem-row">
             <div className="pem-field">
-              <label className="pem-label required">Property Type</label>
-
-{propertyTypesLoading ? (
-  <div>Loading types...</div>
-) : (
-  <select
-    name="type"
-    className="pem-select"
-    value={formData.type}
-    onChange={handleChange}
-  >
-    <option value="">Select Property Type</option>
-    {propertyTypes.map((pt) => (
-      <option key={pt.id ?? pt.name} value={pt.name}>
-        {pt.name}
-      </option>
-    ))}
-  </select>
-)}
-
+              <label className="pem-label">Property Type *</label>
+              {propertyTypesLoading ? (
+                <div>Loading types...</div>
+              ) : (
+                <select
+                  name="type"
+                  className="pem-select"
+                  value={formData.type}
+                  onChange={handleChange}
+                >
+                  <option value="">Select Property Type</option>
+                  {propertyTypes.map((pt) => (
+                    <option key={pt.id ?? pt.name} value={pt.name}>
+                      {pt.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="pem-field">
-              <label className="pem-label required">Listing Type</label>
+              <label className="pem-label">Listing Type *</label>
               <select
                 className="pem-select"
                 name="listingType"
@@ -648,8 +821,8 @@ const [formData, setFormData] = useState({
                 onChange={handleChange}
                 required
               >
-                <option value="sale">For Sale</option>
-                <option value="rent">For Rent</option>
+                <option value="sale">Sale</option>
+                <option value="rent">Rent</option>
               </select>
             </div>
           </div>
@@ -657,7 +830,7 @@ const [formData, setFormData] = useState({
           {/* City & Area */}
           <div className="pem-row">
             <div className="pem-field">
-              <label className="pem-label required">City</label>
+              <label className="pem-label">City *</label>
               <input
                 className="pem-input readonly"
                 type="text"
@@ -668,7 +841,7 @@ const [formData, setFormData] = useState({
             </div>
 
             <div className="pem-field">
-              <label className="pem-label required">Area</label>
+              <label className="pem-label">Area *</label>
               <select
                 className="pem-select"
                 name="areaId"
@@ -680,9 +853,9 @@ const [formData, setFormData] = useState({
                 <option value="">
                   {areasLoading ? "Loading areas..." : "Select Area"}
                 </option>
-                {areas.map((area) => (
-                  <option key={area.areaId} value={area.areaId}>
-                    {area.areaName}
+                {areas.map((a) => (
+                  <option key={a.areaId || a.id} value={a.areaId || a.id}>
+                    {a.areaName || a.name}
                   </option>
                 ))}
               </select>
@@ -691,14 +864,15 @@ const [formData, setFormData] = useState({
 
           {/* Address */}
           <div className="pem-field">
-            <label className="pem-label">Address</label>
+            <label className="pem-label">Address *</label>
             <input
-              type="text"
               className="pem-input"
+              type="text"
               name="address"
               value={formData.address}
               onChange={handleChange}
-              placeholder="Optional - auto-generated if empty"
+              placeholder="Full address"
+              required
             />
           </div>
 
@@ -713,9 +887,9 @@ const [formData, setFormData] = useState({
                 onChange={handleChange}
               >
                 <option value="owner">Owner</option>
-                <option value="builder">Builder</option>
                 <option value="broker">Broker</option>
                 <option value="agent">Agent</option>
+                <option value="builder">Builder</option>
               </select>
             </div>
 
@@ -799,21 +973,6 @@ const [formData, setFormData] = useState({
             </div>
           </div>
 
-          {/* Status (Admin only field) */}
-          <div className="pem-field">
-            <label className="pem-label">Status</label>
-            <select
-              className="pem-select"
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-            >
-              <option value="available">Available</option>
-              <option value="sold">Sold</option>
-              <option value="rented">Rented</option>
-            </select>
-          </div>
-
           {/* Images Section */}
           <div className="pem-images">
             <h3 className="pem-images-title">Property Images (Max 10)</h3>
@@ -861,7 +1020,7 @@ const [formData, setFormData] = useState({
                         className="ppm-control ppm-control-remove"
                         onClick={() => removeExistingImage(img.imageId)}
                       >
-                        ✕
+                        ❌
                       </button>
                     </div>
                   </div>
@@ -915,7 +1074,7 @@ const [formData, setFormData] = useState({
                         className="ppm-control ppm-control-remove"
                         onClick={() => removeNewImage(idx)}
                       >
-                        ✕
+                        ❌
                       </button>
                     </div>
                   </div>
@@ -952,7 +1111,7 @@ const [formData, setFormData] = useState({
 
           {/* Description */}
           <div className="pem-field">
-            <label className="pem-label required">Description</label>
+            <label className="pem-label">Description *</label>
             <textarea
               className="pem-textarea"
               name="description"
@@ -967,7 +1126,7 @@ const [formData, setFormData] = useState({
           {!isPlotOrLandOrVilla && (
             <div className="pem-row3">
               <div className="pem-field">
-                <label className="pem-label required">🛏️ Bedrooms</label>
+                <label className="pem-label">🛏️ Bedrooms *</label>
                 <input
                   className="pem-input"
                   type="number"
@@ -982,7 +1141,7 @@ const [formData, setFormData] = useState({
                 />
               </div>
               <div className="pem-field">
-                <label className="pem-label required">🚿 Bathrooms</label>
+                <label className="pem-label">🚿 Bathrooms *</label>
                 <input
                   className="pem-input"
                   type="number"
@@ -1046,7 +1205,7 @@ const [formData, setFormData] = useState({
             </div>
 
             <div className="pem-field">
-              <label className="pem-label required">💰 Expected Price (₹)</label>
+              <label className="pem-label">💰 Expected Price (₹) *</label>
               <input
                 className="pem-input"
                 type="number"
@@ -1089,6 +1248,22 @@ const [formData, setFormData] = useState({
             </div>
           </div>
 
+          {/* Admin-specific: Status */}
+          <div className="pem-field">
+            <label className="pem-label">Status</label>
+            <select
+              className="pem-select"
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+            >
+              <option value="available">Available</option>
+              <option value="sold">Sold</option>
+              <option value="pending">Pending</option>
+              <option value="rented">Rented</option>
+            </select>
+          </div>
+
           {/* Checkboxes */}
           <div className="pem-checkbox">
             <input
@@ -1125,7 +1300,7 @@ const [formData, setFormData] = useState({
               onChange={handleChange}
             />
             <label htmlFor="isFeatured" className="pem-checkbox-text">
-              Featured Property (Admin)
+              Featured Property
             </label>
           </div>
 
@@ -1136,13 +1311,12 @@ const [formData, setFormData] = useState({
               className="pem-btn pem-btn-primary"
               disabled={loading || imageUploading}
             >
-              {loading ? "Updating..." : "Update Property"}
+              {loading ? "Saving..." : "Save Changes"}
             </button>
             <button
               type="button"
               className="pem-btn pem-btn-secondary"
               onClick={onClose}
-              disabled={loading}
             >
               Cancel
             </button>
