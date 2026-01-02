@@ -718,47 +718,40 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     setUploadProgress(0);
 
     const uploadedUrls = [];
-    const totalImages = selectedImages.length;
+    const total = selectedImages.length;
 
     try {
       for (let i = 0; i < selectedImages.length; i++) {
         const image = selectedImages[i];
-        const formData = new FormData();
-        formData.append("file", image);
+        const fd = new FormData();
+        fd.append("file", image);
 
-        const response = await fetch(
-          `${BACKEND_BASE_URL}/api/upload/image`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${authToken}`,
-            },
-            body: formData,
-          }
-        );
+        const res = await fetch(`${BACKEND_BASE_URL}/api/upload/image`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${authToken}` },
+          body: fd,
+        });
 
-        if (!response.ok) {
-          throw new Error(`Failed to upload image ${i + 1}`);
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Image upload failed: ${text}`);
         }
 
-        const data = await response.json();
-        if (data.success && data.url) {
-          uploadedUrls.push(data.url);
+        const data = await res.json();
+        if (!data?.success || !data?.url) {
+          throw new Error("Invalid image upload response");
         }
 
-        const progress = Math.round(((i + 1) / totalImages) * 100);
-        setUploadProgress(progress);
+        uploadedUrls.push(data.url);
+        setUploadProgress(Math.round(((i + 1) / total) * 100));
       }
 
       return uploadedUrls;
-    } catch (err) {
-      console.error("Image upload error:", err);
-      throw new Error(`Image upload failed: ${err.message}`);
     } finally {
       setImageUploading(false);
-      setUploadProgress(0);
     }
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();

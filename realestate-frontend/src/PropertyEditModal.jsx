@@ -436,36 +436,61 @@ const [formData, setFormData] = useState({
 
     try {
       // 1) Upload new images
-      const uploadedNewUrls = [];
-      if (newFiles.length > 0) {
-        setImageUploading(true);
-        for (let i = 0; i < newFiles.length; i++) {
-          const file = newFiles[i];
-          const fd = new FormData();
-          fd.append("file", file);
-          fd.append("propertyId", String(propertyId));
+     // ✅ FIXED: Upload new images in PropertyEditModal
+     // This should replace the upload section in handleSubmit function (around line 518-550)
 
-          const res = await fetch(`${BACKEND_BASE_URL}/api/upload/property-image`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${authToken}` },
-            body: fd,
-          });
+     // Inside handleSubmit function of PropertyEditModal.jsx:
 
-          if (!res.ok) {
-            throw new Error(`Image upload failed: HTTP ${res.status}`);
-          }
+     // 1) Upload new images
+     const uploadedNewUrls = [];
+     if (newFiles.length > 0) {
+       setImageUploading(true);
+       console.log(`📤 Uploading ${newFiles.length} new images for property ${propertyId}...`);
 
-          const data = await res.json();
-          const url = data.data?.imageUrl || data.imageUrl;
-          if (!url) {
-            throw new Error("Upload returned no imageUrl");
-          }
-          uploadedNewUrls.push(url);
+       for (let i = 0; i < newFiles.length; i++) {
+         const file = newFiles[i];
+         const fd = new FormData();
+         fd.append("file", file);
+         fd.append("propertyId", String(propertyId));
 
-          setUploadProgress(Math.round(((i + 1) / newFiles.length) * 100));
-        }
-        setImageUploading(false);
-      }
+         console.log(`   Uploading image ${i + 1}/${newFiles.length}...`);
+
+         // ✅ CRITICAL FIX: Use property-specific upload endpoint
+         const res = await fetch(`${BACKEND_BASE_URL}/api/upload/property-image`, {
+           method: "POST",
+           headers: { Authorization: `Bearer ${authToken}` },
+           body: fd,
+         });
+
+         if (!res.ok) {
+           const errorText = await res.text();
+           console.error(`❌ Image ${i + 1} upload failed:`, errorText);
+           throw new Error(`Image upload failed: HTTP ${res.status}`);
+         }
+
+         const data = await res.json();
+         console.log(`✅ Image ${i + 1} uploaded:`, data);
+
+         // ✅ Extract URL from response (handle different response formats)
+         const url = data.data?.imageUrl || data.imageUrl || data.url;
+
+         if (!url) {
+           console.error("❌ No imageUrl in response:", data);
+           throw new Error("Upload returned no imageUrl");
+         }
+
+         uploadedNewUrls.push(url);
+         console.log(`✅ Image ${i + 1} URL:`, url);
+
+         setUploadProgress(Math.round(((i + 1) / newFiles.length) * 100));
+       }
+
+       setImageUploading(false);
+       console.log(`✅ All ${uploadedNewUrls.length} new images uploaded successfully`);
+     }
+
+     // Continue with the rest of the handleSubmit logic...
+     // (building finalImages, deleting old images, saving new images, updating property)
 
       // 2) Build final images list
       const finalImages = [
@@ -489,14 +514,35 @@ const [formData, setFormData] = useState({
 
       const primaryUrl = finalImages.find((i) => i.isPrimary)?.imageUrl || "";
 
-      // 3) Delete old property images
-      await fetch(
-        `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${authToken}` },
+      // 3) Delete old images ONLY if something changed
+      if (removedExistingIds.length > 0 || uploadedNewUrls.length > 0) {
+        await fetch(
+          `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
+          {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${authToken}` },
+          }
+        );
+
+        if (finalImages.length > 0) {
+          const saveRes = await fetch(
+            `${BACKEND_BASE_URL}/api/property-images/property/${propertyId}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${authToken}`,
+              },
+              body: JSON.stringify(finalImages),
+            }
+          );
+
+          if (!saveRes.ok) {
+            throw new Error(`Failed to save images`);
+          }
         }
-      );
+      }
+
 
       // 4) Save new images list
       if (finalImages.length > 0) {
