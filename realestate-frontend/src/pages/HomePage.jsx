@@ -1,5 +1,5 @@
 // src/pages/HomePage.jsx
-// ✅ PREMIUM REDESIGN - Modern & Attractive
+// ✅ PREMIUM REDESIGN - Modern & Attractive with Auto-Scroll
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
@@ -60,11 +60,21 @@ function HomePage() {
   const [selectedType, setSelectedType] = useState("All");
   const [loadingTypes, setLoadingTypes] = useState(false);
 
-  // Debounce refs
+  // Refs
   const searchDebounceRef = useRef(null);
   const searchAbortRef = useRef(null);
+  const listingsSectionRef = useRef(null); // 🔥 REF for scrolling
 
-  // Popular Areas Data with images
+  // 🔥 Scroll to listings section
+  const scrollToListings = () => {
+    if (listingsSectionRef.current) {
+      const yOffset = -80; // Offset for fixed header
+      const y = listingsSectionRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  };
+
+  // Popular Areas Data
   const popularAreas = [
     { name: "Gachibowli", icon: "🏢", gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" },
     { name: "HITEC City", icon: "🌆", gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" },
@@ -81,7 +91,7 @@ function HomePage() {
     { type: "Apartment", icon: "🏢", desc: "Flats & Apartments", color: "#6366f1" },
     { type: "Villa", icon: "🏡", desc: "Luxury Villas", color: "#8b5cf6" },
     { type: "House", icon: "🏠", desc: "Independent Houses", color: "#ec4899" },
-    { type: "Plot", icon: "📐", desc: "Residential Plots", color: "#f59e0b" },
+    { type: "Plot", icon: "📏", desc: "Residential Plots", color: "#f59e0b" },
     { type: "Commercial", icon: "🏪", desc: "Office & Shops", color: "#10b981" },
     { type: "PG", icon: "🏨", desc: "Paying Guest", color: "#06b6d4" },
   ];
@@ -254,7 +264,18 @@ function HomePage() {
     }
   }, [isAuthenticated, user?.id]);
 
-  // Smart Search Handler (FIXED – client side)
+  // 🔥 NEW: Check for scroll flag from PropertyDetails page
+  useEffect(() => {
+    const shouldScrollToProperties = sessionStorage.getItem('scrollToProperties');
+    if (shouldScrollToProperties === 'true') {
+      // Clear the flag
+      sessionStorage.removeItem('scrollToProperties');
+      // Scroll after a short delay to ensure page is loaded
+      setTimeout(() => scrollToListings(), 500);
+    }
+  }, []);
+
+  // Smart Search Handler
   const performSearch = async (query) => {
     if (!query.trim()) {
       setSearchResults([]);
@@ -279,8 +300,10 @@ function HomePage() {
     setShowSearchResults(true);
     setSelectedArea(null);
     setSearchLoading(false);
-  };
 
+    // 🔥 Scroll to listings after search
+    setTimeout(() => scrollToListings(), 100);
+  };
 
   // Debounced search
   useEffect(() => {
@@ -311,36 +334,41 @@ function HomePage() {
     }
   };
 
+  // 🔥 UPDATED: Handle area click with scroll
+  const handleAreaClick = async (areaName) => {
+    if (selectedArea === areaName) {
+      setSelectedArea(null);
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
 
+    setSelectedArea(areaName);
+    setSearchLoading(true);
 
-   const handleAreaClick = async (areaName) => {
-     if (selectedArea === areaName) {
-       setSelectedArea(null);
-       setSearchResults([]);
-       setShowSearchResults(false);
-       return;
-     }
+    const results = allProperties.filter(
+      (p) => p.areaName?.toLowerCase() === areaName.toLowerCase()
+    );
 
-     setSelectedArea(areaName);
-     setSearchLoading(true);
+    setSearchResults(results);
+    setShowSearchResults(true);
+    setSearchQuery("");
+    setSearchLoading(false);
 
-     const results = allProperties.filter(
-       (p) => p.areaName?.toLowerCase() === areaName.toLowerCase()
-     );
+    // 🔥 Scroll to listings after area selection
+    setTimeout(() => scrollToListings(), 100);
+  };
 
-     setSearchResults(results);
-     setShowSearchResults(true);
-     setSearchQuery("");
-     setSearchLoading(false);
-   };
-
-
+  // 🔥 UPDATED: Handle type click with scroll
   const handleTypeClick = (type) => {
     setActiveTab("all");
     setSelectedType(type);
     setShowSearchResults(false);
     setSelectedArea(null);
     setSearchQuery("");
+
+    // 🔥 Scroll to listings after type selection
+    setTimeout(() => scrollToListings(), 100);
   };
 
   const handleResetFilters = () => {
@@ -573,10 +601,8 @@ function HomePage() {
               </div>
               <div className="hp-trust-text">
                 <strong>Fair Success Fee</strong>
-                <span className="success-fee-note">
-                               0.5% only after registration</span></div>
-
-
+                <span className="success-fee-note">0.5% only after registration</span>
+              </div>
             </div>
           </div>
         </section>
@@ -674,7 +700,8 @@ function HomePage() {
         </section>
 
         {/* ========== PROPERTY LISTINGS ========== */}
-        <section className="hp-section hp-listings">
+        {/* 🔥 NEW: Added ref to this section */}
+        <section className="hp-section hp-listings" ref={listingsSectionRef}>
           {/* Tabs */}
           {!showSearchResults && !selectedArea && (
             <div className="hp-tabs">

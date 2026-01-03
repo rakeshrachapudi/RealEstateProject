@@ -51,7 +51,7 @@ const DOCUMENT_CONFIG = {
 
 // ⭐ Image Resize + Compression Helper
 // Uses Canvas API to resize and compress images in the browser (no external libs)
-const compressImage = (file, maxWidth = 1280, maxHeight = 1280, quality = 0.7) => {
+const compressImage = (file, maxWidth = 1920, maxHeight = 1920, quality = 0.8) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const reader = new FileReader();
@@ -637,7 +637,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
     }
   };
 
-  // Image handling (updated: compression + resize)
+  // ⭐ UPDATED: Image handling with larger size support
   const handleImageChange = async (e) => {
     try {
       const files = Array.from(e.target.files);
@@ -649,6 +649,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
       }
 
       const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
+      const MAX_FILE_SIZE_MB = 10; // ⭐ INCREASED: From implicit 2MB to 10MB
       const validImages = [];
       const errors = [];
 
@@ -659,21 +660,37 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
           continue;
         }
 
-        // If file is already small (< 500KB) and dimensions unknown, we still compress to ensure consistent behavior
-        // If file is very large (> 5MB) we will compress it down
-        try {
-          const compressed = await compressImage(file, 1280, 1280, 0.7);
-          validImages.push(compressed);
+        // ⭐ NEW: Check file size (10MB limit)
+        const fileSizeMB = file.size / (1024 * 1024);
+        if (fileSizeMB > MAX_FILE_SIZE_MB) {
+          errors.push(`${file.name} — File too large (max ${MAX_FILE_SIZE_MB}MB)`);
+          continue;
+        }
 
-          // Create preview from compressed file
+        try {
+          // ⭐ SMART COMPRESSION: Compress images larger than 2MB, keep smaller ones as-is
+          let processedFile;
+          if (fileSizeMB > 2) {
+            // Compress larger images
+            processedFile = await compressImage(file, 1920, 1920, 0.8);
+            console.log(`Compressed ${file.name}: ${fileSizeMB.toFixed(2)}MB → ${(processedFile.size / (1024 * 1024)).toFixed(2)}MB`);
+          } else {
+            // Keep smaller images as-is
+            processedFile = file;
+            console.log(`Keeping ${file.name} as-is: ${fileSizeMB.toFixed(2)}MB`);
+          }
+
+          validImages.push(processedFile);
+
+          // Create preview from processed file
           const reader = new FileReader();
           reader.onloadend = () => {
             setImagePreviews((prev) => [...prev, reader.result]);
           };
-          reader.readAsDataURL(compressed);
+          reader.readAsDataURL(processedFile);
         } catch (imgErr) {
-          console.error("Compression error for", file.name, imgErr);
-          errors.push(`${file.name} — Failed to compress`);
+          console.error("Processing error for", file.name, imgErr);
+          errors.push(`${file.name} — Failed to process`);
         }
       }
 
@@ -1195,7 +1212,7 @@ function PostPropertyModal({ onClose, onPropertyPosted }) {
 
             {/* Image Upload Section */}
             <div className="ppm-images">
-              <label className="ppm-label required">📷 Property Images</label>
+              <label className="ppm-label required">📷 Property Images (Max 10MB each)</label>
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/jpg"
