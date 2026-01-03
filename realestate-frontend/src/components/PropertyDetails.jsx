@@ -63,6 +63,7 @@ function PropertyDetails() {
   const [agent, setAgent] = useState(null);
   const [agentLoading, setAgentLoading] = useState(false);
 
+
   // Login and Tracking States
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [viewTracked, setViewTracked] = useState(false);
@@ -834,7 +835,17 @@ function PropertyDetails() {
     }
     alert("✅ Deal created successfully!");
   };
+  const handleBackClick = () => {
+    // Set flag to scroll to properties section on home page
+    sessionStorage.setItem('scrollToProperties', 'true');
 
+    // Navigate back (will go to home page or previous page)
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
   const handleViewDeal = () => {
     if (existingDeal) {
       setViewingDeal(existingDeal);
@@ -933,7 +944,7 @@ function PropertyDetails() {
 
       <div className="pd-page">
         <div className="pd-container">
-          <button onClick={() => navigate(-1)} className="pd-back">← Back</button>
+        <button onClick={handleBackClick} className="pd-back">← Back</button>
 
           {((isAgentOrAdmin && isNotPropertyOwner) || existingDeal) && (
             <button
