@@ -102,8 +102,8 @@ export const generateOrganizationSchema = () => {
       latitude: 17.3850,
       longitude: 78.4867
     },
-    telephone: '+91-7730051329',
-    email: 'contact@propertydealz.in',
+    telephone: '+91-6309806984',
+    email: 'info.propertydealz.in@gmail.com',
     areaServed: {
       '@type': 'City',
       name: 'Hyderabad',

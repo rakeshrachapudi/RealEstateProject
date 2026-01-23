@@ -111,7 +111,7 @@ export const SEOCtaGroup = ({
   showWhatsApp = true,
   whatsAppMessage = "Hi! I'm interested in properties in Hyderabad"
 }) => {
-  const whatsAppLink = `https://wa.me/917730051329?text=${encodeURIComponent(whatsAppMessage)}`;
+  const whatsAppLink = `https://wa.me/916309806984?text=${encodeURIComponent(whatsAppMessage)}`;
 
   return (
     <div className="seo-cta-group">
@@ -128,7 +128,7 @@ export const SEOCtaGroup = ({
           💬 WhatsApp Us
         </a>
       )}
-      <a href="tel:+917730051329" className="seo-btn seo-btn-secondary">
+      <a href="tel:+916309806984" className="seo-btn seo-btn-secondary">
         📞 Call Now
       </a>
     </div>
@@ -152,11 +152,11 @@ export const SEOStickyCta = () => {
 
   return (
     <div className={`seo-sticky-cta ${isVisible ? 'visible' : ''}`}>
-      <a href="tel:+917730051329" className="seo-btn seo-btn-primary">
+      <a href="tel:+916309806984" className="seo-btn seo-btn-primary">
         📞 Call
       </a>
       <a
-        href="https://wa.me/917730051329?text=Hi!%20I'm%20looking%20for%20property%20in%20Hyderabad"
+        href="https://wa.me/916309806984?text=Hi!%20I'm%20looking%20for%20property%20in%20Hyderabad"
         target="_blank"
         rel="noopener noreferrer"
         className="seo-btn seo-btn-whatsapp"

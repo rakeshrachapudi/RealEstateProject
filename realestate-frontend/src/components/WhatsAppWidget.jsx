@@ -2,7 +2,7 @@
 import React from 'react';
 import './WhatsAppWidget.css';
 
-const WhatsAppWidget = ({ phoneNumber = '917730051329', message }) => {
+const WhatsAppWidget = ({ phoneNumber = '916309806984', message }) => {
   const defaultMessage = message || 'Hi! I found a property on PropertyDealz.in and want to know more.';
 
   const handleClick = () => {

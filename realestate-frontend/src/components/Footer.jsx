@@ -154,7 +154,6 @@ function Footer() {
               <h4 className="footer-col-title">Get In Touch</h4>
               <div className="footer-contact">
                 <p>📞 +91 63098 06984</p>
-                <p>📞 +91 77300 51329</p>
                 <p>✉️ info@propertydealz.in</p>
                 <p>📍 Kondapur, Hyderabad, 500084</p>
               </div>

@@ -160,7 +160,7 @@ const AreaPage = () => {
                 <button
                   onClick={() =>
                     window.open(
-                      "https://wa.me/917730051329?text=Hi! I'm looking for properties in " +
+                      "https://wa.me/916309806984?text=Hi! I'm looking for properties in " +
                         displayAreaName,
                       "_blank"
                     )

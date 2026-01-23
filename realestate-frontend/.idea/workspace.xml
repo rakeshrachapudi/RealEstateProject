@@ -5,49 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="42dfceb5-b8ee-4b67-a031-eae8b466d127" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/scripts/generate-sitemap.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/Analytics/GoogleAnalytics.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/Analytics/MetaPixel.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/HomePage/HeroSection.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/HomePage/PopularAreasSection.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/HomePage/PropertiesSection.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/HomePage/PropertyTypesSection.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/HomePage/QuickSearchSection.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/LazyImage.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/SEO/SEOHead.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/SEO/StructuredData.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/WhatsAppWidget.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/WhatsAppWidget.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/data/locationData.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/hooks/usePropertyData.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/hooks/useSearchHandlers.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/pages/LocationPage.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/pages/LocationPage.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/utils/fbPixelEvents.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/utils/gtmDataLayer.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/vite.config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/PropertyViewTrackingController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/java/com/example/realestate/controller/PropertyViewTrackingController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../realestate-backend/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/../realestate-backend/src/main/resources/application.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/assets/bg-image-edSZyWbI.webp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/assets/index-BlVWOYpg.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/assets/index-CWB3OWLQ.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/assets/logo-white-ChYiyYvl.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/dist/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/sitemap.xml" beforeDir="false" afterPath="$PROJECT_DIR$/dist/sitemap.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/sitemap.xml" beforeDir="false" afterPath="$PROJECT_DIR$/public/sitemap.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/robots.txt" beforeDir="false" afterPath="$PROJECT_DIR$/robots.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/PostPropertyModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/PostPropertyModal.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/AdvancedSearchBar.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/AdvancedSearchBar.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/PropertyCard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/PropertyCard.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/PropertyDetails.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/PropertyDetails.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/PropertyDetails.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/PropertyDetails.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pages/AdminPropertyEditModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/AdminPropertyEditModal.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/Footer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/Footer.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/SEO/SEOComponents.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/SEO/SEOComponents.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/SEO/StructuredData.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/SEO/StructuredData.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/WhatsAppWidget.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/WhatsAppWidget.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/AreaPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/AreaPage.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/pages/HomePage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/HomePage.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

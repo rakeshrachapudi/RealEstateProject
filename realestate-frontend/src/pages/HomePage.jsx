@@ -388,13 +388,13 @@ function HomePage() {
 
   const handleWhatsApp = () => {
     window.open(
-      `https://wa.me/917730051329?text=${encodeURIComponent("Hi! I'm looking for properties in Hyderabad")}`,
+      `https://wa.me/916309806984?text=${encodeURIComponent("Hi! I'm looking for properties in Hyderabad")}`,
       "_blank"
     );
   };
 
   const handleCall = () => {
-    window.location.href = "tel:+917730051329";
+    window.location.href = "tel:+916309806984";
   };
 
   // Computed values

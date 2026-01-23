@@ -277,7 +277,7 @@ function AppContent() {
       <Footer />
 
       <WhatsAppWidget
-        phoneNumber="917730051329"
+        phoneNumber="916309806984"
         message="Hi! I'm interested in properties on PropertyDealz.in"
       />
 
